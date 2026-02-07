@@ -1,21 +1,51 @@
 using AlgoTrade.Core;
+using AlgoTrade.Core.Trading;
 
 namespace AlgoTrade.WinForms;
 
 public class MainForm : Form
 {
+    private readonly AlgoTrader _trader;
+    private readonly ListBox _logList;
+    private readonly Button _startButton;
+    private readonly Button _stopButton;
+
     public MainForm()
     {
         Text = "AlgoTrade";
         Size = new System.Drawing.Size(800, 600);
         StartPosition = FormStartPosition.CenterScreen;
 
-        var label = new Label
+        _startButton = new Button { Text = "Start", Location = new(20, 20), Width = 100 };
+        _stopButton = new Button { Text = "Stop", Location = new(130, 20), Width = 100, Enabled = false };
+        _logList = new ListBox { Location = new(20, 60), Size = new(740, 480) };
+
+        _startButton.Click += (_, _) => StartTrader();
+        _stopButton.Click += (_, _) => StopTrader();
+
+        Controls.AddRange([_startButton, _stopButton, _logList]);
+
+        _trader = new AlgoTrader("MyStrategy");
+        _trader.MessageReceived += message =>
         {
-            Text = $"Inputs: {AppSettings.InputsDir}\nOutputs: {AppSettings.OutputsDir}",
-            AutoSize = true,
-            Location = new System.Drawing.Point(20, 20)
+            if (InvokeRequired)
+                Invoke(() => _logList.Items.Add(message));
+            else
+                _logList.Items.Add(message);
         };
-        Controls.Add(label);
+    }
+
+    private void StartTrader()
+    {
+        _trader.Start();
+        _startButton.Enabled = false;
+        _stopButton.Enabled = true;
+    }
+
+    private void StopTrader()
+    {
+        _trader.Stop();
+        _startButton.Enabled = true;
+        _stopButton.Enabled = false;
     }
 }

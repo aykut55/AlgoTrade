@@ -1,7 +1,14 @@
 using AlgoTrade.Core;
+using AlgoTrade.Core.Trading;
 
 AppSettings.EnsureDirectories();
 
-Console.WriteLine("AlgoTrade Console");
-Console.WriteLine($"Inputs : {AppSettings.InputsDir}");
-Console.WriteLine($"Outputs: {AppSettings.OutputsDir}");
+var trader = new AlgoTrader("MyStrategy");
+trader.MessageReceived += message => Console.WriteLine(message);
+
+trader.Start();
+
+Console.WriteLine("Çıkmak için bir tuşa basın...");
+Console.ReadKey();
+
+trader.Stop();
