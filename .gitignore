@@ -71,6 +71,9 @@ launchSettings.json
 *.rsuser
 *.DotSettings.user
 
+# Claude Code
+.claude/
+
 # Windows
 Thumbs.db
 desktop.ini
