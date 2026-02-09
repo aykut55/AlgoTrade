@@ -4,12 +4,14 @@ using AlgoTrade.Core.Trading;
 using System;
 using System.Collections.Concurrent;
 using System.Text;
+using static Nessos.LinqOptimizer.Core.QueryExpr;
 
 AppSettings.EnsureDirectories();
 
 Console.Clear();
 Console.WriteLine("#######################################\n");
 
+/*
 var trader = new AlgoTrader("MyStrategy");
 
 trader.MessageReceived += message => Console.WriteLine(message);
@@ -17,6 +19,7 @@ trader.MessageReceived += message => Console.WriteLine(message);
 trader.Start();
 Thread.Sleep(10);
 trader.Stop();
+*/
 
 void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
 {
@@ -251,9 +254,11 @@ try
             stockDataList = stockDataReader.GetData();          // tümü
 
             Console.WriteLine("");
-            Console.WriteLine(stockDataReader.Head());
+            Console.Write($"Data count : {stockDataReader.GetDataCount()}");
+            Console.WriteLine("");
 
             Console.WriteLine("");
+            Console.WriteLine(stockDataReader.Head());
             Console.WriteLine(stockDataReader.Tail());
         }
     }
