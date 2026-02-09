@@ -1,6 +1,7 @@
 using AlgoTrade.Core;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Trading;
+using System;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -21,7 +22,7 @@ void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string>
 {
     if (sender.IsMetaDataRead)
     {
-        var stockMetaData = sender.StockMetaData;
+        var stockMetaData = sender.GetMetaData();
 
         var kayitZamani = stockMetaData.GetValueOrDefault("Kayit_Zamani", "N/A");
         var grafikSembol = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
@@ -247,7 +248,8 @@ try
             Console.ResetColor();
             Console.WriteLine(" ms.");
 
-            stockDataList = stockDataReader.StockDataList;
+            stockDataList = stockDataReader.GetData();          // tümü
+            var slice = stockDataReader.GetData(100, 200);      // 100-200 arası
 
             Console.WriteLine("");
             Console.WriteLine(stockDataReader.Head());

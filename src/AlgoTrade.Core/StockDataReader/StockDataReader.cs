@@ -23,12 +23,21 @@ namespace AlgoTrade.Core.StockDataReader
         private List<StockData> _stockDataList = new();
         private bool _isDisposed;
 
-        public int DataReadCount { get; private set; }
         public bool IsMetaDataRead { get; private set; }
         public bool IsDataRead { get; private set; }
-        public List<string> StockMetaDataLines => _metaDataLines;
-        public ConcurrentDictionary<string, string> StockMetaData => _metaData;
-        public List<StockData> StockDataList => _stockDataList;
+        public int GetDataCount() => _stockDataList.Count;
+        public List<StockData> GetData() => _stockDataList;
+        public List<StockData> GetData(int start, int end)
+        {
+            if (start < 0) start = 0;
+            if (end >= _stockDataList.Count) end = _stockDataList.Count - 1;
+            if (start > end) return new List<StockData>();
+            return _stockDataList.Skip(start).Take(end - start + 1).ToList();
+        }
+        public int GetMetaDataCount() => _metaData.Count;
+        public ConcurrentDictionary<string, string> GetMetaData() => _metaData;
+        public List<string> GetMetaDataLines() => _metaDataLines;
+        public int GetMetaDataLinesCount() => _metaDataLines.Count;
 
         public event Action<StockDataReader, ConcurrentDictionary<string, string>>? OnReadMetaData;
         public event Action<StockDataReader, List<StockData>, long>? OnReadData;
@@ -43,7 +52,6 @@ namespace AlgoTrade.Core.StockDataReader
         public void Clear()
         {
             _stopwatch.Reset();
-            DataReadCount = 0;
             IsMetaDataRead = false;
             IsDataRead = false;
             _metaData.Clear();
@@ -121,9 +129,8 @@ namespace AlgoTrade.Core.StockDataReader
 
             var filtered = ApplyFilter(sorted, mode, n1, n2, dt1, dt2);
             _stockDataList = filtered;
-            DataReadCount = filtered.Count;
             IsDataRead = true;
-            OnProgress?.Invoke(this, DataReadCount, true);
+            OnProgress?.Invoke(this, filtered.Count, true);
             OnReadData?.Invoke(this, filtered, _stopwatch.ElapsedMilliseconds);
             return filtered;
         }
