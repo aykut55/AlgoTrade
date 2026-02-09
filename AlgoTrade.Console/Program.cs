@@ -249,27 +249,25 @@ try
             Console.WriteLine(" ms.");
 
             stockDataList = stockDataReader.GetData();          // tümü
-            var slice = stockDataReader.GetData(100, 200);      // 100-200 arası
 
             Console.WriteLine("");
             Console.WriteLine(stockDataReader.Head());
 
             Console.WriteLine("");
             Console.WriteLine(stockDataReader.Tail());
-
-            Console.WriteLine("");
-            Console.Write(stockDataReader.ToTable(100, 200));    // 100-200 arası
-            //Console.Write(stockDataReader.ToTable());          // tümü
         }
     }
-
-    if (stockDataReader != null)
-        stockDataReader.Dispose();
-    stockDataReader = null;
 }
 catch (Exception ex)
 {
     Console.WriteLine($"An error occurred while reading data: {ex.Message}");
+}
+finally
+{
+    stockDataReader?.Dispose();
+    stockDataReader = null;
+    stockDataList = null;
+    stockMetaData = null;
 }
 
 Console.WriteLine("\n#######################################\n");
