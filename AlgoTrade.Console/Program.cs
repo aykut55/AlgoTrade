@@ -262,6 +262,10 @@ try
             //Console.Write(stockDataReader.ToTable());          // tümü
         }
     }
+
+    if (stockDataReader != null)
+        stockDataReader.Dispose();
+    stockDataReader = null;
 }
 catch (Exception ex)
 {
