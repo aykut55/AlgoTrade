@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Text;
 namespace AlgoTrade.Core.StockDataReader
 {
     public class StockDataReader : IDisposable
@@ -144,6 +145,54 @@ namespace AlgoTrade.Core.StockDataReader
                     : data,
                 _ => data
             };
+        }
+
+        public string Head(int n = 5)
+        {
+            return FormatTable(_stockDataList.Take(n).ToList());
+        }
+
+        public string Tail(int n = 5)
+        {
+            return FormatTable(_stockDataList.TakeLast(n).ToList());
+        }
+
+        public string ToTable()
+        {
+            return FormatTable(_stockDataList);
+        }
+
+        public string ToTable(int start, int end)
+        {
+            if (start < 0) start = 0;
+            if (end >= _stockDataList.Count) end = _stockDataList.Count - 1;
+            if (start > end) return "(invalid range)";
+            return FormatTable(_stockDataList.Skip(start).Take(end - start + 1).ToList());
+        }
+
+        private static string FormatTable(List<StockData> data)
+        {
+            if (data.Count == 0)
+                return "(empty)";
+
+            var sb = new StringBuilder();
+            var header = $"{"Id",-8}{"DateTime",-21}{"Date",-13}{"Time",-10}{"Open",12}{"High",12}{"Low",12}{"Close",12}      {"Volume",-14}{"Size",-10}{"Diff",10}{"Chg%",8}  {"EpochTime",-14}";
+            sb.AppendLine(header);
+            sb.AppendLine(new string('-', header.Length));
+
+            foreach (var d in data)
+            {
+                sb.AppendLine(
+                    $"{d.Id,-8}{d.DateTime:yyyy.MM.dd HH:mm:ss}  {d.Date:yyyy.MM.dd}   {d.Time:hh\\:mm\\:ss}  {d.Open,12:F2}{d.High,12:F2}{d.Low,12:F2}{d.Close,12:F2}      {d.Volume,-14}{d.Size,-10}{d.Diff,10:F2}{d.ChangePct,8:F2}  {d.EpochTime,-14}");
+            }
+
+            sb.AppendLine($"\n[{data.Count} rows]");
+            return sb.ToString();
+        }
+
+        private static string FormatSigned(double value)
+        {
+            return value >= 0 ? $" {value:F2}" : $"{value:F2}";
         }
 
         public void Dispose()
