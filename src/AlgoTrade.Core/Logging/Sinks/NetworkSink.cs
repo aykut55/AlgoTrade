@@ -21,6 +21,10 @@ namespace AlgoTrade.Core.Logging.Sinks
         public LogSinks SinkType => LogSinks.Network;
         public bool IsEnabled { get; set; } = true;
 
+        public bool ShowTimestamp { get; set; } = true;
+        public bool ShowLevel { get; set; } = true;
+        public bool ShowSource { get; set; } = true;
+
         /// <summary>
         /// Log format (short, medium, default, long, json)
         /// </summary>

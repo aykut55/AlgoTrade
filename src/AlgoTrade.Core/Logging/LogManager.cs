@@ -138,6 +138,42 @@ namespace AlgoTrade.Core.Logging
         public static void EnableDebugSink() => Instance.EnableSink(LogSinks.Debug, true);
 
         // ====================================================================
+        // SHOW/HIDE - Timestamp, Level, Source
+        // ====================================================================
+
+        /// <summary>
+        /// Timestamp gösterimini aç/kapat. sinkType belirtilmezse tüm sink'lerde uygulanır.
+        /// </summary>
+        public static void EnableTimestamp(LogSinks? sinkType = null) => Instance.SetSinkProperty(sinkType, (s, v) => s.ShowTimestamp = v, true);
+        public static void DisableTimestamp(LogSinks? sinkType = null) => Instance.SetSinkProperty(sinkType, (s, v) => s.ShowTimestamp = v, false);
+
+        /// <summary>
+        /// Level gösterimini aç/kapat. sinkType belirtilmezse tüm sink'lerde uygulanır.
+        /// </summary>
+        public static void EnableLevel(LogSinks? sinkType = null) => Instance.SetSinkProperty(sinkType, (s, v) => s.ShowLevel = v, true);
+        public static void DisableLevel(LogSinks? sinkType = null) => Instance.SetSinkProperty(sinkType, (s, v) => s.ShowLevel = v, false);
+
+        /// <summary>
+        /// Source (App name) gösterimini aç/kapat. sinkType belirtilmezse tüm sink'lerde uygulanır.
+        /// </summary>
+        public static void EnableSource(LogSinks? sinkType = null) => Instance.SetSinkProperty(sinkType, (s, v) => s.ShowSource = v, true);
+        public static void DisableSource(LogSinks? sinkType = null) => Instance.SetSinkProperty(sinkType, (s, v) => s.ShowSource = v, false);
+
+        private void SetSinkProperty(LogSinks? sinkType, Action<ILogSink, bool> setter, bool value)
+        {
+            lock (_sinksLock)
+            {
+                foreach (var sink in _sinks)
+                {
+                    if (sinkType == null || sink.SinkType == sinkType.Value)
+                    {
+                        setter(sink, value);
+                    }
+                }
+            }
+        }
+
+        // ====================================================================
         // SINK YÖNETİMİ
         // ====================================================================
 
@@ -280,7 +316,15 @@ namespace AlgoTrade.Core.Logging
         /// </summary>
         public static void Log(params object[] args)
         {
-            Instance.LogInternal(LogLevel.Info, null, LogSinks.All, args);
+            Instance.LogInternal(LogLevel.Info, null, LogSinks.All, null, args);
+        }
+
+        /// <summary>
+        /// Genel log metodu - renkli - STATIC
+        /// </summary>
+        public static void Log(ConsoleColor color, params object[] args)
+        {
+            Instance.LogInternal(LogLevel.Info, null, LogSinks.All, color, args);
         }
 
         /// <summary>
@@ -288,7 +332,7 @@ namespace AlgoTrade.Core.Logging
         /// </summary>
         public static void Log(LogLevel level, LogSinks sinks, params object[] args)
         {
-            Instance.LogInternal(level, null, sinks, args);
+            Instance.LogInternal(level, null, sinks, null, args);
         }
 
         /// <summary>
@@ -296,56 +340,35 @@ namespace AlgoTrade.Core.Logging
         /// </summary>
         public static void Log(LogLevel level, string source, LogSinks sinks, params object[] args)
         {
-            Instance.LogInternal(level, source, sinks, args);
+            Instance.LogInternal(level, source, sinks, null, args);
         }
 
-        /// <summary>
-        /// Trace level log - STATIC
-        /// </summary>
-        public static void LogTrace(params object[] args)
-        {
-            Instance.LogInternal(LogLevel.Trace, null, LogSinks.All, args);
-        }
+        public static void LogTrace(params object[] args) => Instance.LogInternal(LogLevel.Trace, null, LogSinks.All, null, args);
+        public static void LogDebug(params object[] args) => Instance.LogInternal(LogLevel.Debug, null, LogSinks.All, null, args);
+        public static void LogInfo(params object[] args) => Instance.LogInternal(LogLevel.Info, null, LogSinks.All, null, args);
+        public static void LogWarning(params object[] args) => Instance.LogInternal(LogLevel.Warning, null, LogSinks.All, null, args);
+        public static void LogError(params object[] args) => Instance.LogInternal(LogLevel.Error, null, LogSinks.All, null, args);
+        public static void LogFatal(params object[] args) => Instance.LogInternal(LogLevel.Fatal, null, LogSinks.All, null, args);
 
-        /// <summary>
-        /// Debug level log - STATIC
-        /// </summary>
-        public static void LogDebug(params object[] args)
-        {
-            Instance.LogInternal(LogLevel.Debug, null, LogSinks.All, args);
-        }
+        public static void Log(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Info, null, LogSinks.All, color, message);
 
-        /// <summary>
-        /// Info level log - STATIC
-        /// </summary>
-        public static void LogInfo(params object[] args)
-        {
-            Instance.LogInternal(LogLevel.Info, null, LogSinks.All, args);
-        }
+        public static void LogTrace(ConsoleColor color, params object[] args) => Instance.LogInternal(LogLevel.Trace, null, LogSinks.All, color, args);
+        public static void LogTrace(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Trace, null, LogSinks.All, color, message);
 
-        /// <summary>
-        /// Warning level log - STATIC
-        /// </summary>
-        public static void LogWarning(params object[] args)
-        {
-            Instance.LogInternal(LogLevel.Warning, null, LogSinks.All, args);
-        }
+        public static void LogDebug(ConsoleColor color, params object[] args) => Instance.LogInternal(LogLevel.Debug, null, LogSinks.All, color, args);
+        public static void LogDebug(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Debug, null, LogSinks.All, color, message);
 
-        /// <summary>
-        /// Error level log - STATIC
-        /// </summary>
-        public static void LogError(params object[] args)
-        {
-            Instance.LogInternal(LogLevel.Error, null, LogSinks.All, args);
-        }
+        public static void LogInfo(ConsoleColor color, params object[] args) => Instance.LogInternal(LogLevel.Info, null, LogSinks.All, color, args);
+        public static void LogInfo(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Info, null, LogSinks.All, color, message);
 
-        /// <summary>
-        /// Fatal level log - STATIC
-        /// </summary>
-        public static void LogFatal(params object[] args)
-        {
-            Instance.LogInternal(LogLevel.Fatal, null, LogSinks.All, args);
-        }
+        public static void LogWarning(ConsoleColor color, params object[] args) => Instance.LogInternal(LogLevel.Warning, null, LogSinks.All, color, args);
+        public static void LogWarning(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Warning, null, LogSinks.All, color, message);
+
+        public static void LogError(ConsoleColor color, params object[] args) => Instance.LogInternal(LogLevel.Error, null, LogSinks.All, color, args);
+        public static void LogError(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Error, null, LogSinks.All, color, message);
+
+        public static void LogFatal(ConsoleColor color, params object[] args) => Instance.LogInternal(LogLevel.Fatal, null, LogSinks.All, color, args);
+        public static void LogFatal(string message, ConsoleColor color) => Instance.LogInternal(LogLevel.Fatal, null, LogSinks.All, color, message);
 
         // ====================================================================
         // LOG METODLARI - INSTANCE
@@ -356,7 +379,7 @@ namespace AlgoTrade.Core.Logging
         /// </summary>
         public void WriteLog(params object[] args)
         {
-            LogInternal(LogLevel.Info, null, LogSinks.All, args);
+            LogInternal(LogLevel.Info, null, LogSinks.All, null, args);
         }
 
         /// <summary>
@@ -364,7 +387,7 @@ namespace AlgoTrade.Core.Logging
         /// </summary>
         public void WriteLog(LogLevel level, LogSinks sinks, params object[] args)
         {
-            LogInternal(level, null, sinks, args);
+            LogInternal(level, null, sinks, null, args);
         }
 
         /// <summary>
@@ -372,21 +395,21 @@ namespace AlgoTrade.Core.Logging
         /// </summary>
         public void WriteLog(LogLevel level, string source, LogSinks sinks, params object[] args)
         {
-            LogInternal(level, source, sinks, args);
+            LogInternal(level, source, sinks, null, args);
         }
 
-        public void WriteTrace(params object[] args) => LogInternal(LogLevel.Trace, null, LogSinks.All, args);
-        public void WriteDebug(params object[] args) => LogInternal(LogLevel.Debug, null, LogSinks.All, args);
-        public void WriteInfo(params object[] args) => LogInternal(LogLevel.Info, null, LogSinks.All, args);
-        public void WriteWarning(params object[] args) => LogInternal(LogLevel.Warning, null, LogSinks.All, args);
-        public void WriteError(params object[] args) => LogInternal(LogLevel.Error, null, LogSinks.All, args);
-        public void WriteFatal(params object[] args) => LogInternal(LogLevel.Fatal, null, LogSinks.All, args);
+        public void WriteTrace(params object[] args) => LogInternal(LogLevel.Trace, null, LogSinks.All, null, args);
+        public void WriteDebug(params object[] args) => LogInternal(LogLevel.Debug, null, LogSinks.All, null, args);
+        public void WriteInfo(params object[] args) => LogInternal(LogLevel.Info, null, LogSinks.All, null, args);
+        public void WriteWarning(params object[] args) => LogInternal(LogLevel.Warning, null, LogSinks.All, null, args);
+        public void WriteError(params object[] args) => LogInternal(LogLevel.Error, null, LogSinks.All, null, args);
+        public void WriteFatal(params object[] args) => LogInternal(LogLevel.Fatal, null, LogSinks.All, null, args);
 
         // ====================================================================
         // İÇ METOD - LOG İŞLEME
         // ====================================================================
 
-        private void LogInternal(LogLevel level, string? source, LogSinks targetSinks, params object[] args)
+        private void LogInternal(LogLevel level, string? source, LogSinks targetSinks, ConsoleColor? color, params object[] args)
         {
             if (_isDisposed || args == null || args.Length == 0)
                 return;
@@ -422,7 +445,8 @@ namespace AlgoTrade.Core.Logging
                     source: source ?? DefaultSource,
                     exception: exception,
                     properties: properties.Count > 0 ? properties : null,
-                    targetSinks: targetSinks
+                    targetSinks: targetSinks,
+                    color: color
                 );
 
                 AddToBuffer(entry);

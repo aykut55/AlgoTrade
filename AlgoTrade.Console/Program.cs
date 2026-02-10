@@ -80,6 +80,7 @@ void main()
     LogManager.Instance.RegisterSink(new ConsoleSink());
     LogManager.Instance.RegisterSink(new DebugSink());
     LogManager.Instance.RegisterSink(new FileSink(AppSettings.LogsDir, "app.log"));
+    // LogManager.DisableTimestamp(); LogManager.DisableLevel(); LogManager.DisableSource();
     consoleLogger = LogManager.GetConsoleLogger();
     consoleLogger.Clear();
 

@@ -29,23 +29,16 @@ namespace AlgoTrade.Core.Logging.Sinks
                 {
                     if (entry.IsRaw)
                     {
-                        if (entry.Color.HasValue)
-                        {
-                            var orig = Console.ForegroundColor;
-                            Console.ForegroundColor = entry.Color.Value;
-                            Console.WriteLine(entry.Message);
-                            Console.ForegroundColor = orig;
-                        }
-                        else
-                        {
-                            Console.WriteLine(entry.Message);
-                        }
+                        var orig = Console.ForegroundColor;
+                        Console.ForegroundColor = entry.Color ?? GetColor(entry.Level);
+                        Console.WriteLine(entry.Message);
+                        Console.ForegroundColor = orig;
                         return;
                     }
 
                     var message = entry.ToString(ShowTimestamp, ShowLevel, ShowSource);
                     var originalColor = Console.ForegroundColor;
-                    Console.ForegroundColor = GetColor(entry.Level);
+                    Console.ForegroundColor = entry.Color ?? GetColor(entry.Level);
                     Console.WriteLine(message);
                     Console.ForegroundColor = originalColor;
                 }
@@ -62,7 +55,7 @@ namespace AlgoTrade.Core.Logging.Sinks
             {
                 LogLevel.Trace => ConsoleColor.Gray,
                 LogLevel.Debug => ConsoleColor.DarkGray,
-                LogLevel.Info => ConsoleColor.White,
+                LogLevel.Info => ConsoleColor.Gray,
                 LogLevel.Warning => ConsoleColor.Yellow,
                 LogLevel.Error => ConsoleColor.Red,
                 LogLevel.Fatal => ConsoleColor.DarkRed,

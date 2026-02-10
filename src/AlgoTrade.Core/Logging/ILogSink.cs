@@ -23,6 +23,21 @@ namespace AlgoTrade.Core.Logging
         bool IsEnabled { get; set; }
 
         /// <summary>
+        /// Timestamp gösterilsin mi?
+        /// </summary>
+        bool ShowTimestamp { get; set; }
+
+        /// <summary>
+        /// Log level gösterilsin mi?
+        /// </summary>
+        bool ShowLevel { get; set; }
+
+        /// <summary>
+        /// Source (App name) gösterilsin mi?
+        /// </summary>
+        bool ShowSource { get; set; }
+
+        /// <summary>
         /// Log entry'yi işle ve hedefe yaz
         /// Thread-safe olmalı!
         /// </summary>
