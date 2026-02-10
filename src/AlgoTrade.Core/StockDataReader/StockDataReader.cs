@@ -181,6 +181,75 @@ namespace AlgoTrade.Core.StockDataReader
             return FormatTable(_data.Skip(start).Take(end - start + 1).ToList());
         }
 
+        public void WriteToCsvFile(string filePath, List<StockData> data)
+        {
+            if (data.Count == 0) return;
+
+            var sb = new StringBuilder();
+            sb.AppendLine(BuildCsvHeader(data));
+
+            foreach (var d in data)
+            {
+                sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "{0};{1:yyyy.MM.dd};{1:HH:mm:ss};{2:F2};{3:F2};{4:F2};{5:F2};{6};{7}",
+                    d.Id, d.DateTime, d.Open, d.High, d.Low, d.Close, d.Volume, d.Size));
+            }
+
+            using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+            using var writer = new StreamWriter(fs, Encoding.UTF8);
+            writer.Write(sb.ToString());
+        }
+
+        public void WriteToTxtFile(string filePath, List<StockData> data)
+        {
+            if (data.Count == 0) return;
+
+            var sb = new StringBuilder();
+            sb.AppendLine(BuildTxtHeader(data));
+            foreach (var d in data)
+            {
+                sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "{0,-11}{1:yyyy.MM.dd HH:mm:ss}{2,12:F2}{3,11:F2}{4,11:F2}{5,11:F2}{6,16}{7,11}",
+                    d.Id, d.DateTime, d.Open, d.High, d.Low, d.Close, d.Volume, d.Size));
+            }
+
+            using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+            using var writer = new StreamWriter(fs, Encoding.UTF8);
+            writer.Write(sb.ToString());
+        }
+
+        private string BuildCsvHeader(List<StockData> data)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"# Kayit_Zamani: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            if (_metaData.TryGetValue("GrafikSembol", out var sembol))
+                sb.AppendLine($"# GrafikSembol: {sembol}");
+            if (_metaData.TryGetValue("GrafikPeriyot", out var periyot))
+                sb.AppendLine($"# GrafikPeriyot: {periyot}");
+            sb.AppendLine($"# BarCount: {data.Count}");
+            sb.AppendLine($"# Baslangic_Tarihi: {data.First().DateTime:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine($"# Bitis_Tarihi: {data.Last().DateTime:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine("# Format : Id Date Time Open High Low Close Volume Lot");
+            sb.Append("# Data");
+            return sb.ToString();
+        }
+
+        private string BuildTxtHeader(List<StockData> data)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"{"Kayit Zamani",-17} : {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            if (_metaData.TryGetValue("GrafikSembol", out var sembol))
+                sb.AppendLine($"{"GrafikSembol",-17} : {sembol}");
+            if (_metaData.TryGetValue("GrafikPeriyot", out var periyot))
+                sb.AppendLine($"{"GrafikPeriyot",-17} : {periyot}");
+            sb.AppendLine($"{"BarCount",-17} : {data.Count}");
+            sb.AppendLine($"{"Başlangiç Tarihi",-17} : {data.First().DateTime:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine($"{"Bitiş Tarihi",-17} : {data.Last().DateTime:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine($"{"Format",-17} : Id Date Time Open High Low Close Volume Lot");
+            sb.Append("Data");
+            return sb.ToString();
+        }
+
         private static string FormatTable(List<StockData> data)
         {
             if (data.Count == 0)

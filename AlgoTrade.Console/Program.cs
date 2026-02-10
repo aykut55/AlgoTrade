@@ -301,7 +301,46 @@ void main()
 
                     LogManager.LogRaw("");
                     LogManager.LogRaw(stockDataReader.Tail());
-                }    
+                }  
+                
+                // --- WriteToCsvFile / WriteToTxtFile Kullanımları ---
+                // Tüm data
+                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_all.csv"), stockDataReader.GetData());
+                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_all.txt"), stockDataReader.GetData());
+
+                // İlk 100 kayıt
+                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_head.csv"), stockDataReader.GetData().Take(100).ToList());
+                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_head.txt"), stockDataReader.GetData().Take(100).ToList());
+
+                // Son 50 kayıt
+                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_tail.csv"), stockDataReader.GetData().TakeLast(50).ToList());
+                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_tail.txt"), stockDataReader.GetData().TakeLast(50).ToList());
+
+                // Belirli aralık (index 200-299)
+                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_range.csv"), stockDataReader.GetData(200, 299));
+                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_range.txt"), stockDataReader.GetData(200, 299));
+
+                // Belirli bir tarihten sonrası (yyyy.MM.dd HH:mm:ss)
+                // var afterDate = DateTime.ParseExact("2025.01.01 09:30:00", "yyyy.MM.dd HH:mm:ss", CultureInfo.InvariantCulture);
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_after.csv"), stockDataReader.GetData().Where(d => d.DateTime >= afterDate).ToList());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_after.txt"), stockDataReader.GetData().Where(d => d.DateTime >= afterDate).ToList());
+
+                // Belirli bir tarihten önce (yyyy.MM.dd)
+                // var beforeDate = DateTime.ParseExact("2024.06.30", "yyyy.MM.dd", CultureInfo.InvariantCulture);
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_before.csv"), stockDataReader.GetData().Where(d => d.DateTime <= beforeDate).ToList());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_before.txt"), stockDataReader.GetData().Where(d => d.DateTime <= beforeDate).ToList());
+
+                // Tarih aralığı (yyyy.MM.dd HH:mm:ss)
+                // var startDate = DateTime.ParseExact("2024.01.01 00:00:00", "yyyy.MM.dd HH:mm:ss", CultureInfo.InvariantCulture);
+                // var endDate = DateTime.ParseExact("2024.12.31 23:59:59", "yyyy.MM.dd HH:mm:ss", CultureInfo.InvariantCulture);
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_daterange.csv"), stockDataReader.GetData().Where(d => d.DateTime >= startDate && d.DateTime <= endDate).ToList());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_daterange.txt"), stockDataReader.GetData().Where(d => d.DateTime >= startDate && d.DateTime <= endDate).ToList());
+
+                // Sadece saat bazlı filtreleme (HH:mm:ss)
+                // var startTime = TimeSpan.ParseExact("09:30:00", "hh\\:mm\\:ss", CultureInfo.InvariantCulture);
+                // var endTime = TimeSpan.ParseExact("15:00:00", "hh\\:mm\\:ss", CultureInfo.InvariantCulture);
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_time.csv"), stockDataReader.GetData().Where(d => d.Time >= startTime && d.Time <= endTime).ToList());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_time.txt"), stockDataReader.GetData().Where(d => d.Time >= startTime && d.Time <= endTime).ToList());
             }
         }
     }
