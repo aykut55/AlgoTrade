@@ -107,6 +107,36 @@ namespace AlgoTrade.Core.Logging
             return Instance._consoleLogger;
         }
 
+        /// <summary>
+        /// ConsoleSink'i geçici olarak devre dışı bırak.
+        /// </summary>
+        public static void DisableConsoleSink() => Instance.EnableSink(LogSinks.Console, false);
+
+        /// <summary>
+        /// ConsoleSink'i tekrar aktif et.
+        /// </summary>
+        public static void EnableConsoleSink() => Instance.EnableSink(LogSinks.Console, true);
+
+        /// <summary>
+        /// FileSink'i geçici olarak devre dışı bırak.
+        /// </summary>
+        public static void DisableFileSink() => Instance.EnableSink(LogSinks.File, false);
+
+        /// <summary>
+        /// FileSink'i tekrar aktif et.
+        /// </summary>
+        public static void EnableFileSink() => Instance.EnableSink(LogSinks.File, true);
+
+        /// <summary>
+        /// DebugSink'i geçici olarak devre dışı bırak.
+        /// </summary>
+        public static void DisableDebugSink() => Instance.EnableSink(LogSinks.Debug, false);
+
+        /// <summary>
+        /// DebugSink'i tekrar aktif et.
+        /// </summary>
+        public static void EnableDebugSink() => Instance.EnableSink(LogSinks.Debug, true);
+
         // ====================================================================
         // SINK YÖNETİMİ
         // ====================================================================

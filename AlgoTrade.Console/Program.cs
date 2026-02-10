@@ -10,6 +10,7 @@ using System.Text;
 using static Nessos.LinqOptimizer.Core.QueryExpr;
 
 var consoleLogger = new ConsoleLogger();
+var sb = new StringBuilder();
 
 void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
 {
@@ -26,7 +27,7 @@ void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string>
         var format = stockMetaData.GetValueOrDefault("Format", "N/A");
 
         int padding = 18;
-        var sb = new StringBuilder();
+        sb.Clear();
         sb.AppendLine($"{"\tKayit Zamani".PadRight(padding)}: {kayitZamani}");
         sb.AppendLine($"{"\tGrafikSembol".PadRight(padding)}: {grafikSembol}");
         sb.AppendLine($"{"\tGrafikPeriyot".PadRight(padding)}: {grafikPeriyot}");
@@ -120,10 +121,19 @@ void main()
 
             long t1 = stockDataReader.GetElapsedTimeMsec();
 
-            var sb = new StringBuilder();
-            sb.Append("is completed in ");
-            sb.Append($"{t1} ms.");
-            LogManager.LogRaw(sb.ToString());
+            LogManager.DisableConsoleSink();
+            {
+                sb.Clear();
+                sb.Append("is completed in ");
+                sb.Append($"{t1} ms.");
+                LogManager.LogRaw(sb.ToString());
+
+                consoleLogger.Write("is completed in ");
+                consoleLogger.Write($"{t1}", ConsoleColor.Green);
+                consoleLogger.WriteLine(" ms.");
+
+                LogManager.EnableConsoleSink();
+            }
 
             if (stockDataReader.IsMetaDataRead)
             {
@@ -264,13 +274,23 @@ void main()
 
                 long t2 = stockDataReader.GetElapsedTimeMsec();
 
-                LogManager.LogRaw($"{"\tData count".PadRight(17)} : {stockDataReader.GetDataCount()}");
-                var sb2 = new StringBuilder();
-                sb2.Append("is completed in ");
-                sb2.Append($"{t2} ms.");
-                LogManager.LogRaw(sb2.ToString());
+                LogManager.DisableConsoleSink();
+                {
+                    sb.Clear();
+                    sb.Append("is completed in ");
+                    sb.Append($"{t2} ms.");
+                    LogManager.LogRaw(sb.ToString());
+
+                    consoleLogger.Write("is completed in ");
+                    consoleLogger.Write($"{t2}", ConsoleColor.Green);
+                    consoleLogger.WriteLine(" ms.");
+
+                    LogManager.EnableConsoleSink();
+                }
 
                 stockDataList = stockDataReader.GetData();          // tümü
+
+                LogManager.LogRaw($"{"\n\tData count".PadRight(18)} : {stockDataReader.GetDataCount()}");
 
                 /*
                 LogManager.LogRaw("");
