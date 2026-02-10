@@ -11,6 +11,7 @@ using static Nessos.LinqOptimizer.Core.QueryExpr;
 
 var consoleLogger = new ConsoleLogger();
 var sb = new StringBuilder();
+bool addHeadTailInfo = false;
 
 void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
 {
@@ -293,13 +294,14 @@ void main()
 
                 LogManager.LogRaw($"{"\n\tData count".PadRight(18)} : {stockDataReader.GetDataCount()}");
 
-                /*
-                LogManager.LogRaw("");
-                LogManager.LogRaw(stockDataReader.Head());
+                if (addHeadTailInfo)
+                {
+                    LogManager.LogRaw("");
+                    LogManager.LogRaw(stockDataReader.Head());
 
-                LogManager.LogRaw("");
-                LogManager.LogRaw(stockDataReader.Tail());
-                */
+                    LogManager.LogRaw("");
+                    LogManager.LogRaw(stockDataReader.Tail());
+                }    
             }
         }
     }
