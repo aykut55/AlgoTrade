@@ -2,9 +2,11 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using AlgoTrade.Core.DataProvider;
+
 namespace AlgoTrade.Core.StockDataReader
 {
-    public class StockDataReader : IDisposable
+    public class StockDataReader : MarketDataProvider, IDisposable
     {
         public enum FilterMode
         {
@@ -20,20 +22,22 @@ namespace AlgoTrade.Core.StockDataReader
         private readonly ConcurrentDictionary<string, string> _metaData = new();
         private readonly List<string> _metaDataLines = new();
         private readonly Stopwatch _stopwatch = new();
-        private List<StockData> _stockDataList = new();
+        // private List<StockData> _data = new();  // [MarketDataProvider] _data base class'ta tanimlandi
         private bool _isDisposed;
 
         public bool IsMetaDataRead { get; private set; }
-        public bool IsDataRead { get; private set; }
-        public int GetDataCount() => _stockDataList.Count;
-        public List<StockData> GetData() => _stockDataList;
-        public List<StockData> GetData(int start, int end)
-        {
-            if (start < 0) start = 0;
-            if (end >= _stockDataList.Count) end = _stockDataList.Count - 1;
-            if (start > end) return new List<StockData>();
-            return _stockDataList.Skip(start).Take(end - start + 1).ToList();
-        }
+        // public bool IsDataRead { get; private set; }  // [MarketDataProvider] base class'tan geliyor (_data.Count > 0)
+
+        // [MarketDataProvider] GetDataCount(), GetData(), GetData(int, int), Data property base class'tan geliyor
+        // public int GetDataCount() => _data.Count;
+        // public List<StockData> GetData() => _data;
+        // public List<StockData> GetData(int start, int end)
+        // {
+        //     if (start < 0) start = 0;
+        //     if (end >= _data.Count) end = _data.Count - 1;
+        //     if (start > end) return new List<StockData>();
+        //     return _data.Skip(start).Take(end - start + 1).ToList();
+        // }
         public int GetMetaDataCount() => _metaData.Count;
         public ConcurrentDictionary<string, string> GetMetaData() => _metaData;
         public List<string> GetMetaDataLines() => _metaDataLines;
@@ -53,10 +57,10 @@ namespace AlgoTrade.Core.StockDataReader
         {
             _stopwatch.Reset();
             IsMetaDataRead = false;
-            IsDataRead = false;
+            // IsDataRead = false;  // [MarketDataProvider] _data.Clear() yapilinca otomatik false olur
             _metaData.Clear();
             _metaDataLines.Clear();
-            _stockDataList.Clear();
+            _data.Clear();
         }
 
         public ConcurrentDictionary<string, string> ReadMetaData(string filePath)
@@ -128,8 +132,8 @@ namespace AlgoTrade.Core.StockDataReader
             sorted.Sort((x, y) => x.Id.CompareTo(y.Id));
 
             var filtered = ApplyFilter(sorted, mode, n1, n2, dt1, dt2);
-            _stockDataList = filtered;
-            IsDataRead = true;
+            _data = filtered;
+            // IsDataRead = true;  // [MarketDataProvider] _data.Count > 0 oldugu icin otomatik true olur
             OnProgress?.Invoke(this, filtered.Count, true);
             OnReadData?.Invoke(this, filtered, _stopwatch.ElapsedMilliseconds);
             return filtered;
@@ -156,25 +160,25 @@ namespace AlgoTrade.Core.StockDataReader
 
         public string Head(int n = 5)
         {
-            return FormatTable(_stockDataList.Take(n).ToList());
+            return FormatTable(_data.Take(n).ToList());
         }
 
         public string Tail(int n = 5)
         {
-            return FormatTable(_stockDataList.TakeLast(n).ToList());
+            return FormatTable(_data.TakeLast(n).ToList());
         }
 
         public string ToTable()
         {
-            return FormatTable(_stockDataList);
+            return FormatTable(_data);
         }
 
         public string ToTable(int start, int end)
         {
             if (start < 0) start = 0;
-            if (end >= _stockDataList.Count) end = _stockDataList.Count - 1;
+            if (end >= _data.Count) end = _data.Count - 1;
             if (start > end) return "(invalid range)";
-            return FormatTable(_stockDataList.Skip(start).Take(end - start + 1).ToList());
+            return FormatTable(_data.Skip(start).Take(end - start + 1).ToList());
         }
 
         private static string FormatTable(List<StockData> data)
@@ -210,7 +214,7 @@ namespace AlgoTrade.Core.StockDataReader
             _isDisposed = true;
             _metaData.Clear();
             _metaDataLines.Clear();
-            _stockDataList.Clear();
+            _data.Clear();
         }
 
         private static StockData CreateStockData(string[] parts, CultureInfo culture)
