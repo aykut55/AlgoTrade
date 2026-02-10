@@ -14,7 +14,7 @@ namespace AlgoTrade.Core.Logging.Sinks
     {
         private readonly string _filePath;
         private readonly ConcurrentQueue<LogEntry> _writeQueue = new ConcurrentQueue<LogEntry>();
-        private readonly Timer _flushTimer;
+        private readonly System.Threading.Timer _flushTimer;
         private readonly object _fileLock = new object();
         private bool _isDisposed;
 
@@ -46,7 +46,7 @@ namespace AlgoTrade.Core.Logging.Sinks
                 File.Delete(filePath);
             }
 
-            _flushTimer = new Timer(_ => Flush(), null, FlushIntervalMs, FlushIntervalMs);
+            _flushTimer = new System.Threading.Timer(_ => Flush(), null, FlushIntervalMs, FlushIntervalMs);
         }
 
         public FileSink(string fileDirectory, string fileName, bool appendMode = false)

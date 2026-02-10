@@ -44,6 +44,11 @@ namespace AlgoTrade.Core.Logging
         private bool _isDisposed;
 
         /// <summary>
+        /// Master switch - false yapılırsa tüm loglama durur
+        /// </summary>
+        public bool IsEnabled { get; set; } = true;
+
+        /// <summary>
         /// Buffer max boyutu
         /// </summary>
         public int MaxBufferSize { get; set; } = 10000;
@@ -292,7 +297,7 @@ namespace AlgoTrade.Core.Logging
 
         public static void LogRaw(string message, ConsoleColor? color, LogSinks sinks = LogSinks.All)
         {
-            if (message == null)
+            if (!Instance.IsEnabled || message == null)
                 return;
 
             var entry = new LogEntry(
@@ -411,7 +416,7 @@ namespace AlgoTrade.Core.Logging
 
         private void LogInternal(LogLevel level, string? source, LogSinks targetSinks, ConsoleColor? color, params object[] args)
         {
-            if (_isDisposed || args == null || args.Length == 0)
+            if (!IsEnabled || _isDisposed || args == null || args.Length == 0)
                 return;
 
             try

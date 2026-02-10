@@ -11,6 +11,7 @@ namespace AlgoTrade.Core.Logging
     /// </summary>
     public class ConsoleLogger
     {
+        public bool IsEnabled { get; set; } = true;
         public bool ShowTimestamp { get; set; } = false;
         public bool ShowLevel { get; set; } = false;
         public bool ShowSource { get; set; } = false;
@@ -18,21 +19,25 @@ namespace AlgoTrade.Core.Logging
 
         public void Write(string message)
         {
+            if (!IsEnabled) return;
             Console.Write(BuildMessage(message));
         }
 
         public void WriteLine(string message)
         {
+            if (!IsEnabled) return;
             Console.WriteLine(BuildMessage(message));
         }
 
         public void WriteLine()
         {
+            if (!IsEnabled) return;
             Console.WriteLine();
         }
 
         public void Write(string message, ConsoleColor color)
         {
+            if (!IsEnabled) return;
             var original = Console.ForegroundColor;
             Console.ForegroundColor = color;
             Console.Write(BuildMessage(message));
@@ -41,6 +46,7 @@ namespace AlgoTrade.Core.Logging
 
         public void WriteLine(string message, ConsoleColor color)
         {
+            if (!IsEnabled) return;
             var original = Console.ForegroundColor;
             Console.ForegroundColor = color;
             Console.WriteLine(BuildMessage(message));
