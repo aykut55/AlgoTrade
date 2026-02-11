@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace AlgoTrade.Core.DataProvider
 {
@@ -185,6 +186,16 @@ namespace AlgoTrade.Core.DataProvider
         {
             ValidateInitialized();
             return (_data.First().DateTime, _data.Last().DateTime);
+        }
+
+        public virtual StringBuilder GetDataInfo()
+        {
+            ValidateInitialized();
+            var sb = new StringBuilder();
+            sb.AppendLine($"Total Bars : {Data.Count}");
+            sb.AppendLine($"Start Date : {Data[0].DateTime:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"End Date   : {Data[Data.Count - 1].DateTime:yyyy-MM-dd HH:mm:ss}");
+            return sb;
         }
 
         #endregion

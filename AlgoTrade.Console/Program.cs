@@ -2,16 +2,26 @@ using AlgoTrade.Core;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Logging.Sinks;
 using AlgoTrade.Core.StockDataReader;
+using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading;
 using ScottPlot.Colormaps;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using static Nessos.LinqOptimizer.Core.QueryExpr;
 
-var consoleLogger = new ConsoleLogger();
-var sb = new StringBuilder();
 bool addHeadTailInfo = false;
+var sb = new StringBuilder();
+ConsoleLogger ? consoleLogger = null;
+List<StockData>? stockDataList = null;
+StockDataReader? stockDataReader = null;
+ConcurrentDictionary<string, string>? stockMetaData = null;
+AlgoTrader? algoTrader = null;
+TimeManager timer = TimeManager.GetInstance();
+LogManager logger = LogManager.GetInstance();
+
+string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
 
 void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
 {
@@ -60,39 +70,13 @@ void OnReadData(StockDataReader sender, List<StockData> data, long elapsedMs)
     // LogManager.Log(sb.ToString());
 }
 
-void main()
+void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, double percentage)
 {
-    /*
-    var trader = new AlgoTrader("MyStrategy");
+    //LogManager.LogRaw($"\rProgress: {currentBar}/{totalBars} ({percentage:F1}%)");
+}
 
-    trader.MessageReceived += message => Console.WriteLine(message);
-
-    trader.Start();
-    Thread.Sleep(10);
-    trader.Stop();
-    */
-
-
-    AppSettings.EnsureDirectories();
-
-    // ====================================================================
-    // LogManager Setup
-    // ====================================================================
-    LogManager.Instance.RegisterSink(new ConsoleSink());
-    LogManager.Instance.RegisterSink(new DebugSink());
-    LogManager.Instance.RegisterSink(new FileSink(AppSettings.LogsDir, "app.log"));
-    // LogManager.DisableTimestamp(); LogManager.DisableLevel(); LogManager.DisableSource();
-    consoleLogger = LogManager.GetConsoleLogger();
-    consoleLogger.Clear();
-
-    LogManager.LogRaw("Application started", ConsoleColor.Green);
-
-    string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
-
-    StockDataReader? stockDataReader = null;
-    List<StockData>? stockDataList = null;
-    ConcurrentDictionary<string, string>? stockMetaData = null;
-
+void readStockData()
+{
     try
     {
         if (!File.Exists(stockDataFullFileName))
@@ -301,24 +285,24 @@ void main()
 
                     LogManager.LogRaw("");
                     LogManager.LogRaw(stockDataReader.Tail());
-                }  
-                
+                }
+
                 // --- WriteToCsvFile / WriteToTxtFile Kullanımları ---
                 // Tüm data
-                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_all.csv"), stockDataReader.GetData());
-                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_all.txt"), stockDataReader.GetData());
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_all.csv"), stockDataReader.GetData());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_all.txt"), stockDataReader.GetData());
 
                 // İlk 100 kayıt
-                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_head.csv"), stockDataReader.GetData().Take(100).ToList());
-                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_head.txt"), stockDataReader.GetData().Take(100).ToList());
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_head.csv"), stockDataReader.GetData().Take(100).ToList());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_head.txt"), stockDataReader.GetData().Take(100).ToList());
 
                 // Son 50 kayıt
-                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_tail.csv"), stockDataReader.GetData().TakeLast(50).ToList());
-                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_tail.txt"), stockDataReader.GetData().TakeLast(50).ToList());
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_tail.csv"), stockDataReader.GetData().TakeLast(50).ToList());
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_tail.txt"), stockDataReader.GetData().TakeLast(50).ToList());
 
                 // Belirli aralık (index 200-299)
-                stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_range.csv"), stockDataReader.GetData(200, 299));
-                stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_range.txt"), stockDataReader.GetData(200, 299));
+                // stockDataReader.WriteToCsvFile(Path.Combine(AppSettings.OutputsDir, "data_range.csv"), stockDataReader.GetData(200, 299));
+                // stockDataReader.WriteToTxtFile(Path.Combine(AppSettings.OutputsDir, "data_range.txt"), stockDataReader.GetData(200, 299));
 
                 // Belirli bir tarihten sonrası (yyyy.MM.dd HH:mm:ss)
                 // var afterDate = DateTime.ParseExact("2025.01.01 09:30:00", "yyyy.MM.dd HH:mm:ss", CultureInfo.InvariantCulture);
@@ -350,20 +334,74 @@ void main()
     }
     finally
     {
-        stockDataReader?.Dispose();
-        stockDataReader = null;
-        stockDataList = null;
-        stockMetaData = null;
     }
-
-    LogManager.LogRaw("");
-    LogManager.LogRaw("Application finished", ConsoleColor.Green);
-
-    LogManager.LogRaw("\nÇıkmak için bir tuşa basın...");
-    Console.ReadKey();
-
-    LogManager.Instance.Dispose();
 }
 
-main();
+async Task runAlgoTrade()
+{
+    try
+    {
+        if (!stockDataReader!.IsDataReady)
+            return;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Running AlgoTrader");
+
+        algoTrader = new AlgoTrader("AlgoTrader");
+
+        algoTrader.OnTraderProgress += OnTraderProgress;
+        algoTrader.RegisterLogger(logger);
+        algoTrader.RegisterTimer(timer);
+
+        algoTrader.Reset();
+        algoTrader.SetData(stockDataReader!.GetData());
+
+        algoTrader.Initialize();
+
+        var sb = algoTrader.GetDataInfo();
+        LogManager.LogRaw("");
+        LogManager.LogRaw(sb.ToString());
+
+        await algoTrader.RunSingleTraderWithProgressAsync();
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred while reading data: {ex.Message}", ex);
+    }
+    finally
+    {
+    }
+}
+async Task main()
+{
+    AppSettings.EnsureDirectories();
+
+    logger.RegisterSink(new ConsoleSink());
+    logger.RegisterSink(new DebugSink());
+    logger.RegisterSink(new FileSink(AppSettings.LogsDir, "app.log"));
+    consoleLogger = LogManager.GetConsoleLogger();
+    consoleLogger.Clear();
+
+    LogManager.LogRaw("Application started", ConsoleColor.Green);
+    {
+        readStockData();
+
+        await runAlgoTrade();
+    }
+    LogManager.LogRaw("Application finished", ConsoleColor.Green);
+
+    //LogManager.LogRaw("\nÇıkmak için bir tuşa basın...");
+    //Console.ReadKey();
+
+    algoTrader?.Dispose();
+    stockDataReader?.Dispose();
+    LogManager.Instance.Dispose();
+
+    algoTrader = null;
+    stockDataReader = null;
+    stockDataList = null;
+    stockMetaData = null;
+}
+
+await main();
 
