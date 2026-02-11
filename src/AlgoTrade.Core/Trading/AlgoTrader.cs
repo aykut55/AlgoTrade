@@ -1,7 +1,8 @@
 using AlgoTrade.Core.DataProvider;
-using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
+using AlgoTrade.Core.Trading.Indicators;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -63,7 +64,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     }
 
-    private void OnSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars)
+    private void OnSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars, double percentage)
     {
 
     }
@@ -139,9 +140,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         indicators = new IndicatorManager(this.Data);
         if (indicators == null)
             return;
-        // *****************************************************************************
-        // Indicators - end
-        // *****************************************************************************
+
 
         // *****************************************************************************
         // SingleTrader - beg
@@ -152,7 +151,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.Dispose();
             singleTrader = null;
         }
-        singleTrader = new SingleTrader(0, "singleTraderQuery", this.Data, indicators, _logger);
+        singleTrader = new SingleTrader(0, "singleTrader", this.Data, indicators, _logger);
         if (singleTrader == null) return;
 
         // Assign callbacks
@@ -160,13 +159,17 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                                   OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, 
                                   OnSingleTraderProgress, OnApplyUserFlags);
 
+        // Init
         singleTrader.Reset();
 
-        singleTrader.Init();
-        // *****************************************************************************
-        // SingleTrader - end
-        // *****************************************************************************
+        // ne yapılacaksa bu arada yapilacak
 
+        // Reset
+        singleTrader.Init();
+
+        // *****************************************************************************
+        // AlgoTrader - Run
+        // *****************************************************************************
         IsRunning = true;
         await Task.Run(() =>
         {
@@ -174,16 +177,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var bar = _data[i];
-
                 singleTrader.Run(i);
-
-                // TODO: Strategy evaluate here
-                // EvaluateStrategy(i, bar);
 
                 double percentage = (i + 1) / (double)totalBars * 100.0;
                 OnTraderProgress?.Invoke(i + 1, totalBars, percentage);
             }
+
         }, cancellationToken);
         IsRunning = false;
 

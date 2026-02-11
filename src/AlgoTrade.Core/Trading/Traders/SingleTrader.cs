@@ -7,6 +7,54 @@ namespace AlgoTrade.Core.Trading;
 
 public class SingleTrader : MarketDataProvider, IDisposable
 {
+    #region Properties
+
+    // Identification
+    public int Id { get; private set; }
+    public void SetId(int id) => Id = id;
+    public int GetId() => Id;
+
+    public string Name { get; private set; }
+    public void SetName(string name) => Name = name;
+    public string GetName() => Name;
+
+    public void SetData(List<StockData> data)
+    {
+        _data = data;
+    }
+
+    // Symbol and System Id
+    public string SymbolName { get; set; }
+    public string SymbolPeriod { get; set; }
+    public string SystemId { get; set; }
+    public string SystemName { get; set; }
+    public string StrategyId { get; set; }
+    public string StrategyName { get; set; }
+
+    // Execution Time Tracking
+    public string LastExecutionId { get; set; }
+    public string LastExecutionTime { get; set; }
+    public string LastExecutionTimeStart { get; set; }
+    public string LastExecutionTimeStop { get; set; }
+    public string LastExecutionTimeInMSec { get; set; }
+    public string LastResetTime { get; set; }
+    public string LastStatisticsCalculationTime { get; set; }
+
+    // Logger
+    private LogManager? _logger;
+    public void SetLogger(LogManager? logger)
+    {
+        _logger = logger;
+    }
+
+    private IndicatorManager? _indicators;
+    public void SetIndicators(IndicatorManager? indicators)
+    {
+        _indicators = indicators;
+    }
+
+    #endregion
+
     public event Action<SingleTrader, int>? OnReset;
     public event Action<SingleTrader, int>? OnInit;
     public event Action<SingleTrader, int>? OnRun;
@@ -14,11 +62,19 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public event Action<SingleTrader, int>? OnBeforeOrder;
     public event Action<SingleTrader, string, int>? OnNotifySignal;
     public event Action<SingleTrader, int>? OnAfterOrder;
-    public event Action<SingleTrader, int, int>? OnProgress;
+    public event Action<SingleTrader, int, int, double>? OnProgress;
     public event Action<SingleTrader>? OnApplyUserFlags;    
 
     public SingleTrader(int id, string name, List<StockData> data, IndicatorManager indicators, LogManager? logger = null)
     {
+        SetId(id);
+        SetName(name);
+        SetData(data);
+        SetIndicators(indicators);
+
+        _logger = null;
+        if (logger is not null)
+            SetLogger(logger);
     }
     public SingleTrader SetCallbacks(
         Action<SingleTrader, int>? onReset = null,
@@ -28,7 +84,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         Action<SingleTrader, int>? onBeforeOrders = null,
         Action<SingleTrader, string, int>? onNotifySignal = null,
         Action<SingleTrader, int>? onAfterOrders = null,
-        Action<SingleTrader, int, int>? onProgress = null,
+        Action<SingleTrader, int, int, double>? onProgress = null,
         Action<SingleTrader>? onApplyUserFlags = null)
     {
         if (onReset != null) OnReset = onReset;
@@ -44,7 +100,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         return this;
     }
 
-
     public void Reset()
     {
         OnReset?.Invoke(this, 0);
@@ -57,18 +112,44 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public void Run(int barIndex)
     {
-        OnBeforeOrder?.Invoke(this, barIndex);
+        int i = barIndex;
 
-        // TODO: Strategy evaluate, sinyal üret, emir uygula
+        if (!IsInitialized)
+            //throw new InvalidOperationException("Trader not initialized");
 
-        OnAfterOrder?.Invoke(this, barIndex);
+        if (i >= Data.Count)
+            return;
 
-        OnProgress?.Invoke(this, barIndex, GetDataCount());
+        OnRun?.Invoke(this, 0);
+
+        {
+            OnBeforeOrder?.Invoke(this, barIndex);
+
+            // TODO: Strategy evaluate, sinyal üret, emir uygula
+
+            OnAfterOrder?.Invoke(this, barIndex);
+        }
+
+        OnRun?.Invoke(this, 1);
+
+        int totalBars = GetDataCount();
+        double percentage = (i + 1) / (double)totalBars * 100.0;
+        OnProgress?.Invoke(this, i+1, totalBars, percentage);
     }
 
     public void Finalize(bool dispose)
     {
         OnFinal?.Invoke(this, dispose ? 1 : 0);
+    }
+    public SingleTrader ResetModules()
+    {
+
+        return this;
+    }
+    public SingleTrader InitModules()
+    {
+
+        return this;
     }
     public void Dispose()
     {
