@@ -1,7 +1,9 @@
 using AlgoTrade.Core;
 using AlgoTrade.Core.DataProvider;
-using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
+using MathNet.Numerics.Statistics;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -53,6 +55,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         _indicators = indicators;
     }
 
+    public InitialTradeParams initialTradeParams { get; private set; }
+
     #endregion
 
     public event Action<SingleTrader, int>? OnReset;
@@ -75,6 +79,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         _logger = null;
         if (logger is not null)
             SetLogger(logger);
+
+        CreateModules();
     }
     public SingleTrader SetCallbacks(
         Action<SingleTrader, int>? onReset = null,
@@ -103,11 +109,20 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public void Reset()
     {
         OnReset?.Invoke(this, 0);
+
+        // Reset internal modules (state only)
+        ResetModules();
+
+        OnReset?.Invoke(this, 1);
     }
 
     public void Init()
     {
         OnInit?.Invoke(this, 0);
+
+        InitModules();
+
+        OnInit?.Invoke(this, 1);
     }
 
     public void Run(int barIndex)
@@ -141,17 +156,52 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         OnFinal?.Invoke(this, dispose ? 1 : 0);
     }
+    public SingleTrader CreateModules()
+    {
+        /*signals = new Signals();
+        status = new Status();
+        flags = new Flags();
+        lists = new Lists();
+        timeUtils = new TimeUtils();
+        timeUtils.SetTrader(this);
+        karZarar = new KarZarar(this);
+        karAlZararKes = new KarAlZararKes();
+        karAlZararKes.SetTrader(this);
+        komisyon = new Komisyon();
+        komisyon.SetTrader(this);
+        Bakiye = new Bakiye();
+        Bakiye.SetTrader(this);
+        bakiye = new Bakiye();
+        bakiye.SetTrader(this);
+        pozisyonBuyuklugu = new PozisyonBuyuklugu();
+        Position = new Position();
+        statistics = new AlgoTradeWithOptimizationSupportWinFormsApp.Trading.Statistics.Statistics();*/
+
+        initialTradeParams = new InitialTradeParams();
+
+        return this;
+    }
     public SingleTrader ResetModules()
     {
+        initialTradeParams.Reset();
 
         return this;
     }
     public SingleTrader InitModules()
     {
+        initialTradeParams.Init();
 
         return this;
     }
+    public SingleTrader DeleteModules()
+    {
+        initialTradeParams = null;
+
+        return this;
+    }
+
     public void Dispose()
     {
+        DeleteModules();
     }
 }
