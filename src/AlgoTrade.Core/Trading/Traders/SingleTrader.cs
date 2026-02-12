@@ -66,6 +66,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public TradeSignals strategySignal { get; set; }
     public KarZarar karZarar { get; private set; }
     public KarAlZararKes karAlZararKes { get; private set; }
+    public Statistics.Statistics statistics { get; private set; }
+    
 
     #endregion
 
@@ -313,9 +315,20 @@ public class SingleTrader : MarketDataProvider, IDisposable
         OnProgress?.Invoke(this, i + 1, totalBars, percentage);
     }
 
-    public void Finalize(bool dispose)
+    public void Finalize(bool saveStatisticsToFile = true, string? outputDir = null)
     {
-        OnFinal?.Invoke(this, dispose ? 1 : 0);
+        OnFinal?.Invoke(this, 0);
+
+        Log($"\nCalculating statistics...");
+
+        CalculateStatistics();
+
+        if (saveStatisticsToFile) {
+            Log($"\nSaving statistics to files...");
+            WriteStatisticsToFile(outputDir ?? AppSettings.LogsDir);
+        }
+
+        OnFinal?.Invoke(this, 1);
     }
     
     public SingleTrader CreateModules()
@@ -356,6 +369,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         karAlZararKes = new KarAlZararKes();
         karAlZararKes.SetTrader(this);
 
+        statistics = new Statistics.Statistics();
+
         return this;
     }
     
@@ -376,6 +391,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         karZarar.Reset();
 
         karAlZararKes.Reset();
+
+        statistics.Reset();
 
         return this;
     }
@@ -398,6 +415,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         karAlZararKes.Init();
 
+        statistics.Init(this);
+
         return this;
     }
     
@@ -414,6 +433,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
         lists = null;
 
         timeUtils = null;
+
+        karZarar = null;
+
+        karAlZararKes = null;
+
+        statistics = null;
 
         return this;
     }
@@ -2022,6 +2047,93 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.signals.TimeFilteringEnabled = true;     // DEFAULT = False, Ek maliyet getirir : 
 
         return this;
+    }
+
+    public void CalculateStatistics()
+    {
+        if (_data == null || _data.Count == 0)
+            throw new ArgumentException("Data cannot be null or empty");
+        int lastBarIndex = GetLastBarIndex();
+        statistics.Hesapla(lastBarIndex);
+    }
+
+    public void WriteStatisticsToFile(
+        string outputDir,
+        bool saveFullStatsTxt = true,
+        bool saveFullStatsCsv = true,
+        bool saveMinimalStatsTxt = true,
+        bool saveMinimalStatsCsv = true,
+        bool saveFullListsTxt = true,
+        bool saveFullListsCsv = true,
+        bool saveMinimalListsTxt = true,
+        bool saveMinimalListsCsv = true,
+        bool saveFullStatsTxtFormatted = true,
+        bool saveMinimalStatsTxtFormatted = true)
+    {
+        if (saveFullStatsTxt)
+        {
+            Log($"\n\tSaving statistics to SingleTraderStatistics.txt...");
+            statistics.SaveToTxt(Path.Combine(outputDir, "SingleTraderStatistics.txt"));
+        }
+
+        if (saveFullStatsCsv)
+        {
+            Log($"\n\tSaving statistics to SingleTraderStatistics.csv...");
+            statistics.SaveToCsv(Path.Combine(outputDir, "SingleTraderStatistics.csv"));
+        }
+
+        if (saveMinimalStatsTxt)
+        {
+            Log($"\n\tSaving statistics to SingleTraderStatisticsMinimal.txt...");
+            statistics.SaveToTxtMinimal(Path.Combine(outputDir, "SingleTraderStatisticsMinimal.txt"));
+        }
+
+        if (saveMinimalStatsCsv)
+        {
+            Log($"\n\tSaving statistics to SingleTraderStatisticsMinimal.csv...");
+            statistics.SaveToCsvMinimal(Path.Combine(outputDir, "SingleTraderStatisticsMinimal.csv"));
+        }
+
+        if (saveFullListsTxt)
+        {
+            Log($"\n\tSaving statistics to SingleTraderLists.txt...");
+            statistics.SaveListsToTxt(Path.Combine(outputDir, "SingleTraderLists.txt"));
+        }
+
+        if (saveFullListsCsv)
+        {
+            Log($"\n\tSaving statistics to SingleTraderLists.csv...");
+            statistics.SaveListsToCsv(Path.Combine(outputDir, "SingleTraderLists.csv"));
+        }
+
+        if (saveMinimalListsTxt)
+        {
+            Log($"\n\tSaving statistics to SingleTraderListsMinimal.txt...");
+            statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, "SingleTraderListsMinimal.txt"));
+        }
+
+        if (saveMinimalListsCsv)
+        {
+            Log($"\n\tSaving statistics to SingleTraderListsMinimal.csv...");
+            statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, "SingleTraderListsMinimal.csv"));
+        }
+
+        if (saveFullStatsTxtFormatted)
+        {
+            Log($"\n\tSaving statistics to SingleTraderStatisticsFormatted.txt...");
+            statistics.SaveToTxtFormatted(Path.Combine(outputDir, "SingleTraderStatisticsFormatted.txt"));
+        }
+
+        if (saveMinimalStatsTxtFormatted)
+        {
+            Log($"\n\tSaving statistics to SingleTraderStatisticsFormattedMinimal.txt...");
+            statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, "SingleTraderStatisticsFormattedMinimal.txt"));
+        }
+    }
+    private void Log(string message)
+    {
+        if (_logger == null) return;
+        _logger.LogRawInstance(message);
     }
 
     public void Dispose()

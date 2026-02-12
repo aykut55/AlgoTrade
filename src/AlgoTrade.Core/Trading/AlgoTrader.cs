@@ -262,8 +262,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             var karZararYuzde = singleTrader.SonKarZararYuzde;          // 0.85
             var ozet          = singleTrader.TaramaOzeti;               // "A | Bar:5 | KZ:125.50 | %:0.85"
 
-            Log("\nScreening summary...");
-            Log(ozet);
+            Log($"\nScreening summary... : {ozet}");
 
             Log("\nFinalizing singleTrader...");
 
@@ -305,7 +304,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         // Update state flags
         singleTrader.IsRunning = false;
         singleTrader.IsStopped = true;
-        Log($"SingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
+        Log($"\nSingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
 
         Log("");
         Log($"AlgoTrader '{Name}' completed. Processed {totalBars} bars.");

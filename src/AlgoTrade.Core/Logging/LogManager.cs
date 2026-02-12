@@ -313,6 +313,32 @@ namespace AlgoTrade.Core.Logging
         }
 
         // ====================================================================
+        // LOG METODLARI - INSTANCE (Inject edilmiş logger üzerinden yazma)
+        // ====================================================================
+
+        public void LogRawInstance(string message, LogSinks sinks = LogSinks.All)
+        {
+            LogRawInstance(message, null, sinks);
+        }
+
+        public void LogRawInstance(string message, ConsoleColor? color, LogSinks sinks = LogSinks.All)
+        {
+            if (!IsEnabled || message == null)
+                return;
+
+            var entry = new LogEntry(
+                level: LogLevel.Info,
+                message: message,
+                targetSinks: sinks,
+                isRaw: true,
+                color: color
+            );
+
+            AddToBuffer(entry);
+            SendToSinks(entry);
+        }
+
+        // ====================================================================
         // LOG METODLARI - STATIC (Global logging to all sinks)
         // ====================================================================
 
@@ -624,3 +650,46 @@ namespace AlgoTrade.Core.Logging
         }
     }
 }
+
+// ============================================================================
+// TODO: Static -> Instance method refactoring
+// ============================================================================
+//
+// YAPILAN:
+//   - LogRawInstance() eklendi (non-static versiyon).
+//     SingleTrader gibi siniflar inject edilen _logger uzerinden
+//     instance method ile log yazabiliyor.
+//     Boylece ileride sinifa ozel logger verilebilir (farkli sink'ler vb.)
+//
+// YAPILACAK:
+//   Asagidaki static method'larin da non-static versiyonlari eklenmeli:
+//
+//   Static method                  ->  Instance method (onerilen isim)
+//   ─────────────────────────────────────────────────────────────────────
+//   LogRaw(message, color, sinks)  ->  LogRawInstance(message, color, sinks)   [DONE]
+//   Log(params object[])           ->  WriteLog(params object[])               [DONE - zaten var]
+//   Log(ConsoleColor, params)      ->  WriteLog(ConsoleColor, params)          [TODO]
+//   Log(message, ConsoleColor)     ->  WriteLog(message, ConsoleColor)         [TODO]
+//   LogTrace(params)               ->  WriteTrace(params)                      [DONE - zaten var]
+//   LogDebug(params)               ->  WriteDebug(params)                      [DONE - zaten var]
+//   LogInfo(params)                ->  WriteInfo(params)                       [DONE - zaten var]
+//   LogWarning(params)             ->  WriteWarning(params)                    [DONE - zaten var]
+//   LogError(params)               ->  WriteError(params)                      [DONE - zaten var]
+//   LogFatal(params)               ->  WriteFatal(params)                      [DONE - zaten var]
+//   LogTrace(color, params)        ->  WriteTrace(color, params)               [TODO]
+//   LogDebug(color, params)        ->  WriteDebug(color, params)               [TODO]
+//   LogInfo(color, params)         ->  WriteInfo(color, params)                [TODO]
+//   LogWarning(color, params)      ->  WriteWarning(color, params)             [TODO]
+//   LogError(color, params)        ->  WriteError(color, params)               [TODO]
+//   LogFatal(color, params)        ->  WriteFatal(color, params)               [TODO]
+//   LogError(message, Exception)   ->  WriteError(message, Exception)          [TODO]
+//   DisableConsoleSink()           ->  (instance versiyon)                     [TODO]
+//   EnableConsoleSink()            ->  (instance versiyon)                     [TODO]
+//
+// HEDEF:
+//   - Her sinif kendi logger instance'i uzerinden yazabilsin
+//   - Sinifa ozel sink konfigurasyonu mumkun olsun
+//     (ornegin SingleTrader sadece dosyaya yazsin, konsola yazmasin)
+//   - Static method'lar geriye uyumluluk icin kalacak (global/singleton loglama)
+//   - Yeni kodlarda instance method'lar tercih edilecek
+// ============================================================================
