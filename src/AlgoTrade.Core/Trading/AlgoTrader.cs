@@ -234,6 +234,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
+                    // Check if stop is requested
+                    if (singleTrader.IsStopRequested)
+                    {
+                        Log($"SingleTrader stopped by user request at bar {i}/{totalBars}");
+                        break;
+                    }
+
                     singleTrader.Run(i);
 
                     double percentage = (i + 1) / (double)totalBars * 100.0;
@@ -262,7 +269,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             _timer!.RestartTimer("3");
 
-            singleTrader.Finalize(false);
+            if (singleTrader.IsStopRequested)
+            {
+                singleTrader.Finalize(false);
+            }
+            else
+            {
+                singleTrader.Finalize(true);
+            }
 
             _timer!.StopTimer("3");
 
@@ -287,6 +301,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         finally
         {
         }
+
+        // Update state flags
+        singleTrader.IsRunning = false;
+        singleTrader.IsStopped = true;
+        Log($"SingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
 
         Log("");
         Log($"AlgoTrader '{Name}' completed. Processed {totalBars} bars.");
