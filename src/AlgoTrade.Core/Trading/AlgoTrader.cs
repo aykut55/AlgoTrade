@@ -124,8 +124,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
         try
         {
-            if (_timer != null)
-                _timer.RestartTimer("0");
+            _timer!.RestartTimer("0");
 
             totalBars = GetDataCount();
 
@@ -167,6 +166,17 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Reset
             singleTrader.Reset();
 
+            // Set attributes
+            /*
+            singleTrader.SymbolName             = this.SymbolName;
+            singleTrader.SymbolPeriod           = this.SymbolPeriod;
+            singleTrader.SystemId               = this.SystemId     = "0";
+            singleTrader.SystemName             = this.SystemName   = "SystemName";
+            singleTrader.StrategyId             = this.StrategyId   = "0";
+            singleTrader.StrategyName           = this.StrategyName = "StrategyName";*/
+            singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            
             // Configure position sizing
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
@@ -174,11 +184,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Init
             singleTrader.Init();
 
-            if (_timer != null)
-                _timer.RestartTimer("1");
+            _timer!.RestartTimer("1");
 
-            if (_timer != null)
-                _timer.RestartTimer("2");
+            _timer!.RestartTimer("2");
 
             // *****************************************************************************
             // SingleTrader - Run
@@ -202,24 +210,32 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             }, cancellationToken);
             IsRunning = false;
 
-            if (_timer != null)
-                _timer.StopTimer("2");
+            _timer!.StopTimer("2");
+
+            singleTrader.LastExecutionTimeStop = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            singleTrader.LastExecutionTimeInMSec = _timer!.GetElapsedTime("2").ToString();
+
+            // Tarama bilgileri: (Finalize gerek kalmadan alinabilir)
+            var yon           = singleTrader.SonYon;                    // "A"
+            var kacBarOnce    = singleTrader.SonSinyaldenBeriBarSayisi; // 5
+            var karZarar      = singleTrader.SonKarZararFiyat;          // 125.50
+            var karZararYuzde = singleTrader.SonKarZararYuzde;          // 0.85
+            var ozet          = singleTrader.TaramaOzeti;               // "A | Bar:5 | KZ:125.50 | %:0.85"
+
+            Log("\nScreening summary...");
+            Log(ozet);
 
             Log("\nFinalizing singleTrader...");
 
-            if (_timer != null)
-                _timer.RestartTimer("3");
+            _timer!.RestartTimer("3");
 
             singleTrader.Finalize(false);
 
-            if (_timer != null)
-                _timer.StopTimer("3");
+            _timer!.StopTimer("3");
 
-            if (_timer != null)
-                _timer.StopTimer("1");
+            _timer!.StopTimer("1");
 
-            if (_timer != null)
-                _timer.StopTimer("0");
+            _timer!.StopTimer("0");
 
             var t0 = _timer!.GetElapsedTime("0");
             var t1 = _timer!.GetElapsedTime("1");
