@@ -3,6 +3,7 @@ using AlgoTrade.Core.DataProvider;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
+// using AlgoTrade.Core.Trading.Core; // already included above
 using MathNet.Numerics.Statistics;
 using static AlgoTrade.Core.StockDataReader.StockDataReader;
 
@@ -61,10 +62,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public Status? status { get; private set; }
     public Flags? flags { get; private set; }
     public Lists? lists { get; private set; }
-
     public TimeUtils timeUtils { get; private set; }
-
     public TradeSignals strategySignal { get; set; }
+    public KarZarar karZarar { get; private set; }
+    public KarAlZararKes karAlZararKes { get; private set; }
 
     #endregion
 
@@ -313,7 +314,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
         lists = new Lists();
 
         timeUtils = new TimeUtils();
-        timeUtils.SetTrader(this);
+        timeUtils.SetTrader(this); 
+        
+        karZarar = new KarZarar(this);
+
+        karAlZararKes = new KarAlZararKes();
+        karAlZararKes.SetTrader(this);
 
         return this;
     }
@@ -331,6 +337,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         timeUtils.Reset();
 
+        karZarar.Reset();
+
+        karAlZararKes.Reset();
+
         return this;
     }
     public SingleTrader InitModules()
@@ -346,6 +356,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
         lists.InitOrReuse(_data.Count);
 
         timeUtils.Init();
+
+        karZarar.Init(this);
+
+        karAlZararKes.Init();
 
         return this;
     }
