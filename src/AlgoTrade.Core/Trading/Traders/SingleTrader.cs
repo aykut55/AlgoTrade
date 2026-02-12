@@ -4,6 +4,7 @@ using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using MathNet.Numerics.Statistics;
+using static AlgoTrade.Core.StockDataReader.StockDataReader;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -61,8 +62,20 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public Flags? flags { get; private set; }
     public Lists? lists { get; private set; }
 
+    public TimeUtils timeUtils { get; private set; }
+
     public TradeSignals strategySignal { get; set; }
 
+    #endregion
+
+    #region TimeFilterProperties
+    // Time Filter Properties
+    public string StartDateTimeStr { get; set; }
+    public string StopDateTimeStr { get; set; }
+    public string StartDateStr { get; set; }
+    public string StopDateStr { get; set; }
+    public string StartTimeStr { get; set; }
+    public string StopTimeStr { get; set; }
     #endregion
 
     public event Action<SingleTrader, int>? OnReset;
@@ -132,7 +145,32 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public string TaramaOzeti => $"{SonYon} | Bar:{SonSinyaldenBeriBarSayisi} | KZ:{SonKarZararFiyat:F2} | %:{SonKarZararYuzde:F2}";
 
     // ═══════════════════════════════════════════════════════════════════════
-    # endregion 
+    #endregion
+
+    #region Statistics
+
+    #endregion
+
+    public bool is_son_yon_f()
+    {
+        return this.signals.SonYon == "F";
+    }
+
+    /// <summary>
+    /// Check if last direction is Buy (A)
+    /// </summary>
+    public bool is_son_yon_a()
+    {
+        return this.signals.SonYon == "A";
+    }
+
+    /// <summary>
+    /// Check if last direction is Sell (S)
+    /// </summary>
+    public bool is_son_yon_s()
+    {
+        return this.signals.SonYon == "S";
+    }
 
     public SingleTrader(int id, string name, List<StockData> data, IndicatorManager indicators, LogManager? logger = null)
     {
@@ -213,7 +251,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         int i = barIndex;
 
         //if (!IsInitialized)
-            //throw new InvalidOperationException("Trader not initialized");
+        //throw new InvalidOperationException("Trader not initialized");
 
         if (i >= Data.Count)
             return;
@@ -229,13 +267,15 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         MapStrategyCommandsToTradeCommands(this.strategySignal);
 
+        ApplyTimingFilters(i);
+
         ExecutePostOrderMethods(i);
 
         OnRun?.Invoke(this, 1);
 
         int totalBars = GetDataCount();
         double percentage = (i + 1) / (double)totalBars * 100.0;
-        OnProgress?.Invoke(this, i+1, totalBars, percentage);
+        OnProgress?.Invoke(this, i + 1, totalBars, percentage);
     }
 
     public void Finalize(bool dispose)
@@ -248,8 +288,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         status = new Status();
         flags = new Flags();
         lists = new Lists();
-        timeUtils = new TimeUtils();
-        timeUtils.SetTrader(this);
+
         karZarar = new KarZarar(this);
         karAlZararKes = new KarAlZararKes();
         karAlZararKes.SetTrader(this);
@@ -273,6 +312,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         lists = new Lists();
 
+        timeUtils = new TimeUtils();
+        timeUtils.SetTrader(this);
+
         return this;
     }
     public SingleTrader ResetModules()
@@ -286,6 +328,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         flags.Reset();
 
         lists.Reset();
+
+        timeUtils.Reset();
 
         return this;
     }
@@ -301,6 +345,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         lists.InitOrReuse(_data.Count);
 
+        timeUtils.Init();
+
         return this;
     }
     public SingleTrader DeleteModules()
@@ -314,6 +360,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         flags = null;
 
         lists = null;
+
+        timeUtils = null;
 
         return this;
     }
@@ -434,9 +482,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             this.signals.PrevAFiyat = this.signals.SonAFiyat;
             this.signals.PrevABarNo = this.signals.SonABarNo;
-            this.signals.PrevYon    = this.signals.SonYon;
-            this.signals.PrevFiyat  = this.signals.SonFiyat;
-            this.signals.PrevBarNo  = this.signals.SonBarNo;
+            this.signals.PrevYon = this.signals.SonYon;
+            this.signals.PrevFiyat = this.signals.SonFiyat;
+            this.signals.PrevBarNo = this.signals.SonBarNo;
 
             // Pozisyon büyüklüğünü kaydet (dinamik lot desteği için)
             this.signals.PrevVarlikAdedSayisi = this.signals.SonVarlikAdedSayisi;
@@ -557,9 +605,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             this.signals.PrevSFiyat = this.signals.SonSFiyat;
             this.signals.PrevSBarNo = this.signals.SonSBarNo;
-            this.signals.PrevYon    = this.signals.SonYon;
-            this.signals.PrevFiyat  = this.signals.SonFiyat;
-            this.signals.PrevBarNo  = this.signals.SonBarNo;
+            this.signals.PrevYon = this.signals.SonYon;
+            this.signals.PrevFiyat = this.signals.SonFiyat;
+            this.signals.PrevBarNo = this.signals.SonBarNo;
 
             // Pozisyon büyüklüğünü kaydet (dinamik lot desteği için)
             this.signals.PrevVarlikAdedSayisi = this.signals.SonVarlikAdedSayisi;
@@ -614,7 +662,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
                 // komisyon hesapla
                 double closeCommission = komisyonCarpan * komisyonVolume;
 
-                totalCommission = closeCommission; 
+                totalCommission = closeCommission;
             }
             if (this.signals.PrevYon == "A")
             {
@@ -679,9 +727,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             this.signals.PrevFFiyat = this.signals.SonFFiyat;
             this.signals.PrevFBarNo = this.signals.SonFBarNo;
-            this.signals.PrevYon    = this.signals.SonYon;
-            this.signals.PrevFiyat  = this.signals.SonFiyat;
-            this.signals.PrevBarNo  = this.signals.SonBarNo;
+            this.signals.PrevYon = this.signals.SonYon;
+            this.signals.PrevFiyat = this.signals.SonFiyat;
+            this.signals.PrevBarNo = this.signals.SonBarNo;
 
             // Pozisyon büyüklüğünü kaydet (dinamik lot desteği için)
             this.signals.PrevVarlikAdedSayisi = this.signals.SonVarlikAdedSayisi;
@@ -1597,6 +1645,285 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return result;
     }
+
+    public int CheckOrderTimeEligibility(int BarIndex, int FilterMode, ref bool IsTradeEnabled, ref bool IsPozKapatEnabled, ref int CheckResult)
+    {
+        int i = BarIndex;
+        DateTime BarDateTime = this.Data[i].DateTime;
+        string startDateTime = this.StartDateTimeStr ?? "";
+        string stopDateTime = this.StopDateTimeStr ?? "";
+        string startDate = this.StartDateStr ?? "";
+        string stopDate = this.StopDateStr ?? "";
+        string startTime = this.StartTimeStr ?? "";
+        string stopTime = this.StopTimeStr ?? "";
+
+        DateTime now = DateTime.Now;
+        string nowDateTime = now.ToString("yyyy.MM.dd HH:mm:ss");
+        string nowDate = now.ToString("yyyy.MM.dd");
+        string nowTime = now.ToString("HH:mm:ss");
+
+        bool useTimeFiltering = this.signals.TimeFilteringEnabled;
+
+        if (useTimeFiltering)
+        {
+            if (i == this.Data.Count - 1)
+            {
+                string s = "";
+                s += $"  {startDateTime}\n";
+                s += $"  {stopDateTime}\n";
+                s += $"  {startDate}\n";
+                s += $"  {stopDate}\n";
+                s += $"  {startTime}\n";
+                s += $"  {stopTime}\n";
+                s += $"  {nowDateTime}\n";
+                s += $"  {nowDate}\n";
+                s += $"  {nowTime}\n";
+                s += $"  FilterMode = {FilterMode}\n";
+                s += "  CTrader::IslemZamanFiltresiUygula\n";
+                // Log if needed
+            }
+
+            if (FilterMode == 0)
+            {
+                IsTradeEnabled = true;
+                CheckResult = 0;
+            }
+            else if (FilterMode == 1)
+            {
+                if (this.timeUtils.check_bar_time_with(i, startTime) >= 0 && this.timeUtils.check_bar_time_with(i, stopTime) < 0)
+                {
+                    IsTradeEnabled = true;
+                    CheckResult = 0;
+                }
+                else if (this.timeUtils.check_bar_time_with(i, startTime) < 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = -1;
+                }
+                else if (this.timeUtils.check_bar_time_with(i, stopTime) >= 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = 1;
+                }
+            }
+            else if (FilterMode == 2)
+            {
+                if (this.timeUtils.check_bar_date_with(i, startDate) >= 0 && this.timeUtils.check_bar_date_with(i, stopDate) < 0)
+                {
+                    IsTradeEnabled = true;
+                    CheckResult = 0;
+                }
+                else if (this.timeUtils.check_bar_date_with(i, startDate) < 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = -1;
+                }
+                else if (this.timeUtils.check_bar_date_with(i, stopDate) >= 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = 1;
+                }
+            }
+            else if (FilterMode == 3)
+            {
+                if (this.timeUtils.check_bar_date_time_with(i, startDateTime) >= 0 && this.timeUtils.check_bar_date_time_with(i, stopDateTime) < 0)
+                {
+                    IsTradeEnabled = true;
+                    CheckResult = 0;
+                }
+                else if (this.timeUtils.check_bar_date_time_with(i, startDateTime) < 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = -1;
+                }
+                else if (this.timeUtils.check_bar_date_time_with(i, stopDateTime) >= 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = 1;
+                }
+            }
+            else if (FilterMode == 4)
+            {
+                if (this.timeUtils.check_bar_time_with(i, startTime) >= 0)
+                {
+                    IsTradeEnabled = true;
+                    CheckResult = 0;
+                }
+                else if (this.timeUtils.check_bar_time_with(i, startTime) < 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = -1;
+                }
+            }
+            else if (FilterMode == 5)
+            {
+                if (this.timeUtils.check_bar_date_with(i, startDate) >= 0)
+                {
+                    IsTradeEnabled = true;
+                    CheckResult = 0;
+                }
+                else if (this.timeUtils.check_bar_date_with(i, startDate) < 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = -1;
+                }
+            }
+            else if (FilterMode == 6)
+            {
+                if (this.timeUtils.check_bar_date_time_with(i, startDateTime) >= 0)
+                {
+                    IsTradeEnabled = true;
+                    CheckResult = 0;
+                }
+                else if (this.timeUtils.check_bar_date_time_with(i, startDateTime) < 0)
+                {
+                    if (!this.is_son_yon_f())
+                    {
+                        IsPozKapatEnabled = true;
+                    }
+                    CheckResult = -1;
+                }
+            }
+        }
+
+        return 0;
+    }
+    
+    public void ApplyTimingFilters(int barIndex)
+    {
+        int i = barIndex;
+
+        bool useTimeFiltering = this.signals.TimeFilteringEnabled;
+        if (useTimeFiltering)
+        {
+            int filterMode = 1;
+            bool isTradeEnabled = false;
+            bool isPozKapatEnabled = false;
+            int checkResult = 0;
+
+            CheckOrderTimeEligibility(i, filterMode, ref isTradeEnabled, ref isPozKapatEnabled, ref checkResult);
+
+            this.signals.IsTradeEnabled = isTradeEnabled;
+            this.signals.IsPozKapatEnabled = isPozKapatEnabled;
+        }
+
+        // --------------------------------------------------------------------------------------------------------------------------------------------
+        var isSonYonA = is_son_yon_a();
+
+        var isSonYonS = is_son_yon_s();
+
+        var isSonYonF = is_son_yon_f();
+
+        // --------------------------------------------------------------------------------------------------------------------------------------------
+        if (this.signals.IsPozKapatEnabled || this.signals.GunSonuPozKapatEnabled)
+        {
+            if (this.signals.IsPozKapatEnabled)
+            {
+                if (isSonYonF)
+                {
+                    this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                    this.signals.None = true;
+                }
+                else
+                {
+                    this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                    this.signals.FlatOl = true;
+                }
+            }
+            else if (this.signals.GunSonuPozKapatEnabled)
+            {
+                bool pozKapat = this.ClosePositionEOD(i, this.signals.GunSonuPozKapatEnabled);
+                if (pozKapat)
+                {
+                    if (isSonYonF)
+                    {
+                        this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                        this.signals.None = true;
+                    }
+                    else
+                    {
+                        this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                        this.signals.FlatOl = true;
+                        this.signals.GunSonuPozKapatildi = true;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (!this.signals.IsTradeEnabled)
+            {
+                // Zaman filtresi trade'e izin vermiyor, emirleri iptal et
+                this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                this.signals.None = true;
+            }
+        }
+    }
+
+    public bool ClosePositionEOD(int i, bool gunSonuPozKapatEnabled = true)
+    {
+        // Optimizasyon: Önce disabled kontrolü yap
+        if (!gunSonuPozKapatEnabled)
+            return false;
+
+        // Optimizasyon: Sınır kontrolü
+        if (i >= Data.Count - 1)
+            return false;
+
+        // Optimizasyon: GetDates() yerine direkt Data'ya eriş
+        // GetDates() her çağrıda 1.8M+ bar iterate ediyor - O(n) maliyeti var!
+        // Direkt erişim O(1) maliyetli
+        return Data[i].Date != Data[i + 1].Date;
+    }
+
+    public bool ClosePositionEOD_2(int i, bool gunSonuPozKapatEnabled = true, int hour = 18, int minute = 0)
+    {
+        // Optimizasyon: Önce disabled kontrolü yap
+        if (!gunSonuPozKapatEnabled)
+            return false;
+
+        // Optimizasyon: Sınır kontrolü
+        if (i >= Data.Count)
+            return false;
+
+        // Optimizasyon: GetDateTimes() yerine direkt Data'ya eriş
+        // GetDateTimes() her çağrıda 1.8M+ bar iterate ediyor - O(n) maliyeti var!
+        var currentDateTime = Data[i].DateTime;
+
+        if (currentDateTime.Hour == hour && currentDateTime.Minute >= minute)
+        {
+            //this.signals.FlatOl = true;
+            return true;
+        }
+
+        return false;
+    }
+
+
 
     public void Dispose()
     {
