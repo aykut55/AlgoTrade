@@ -375,23 +375,15 @@ async Task runAlgoTrade()
 void showMainMenu()
 {
     Console.WriteLine();
-    Console.WriteLine("╔═══════════════════════════════════════╗");
-    Console.WriteLine("║        AlgoTrade - Ana Menü           ║");
-    Console.WriteLine("╠═══════════════════════════════════════╣");
-    Console.WriteLine("║  [1] Read Stock Data                  ║");
-    Console.WriteLine("║  [2] Run SingleTrader With Progress   ║");
-    Console.WriteLine("║  [0] Çıkış                            ║");
-    Console.WriteLine("╚═══════════════════════════════════════╝");
-    Console.Write("Seçiminiz: ");
-}
-
-bool askRunAgain()
-{
-    Console.WriteLine();
-    Console.Write("Tekrar çalıştırmak ister misiniz? (E/H): ");
-    var key = Console.ReadKey();
-    Console.WriteLine();
-    return key.KeyChar is 'E' or 'e';
+    Console.WriteLine("╔═════════════════════════════════════════════════════╗");
+    Console.WriteLine("║        AlgoTrade - Ana Menü                         ║");
+    Console.WriteLine("╠═════════════════════════════════════════════════════╣");
+    Console.WriteLine("║  [1] Read Stock Data                                ║");
+    Console.WriteLine("║  [2] Run SingleTrader With Progress                 ║");
+    Console.WriteLine("║  [3] Read Data + Run SingleTrader With Progress     ║");
+    Console.WriteLine("║  [0] Çıkış                                          ║");
+    Console.WriteLine("╚═════════════════════════════════════════════════════╝");
+    Console.Write("\nSeçiminiz: ");
 }
 
 async Task main()
@@ -416,11 +408,13 @@ async Task main()
         {
             case "1":
                 readStockData();
-                running = askRunAgain();
                 break;
             case "2":
                 await runAlgoTrade();
-                running = askRunAgain();
+                break;
+            case "3":
+                readStockData();
+                await runAlgoTrade();
                 break;
             case "0":
                 running = false;
