@@ -162,6 +162,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Assign callbacks
             singleTrader.SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress, OnApplyUserFlags);
+            singleTrader.ClearCallbacks();
 
             // Reset
             singleTrader.Reset();
@@ -175,6 +176,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             if (_timer != null)
                 _timer.RestartTimer("1");
+
+            if (_timer != null)
+                _timer.RestartTimer("2");
 
             // *****************************************************************************
             // SingleTrader - Run
@@ -198,9 +202,18 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             }, cancellationToken);
             IsRunning = false;
 
+            if (_timer != null)
+                _timer.StopTimer("2");
+
             Log("\nFinalizing singleTrader...");
 
+            if (_timer != null)
+                _timer.RestartTimer("3");
+
             singleTrader.Finalize(false);
+
+            if (_timer != null)
+                _timer.StopTimer("3");
 
             if (_timer != null)
                 _timer.StopTimer("1");
@@ -210,9 +223,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             var t0 = _timer!.GetElapsedTime("0");
             var t1 = _timer!.GetElapsedTime("1");
+            var t2 = _timer!.GetElapsedTime("2");
+            var t3 = _timer!.GetElapsedTime("3");
 
             Log($"\nt0 = {t0} msec. <==> RunSingleTraderWithProgressAsync elapsed time");
-            Log($"\nt1 = {t1} msec. <==> Running singleTrader elapsed time");
+            Log($"\nt1 = {t1} msec. <==> Running + Finalizing singleTrader elapsed time");
+            Log($"\nt2 = {t2} msec. <==> Running singleTrader elapsed time");
+            Log($"\nt3 = {t3} msec. <==> Finalizing singleTrader elapsed time");
         }
         catch (Exception ex)
         {

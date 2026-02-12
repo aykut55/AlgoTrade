@@ -114,6 +114,21 @@ public class SingleTrader : MarketDataProvider, IDisposable
         return this;
     }
 
+    public SingleTrader ClearCallbacks()
+    {
+        OnReset = null;
+        OnInit = null;
+        OnRun = null;
+        OnFinal = null;
+        OnBeforeOrder = null;
+        OnNotifySignal = null;
+        OnAfterOrder = null;
+        OnProgress = null;
+        OnApplyUserFlags = null;
+
+        return this;
+    }
+
     public void Reset()
     {
         OnReset?.Invoke(this, 0);
