@@ -372,6 +372,28 @@ async Task runAlgoTrade()
     {
     }
 }
+void showMainMenu()
+{
+    Console.WriteLine();
+    Console.WriteLine("╔═══════════════════════════════════════╗");
+    Console.WriteLine("║        AlgoTrade - Ana Menü           ║");
+    Console.WriteLine("╠═══════════════════════════════════════╣");
+    Console.WriteLine("║  [1] Read Stock Data                  ║");
+    Console.WriteLine("║  [2] Run SingleTrader With Progress   ║");
+    Console.WriteLine("║  [0] Çıkış                            ║");
+    Console.WriteLine("╚═══════════════════════════════════════╝");
+    Console.Write("Seçiminiz: ");
+}
+
+bool askRunAgain()
+{
+    Console.WriteLine();
+    Console.Write("Tekrar çalıştırmak ister misiniz? (E/H): ");
+    var key = Console.ReadKey();
+    Console.WriteLine();
+    return key.KeyChar is 'E' or 'e';
+}
+
 async Task main()
 {
     AppSettings.EnsureDirectories();
@@ -383,15 +405,33 @@ async Task main()
     consoleLogger.Clear();
 
     LogManager.LogRaw("Application started", ConsoleColor.Green);
+
+    bool running = true;
+    while (running)
     {
-        readStockData();
+        showMainMenu();
+        var input = Console.ReadLine()?.Trim();
 
-        await runAlgoTrade();
+        switch (input)
+        {
+            case "1":
+                readStockData();
+                running = askRunAgain();
+                break;
+            case "2":
+                await runAlgoTrade();
+                running = askRunAgain();
+                break;
+            case "0":
+                running = false;
+                break;
+            default:
+                Console.WriteLine("Geçersiz seçim!");
+                break;
+        }
     }
-    LogManager.LogRaw("Application finished", ConsoleColor.Green);
 
-    //LogManager.LogRaw("\nÇıkmak için bir tuşa basın...");
-    //Console.ReadKey();
+    LogManager.LogRaw("Application finished", ConsoleColor.Green);
 
     algoTrader?.Dispose();
     stockDataReader?.Dispose();
