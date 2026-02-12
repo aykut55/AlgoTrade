@@ -16,7 +16,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public void SetId(int id) => Id = id;
     public int GetId() => Id;
 
-    public string Name { get; private set; }
+    public string Name { get; private set; } = string.Empty;
     public void SetName(string name) => Name = name;
     public string GetName() => Name;
 
@@ -55,11 +55,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
         _indicators = indicators;
     }
 
-    public InitialTradeParams initialTradeParams { get; private set; }
-    public Signals signals { get; private set; }
-    public Status status { get; private set; }
-    public Flags flags { get; private set; }
-    public Lists lists { get; private set; }
+    public InitialTradeParams? initialTradeParams { get; private set; }
+    public Signals? signals { get; private set; }
+    public Status? status { get; private set; }
+    public Flags? flags { get; private set; }
+    public Lists? lists { get; private set; }
 
     public TradeSignals strategySignal { get; set; }
 
@@ -73,7 +73,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public event Action<SingleTrader, string, int>? OnNotifySignal;
     public event Action<SingleTrader, int>? OnAfterOrder;
     public event Action<SingleTrader, int, int, double>? OnProgress;
-    public event Action<SingleTrader>? OnApplyUserFlags;    
+    public event Action<SingleTrader>? OnApplyUserFlags;
+    public int ExecutionStepNumber { get; set; }
+    public bool BakiyeInitialized { get; set; }
 
     public SingleTrader(int id, string name, List<StockData> data, IndicatorManager indicators, LogManager? logger = null)
     {
@@ -119,6 +121,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // Reset internal modules (state only)
         ResetModules();
 
+        ExecutionStepNumber = 0;
+        BakiyeInitialized = false;
+
         OnReset?.Invoke(this, 1);
     }
 
@@ -135,7 +140,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         int i = barIndex;
 
-        if (!IsInitialized)
+        //if (!IsInitialized)
             //throw new InvalidOperationException("Trader not initialized");
 
         if (i >= Data.Count)
@@ -143,44 +148,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         OnRun?.Invoke(this, 0);
 
-        // emir_oncesi_dongu_foksiyonlarini_calistir  - beg
-
-        //dongu_basi_degiskenleri_resetle(i);
-
-        //dongu_basi_degiskenleri_guncelle(i);
-
-        //anlik_kar_zarar_hesapla(i);
-
-        //emirleri_resetle(i);
-        this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
-        this.signals.Sinyal = "";
-
-        if (this.signals.IsTradeEnabled)
-            this.signals.IsTradeEnabled = false;
-
-        if (this.signals.IsPozKapatEnabled)
-            this.signals.IsPozKapatEnabled = false;
-
-        if (this.signals.GunSonuPozKapatildi)
-            this.signals.GunSonuPozKapatildi = false;
-
-        if (this.signals.KarAlindi || this.signals.ZararKesildi || this.signals.FlatOlundu)
-        {
-            this.signals.KarAlindi = false;
-            this.signals.ZararKesildi = false;
-            this.signals.FlatOlundu = false;
-            this.signals.PozAcilabilir = false;
-        }
-
-        if (this.signals.PozAcilabilir == false)
-        {
-            this.signals.PozAcilabilir = true;
-            this.signals.PozAcildi = false;
-        }
-
-        this.signals.IsTradeEnabled = true;
-
-        // emir_oncesi_dongu_foksiyonlarini_calistir  - end
+        ExecutePreOrderMethods(i);
 
         if (i < 1)
             return;
@@ -189,9 +157,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         MapStrategyCommandsToTradeCommands(this.strategySignal);
 
-        OnBeforeOrder?.Invoke(this, barIndex);
-        ExecuteOrders(i);   // TODO: Strategy evaluate, sinyal üret, emir uygula
-        OnAfterOrder?.Invoke(this, barIndex);
+        ExecutePostOrderMethods(i);
 
         OnRun?.Invoke(this, 1);
 
@@ -434,12 +400,26 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.lists.SonVarlikAdedSayisiList[i] = this.signals.SonVarlikAdedSayisi;
             this.lists.SonVarlikAdedSayisiMicroList[i] = this.signals.SonVarlikAdedSayisiMicro;
 
+            bool isMicroLot = this.initialTradeParams.MicroLotSizeEnabled;
+            double komisyonVolume = 0.0;
+            double totalCommission = 0.0;
+            double komisyonCarpan = this.status.KomisyonCarpan;
+
             if (this.signals.PrevYon == "F")
             {
                 // F → A: Yeni pozisyon açma (1 işlem)
                 // İşlem hacmi: SonVarlikAdedSayisi
                 this.status.KomisyonIslemSayisi += 1;
                 this.signals.EmirStatus = 1;
+
+                komisyonVolume = isMicroLot
+                    ? this.status.KomisyonVarlikAdedSayisiMicro
+                    : this.status.KomisyonVarlikAdedSayisi;
+
+                // komisyon hesapla
+                double openCommission = komisyonCarpan * komisyonVolume;
+
+                totalCommission = openCommission;
             }
             if (this.signals.PrevYon == "S")
             {
@@ -465,6 +445,16 @@ public class SingleTrader : MarketDataProvider, IDisposable
                 // 2 işlem: Kapatma + Açma
                 this.status.KomisyonIslemSayisi += 2;
                 this.signals.EmirStatus = 2;
+
+                komisyonVolume = isMicroLot
+                    ? this.status.KomisyonVarlikAdedSayisiMicro
+                    : this.status.KomisyonVarlikAdedSayisi;
+
+                // Her iki işlem için de ayrı komisyon hesapla
+                double closeCommission = komisyonCarpan * komisyonVolume;
+                double openCommission = komisyonCarpan * komisyonVolume;
+
+                totalCommission = closeCommission + openCommission;
             }
 
             this.flags.BakiyeGuncelle = true;
@@ -475,6 +465,19 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.flags.AGerceklesti = true;
 
             //OnNotifyStrategySignal?.Invoke(this, this.signals.Sinyal, i);
+
+            // Mevcut pozisyon büyüklüğü
+            double mevcutLot = isMicroLot
+                ? this.signals.SonVarlikAdedSayisiMicro
+                : this.signals.SonVarlikAdedSayisi;
+
+            // Eklenecek lot büyüklüğü
+            double yeniLot = isMicroLot
+                ? this.initialTradeParams.VarlikAdedSayisiMicro
+                : this.initialTradeParams.VarlikAdedSayisi;
+
+            this.status.KomisyonFiyat += totalCommission;
+            this.lists.KomisyonFiyatList[i] = this.status.KomisyonFiyat;
 
         }
         // Process "S" (Sat/Sell) signal
@@ -520,12 +523,26 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.lists.SonVarlikAdedSayisiList[i] = this.signals.SonVarlikAdedSayisi;
             this.lists.SonVarlikAdedSayisiMicroList[i] = this.signals.SonVarlikAdedSayisiMicro;
 
+            bool isMicroLot = this.initialTradeParams.MicroLotSizeEnabled;
+            double komisyonVolume = 0.0;
+            double totalCommission = 0.0;
+            double komisyonCarpan = this.status.KomisyonCarpan;
+
             if (this.signals.PrevYon == "F")
             {
                 // F → S: Yeni pozisyon açma (1 işlem)
                 // İşlem hacmi: SonVarlikAdedSayisi
                 this.status.KomisyonIslemSayisi += 1;
                 this.signals.EmirStatus = 3;
+
+                komisyonVolume = isMicroLot
+                    ? this.status.KomisyonVarlikAdedSayisiMicro
+                    : this.status.KomisyonVarlikAdedSayisi;
+
+                // komisyon hesapla
+                double closeCommission = komisyonCarpan * komisyonVolume;
+
+                totalCommission = closeCommission; 
             }
             if (this.signals.PrevYon == "A")
             {
@@ -551,6 +568,16 @@ public class SingleTrader : MarketDataProvider, IDisposable
                 // 2 işlem: Kapatma + Açma
                 this.status.KomisyonIslemSayisi += 2;
                 this.signals.EmirStatus = 4;
+
+                komisyonVolume = isMicroLot
+                    ? this.status.KomisyonVarlikAdedSayisiMicro
+                    : this.status.KomisyonVarlikAdedSayisi;
+
+                // Her iki işlem için de ayrı komisyon hesapla
+                double closeCommission = komisyonCarpan * komisyonVolume;
+                double openCommission = komisyonCarpan * komisyonVolume;
+
+                totalCommission = closeCommission + openCommission;
             }
 
             this.flags.BakiyeGuncelle = true;
@@ -561,6 +588,19 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.flags.SGerceklesti = true;
 
             //OnNotifyStrategySignal?.Invoke(this, this.signals.Sinyal, i);
+
+            // Mevcut pozisyon büyüklüğü
+            double mevcutLot = isMicroLot
+                ? this.signals.SonVarlikAdedSayisiMicro
+                : this.signals.SonVarlikAdedSayisi;
+
+            // Eklenecek lot büyüklüğü
+            double yeniLot = isMicroLot
+                ? this.initialTradeParams.VarlikAdedSayisiMicro
+                : this.initialTradeParams.VarlikAdedSayisi;
+
+            this.status.KomisyonFiyat += totalCommission;
+            this.lists.KomisyonFiyatList[i] = this.status.KomisyonFiyat;
         }
         // Process "F" (Flat) signal
         else if (this.signals.Sinyal == "F" && this.signals.SonYon != "F")
@@ -612,6 +652,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.lists.SonVarlikAdedSayisiList[i] = this.signals.SonVarlikAdedSayisi;
             this.lists.SonVarlikAdedSayisiMicroList[i] = this.signals.SonVarlikAdedSayisiMicro;
 
+            bool isMicroLot = this.initialTradeParams.MicroLotSizeEnabled;
+            double komisyonVolume = 0.0;
+            double totalCommission = 0.0;
+            double komisyonCarpan = this.status.KomisyonCarpan;
+
             if (this.signals.PrevYon == "A")
             {
                 // A → F: Long pozisyonu KAPAT (1 işlem)
@@ -634,6 +679,15 @@ public class SingleTrader : MarketDataProvider, IDisposable
                 // 1 işlem: Kapatma
                 this.status.KomisyonIslemSayisi += 1;
                 this.signals.EmirStatus = 5;
+
+                komisyonVolume = isMicroLot
+                    ? this.status.KomisyonVarlikAdedSayisiMicro
+                    : this.status.KomisyonVarlikAdedSayisi;
+
+                // komisyon hesapla
+                double closeCommission = komisyonCarpan * komisyonVolume;
+
+                totalCommission = closeCommission;
             }
             if (this.signals.PrevYon == "S")
             {
@@ -657,6 +711,15 @@ public class SingleTrader : MarketDataProvider, IDisposable
                 // 1 işlem: Kapatma
                 this.status.KomisyonIslemSayisi += 1;
                 this.signals.EmirStatus = 6;
+
+                komisyonVolume = isMicroLot
+                    ? this.status.KomisyonVarlikAdedSayisiMicro
+                    : this.status.KomisyonVarlikAdedSayisi;
+
+                // komisyon hesapla
+                double closeCommission = komisyonCarpan * komisyonVolume;
+
+                totalCommission = closeCommission;
             }
 
             this.flags.BakiyeGuncelle = true;
@@ -667,6 +730,19 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.flags.FGerceklesti = true;
 
             //OnNotifyStrategySignal?.Invoke(this, this.signals.Sinyal, i);
+
+            // Mevcut pozisyon büyüklüğü
+            double mevcutLot = isMicroLot
+                ? this.signals.SonVarlikAdedSayisiMicro
+                : this.signals.SonVarlikAdedSayisi;
+
+            // Eklenecek lot büyüklüğü
+            double yeniLot = isMicroLot
+                ? this.initialTradeParams.VarlikAdedSayisiMicro
+                : this.initialTradeParams.VarlikAdedSayisi;
+
+            this.status.KomisyonFiyat += totalCommission;
+            this.lists.KomisyonFiyatList[i] = this.status.KomisyonFiyat;
 
         }
         // Process "P" (PasGec/Skip) or empty signal
@@ -905,6 +981,547 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.flags.SGerceklesti = false;
         this.flags.FGerceklesti = false;
         this.flags.PGerceklesti = false;
+
+        return result;
+    }
+
+    public void ResetVariablesOnNewIteration(int barIndex)
+    {
+        int i = barIndex;
+
+        if (this.ExecutionStepNumber == 0)
+        {
+
+        }
+        this.lists.BarIndexList[i] = i;
+        this.lists.YonList[i] = "";
+        this.lists.SeviyeList[i] = 0.0;
+        this.lists.SinyalList[i] = 0.0;
+        this.lists.KarZararPuanList[i] = 0.0;
+        this.lists.KarZararFiyatList[i] = 0.0;
+        this.lists.KarZararPuanYuzdeList[i] = 0.0;
+        this.lists.KarZararFiyatYuzdeList[i] = 0.0;
+        this.status.KarZararPuan = 0.0;
+        this.status.KarZararFiyat = 0.0;
+        this.status.KarZararPuanYuzde = 0.0;
+        this.status.KarZararFiyatYuzde = 0.0;
+        this.lists.KarAlList[i] = 0.0;
+        this.lists.ZararKesList[i] = 0.0;
+        this.lists.IzleyenStopList[i] = 0.0;
+        this.lists.IslemSayisiList[i] = 0;
+        this.lists.AlisSayisiList[i] = 0;
+        this.lists.SatisSayisiList[i] = 0;
+        this.lists.FlatSayisiList[i] = 0;
+        this.lists.PassSayisiList[i] = 0;
+        this.lists.KontratSayisiList[i] = 0;
+        this.lists.VarlikAdedSayisiList[i] = 0;
+        this.lists.SonVarlikAdedSayisiList[i] = 0;
+        this.lists.SonVarlikAdedSayisiMicroList[i] = 0;
+        this.lists.KomisyonVarlikAdedSayisiList[i] = 0;
+        this.lists.KomisyonIslemSayisiList[i] = 0;
+        this.lists.KomisyonFiyatList[i] = 0.0;
+        this.lists.KardaBarSayisiList[i] = 0;
+        this.lists.ZarardaBarSayisiList[i] = 0;
+        this.lists.BakiyeFiyatList[i] = this.status.BakiyeFiyat;
+        this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.BakiyeFiyat;
+        this.lists.BakiyePuanList[i] = this.status.BakiyePuan;
+        this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;
+        this.lists.EmirKomutList[i] = 0;
+        this.lists.EmirStatusList[i] = 0;
+        this.ExecutionStepNumber += 1;
+        this.lists.IsTradeEnabledList[i] = 0;
+        this.lists.IsPozKapatEnabledList[i] = 0;
+    }
+
+    public void UpdateVariablesOnNewIteration(int barIndex)
+    {
+        int i = barIndex;
+
+        this.status.KomisyonVarlikAdedSayisi = this.initialTradeParams.KomisyonVarlikAdedSayisi;
+        this.status.KomisyonVarlikAdedSayisiMicro = this.initialTradeParams.KomisyonVarlikAdedSayisiMicro;
+        this.status.KomisyonCarpan = this.initialTradeParams.KomisyonCarpan;
+        this.flags.KomisyonuDahilEt = this.initialTradeParams.KomisyonuDahilEt;
+        this.status.KaymaMiktari = this.initialTradeParams.KaymaMiktari;
+        this.flags.KaymayiDahilEt = this.initialTradeParams.KaymayiDahilEt;
+        this.status.VarlikAdedSayisi = this.initialTradeParams.VarlikAdedSayisi;
+        this.status.VarlikAdedSayisiMicro = this.initialTradeParams.VarlikAdedSayisiMicro;
+        this.status.VarlikAdedCarpani = this.initialTradeParams.VarlikAdedCarpani;
+        this.status.KontratSayisi = this.initialTradeParams.KontratSayisi;
+        this.status.HisseSayisi = this.initialTradeParams.HisseSayisi;
+        this.status.IlkBakiyeFiyat = this.initialTradeParams.IlkBakiyeFiyat;
+        this.status.IlkBakiyePuan = this.initialTradeParams.IlkBakiyePuan;
+        this.status.GetiriFiyatTipi = this.initialTradeParams.GetiriFiyatTipi;
+        this.status.MicroLotSizeEnabled = this.initialTradeParams.MicroLotSizeEnabled;
+        if (this.BakiyeInitialized == false)
+        {
+            this.BakiyeInitialized = true;
+            this.status.BakiyeFiyat = this.status.IlkBakiyeFiyat;
+            this.status.BakiyePuan = this.status.IlkBakiyePuan;
+            this.lists.BakiyeFiyatList[i] = this.status.BakiyeFiyat;
+            this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.BakiyeFiyat;
+            this.lists.BakiyePuanList[i] = this.status.BakiyePuan;
+            this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;
+        }
+    }
+
+    public void ResetTradeCommands()
+    {
+        this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+        this.signals.Sinyal = "";
+    }
+    public double CalculateUnrealizedPnL(int barIndex)
+    {
+        double result = 0.0;
+
+        int i = barIndex;
+        string type = "C";
+
+        if (this.initialTradeParams.MicroLotSizeEnabled)
+        {
+            result = _calculateUnrealizedPnLMicro(barIndex, type);
+        }
+        else
+        {
+            result = _calculateUnrealizedPnL(barIndex, type);
+        }
+
+        return result;
+    }
+    /// <summary>
+    /// Anlık kar/zarar hesaplama - Micro version (FX, Crypto için)
+    /// Kesirli varlık adedi (0.01 lot, 0.1 lot, vb.) kullanır
+    /// </summary>
+    public double _calculateUnrealizedPnLMicro(int barIndex, string type = "C")
+    {
+        // Validate dependencies
+        if (Data == null || flags == null || signals == null || status == null || lists == null || initialTradeParams == null)
+            return 0.0;
+
+        // Validate bar index
+        if (barIndex < 0 || barIndex >= Data.Count)
+            return 0.0;
+
+        double result = 0.0;
+        int i = barIndex;
+
+        // Get current price based on type
+        double anlikFiyat = Data[i].Close;
+        bool anlikKarZararHesaplaEnabled = flags.AnlikKarZararHesaplaEnabled;
+        string sonYon = signals.SonYon;
+        double sonFiyat = signals.SonFiyat;
+        // Dinamik lot desteği: Son açılan pozisyonun büyüklüğünü kullan (MICRO)
+        double varlikAdedSayisi = signals.SonVarlikAdedSayisiMicro;
+
+        if (!anlikKarZararHesaplaEnabled)
+            return result;
+
+        // Select price based on type
+        if (type != "C")
+        {
+            if (type == "O")
+                anlikFiyat = Data[i].Open;
+            else if (type == "H")
+                anlikFiyat = Data[i].High;
+            else if (type == "L")
+                anlikFiyat = Data[i].Low;
+        }
+
+        // Calculate profit/loss based on position direction
+        if (sonYon == "A")  // Long position (Al - Buy)
+        {
+            status.KarZararPuan = anlikFiyat - sonFiyat;
+            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
+            lists.KarZararPuanList[i] = status.KarZararPuan;
+            lists.KarZararFiyatList[i] = status.KarZararFiyat;
+
+            if (sonFiyat != 0)
+                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+            else
+                status.KarZararFiyatYuzde = 0.0;
+
+            lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
+
+            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
+            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+        }
+        else if (sonYon == "S")  // Short position (Sat - Sell)
+        {
+            status.KarZararPuan = sonFiyat - anlikFiyat;
+            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
+            lists.KarZararPuanList[i] = status.KarZararPuan;
+            lists.KarZararFiyatList[i] = status.KarZararFiyat;
+
+            if (sonFiyat != 0)
+                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+            else
+                status.KarZararFiyatYuzde = 0.0;
+
+            lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
+
+            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
+            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+        }
+
+        // Update bar count statistics
+        if (status.KarZararPuan > 0)
+        {
+            status.KardaBarSayisi += 1;
+            status.ZarardaBarSayisi -= 1;
+        }
+        else if (status.KarZararPuan == 0)
+        {
+            status.KardaBarSayisi = 0;
+            status.ZarardaBarSayisi = 0;
+        }
+        else  // KarZararPuan < 0
+        {
+            status.KardaBarSayisi -= 1;
+            status.ZarardaBarSayisi += 1;
+        }
+
+        return result;
+    }
+    /// <summary>
+    /// Anlık kar/zarar hesaplama - Normal version (BIST, VIOP için)
+    /// Integer varlık adedi kullanır
+    /// </summary>
+    public double _calculateUnrealizedPnL(int barIndex, string type = "C")
+    {
+        // Validate dependencies
+        if (Data == null || flags == null || signals == null || status == null || lists == null || initialTradeParams == null)
+            return 0.0;
+
+        // Validate bar index
+        if (barIndex < 0 || barIndex >= Data.Count)
+            return 0.0;
+
+        double result = 0.0;
+        int i = barIndex;
+
+        // Get current price based on type
+        double anlikFiyat = Data[i].Close;
+        bool anlikKarZararHesaplaEnabled = flags.AnlikKarZararHesaplaEnabled;
+        string sonYon = signals.SonYon;
+        double sonFiyat = signals.SonFiyat;
+        // Dinamik lot desteği: Son açılan pozisyonun büyüklüğünü kullan
+        double varlikAdedSayisi = signals.SonVarlikAdedSayisi;
+
+        if (!anlikKarZararHesaplaEnabled)
+            return result;
+
+        // Select price based on type
+        if (type != "C")
+        {
+            if (type == "O")
+                anlikFiyat = Data[i].Open;
+            else if (type == "H")
+                anlikFiyat = Data[i].High;
+            else if (type == "L")
+                anlikFiyat = Data[i].Low;
+        }
+
+        // Calculate profit/loss based on position direction
+        if (sonYon == "A")  // Long position (Al - Buy)
+        {
+            status.KarZararPuan = anlikFiyat - sonFiyat;
+            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
+            lists.KarZararPuanList[i] = status.KarZararPuan;
+            lists.KarZararFiyatList[i] = status.KarZararFiyat;
+
+            if (sonFiyat != 0)
+                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+            else
+                status.KarZararFiyatYuzde = 0.0;
+
+            lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
+
+            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
+            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+        }
+        else if (sonYon == "S")  // Short position (Sat - Sell)
+        {
+            status.KarZararPuan = sonFiyat - anlikFiyat;
+            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
+            lists.KarZararPuanList[i] = status.KarZararPuan;
+            lists.KarZararFiyatList[i] = status.KarZararFiyat;
+
+            if (sonFiyat != 0)
+                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+            else
+                status.KarZararFiyatYuzde = 0.0;
+
+            lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
+
+            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
+            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+        }
+
+        // Update bar count statistics
+        if (status.KarZararPuan > 0)
+        {
+            status.KardaBarSayisi += 1;
+            status.ZarardaBarSayisi -= 1;
+        }
+        else if (status.KarZararPuan == 0)
+        {
+            status.KardaBarSayisi = 0;
+            status.ZarardaBarSayisi = 0;
+        }
+        else  // KarZararPuan < 0
+        {
+            status.KardaBarSayisi -= 1;
+            status.ZarardaBarSayisi += 1;
+        }
+
+        return result;
+    }
+    public void ExecutePreOrderMethods(int barIndex)
+    {
+        int i = barIndex;
+
+        ResetVariablesOnNewIteration(i);
+
+        UpdateVariablesOnNewIteration(i);
+
+        if (i < 1)
+            return;
+
+        CalculateUnrealizedPnL(i);
+
+        ResetTradeCommands();
+
+        if (this.signals.IsTradeEnabled)
+            this.signals.IsTradeEnabled = false;
+
+        if (this.signals.IsPozKapatEnabled)
+            this.signals.IsPozKapatEnabled = false;
+
+        if (this.signals.GunSonuPozKapatildi)
+            this.signals.GunSonuPozKapatildi = false;
+
+        if (this.signals.KarAlindi || this.signals.ZararKesildi || this.signals.FlatOlundu)
+        {
+            this.signals.KarAlindi = false;
+            this.signals.ZararKesildi = false;
+            this.signals.FlatOlundu = false;
+            this.signals.PozAcilabilir = false;
+        }
+
+        if (this.signals.PozAcilabilir == false)
+        {
+            this.signals.PozAcilabilir = true;
+            this.signals.PozAcildi = false;
+        }
+
+        this.signals.IsTradeEnabled = true;
+    }
+
+    public void ExecutePostOrderMethods(int barIndex)
+    {
+        int i = barIndex;
+
+        // ----------------------------------------------------------------------------
+        OnBeforeOrder?.Invoke(this, barIndex);
+
+        // ----------------------------------------------------------------------------
+        ExecuteOrders(i);   // TODO: Strategy evaluate, sinyal üret, emir uygula
+
+        // ----------------------------------------------------------------------------
+        OnAfterOrder?.Invoke(this, barIndex);
+
+        // ----------------------------------------------------------------------------
+        if (this.signals.KarAlindi == false && this.signals.KarAl)
+            this.signals.KarAlindi = true;
+
+        if (this.signals.ZararKesildi == false && this.signals.ZararKes)
+            this.signals.ZararKesildi = true;
+
+        if (this.signals.FlatOlundu == false && this.signals.FlatOl)
+            this.signals.FlatOlundu = true;
+
+        // ----------------------------------------------------------------------------
+        // Sistem.Yon[i] = self.Lists.YonList[i]
+        // Sistem.Seviye[i] = self.Lists.SeviyeList[i]
+
+        // ----------------------------------------------------------------------------
+        if (this.signals.SonYon == "A")
+        {
+            this.lists.SinyalList[i] = 1.0;
+        }
+        else if (this.signals.SonYon == "S")
+        {
+            this.lists.SinyalList[i] = -1.0;
+        }
+        else if (this.signals.SonYon == "F")
+        {
+            this.lists.SinyalList[i] = 0.0;
+        }
+
+        // ----------------------------------------------------------------------------
+        this.lists.IslemSayisiList[i] = this.status.IslemSayisi;
+        this.lists.AlisSayisiList[i] = this.status.AlisSayisi;
+        this.lists.SatisSayisiList[i] = this.status.SatisSayisi;
+        this.lists.FlatSayisiList[i] = this.status.FlatSayisi;
+        this.lists.PassSayisiList[i] = this.status.PassSayisi;
+        this.lists.VarlikAdedSayisiList[i] = this.status.VarlikAdedSayisi;
+        this.lists.KontratSayisiList[i] = this.status.KontratSayisi;
+        this.lists.KomisyonVarlikAdedSayisiList[i] = this.status.KomisyonVarlikAdedSayisi;
+        this.lists.KomisyonIslemSayisiList[i] = this.status.KomisyonIslemSayisi;
+        this.lists.KomisyonFiyatList[i] = this.status.KomisyonFiyat;
+        this.lists.KardaBarSayisiList[i] = this.status.KardaBarSayisi;
+        this.lists.ZarardaBarSayisiList[i] = this.status.ZarardaBarSayisi;
+
+        // ----------------------------------------------------------------------------
+        CalculateBalance(i);
+
+        // ----------------------------------------------------------------------------
+        if (this.signals.IsTradeEnabled)
+        {
+            this.signals.IsTradeEnabled = true;
+        }
+        else
+        {
+            this.signals.IsTradeEnabled = false;
+        }
+        this.lists.IsTradeEnabledList[i] = this.signals.IsTradeEnabled ? 1 : 0;
+        this.lists.IsPozKapatEnabledList[i] = this.signals.IsPozKapatEnabled ? 1 : 0;
+    }
+    public double CalculateBalance(int barIndex)
+    {
+        double result = 0.0;
+
+        int i = barIndex;
+
+        // Bakiye (Puan)
+        this.lists.BakiyePuanList[i] = this.status.BakiyePuan + this.lists.KarZararPuanList[i];
+        this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.IlkBakiyePuan;
+
+        if (this.flags.BakiyeGuncelle)
+        {
+            this.status.BakiyePuan = this.lists.BakiyePuanList[i];
+            this.status.GetiriPuan = this.lists.GetiriPuanList[i];
+
+            if (this.lists.KarZararPuanList[i] >= 0)
+            {
+                this.status.ToplamKarPuan += this.lists.KarZararPuanList[i];
+            }
+            else if (this.lists.KarZararPuanList[i] < 0)
+            {
+                this.status.ToplamZararPuan += this.lists.KarZararPuanList[i];
+            }
+
+            this.status.NetKarPuan = this.status.ToplamKarPuan + this.status.ToplamZararPuan;
+        }
+
+        // Bakiye (Fiyat)
+        this.lists.BakiyeFiyatList[i] = this.status.BakiyeFiyat + this.lists.KarZararFiyatList[i];
+        this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.IlkBakiyeFiyat;
+
+        if (this.flags.BakiyeGuncelle)
+        {
+            this.status.BakiyeFiyat = this.lists.BakiyeFiyatList[i];
+            this.status.GetiriFiyat = this.lists.GetiriFiyatList[i];
+
+            if (this.lists.KarZararFiyatList[i] >= 0)
+            {
+                this.status.ToplamKarFiyat += this.lists.KarZararFiyatList[i];
+            }
+            else if (this.lists.KarZararFiyatList[i] < 0)
+            {
+                this.status.ToplamZararFiyat += this.lists.KarZararFiyatList[i];
+            }
+
+            this.status.NetKarFiyat = this.status.ToplamKarFiyat + this.status.ToplamZararFiyat;
+        }
+
+        // Yüzde hesaplamaları (Puan)
+        if (this.status.IlkBakiyePuan != 0.0)
+        {
+            this.lists.GetiriPuanYuzdeList[i] = 100.0 * this.lists.GetiriPuanList[i] / this.status.IlkBakiyePuan;
+        }
+        else
+        {
+            this.lists.GetiriPuanYuzdeList[i] = 0.0;
+        }
+
+        // Yüzde hesaplamaları (Fiyat)
+        if (this.status.IlkBakiyeFiyat != 0.0)
+        {
+            this.lists.GetiriFiyatYuzdeList[i] = 100.0 * this.lists.GetiriFiyatList[i] / this.status.IlkBakiyeFiyat;
+        }
+        else
+        {
+            this.lists.GetiriFiyatYuzdeList[i] = 0.0;
+        }
+
+        if (this.flags.BakiyeGuncelle)
+        {
+            this.status.GetiriPuanYuzde = this.lists.GetiriPuanYuzdeList[i];
+            this.status.GetiriFiyatYuzde = this.lists.GetiriFiyatYuzdeList[i];
+        }
+
+        // Net hesaplamalar (komisyon dahil)
+        double k = this.status.KomisyonCarpan != 0.0 ? 1.0 : 0.0;
+
+        this.lists.GetiriFiyatNetList[i] = this.lists.GetiriFiyatList[i] - this.lists.KomisyonFiyatList[i] * k;
+        this.lists.BakiyeFiyatNetList[i] = this.lists.GetiriFiyatNetList[i] + this.status.IlkBakiyeFiyat;
+
+        this.lists.GetiriFiyatYuzdeNetList[i] = 0.0;
+        if (this.status.IlkBakiyeFiyat != 0.0)
+        {
+            this.lists.GetiriFiyatYuzdeNetList[i] = 100.0 * this.lists.GetiriFiyatNetList[i] / this.status.IlkBakiyeFiyat;
+        }
+
+        // Dinamik lot büyüklüğünü kullan
+        bool isMicroLot = this.initialTradeParams.MicroLotSizeEnabled;
+        double varlikAdedSayisi = isMicroLot
+            ? this.signals.SonVarlikAdedSayisiMicro
+            : this.signals.SonVarlikAdedSayisi;
+
+        // Sıfıra bölme kontrolü
+        if (varlikAdedSayisi != 0)
+        {
+            this.lists.GetiriKz[i] = this.lists.GetiriFiyatList[i] / varlikAdedSayisi;
+            this.lists.GetiriKzNet[i] = this.lists.GetiriFiyatNetList[i] / varlikAdedSayisi;
+        }
+        else
+        {
+            // Pozisyon yoksa (Flat), getiri var ama lot yok
+            // Bir önceki lot büyüklüğünü kullan (eğer varsa)
+            double prevVolume = isMicroLot
+                ? this.signals.PrevVarlikAdedSayisiMicro
+                : this.signals.PrevVarlikAdedSayisi;
+
+            if (prevVolume != 0)
+            {
+                this.lists.GetiriKz[i] = this.lists.GetiriFiyatList[i] / prevVolume;
+                this.lists.GetiriKzNet[i] = this.lists.GetiriFiyatNetList[i] / prevVolume;
+            }
+            else
+            {
+                this.lists.GetiriKz[i] = 0.0;
+                this.lists.GetiriKzNet[i] = 0.0;
+            }
+        }
+
+        // Son bar kontrolü
+        int barCount = this.Data.Count;
+        if (i == barCount - 1)
+        {
+            this.status.BakiyeFiyat = this.lists.BakiyeFiyatList[barCount - 1];
+            this.status.GetiriFiyat = this.lists.GetiriFiyatList[barCount - 1];
+            this.status.GetiriKz = this.lists.GetiriKz[barCount - 1];
+            this.status.GetiriFiyatYuzde = this.lists.GetiriFiyatYuzdeList[barCount - 1];
+            this.status.BakiyeFiyatNet = this.lists.BakiyeFiyatNetList[barCount - 1];
+            this.status.GetiriFiyatNet = this.lists.GetiriFiyatNetList[barCount - 1];
+            this.status.GetiriKzNet = this.lists.GetiriKzNet[barCount - 1];
+            this.status.GetiriFiyatYuzdeNet = this.lists.GetiriFiyatYuzdeNetList[barCount - 1];
+            this.status.BakiyePuan = this.lists.BakiyePuanList[barCount - 1];
+            this.status.GetiriPuan = this.lists.GetiriPuanList[barCount - 1];
+            this.status.BakiyePuanNet = this.lists.BakiyePuanNetList[barCount - 1];
+            this.status.GetiriPuanNet = this.lists.GetiriPuanNetList[barCount - 1];
+            this.status.GetiriPuanYuzdeNet = this.lists.GetiriPuanYuzdeNetList[barCount - 1];
+        }
 
         return result;
     }
