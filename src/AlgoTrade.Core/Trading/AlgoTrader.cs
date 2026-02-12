@@ -71,6 +71,30 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private void OnApplyUserFlags(SingleTrader trader)
     {
         // InitializeUserControlledFlags
+        trader.ConfigureUserFlagsOnce();
+
+        int traderId = trader.GetId();
+        if (traderId == 0)
+        {
+            // 0 id'li trader icin
+        }
+        else if (traderId == 1)
+        {
+            // 1 id'li trader icin
+        }
+
+        var dateTimes = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+
+        trader.StartDateTimeStr = dateTimes[0];
+        trader.StopDateTimeStr = dateTimes[1];
+
+        var startDateTime = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
+        trader.StartDateStr = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
+        trader.StartTimeStr = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
+
+        var stopDateTime = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
+        trader.StopDateStr = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
+        trader.StopTimeStr = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
     }
 
     public void Start()
@@ -160,8 +184,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 throw new InvalidOperationException("singleTrader not not be created...");
 
             // Assign callbacks
-            singleTrader.SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress, OnApplyUserFlags);
-            singleTrader.ClearCallbacks();
+            singleTrader.ClearCallbacks()
+                        .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
 
             // Reset
             singleTrader.Reset();
@@ -182,6 +206,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
 
             // Init
+            OnApplyUserFlags(singleTrader);
+
+            // Init
             singleTrader.Init();
 
             _timer!.RestartTimer("1");
@@ -197,6 +224,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             IsRunning = true;
             await Task.Run(() =>
             {
+                // Set state flags
+                singleTrader.IsStarted = true;
+                singleTrader.IsRunning = true;
+                singleTrader.IsStopped = false;
+                singleTrader.IsStopRequested = false;
+
                 for (int i = 0; i < totalBars; i++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();

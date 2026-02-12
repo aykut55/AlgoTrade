@@ -92,6 +92,14 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public int ExecutionStepNumber { get; set; }
     public bool BakiyeInitialized { get; set; }
 
+    #region StateFlags
+    // State flags
+    public bool IsStarted { get; internal set; }
+    public bool IsRunning { get; internal set; }
+    public bool IsStopped { get; internal set; }
+    public bool IsStopRequested { get; internal set; }
+    #endregion
+
     #region ScreeningProperties
     // ═══════════════════════════════════════════════════════════════════════
     // SCREENING (TARAMA) PROPERTIES - Son sinyal ve açık pozisyon bilgileri
@@ -227,15 +235,41 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public void Reset()
     {
+        //CurrentIndex = 0;
+
+        SymbolName = "...";
+        SymbolPeriod = "...";
+        SystemId = "...";
+        SystemName = "...";
+        StrategyId = "...";
+        StrategyName = "...";
+        LastResetTime = "...";
+        LastExecutionId = "...";
+        LastExecutionTime = "...";
+        LastExecutionTimeStart = "...";
+        LastExecutionTimeStop = "...";
+        LastExecutionTimeInMSec = "...";
+
         OnReset?.Invoke(this, 0);
 
         // Reset internal modules (state only)
         ResetModules();
 
+        // Re-apply user-defined flags after internal resets
+        // OnApplyUserFlags?.Invoke(this);
+
+        OnReset?.Invoke(this, 1);
+
         ExecutionStepNumber = 0;
         BakiyeInitialized = false;
 
-        OnReset?.Invoke(this, 1);
+        // Reset state flags
+        IsStarted = false;
+        IsRunning = false;
+        IsStopped = false;
+        IsStopRequested = false;
+
+        this.LastResetTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
     }
 
     public void Init()
@@ -283,6 +317,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         OnFinal?.Invoke(this, dispose ? 1 : 0);
     }
+    
     public SingleTrader CreateModules()
     {
         /*signals = new Signals();
@@ -323,6 +358,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return this;
     }
+    
     public SingleTrader ResetModules()
     {
         initialTradeParams.Reset();
@@ -343,6 +379,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return this;
     }
+    
     public SingleTrader InitModules()
     {
         initialTradeParams.Init();
@@ -363,6 +400,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return this;
     }
+    
     public SingleTrader DeleteModules()
     {
         initialTradeParams = null;
@@ -384,6 +422,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         return TradeSignals.None;
     }
+    
     public void MapStrategyCommandsToTradeCommands(TradeSignals strategySignal)
     {
         if (strategySignal == TradeSignals.None)
@@ -1203,6 +1242,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
         this.signals.Sinyal = "";
     }
+    
     public double CalculateUnrealizedPnL(int barIndex)
     {
         double result = 0.0;
@@ -1409,6 +1449,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return result;
     }
+    
     public void ExecutePreOrderMethods(int barIndex)
     {
         int i = barIndex;
@@ -1520,6 +1561,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.lists.IsTradeEnabledList[i] = this.signals.IsTradeEnabled ? 1 : 0;
         this.lists.IsPozKapatEnabledList[i] = this.signals.IsPozKapatEnabled ? 1 : 0;
     }
+    
     public double CalculateBalance(int barIndex)
     {
         double result = 0.0;
@@ -1937,7 +1979,50 @@ public class SingleTrader : MarketDataProvider, IDisposable
         return false;
     }
 
+    public SingleTrader ConfigureUserFlagsOnce()
+    {
+        if (_data == null || _data.Count == 0)
+            throw new ArgumentException("Data cannot be null or empty");
 
+        // First All Reset
+        this.signals.AlEnabled = false;
+        this.signals.SatEnabled = false;
+        this.signals.FlatOlEnabled = false;
+        this.signals.PasGecEnabled = false;
+        this.signals.KarAlEnabled = false;
+        this.signals.ZararKesEnabled = false;
+        this.signals.Alindi = false;
+        this.signals.Satildi = false;
+        this.signals.FlatOlundu = false;
+        this.signals.PasGecildi = false;
+        this.signals.KarAlindi = false;
+        this.signals.ZararKesildi = false;
+        this.signals.PozAcilabilir = false;
+        this.signals.PozAcildi = false;
+        this.signals.PozKapatilabilir = false;
+        this.signals.PozKapatildi = false;
+        this.signals.PozAcilabilirAlis = false;
+        this.signals.PozAcilabilirSatis = false;
+        this.signals.PozAcildiAlis = false;
+        this.signals.PozAcildiSatis = false;
+        this.signals.GunSonuPozKapatEnabled = false;
+        this.signals.GunSonuPozKapatildi = false;
+        this.signals.TimeFilteringEnabled = false;
+        this.signals.IsTradeEnabled = false;
+        this.signals.IsPozKapatEnabled = false;
+
+        // Then Needed Set
+        this.signals.AlEnabled = true;
+        this.signals.SatEnabled = true;
+        this.signals.FlatOlEnabled = true;
+        this.signals.PasGecEnabled = false;
+        this.signals.KarAlEnabled = false;
+        this.signals.ZararKesEnabled = false;
+        this.signals.GunSonuPozKapatEnabled = false;    // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+        this.signals.TimeFilteringEnabled = true;     // DEFAULT = False, Ek maliyet getirir : 
+
+        return this;
+    }
 
     public void Dispose()
     {
