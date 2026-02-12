@@ -8,14 +8,28 @@ namespace AlgoTrade.Core.Trading;
 
 public class AlgoTrader : MarketDataProvider, IDisposable
 {
+    #region Properties
+
+    // Identification
     public string Name { get; }
     public bool IsRunning { get; private set; }
     public new bool IsInitialized { get; private set; }
 
+    // Symbol and System Info
+    public string SymbolName { get; set; } = "...";
+    public string SymbolPeriod { get; set; } = "...";
+    public string SystemId { get; set; } = "...";
+    public string SystemName { get; set; } = "...";
+    public string StrategyId { get; set; } = "...";
+    public string StrategyName { get; set; } = "...";
+
+    // Internal
     private LogManager? _logger;
     private TimeManager? _timer;
     private SingleTrader? singleTrader { get; set; }
     public IndicatorManager? indicators { get; private set; }
+
+    #endregion
 
     public AlgoTrader(string name)
     {
@@ -191,13 +205,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.Reset();
 
             // Set attributes
-            /*
             singleTrader.SymbolName             = this.SymbolName;
             singleTrader.SymbolPeriod           = this.SymbolPeriod;
-            singleTrader.SystemId               = this.SystemId     = "0";
-            singleTrader.SystemName             = this.SystemName   = "SystemName";
-            singleTrader.StrategyId             = this.StrategyId   = "0";
-            singleTrader.StrategyName           = this.StrategyName = "StrategyName";*/
+            singleTrader.SystemId               = this.SystemId;
+            singleTrader.SystemName             = this.SystemName;
+            singleTrader.StrategyId             = this.StrategyId;
+            singleTrader.StrategyName           = this.StrategyName;
             singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             

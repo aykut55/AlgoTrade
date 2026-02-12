@@ -70,9 +70,23 @@ void OnReadData(StockDataReader sender, List<StockData> data, long elapsedMs)
     // LogManager.Log(sb.ToString());
 }
 
+DateTime? _progressStartTime = null;
 void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, double percentage)
 {
     //LogManager.LogRaw($"\rProgress: {currentBar}/{totalBars} ({percentage:F1}%)");
+
+    // TODO: Ileride detayli progress bilgisi eklenebilir:
+    // Ilk mesajda startTime set edilir, sonrakilerde elapsed/remaining hesaplanir.
+    // if (_progressStartTime == null) _progressStartTime = DateTime.Now;
+    //
+    // var elapsed = DateTime.Now - _progressStartTime.Value;
+    // double barsPerSecond = currentBar / elapsed.TotalSeconds;
+    // int remainingBars = totalBars - currentBar;
+    // TimeSpan estimatedRemaining = barsPerSecond > 0
+    //     ? TimeSpan.FromSeconds(remainingBars / barsPerSecond)
+    //     : TimeSpan.Zero;
+    //
+    // Not: Her yeni run oncesi _progressStartTime = null yapilmali.
 }
 
 void readStockData()
@@ -348,6 +362,13 @@ async Task runAlgoTrade()
         LogManager.LogRaw($"Running AlgoTrader");
 
         algoTrader = new AlgoTrader("AlgoTrader");
+
+        // Set symbol/system info from metadata
+        if (stockMetaData != null)
+        {
+            algoTrader.SymbolName  = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        }
 
         algoTrader.OnTraderProgress += OnTraderProgress;
         algoTrader.RegisterLogger(logger);

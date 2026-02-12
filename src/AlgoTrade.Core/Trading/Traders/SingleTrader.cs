@@ -237,6 +237,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public void Reset()
     {
+        if (_data == null || _data.Count == 0)
+            throw new ArgumentException("Data cannot be null or empty");
+
         //CurrentIndex = 0;
 
         SymbolName = "...";
@@ -276,6 +279,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public void Init()
     {
+        if (_data == null || _data.Count == 0)
+            throw new ArgumentException("Data cannot be null or empty");
+
         OnInit?.Invoke(this, 0);
 
         InitModules();
@@ -422,6 +428,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     
     public SingleTrader DeleteModules()
     {
+        ClearCallbacks();
+
         initialTradeParams = null;
 
         signals = null;
