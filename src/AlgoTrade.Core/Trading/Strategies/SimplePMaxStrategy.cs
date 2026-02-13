@@ -75,7 +75,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _pmaxResult = Indicators.Trend.PMax(_atrPeriod, _multiplier, _maPeriod);
 
-            LogManager.Log($"SimplePMaxStrategy initialized: ATRPeriod={_atrPeriod}, Multiplier={_multiplier}, MAPeriod={_maPeriod}");
+            Log($"SimplePMaxStrategy initialized: ATRPeriod={_atrPeriod}, Multiplier={_multiplier}, MAPeriod={_maPeriod}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

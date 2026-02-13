@@ -92,7 +92,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            LogManager.Log($"SimpleKairiStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
+            Log($"SimpleKairiStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

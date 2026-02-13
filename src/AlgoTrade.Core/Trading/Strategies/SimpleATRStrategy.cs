@@ -97,7 +97,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            LogManager.Log($"SimpleATRStrategy initialized: ATRPeriod={_atrPeriod}, MAPeriod={_maPeriod}, Multiplier={_multiplier}");
+            Log($"SimpleATRStrategy initialized: ATRPeriod={_atrPeriod}, MAPeriod={_maPeriod}, Multiplier={_multiplier}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

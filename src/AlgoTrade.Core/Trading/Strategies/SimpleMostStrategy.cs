@@ -1,6 +1,5 @@
 using AlgoTrade.Core;
 using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
@@ -70,12 +69,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 // Implement edildikten sonra bu satır çalışacak
                 (_most, _exmov) = Indicators.Trend.MOST(_period, _percent);
 
-                LogManager.Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
+                Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
             }
             catch (NotImplementedException)
             {
-                LogManager.LogWarning($"MOST indicator not yet implemented! Strategy will not generate signals.");
-                LogManager.LogWarning($"To implement MOST, edit src/Trading/Indicators/Trend/TrendIndicators.cs");
+                LogWarning("MOST indicator not yet implemented! Strategy will not generate signals.");
+                LogWarning("To implement MOST, edit src/Trading/Indicators/Trend/TrendIndicators.cs");
 
                 // MOST henüz implement edilmemiş, boş arrayler oluştur
                 int barCount = Indicators.BarCount;

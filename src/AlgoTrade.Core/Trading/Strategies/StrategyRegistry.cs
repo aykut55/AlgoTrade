@@ -58,10 +58,22 @@ public sealed class StrategyRegistry
 
         var safeParameters = parameters ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
+        IStrategy createdStrategy;
         if (TryCreateViaStaticFactory(strategyType, data, indicators, safeParameters, out var strategyFromFactory))
-            return strategyFromFactory;
+        {
+            createdStrategy = strategyFromFactory;
+        }
+        else
+        {
+            createdStrategy = CreateFromBestMatchingConstructor(strategyType, data, indicators, safeParameters);
+        }
 
-        return CreateFromBestMatchingConstructor(strategyType, data, indicators, safeParameters);
+        if (createdStrategy is BaseStrategy baseStrategy)
+        {
+            baseStrategy.SetLogger(logger);
+        }
+
+        return createdStrategy;
     }
 
     private static void Log(LogManager? logger, string message)

@@ -76,7 +76,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _stochResult = Indicators.Momentum.Stochastic(_kPeriod, _dPeriod);
 
-            LogManager.Log($"SimpleStochasticStrategy initialized: K={_kPeriod}, D={_dPeriod}, CenterLine={_centerLine}");
+            Log($"SimpleStochasticStrategy initialized: K={_kPeriod}, D={_dPeriod}, CenterLine={_centerLine}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

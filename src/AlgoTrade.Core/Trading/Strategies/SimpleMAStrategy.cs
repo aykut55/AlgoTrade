@@ -61,7 +61,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             _fastMA = Indicators.MA.SMA(closes, _fastPeriod);
             _slowMA = Indicators.MA.SMA(closes, _slowPeriod);
 
-            LogManager.Log($"Strategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}, Choice={_choice}");
+            Log($"Strategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}, Choice={_choice}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

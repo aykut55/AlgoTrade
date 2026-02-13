@@ -77,7 +77,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             var closes = Indicators.GetClosePrices();
             _macdResult = Indicators.Momentum.MACD(closes, _fastPeriod, _slowPeriod, _signalPeriod);
 
-            LogManager.Log($"SimpleMACDStrategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}, Signal={_signalPeriod}");
+            Log($"SimpleMACDStrategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}, Signal={_signalPeriod}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

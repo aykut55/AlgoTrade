@@ -67,7 +67,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             _hhv = Indicators.Utils.HHV(highs, _period);
             _llv = Indicators.Utils.LLV(lows, _period);
 
-            LogManager.Log($"SimpleHHVLLVStrategy initialized: Period={_period}");
+            Log($"SimpleHHVLLVStrategy initialized: Period={_period}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

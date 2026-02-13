@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using AlgoTrade.Core;
+using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading;
@@ -28,6 +29,7 @@ namespace AlgoTrade.Core.Trading.Strategy
 
         /// <summary>Is initialized?</summary>
         protected bool IsInitialized { get; set; }
+        protected LogManager? Logger { get; private set; }
 
         #endregion
 
@@ -100,6 +102,33 @@ namespace AlgoTrade.Core.Trading.Strategy
         public void SetTrader(SingleTrader trader)
         {
             Trader = trader;
+        }
+
+        public void SetLogger(LogManager? logger)
+        {
+            Logger = logger;
+        }
+
+        protected void Log(string message)
+        {
+            if (Logger is not null)
+            {
+                Logger.LogRawInstance(message);
+                return;
+            }
+
+            LogManager.LogRaw(message);
+        }
+
+        protected void LogWarning(string message)
+        {
+            if (Logger is not null)
+            {
+                Logger.LogRawInstance(message);
+                return;
+            }
+
+            LogManager.LogRaw(message);
         }
 
         /// <summary>

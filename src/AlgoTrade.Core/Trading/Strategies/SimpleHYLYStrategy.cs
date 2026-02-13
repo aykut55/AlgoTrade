@@ -94,7 +94,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            LogManager.Log($"SimpleHYLYStrategy initialized: Period={_period}, Threshold={_threshold}");
+            Log($"SimpleHYLYStrategy initialized: Period={_period}, Threshold={_threshold}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

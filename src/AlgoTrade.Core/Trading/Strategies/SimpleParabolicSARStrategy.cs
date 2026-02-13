@@ -70,7 +70,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _sarResult = Indicators.Trend.ParabolicSAR(_step, _max);
 
-            LogManager.Log($"SimpleParabolicSARStrategy initialized: Step={_step}, Max={_max}");
+            Log($"SimpleParabolicSARStrategy initialized: Step={_step}, Max={_max}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

@@ -75,7 +75,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             var closes = Indicators.GetClosePrices();
             _momentum = Indicators.Momentum.ROC(closes, _period);
 
-            LogManager.Log($"SimpleMomentumStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
+            Log($"SimpleMomentumStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
         }
 
         public override TradeSignals OnStep(int currentIndex)
