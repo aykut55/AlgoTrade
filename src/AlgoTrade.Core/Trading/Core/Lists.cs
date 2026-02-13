@@ -61,6 +61,7 @@ namespace AlgoTrade.Core.Trading.Core
 
         public List<double> KontratSayisiList { get; set; }
         public List<double> VarlikAdedSayisiList { get; set; }
+        public List<double> VarlikAdedSayisiMicroList { get; set; }
         public List<double> SonVarlikAdedSayisiList { get; set; }
         public List<double> SonVarlikAdedSayisiMicroList { get; set; }
 
@@ -69,6 +70,7 @@ namespace AlgoTrade.Core.Trading.Core
         #region Commission
 
         public List<double> KomisyonVarlikAdedSayisiList { get; set; }
+        public List<double> KomisyonVarlikAdedSayisiMicroList { get; set; }
         public List<int> KomisyonIslemSayisiList { get; set; }
         public List<double> KomisyonFiyatList { get; set; }
 
@@ -161,11 +163,13 @@ namespace AlgoTrade.Core.Trading.Core
 
             KontratSayisiList = new List<double>();
             VarlikAdedSayisiList = new List<double>();
+            VarlikAdedSayisiMicroList = new List<double>();
 
             SonVarlikAdedSayisiList = new List<double>();
             SonVarlikAdedSayisiMicroList = new List<double>();
 
             KomisyonVarlikAdedSayisiList = new List<double>();
+            KomisyonVarlikAdedSayisiMicroList = new List<double>();
             KomisyonIslemSayisiList = new List<int>();
             KomisyonFiyatList = new List<double>();
 
@@ -237,11 +241,13 @@ namespace AlgoTrade.Core.Trading.Core
             PassSayisiList?.Clear();
 
             KontratSayisiList?.Clear();
-            VarlikAdedSayisiList?.Clear(); 
+            VarlikAdedSayisiList?.Clear();
+            VarlikAdedSayisiMicroList?.Clear();
             SonVarlikAdedSayisiList?.Clear();
             SonVarlikAdedSayisiMicroList?.Clear();
 
             KomisyonVarlikAdedSayisiList?.Clear();
+            KomisyonVarlikAdedSayisiMicroList?.Clear();
             KomisyonIslemSayisiList?.Clear();
             KomisyonFiyatList?.Clear();
 
@@ -333,10 +339,12 @@ namespace AlgoTrade.Core.Trading.Core
 
                 if (KontratSayisiList != null && KontratSayisiList.Count == n) KontratSayisiList[i] = 0.0;
                 if (VarlikAdedSayisiList != null && VarlikAdedSayisiList.Count == n) VarlikAdedSayisiList[i] = 0.0;
+                if (VarlikAdedSayisiMicroList != null && VarlikAdedSayisiMicroList.Count == n) VarlikAdedSayisiMicroList[i] = 0.0;
                 if (SonVarlikAdedSayisiList != null && SonVarlikAdedSayisiList.Count == n) SonVarlikAdedSayisiList[i] = 0.0;
                 if (SonVarlikAdedSayisiMicroList != null && SonVarlikAdedSayisiMicroList.Count == n) SonVarlikAdedSayisiMicroList[i] = 0.0;
 
                 if (KomisyonVarlikAdedSayisiList != null && KomisyonVarlikAdedSayisiList.Count == n) KomisyonVarlikAdedSayisiList[i] = 0.0;
+                if (KomisyonVarlikAdedSayisiMicroList != null && KomisyonVarlikAdedSayisiMicroList.Count == n) KomisyonVarlikAdedSayisiMicroList[i] = 0.0;
                 if (KomisyonIslemSayisiList != null && KomisyonIslemSayisiList.Count == n) KomisyonIslemSayisiList[i] = 0;
                 if (KomisyonFiyatList != null && KomisyonFiyatList.Count == n) KomisyonFiyatList[i] = 0.0;
 
@@ -400,10 +408,12 @@ namespace AlgoTrade.Core.Trading.Core
 
                 KontratSayisiList = new List<double>(new double[barCount]);
                 VarlikAdedSayisiList = new List<double>(new double[barCount]);
+                VarlikAdedSayisiMicroList = new List<double>(new double[barCount]);
                 SonVarlikAdedSayisiList = new List<double>(new double[barCount]);
                 SonVarlikAdedSayisiMicroList = new List<double>(new double[barCount]);
 
                 KomisyonVarlikAdedSayisiList = new List<double>(new double[barCount]);
+                KomisyonVarlikAdedSayisiMicroList = new List<double>(new double[barCount]);
                 KomisyonIslemSayisiList = new List<int>(new int[barCount]);
                 KomisyonFiyatList = new List<double>(new double[barCount]);
 

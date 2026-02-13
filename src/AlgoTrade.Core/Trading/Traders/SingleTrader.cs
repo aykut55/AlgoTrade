@@ -1221,9 +1221,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.lists.PassSayisiList[i] = 0;
         this.lists.KontratSayisiList[i] = 0;
         this.lists.VarlikAdedSayisiList[i] = 0;
+        this.lists.VarlikAdedSayisiMicroList[i] = 0;
         this.lists.SonVarlikAdedSayisiList[i] = 0;
         this.lists.SonVarlikAdedSayisiMicroList[i] = 0;
         this.lists.KomisyonVarlikAdedSayisiList[i] = 0;
+        this.lists.KomisyonVarlikAdedSayisiMicroList[i] = 0;
         this.lists.KomisyonIslemSayisiList[i] = 0;
         this.lists.KomisyonFiyatList[i] = 0.0;
         this.lists.KardaBarSayisiList[i] = 0;
@@ -1572,8 +1574,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.lists.FlatSayisiList[i] = this.status.FlatSayisi;
         this.lists.PassSayisiList[i] = this.status.PassSayisi;
         this.lists.VarlikAdedSayisiList[i] = this.status.VarlikAdedSayisi;
+        this.lists.VarlikAdedSayisiMicroList[i] = this.status.VarlikAdedSayisiMicro;
         this.lists.KontratSayisiList[i] = this.status.KontratSayisi;
         this.lists.KomisyonVarlikAdedSayisiList[i] = this.status.KomisyonVarlikAdedSayisi;
+        this.lists.KomisyonVarlikAdedSayisiMicroList[i] = this.status.KomisyonVarlikAdedSayisiMicro;
         this.lists.KomisyonIslemSayisiList[i] = this.status.KomisyonIslemSayisi;
         this.lists.KomisyonFiyatList[i] = this.status.KomisyonFiyat;
         this.lists.KardaBarSayisiList[i] = this.status.KardaBarSayisi;

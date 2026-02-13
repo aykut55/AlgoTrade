@@ -271,7 +271,8 @@ namespace AlgoTrade.Core.Trading.Statistics
         public int EmirKomut => Trader?.signals?.EmirKomut ?? 0;
         public int EmirStatus => Trader?.signals?.EmirStatus ?? 0;
 
-        // New Micro Signal fields
+        // Dynamic lot size signal fields
+        public double SonVarlikAdedSayisi => Trader?.signals?.SonVarlikAdedSayisi ?? 0;
         public double SonVarlikAdedSayisiMicro => Trader?.signals?.SonVarlikAdedSayisiMicro ?? 0;
         public double PrevVarlikAdedSayisiMicro => Trader?.signals?.PrevVarlikAdedSayisiMicro ?? 0;
         #endregion
@@ -832,6 +833,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("VarlikAdedCarpani", VarlikAdedCarpani, "F2");
             Add("VarlikAdedSayisi", VarlikAdedSayisi, "F2");
             Add("VarlikAdedSayisiMicro", VarlikAdedSayisiMicro, "F4");
+            Add("SonVarlikAdedSayisi", SonVarlikAdedSayisi, "F2");
+            Add("SonVarlikAdedSayisiMicro", SonVarlikAdedSayisiMicro, "F4");
             Add("KaymaMiktari", KaymaMiktari, "F4");
             Add("KaymayiDahilEt", KaymayiDahilEt);
 
@@ -944,7 +947,11 @@ namespace AlgoTrade.Core.Trading.Statistics
                     $"{"Pass",6} | " +
                     $"{"Kontrat",8} | " +
                     $"{"VarAded",8} | " +
+                    $"{"VarAdedM",9} | " +
+                    $"{"SnVarAd",8} | " +
+                    $"{"SnVarAdM",9} | " +
                     $"{"KomVAded",9} | " +
+                    $"{"KomVAdM",9} | " +
                     $"{"KomIslem",9} | " +
                     $"{"KomFiyat",10} | " +
                     $"{"KarBar",7} | " +
@@ -1003,7 +1010,11 @@ namespace AlgoTrade.Core.Trading.Statistics
                         $"{Trader.lists.PassSayisiList[i],6} | " +
                         $"{Trader.lists.KontratSayisiList[i],8:F2} | " +
                         $"{Trader.lists.VarlikAdedSayisiList[i],8:F2} | " +
+                        $"{Trader.lists.VarlikAdedSayisiMicroList[i],9:F4} | " +
+                        $"{Trader.lists.SonVarlikAdedSayisiList[i],8:F2} | " +
+                        $"{Trader.lists.SonVarlikAdedSayisiMicroList[i],9:F4} | " +
                         $"{Trader.lists.KomisyonVarlikAdedSayisiList[i],9:F2} | " +
+                        $"{Trader.lists.KomisyonVarlikAdedSayisiMicroList[i],9:F4} | " +
                         $"{Trader.lists.KomisyonIslemSayisiList[i],9} | " +
                         $"{Trader.lists.KomisyonFiyatList[i],10:F2} | " +
                         $"{Trader.lists.KardaBarSayisiList[i],7} | " +
@@ -1050,7 +1061,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                     "KarZararPuan;KarZararFiyat;KarZararPuanYuzde;KarZararFiyatYuzde;" +
                     "KarAl;ZararKes;IzleyenStop;" +
                     "IslemSayisi;AlisSayisi;SatisSayisi;FlatSayisi;PassSayisi;" +
-                    "KontratSayisi;VarlikAdedSayisi;KomisyonVarlikAdedSayisi;KomisyonIslemSayisi;KomisyonFiyat;" +
+                    "KontratSayisi;VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KomisyonVarlikAdedSayisi;KomisyonVarlikAdedSayisiMicro;KomisyonIslemSayisi;KomisyonFiyat;" +
                     "KardaBarSayisi;ZarardaBarSayisi;" +
                     "BakiyePuan;BakiyeFiyat;GetiriPuan;GetiriFiyat;GetiriPuanYuzde;GetiriFiyatYuzde;" +
                     "BakiyePuanNet;BakiyeFiyatNet;GetiriPuanNet;GetiriFiyatNet;GetiriPuanYuzdeNet;GetiriFiyatYuzdeNet;" +
@@ -1090,7 +1101,11 @@ namespace AlgoTrade.Core.Trading.Statistics
                         $"{Trader.lists.PassSayisiList[i]};" +
                         $"{Trader.lists.KontratSayisiList[i]:F2};" +
                         $"{Trader.lists.VarlikAdedSayisiList[i]:F2};" +
+                        $"{Trader.lists.VarlikAdedSayisiMicroList[i]:F4};" +
+                        $"{Trader.lists.SonVarlikAdedSayisiList[i]:F2};" +
+                        $"{Trader.lists.SonVarlikAdedSayisiMicroList[i]:F4};" +
                         $"{Trader.lists.KomisyonVarlikAdedSayisiList[i]:F2};" +
+                        $"{Trader.lists.KomisyonVarlikAdedSayisiMicroList[i]:F4};" +
                         $"{Trader.lists.KomisyonIslemSayisiList[i]};" +
                         $"{Trader.lists.KomisyonFiyatList[i]:F2};" +
                         $"{Trader.lists.KardaBarSayisiList[i]};" +
@@ -1345,6 +1360,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Asset Multiplier         : {GetValue("VarlikAdedCarpani"),-50} │");
             sb.AppendLine($"│ Asset Count              : {GetValue("VarlikAdedSayisi"),-50} │");
             sb.AppendLine($"│ Asset Count (Micro)      : {GetValue("VarlikAdedSayisiMicro"),-50} │");
+            sb.AppendLine($"│ Last Asset Count         : {GetValue("SonVarlikAdedSayisi"),-50} │");
+            sb.AppendLine($"│ Last Asset Count (Micro) : {GetValue("SonVarlikAdedSayisiMicro"),-50} │");
             sb.AppendLine($"│ Slippage Amount          : {GetValue("KaymaMiktari"),-50} │");
             sb.AppendLine($"│ Include Slippage         : {GetValue("KaymayiDahilEt"),-50} │");
             sb.AppendLine($"│ Micro Lot Size Enabled   : {GetValue("MicroLotSizeEnabled"),-50} │");
@@ -1526,6 +1543,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("VarlikAdedCarpani", VarlikAdedCarpani, "F2");
             Add("VarlikAdedSayisi", VarlikAdedSayisi, "F2");
             Add("VarlikAdedSayisiMicro", VarlikAdedSayisiMicro, "F4");
+            Add("SonVarlikAdedSayisi", SonVarlikAdedSayisi, "F2");
+            Add("SonVarlikAdedSayisiMicro", SonVarlikAdedSayisiMicro, "F4");
             Add("KaymaMiktari", KaymaMiktari, "F4");
             Add("KaymayiDahilEt", KaymayiDahilEt);
 
@@ -2023,6 +2042,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double VarlikAdedCarpani;
             public double VarlikAdedSayisi;
             public double VarlikAdedSayisiMicro;
+            public double SonVarlikAdedSayisi;
+            public double SonVarlikAdedSayisiMicro;
             public double KaymaMiktari;
             public bool KaymayiDahilEt;
 
@@ -2079,7 +2100,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "GetiriMaxDD;GetiriMaxDDTarih;GetiriMaxKayip;ProfitFactor;ProfitFactorNet;ProfitFactorSistem;" +
                        "Sinyal;SonYon;PrevYon;SonFiyat;SonAFiyat;SonSFiyat;SonFFiyat;SonPFiyat;PrevFiyat;" +
                        "SonBarNo;SonABarNo;SonSBarNo;EmirKomut;EmirStatus;" +
-                       "HisseSayisi;KontratSayisi;VarlikAdedCarpani;VarlikAdedSayisi;VarlikAdedSayisiMicro;KaymaMiktari;KaymayiDahilEt;" +
+                       "HisseSayisi;KontratSayisi;VarlikAdedCarpani;VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KaymaMiktari;KaymayiDahilEt;" +
                        "MicroLotSizeEnabled;PyramidingEnabled;MaxPositionSizeEnabled;MaxPositionSize;MaxPositionSizeMicro;" +
                        "GetiriFiyatBuAy;GetiriFiyatAy1;GetiriFiyatBuHafta;GetiriFiyatHafta1;GetiriFiyatBuGun;GetiriFiyatGun1;GetiriFiyatBuSaat;GetiriFiyatSaat1;" +
                        "GetiriPuanBuAy;GetiriPuanAy1;GetiriPuanBuHafta;GetiriPuanHafta1;GetiriPuanBuGun;GetiriPuanGun1;GetiriPuanBuSaat;GetiriPuanSaat1";
@@ -2113,7 +2134,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{GetiriMaxDD:F2};{GetiriMaxDDTarih};{GetiriMaxKayip:F2};{ProfitFactor:F2};{ProfitFactorNet:F2};{ProfitFactorSistem:F2};" +
                        $"{Sinyal};{SonYon};{PrevYon};{SonFiyat:F4};{SonAFiyat:F4};{SonSFiyat:F4};{SonFFiyat:F4};{SonPFiyat:F4};{PrevFiyat:F4};" +
                        $"{SonBarNo};{SonABarNo};{SonSBarNo};{EmirKomut};{EmirStatus};" +
-                       $"{HisseSayisi:F2};{KontratSayisi:F2};{VarlikAdedCarpani:F2};{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{KaymaMiktari:F4};{KaymayiDahilEt};" +
+                       $"{HisseSayisi:F2};{KontratSayisi:F2};{VarlikAdedCarpani:F2};{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{SonVarlikAdedSayisi:F2};{SonVarlikAdedSayisiMicro:F4};{KaymaMiktari:F4};{KaymayiDahilEt};" +
                        $"{MicroLotSizeEnabled};{PyramidingEnabled};{MaxPositionSizeEnabled};{MaxPositionSize:F4};{MaxPositionSizeMicro:F4};" +
                        $"{GetiriFiyatBuAy:F2};{GetiriFiyatAy1:F2};{GetiriFiyatBuHafta:F2};{GetiriFiyatHafta1:F2};{GetiriFiyatBuGun:F2};{GetiriFiyatGun1:F2};{GetiriFiyatBuSaat:F2};{GetiriFiyatSaat1:F2};" +
                        $"{GetiriPuanBuAy:F4};{GetiriPuanAy1:F4};{GetiriPuanBuHafta:F4};{GetiriPuanHafta1:F4};{GetiriPuanBuGun:F4};{GetiriPuanGun1:F4};{GetiriPuanBuSaat:F4};{GetiriPuanSaat1:F4}";
@@ -2363,6 +2384,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                 VarlikAdedCarpani = VarlikAdedCarpani,
                 VarlikAdedSayisi = VarlikAdedSayisi,
                 VarlikAdedSayisiMicro = VarlikAdedSayisiMicro,
+                SonVarlikAdedSayisi = SonVarlikAdedSayisi,
+                SonVarlikAdedSayisiMicro = SonVarlikAdedSayisiMicro,
                 KaymaMiktari = KaymaMiktari,
                 KaymayiDahilEt = KaymayiDahilEt,
 
@@ -2463,6 +2486,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             // Position Info
             public double VarlikAdedSayisi;
             public double VarlikAdedSayisiMicro;
+            public double SonVarlikAdedSayisi;
+            public double SonVarlikAdedSayisiMicro;
             public double KomisyonCarpan;
             public bool MicroLotSizeEnabled;
             public bool PyramidingEnabled;
@@ -2484,7 +2509,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;" +
                        "MinBakiyeFiyatNet;MaxBakiyeFiyatNet;MinBakiyeFiyatNetYuzde;MaxBakiyeFiyatNetYuzde;" +
                        "ProfitFactor;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;" +
-                       "VarlikAdedSayisi;VarlikAdedSayisiMicro;KomisyonCarpan;" +
+                       "VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KomisyonCarpan;" +
                        "MicroLotSizeEnabled;PyramidingEnabled;MaxPositionSizeEnabled";
             }
 
@@ -2504,7 +2529,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};" +
                        $"{MinBakiyeFiyatNet:F2};{MaxBakiyeFiyatNet:F2};{MinBakiyeFiyatNetYuzde:F2};{MaxBakiyeFiyatNetYuzde:F2};" +
                        $"{ProfitFactor:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};" +
-                       $"{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{KomisyonCarpan:F4};" +
+                       $"{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{SonVarlikAdedSayisi:F2};{SonVarlikAdedSayisiMicro:F4};{KomisyonCarpan:F4};" +
                        $"{MicroLotSizeEnabled};{PyramidingEnabled};{MaxPositionSizeEnabled}";
             }
 
@@ -2643,6 +2668,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                 // Position Info
                 VarlikAdedSayisi = VarlikAdedSayisi,
                 VarlikAdedSayisiMicro = VarlikAdedSayisiMicro,
+                SonVarlikAdedSayisi = SonVarlikAdedSayisi,
+                SonVarlikAdedSayisiMicro = SonVarlikAdedSayisiMicro,
                 KomisyonCarpan = KomisyonCarpan,
                 MicroLotSizeEnabled = MicroLotSizeEnabled,
                 PyramidingEnabled = PyramidingEnabled,
