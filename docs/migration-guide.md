@@ -138,6 +138,66 @@ Uc method da tutarli. Kaldirilan moduller (komisyon, Bakiye, pozisyonBuyuklugu, 
 - `DeleteModules()` icine `ClearCallbacks()` eklendi (event memory leak onlemi)
 - AlgoTrader'a SymbolName/SymbolPeriod vb. property'ler eklendi, metadata'dan set ediliyor
 
+---
+
+## ApplyEquityCurveFilter() Implementasyonu (TAMAMLANDI)
+
+### Kaynak
+- **Eski proje**: `ConfirmingSingleTrader.buildConsensusSignal()` (coklu trader consensus mantigi)
+- **Yeni proje**: `SingleTrader.ApplyEquityCurveFilter(int barIndex)` (tek trader, kendi equity curve'une bakar)
+
+### Yapilan Degisiklikler
+
+#### 1. ConfirmationTrigger Enum
+- `SingleTrader.cs` icinde `TraderRunMode` altina eklendi
+- Degerler: `ProfitOnly = 0`, `LossOnly = 1`, `Both = 2`
+
+#### 2. EquityCurveFilterProperties (SingleTrader field'lari)
+| Field | Varsayilan | Aciklama |
+|-------|-----------|----------|
+| `thresholdTypeIsPercent` | false | false = Deger, true = Yuzde |
+| `profitConfirmationThreshold` | 10.0 | Kar esigi |
+| `lossConfirmationThreshold` | 5.0 | Zarar esigi |
+| `confirmationTrigger` | Both | ProfitOnly / LossOnly / Both |
+| `_equityCurveConfirmed` | false | Onay durumu (yon degisince sifirlanir) |
+
+#### 3. Reset() icine eklendi
+- Tum equity curve filter field'lari varsayilan degerlere sifirlaniyor
+
+#### 4. is_prev_yon_a/s/f() Methodlari
+- `is_son_yon_a/s/f()` pattern'inde `signals.PrevYon` kontrolu icin eklendi
+
+#### 5. ApplyEquityCurveFilter Akisi
+```
+Adim 1: Mevcut yon belirleme (SonYon -> A/S/F)
+Adim 2: Onceki yon ile karsilastir (PrevYon -> yon degisti mi?)
+Adim 3: Yon degiştiyse confirmed = false
+Adim 4: FLAT ise -> direkt gec, confirmed = false, return
+Adim 5: LONG/SHORT ve confirmed degilse -> esik kontrolu:
+         - thresholdTypeIsPercent'e gore deger/yuzde bazli kontrol
+         - confirmationTrigger moduna gore (ProfitOnly/LossOnly/Both)
+         - Esik gecildi -> confirmed = true, sinyal gecerli
+         - Esik gecilmedi -> sadece giris sinyalleri iptal (Al=false, Sat=false, None=true)
+         - Zaten confirmed ise -> esik kontrolu yapilmaz, sinyal devam eder
+```
+
+#### 6. Cagri Sirasi (Run methodu icinde)
+```
+ExecuteStrategy(i)
+  -> MapStrategyCommandsToTradeCommands()
+    -> ApplyTimingFilters(i)          // Zaman filtresi + GunSonuPozKapat
+      -> ApplyEquityCurveFilter(i)    // Equity curve filtresi
+        -> ExecutePostOrderMethods(i) // Emirler calistirilir
+```
+
+#### 7. Onemli Tasarim Kararlari
+- **Sadece giris sinyalleri (Al/Sat) filtrelenir.** Cikis sinyalleri (FlatOl, KarAl, ZararKes, PasGec) dokunulmadan gecilir.
+- **Sebep**: GunSonuPozKapat gibi koruyucu mekanizmalar baskılanmamali. Ornegin pozisyon acikken (SonYon=A) GunSonuPozKapat FlatOl=true set ederse, equity curve filtresi bunu iptal etmemeli.
+- `EquityCurveFilteringEnabled == false` ise method hicbir sey yapmadan gecer.
+- Ileride `IsEquityCurveTradeEnabled` / `IsTimingFiltersTradeEnabled` flag'leri aktif edilebilir (su an comment'li).
+
+---
+
 ================================================================================
 
 # AlgoTrade - Yol Haritasi ve Tasarim Notlari

@@ -155,9 +155,15 @@ namespace AlgoTrade.Core.Trading.Core
 
         public bool TimeFilteringEnabled { get; set; }
 
+        public bool EquityCurveFilteringEnabled { get; set; }           // ajax_bak 
+
         public bool IsTradeEnabled { get; set; }
 
         public bool IsPozKapatEnabled { get; set; }
+
+        public bool IsTimingFiltersTradeEnabled { get; set; }
+
+        public bool IsEquityCurveTradeEnabled { get; set; }
 
         #endregion
 
@@ -194,8 +200,11 @@ namespace AlgoTrade.Core.Trading.Core
             GunSonuPozKapatEnabled = false;
             GunSonuPozKapatildi = false;
             TimeFilteringEnabled = false;
+            EquityCurveFilteringEnabled = false;
             IsTradeEnabled = false;
             IsPozKapatEnabled = false;
+            IsTimingFiltersTradeEnabled = false;
+            IsEquityCurveTradeEnabled = false;
         }
 
         #endregion

@@ -140,6 +140,23 @@ void ConfigureQuery()
     }
 }
 
+void ConfigureEquityCurveFilter()
+{
+    algoTrader.EquityCurveFilteringEnabled = false;
+    algoTrader.ThresholdTypeIsPercent = true;
+    if (algoTrader.ThresholdTypeIsPercent)
+    {
+        algoTrader.ProfitConfirmationThreshold = 0.05;
+        algoTrader.LossConfirmationThreshold = -0.05;
+    }
+    else
+    {
+        algoTrader.ProfitConfirmationThreshold = 1000;
+        algoTrader.LossConfirmationThreshold = -1000;
+    }
+    algoTrader.ConfirmationTrigger = ConfirmationTrigger.Both;
+}
+
 void readStockData()
 {
     try
@@ -449,6 +466,8 @@ async Task runAlgoTrade()
             // Set query
             ConfigureQuery();
         }
+
+        ConfigureEquityCurveFilter();
 
         algoTrader.Initialize();
 

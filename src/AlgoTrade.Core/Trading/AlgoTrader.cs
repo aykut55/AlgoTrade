@@ -31,6 +31,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public bool QueryIsEnabled { get; private set; }
     public TraderRunMode SingleTraderRunMode { get; set; } = TraderRunMode.TradeAndQuery;
 
+    // Equity Curve Filter
+    public bool EquityCurveFilteringEnabled { get; set; } = false;
+    public bool ThresholdTypeIsPercent { get; set; } = false;
+    public double ProfitConfirmationThreshold { get; set; } = 10.0;
+    public double LossConfirmationThreshold { get; set; } = 5.0;
+    public ConfirmationTrigger ConfirmationTrigger { get; set; } = ConfirmationTrigger.Both;
+
     // Internal
     private LogManager? _logger;
     private TimeManager? _timer;
@@ -128,6 +135,17 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         trader.StopDateStr = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
         trader.StopTimeStr = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
     }
+
+    private void setSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
+    {
+        trader.signals.EquityCurveFilteringEnabled = this.EquityCurveFilteringEnabled;
+        trader.ConfigureEquityCurveFilter(
+            isPercent: this.ThresholdTypeIsPercent,
+            profitThreshold: this.ProfitConfirmationThreshold,
+            lossThreshold: this.LossConfirmationThreshold,
+            trigger: this.ConfirmationTrigger
+        );
+    }    
 
     public void Start()
     {
@@ -400,8 +418,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
 
+            // Sıralama Onemli
             // Apply user flags
             OnApplyUserFlags(singleTrader);
+            
+            // Configure equity curve filter
+            setSingleTraderConfigureEquityCurveFilter(singleTrader);
 
             // Init
             singleTrader.Init();

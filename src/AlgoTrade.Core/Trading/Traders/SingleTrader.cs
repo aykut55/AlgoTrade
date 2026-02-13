@@ -17,6 +17,12 @@ public enum TraderRunMode
     TradeAndQuery = 1,
     QueryOnly = 2
 }
+public enum ConfirmationTrigger
+{
+    ProfitOnly = 0,
+    LossOnly = 1,
+    Both = 2
+}
 
 public class SingleTrader : MarketDataProvider, IDisposable
 {
@@ -150,6 +156,15 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public string StopTimeStr { get; set; }
     #endregion
 
+    #region EquityCurveFilterProperties
+    // Equity Curve Filter Properties
+    private bool thresholdTypeIsPercent = false;               // false = Value, true = Percent
+    private double profitConfirmationThreshold = 10.0;         // Profit threshold
+    private double lossConfirmationThreshold = 5.0;            // Loss threshold
+    private ConfirmationTrigger confirmationTrigger = ConfirmationTrigger.Both;
+    private bool _equityCurveConfirmed = false;
+    #endregion
+
     public event Action<SingleTrader, int>? OnReset;
     public event Action<SingleTrader, int>? OnInit;
     public event Action<SingleTrader, int>? OnRun;
@@ -258,6 +273,21 @@ public class SingleTrader : MarketDataProvider, IDisposable
         return this.signals.SonYon == "S";
     }
 
+    public bool is_prev_yon_f()
+    {
+        return this.signals.PrevYon == "F";
+    }
+
+    public bool is_prev_yon_a()
+    {
+        return this.signals.PrevYon == "A";
+    }
+
+    public bool is_prev_yon_s()
+    {
+        return this.signals.PrevYon == "S";
+    }
+
     public SingleTrader(int id, string name, List<StockData> data, IndicatorManager indicators, LogManager? logger = null)
     {
         SetId(id);
@@ -349,6 +379,13 @@ public class SingleTrader : MarketDataProvider, IDisposable
         ExecutionStepNumber = 0;
         BakiyeInitialized = false;
 
+        // Reset equity curve filter properties
+        thresholdTypeIsPercent = false;
+        profitConfirmationThreshold = 10.0;
+        lossConfirmationThreshold = 5.0;
+        confirmationTrigger = ConfirmationTrigger.Both;
+        _equityCurveConfirmed = false;
+
         // Reset state flags
         IsStarted = false;
         IsRunning = false;
@@ -393,7 +430,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             MapStrategyCommandsToTradeCommands(this.strategySignal);
 
+            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek 
             ApplyTimingFilters(i);
+
+            ApplyEquityCurveFilter(i);
+            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek
 
             ExecutePostOrderMethods(i);
 
@@ -409,7 +450,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             MapStrategyCommandsToTradeCommands(this.strategySignal);
 
+            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek
             ApplyTimingFilters(i);
+
+            ApplyEquityCurveFilter(i);
+            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek
 
             ExecutePostOrderMethods(i);
 
@@ -1685,6 +1730,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (this.signals.IsTradeEnabled)
             this.signals.IsTradeEnabled = false;
 
+        if (this.signals.IsTimingFiltersTradeEnabled)
+            this.signals.IsTimingFiltersTradeEnabled = false;
+
+        if (this.signals.IsEquityCurveTradeEnabled)
+            this.signals.IsEquityCurveTradeEnabled = false;
+
         if (this.signals.IsPozKapatEnabled)
             this.signals.IsPozKapatEnabled = false;
 
@@ -1711,6 +1762,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public void ExecutePostOrderMethods(int barIndex)
     {
         int i = barIndex;
+
+        // ----------------------------------------------------------------------------
+        // TODO: İki filtre birlikte çalışınca aktif et
+        // this.signals.IsTradeEnabled = this.signals.IsTimingFiltersTradeEnabled && this.signals.IsEquityCurveTradeEnabled;
 
         // ----------------------------------------------------------------------------
         OnBeforeOrder?.Invoke(this, barIndex);
@@ -2102,6 +2157,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             CheckOrderTimeEligibility(i, filterMode, ref isTradeEnabled, ref isPozKapatEnabled, ref checkResult);
 
+            this.signals.IsTimingFiltersTradeEnabled = isTradeEnabled;
             this.signals.IsTradeEnabled = isTradeEnabled;
             this.signals.IsPozKapatEnabled = isPozKapatEnabled;
         }
@@ -2158,7 +2214,113 @@ public class SingleTrader : MarketDataProvider, IDisposable
             }
         }
     }
+    public void ConfigureEquityCurveFilter(bool isPercent, double profitThreshold, double lossThreshold, ConfirmationTrigger trigger)
+    {
+        this.thresholdTypeIsPercent = isPercent;
+        this.profitConfirmationThreshold = profitThreshold;
+        this.lossConfirmationThreshold = lossThreshold;
+        this.confirmationTrigger = trigger;
+        this._equityCurveConfirmed = false;
+    }
 
+    public void ApplyEquityCurveFilter(int barIndex)
+    {
+        int i = barIndex;
+
+        bool useEquityCurveFilteringEnabled = this.signals.EquityCurveFilteringEnabled;
+        if (!useEquityCurveFilteringEnabled)
+            return;
+
+        // Adım 1:
+        // Mevcut yön belirleme
+        var isSonYonA = this.is_son_yon_a();
+        var isSonYonS = this.is_son_yon_s();
+        var isSonYonF = this.is_son_yon_f();
+
+        // Önceki yön belirleme
+        var isPrevYonA = this.is_prev_yon_a();
+        var isPrevYonS = this.is_prev_yon_s();
+        var isPrevYonF = this.is_prev_yon_f();
+
+        string currentYon = "F";
+        if (isSonYonA) currentYon = "A";
+        else if (isSonYonS) currentYon = "S";
+
+        // Adım 2: Önceki yön ile karşılaştır - yön değişti mi?
+        string previousYon = "F";
+        if (is_prev_yon_a()) previousYon = "A";
+        else if (is_prev_yon_s()) previousYon = "S";
+
+        bool yonDegisti = (currentYon != previousYon);
+
+        // Adım 3: Yön değiştiyse confirmed durumunu sıfırla
+        if (yonDegisti)
+        {
+            _equityCurveConfirmed = false;
+        }
+
+        // Adım 4: FLAT ise - direkt geç, confirmed = false
+        if (isSonYonF)
+        {
+            _equityCurveConfirmed = false;
+            return;
+        }
+
+        // Adım 5: LONG veya SHORT - Eşik kontrolü (sadece confirmed değilse)
+        if ((isSonYonA || isSonYonS) && !_equityCurveConfirmed)
+        {
+            double karZararFiyat = this.status.KarZararFiyat;
+            double karZararYuzde = this.status.KarZararFiyatYuzde;
+
+            bool karTetiklendi = false;
+            bool zararTetiklendi = false;
+
+            if (thresholdTypeIsPercent)
+            {
+                karTetiklendi = karZararYuzde >= profitConfirmationThreshold;
+                zararTetiklendi = karZararYuzde <= lossConfirmationThreshold;
+            }
+            else
+            {
+                karTetiklendi = karZararFiyat >= profitConfirmationThreshold;
+                zararTetiklendi = karZararFiyat <= lossConfirmationThreshold;
+            }
+
+            bool esikGecildi = false;
+            switch (confirmationTrigger)
+            {
+                case ConfirmationTrigger.ProfitOnly:
+                    esikGecildi = karTetiklendi;
+                    break;
+                case ConfirmationTrigger.LossOnly:
+                    esikGecildi = zararTetiklendi;
+                    break;
+                case ConfirmationTrigger.Both:
+                    esikGecildi = karTetiklendi || zararTetiklendi;
+                    break;
+            }
+
+            if (esikGecildi)
+            {
+                // Eşik geçildi - sinyal onaylandı
+                _equityCurveConfirmed = true;
+                this.signals.IsEquityCurveTradeEnabled = true;
+            }
+            else
+            {
+                // Eşik geçilmedi - sadece giriş sinyallerini iptal et
+                // Çıkış sinyallerine (FlatOl/KarAl/ZararKes) dokunma
+                this.signals.Al = false;
+                this.signals.Sat = false;
+                this.signals.None = true;
+                this.signals.IsEquityCurveTradeEnabled = false;
+            }
+
+            // TODO: İki filtre birlikte çalışınca aktif et
+            // this.signals.IsTradeEnabled = this.signals.IsTimingFiltersTradeEnabled && this.signals.IsEquityCurveTradeEnabled;
+
+        }
+    }
     public bool ClosePositionEOD(int i, bool gunSonuPozKapatEnabled = true)
     {
         // Optimizasyon: Önce disabled kontrolü yap
@@ -2227,6 +2389,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.signals.GunSonuPozKapatEnabled = false;
         this.signals.GunSonuPozKapatildi = false;
         this.signals.TimeFilteringEnabled = false;
+        this.signals.EquityCurveFilteringEnabled = false; 
         this.signals.IsTradeEnabled = false;
         this.signals.IsPozKapatEnabled = false;
 
@@ -2237,8 +2400,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.signals.PasGecEnabled = false;
         this.signals.KarAlEnabled = false;
         this.signals.ZararKesEnabled = false;
-        this.signals.GunSonuPozKapatEnabled = false;    // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-        this.signals.TimeFilteringEnabled = true;     // DEFAULT = False, Ek maliyet getirir : 
+        this.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+        this.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+        this.signals.EquityCurveFilteringEnabled = false;
 
         return this;
     }
