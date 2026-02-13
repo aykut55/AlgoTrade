@@ -65,7 +65,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["NegativeThreshold"] = negativeThreshold;
             Parameters["Choice"] = choice;
 
-            Initialize(data, indicators);
+            // Initialize base strategy
+            // Initialize(data, indicators);
         }
 
         public override void OnInit()

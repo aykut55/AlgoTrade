@@ -111,6 +111,11 @@ namespace AlgoTrade.Core.Trading.Strategy
             return null;
         }
 
+        public virtual void Dispose()
+        {
+            Reset();
+        }
+
         #endregion
     }
 }

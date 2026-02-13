@@ -65,7 +65,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["MomentumPeriod"] = momentumPeriod;
             Parameters["Choice"] = choice;
 
-            Initialize(data, indicators);
+            // Initialize base strategy
+            // Initialize(data, indicators);
         }
 
         public override void OnInit()

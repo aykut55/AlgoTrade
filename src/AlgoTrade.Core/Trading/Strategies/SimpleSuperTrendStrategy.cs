@@ -6,6 +6,7 @@ using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using Microsoft.FSharp.Core;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -32,29 +33,34 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int _period;
         private readonly double _multiplier;
+        private readonly int _choice;
         private SuperTrendResult? _superTrendResult;
 
         // Parametresiz constructor (eski kullanımlar için)
-        public SimpleSuperTrendStrategy(int period = 10, double multiplier = 3.0)
+        public SimpleSuperTrendStrategy(int period = 10, double multiplier = 3.0, int choice = 0)
         {
             _period = period;
             _multiplier = multiplier;
+            _choice = choice;
 
             Parameters["Period"] = period;
             Parameters["Multiplier"] = multiplier;
+            Parameters["Choice"] = choice;
         }
 
         // Parametreli constructor (yeni kullanım)
-        public SimpleSuperTrendStrategy(List<StockData> data, IndicatorManager indicators, int period = 10, double multiplier = 3.0)
+        public SimpleSuperTrendStrategy(List<StockData> data, IndicatorManager indicators, int period = 10, double multiplier = 3.0, int choice = 0)
         {
             _period = period;
             _multiplier = multiplier;
+            _choice = choice;
 
             Parameters["Period"] = period;
             Parameters["Multiplier"] = multiplier;
+            Parameters["Choice"] = choice;
 
             // Initialize base strategy
-            Initialize(data, indicators);
+            // Initialize(data, indicators);
         }
 
         public override void OnInit()
@@ -65,7 +71,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             // SuperTrend indicator'ı hesapla
             _superTrendResult = Indicators.Trend.SuperTrend(_period, _multiplier);
 
-            LogManager.Log($"SimpleSuperTrendStrategy initialized: Period={_period}, Multiplier={_multiplier}");
+            LogManager.Log($"SimpleSuperTrendStrategy initialized: Period={_period}, Multiplier={_multiplier}, Choice={_choice}");
             LogManager.Log($"SuperTrend calculated for {_superTrendResult.Length} bars");
         }
 

@@ -20,30 +20,35 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int _fastPeriod;
         private readonly int _slowPeriod;
+        private readonly int _choice;
         private double[]? _fastMA;
         private double[]? _slowMA;
 
         // Parametresiz constructor (eski kullanımlar için)
-        public SimpleMAStrategy(int fastPeriod = 10, int slowPeriod = 20)
+        public SimpleMAStrategy(int fastPeriod = 10, int slowPeriod = 20, int choice = 0)
         {
             _fastPeriod = fastPeriod;
             _slowPeriod = slowPeriod;
+            _choice = choice;
 
             Parameters["FastPeriod"] = fastPeriod;
             Parameters["SlowPeriod"] = slowPeriod;
+            Parameters["Choice"] = choice;
         }
 
         // Parametreli constructor (yeni kullanım)
-        public SimpleMAStrategy(List<StockData> data, IndicatorManager indicators, int fastPeriod = 10, int slowPeriod = 20)
+        public SimpleMAStrategy(List<StockData> data, IndicatorManager indicators, int fastPeriod = 10, int slowPeriod = 20, int choice = 0)
         {
             _fastPeriod = fastPeriod;
             _slowPeriod = slowPeriod;
+            _choice = choice;
 
             Parameters["FastPeriod"] = fastPeriod;
             Parameters["SlowPeriod"] = slowPeriod;
+            Parameters["Choice"] = choice;
 
             // Initialize base strategy
-            Initialize(data, indicators);
+            // Initialize(data, indicators);
         }
 
         public override void OnInit()
@@ -56,7 +61,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             _fastMA = Indicators.MA.SMA(closes, _fastPeriod);
             _slowMA = Indicators.MA.SMA(closes, _slowPeriod);
 
-            LogManager.Log($"Strategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}");
+            LogManager.Log($"Strategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}, Choice={_choice}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

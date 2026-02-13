@@ -20,6 +20,7 @@ ConcurrentDictionary<string, string>? stockMetaData = null;
 AlgoTrader? algoTrader = null;
 TimeManager timer = TimeManager.GetInstance();
 LogManager logger = LogManager.GetInstance();
+DateTime? _progressStartTime = null;
 
 string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
 
@@ -70,7 +71,6 @@ void OnReadData(StockDataReader sender, List<StockData> data, long elapsedMs)
     // LogManager.Log(sb.ToString());
 }
 
-DateTime? _progressStartTime = null;
 void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, double percentage)
 {
     //LogManager.LogRaw($"\rProgress: {currentBar}/{totalBars} ({percentage:F1}%)");
@@ -87,6 +87,31 @@ void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, do
     //     : TimeSpan.Zero;
     //
     // Not: Her yeni run oncesi _progressStartTime = null yapilmali.
+}
+
+void ConfigureStrategy()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    string configPath = Path.Combine(AppSettings.InputsDir, "StrategyConfig.txt");
+
+    if (File.Exists(configPath))
+    {
+        algoTrader.ConfigureStrategyFromConfig(configPath, "SimpleMostStrategy", "v1-Default");
+        LogManager.LogRaw($"\nStrategy loaded from config: {configPath}");
+    }
+    else
+    {
+        LogManager.LogRaw($"\nStrategy config file not found: {configPath}");
+        algoTrader.ConfigureStrategy("SimpleMostStrategy", new Dictionary<string, object>
+        {
+            ["period"] = 21,
+            ["percent"] = 1.0,
+            ["choice"] = 0
+        });
+        LogManager.LogRaw("\nStrategy config file not found, fallback strategy configured from in-code parameters.");
+    }
 }
 
 void readStockData()
@@ -363,19 +388,22 @@ async Task runAlgoTrade()
 
         algoTrader = new AlgoTrader("AlgoTrader");
 
-        // Set symbol/system info from metadata
-        if (stockMetaData != null)
-        {
-            algoTrader.SymbolName  = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
-            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
-        }
-
         algoTrader.OnTraderProgress += OnTraderProgress;
         algoTrader.RegisterLogger(logger);
         algoTrader.RegisterTimer(timer);
 
         algoTrader.Reset();
         algoTrader.SetData(stockDataReader!.GetData());
+
+        // Set symbol/system info from metadata
+        if (stockMetaData != null)
+        {
+            algoTrader.SymbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        }
+
+        // Set strategy
+        ConfigureStrategy();
 
         algoTrader.Initialize();
 

@@ -3,6 +3,7 @@ using AlgoTrade.Core.DataProvider;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Strategy;
 // using AlgoTrade.Core.Trading.Core; // already included above
 using MathNet.Numerics.Statistics;
 using static AlgoTrade.Core.StockDataReader.StockDataReader;
@@ -55,6 +56,32 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public void SetIndicators(IndicatorManager? indicators)
     {
         _indicators = indicators;
+    }
+
+    public IStrategy? Strategy { get; private set; }
+
+    public void SetStrategy(IStrategy strategy)
+    {
+        if (strategy is null)
+            throw new ArgumentNullException(nameof(strategy));
+
+        if (_data == null || _data.Count == 0)
+            throw new InvalidOperationException("Trader data is not initialized.");
+
+        if (_indicators is null)
+            throw new InvalidOperationException("IndicatorManager is not initialized.");
+
+        Strategy = strategy;
+
+        if (strategy is BaseStrategy baseStrategy)
+        {
+            baseStrategy.SetTrader(this);
+            baseStrategy.Initialize(_data, _indicators);
+        }
+        else
+        {
+            throw new InvalidOperationException("Strategy must inherit from BaseStrategy.");
+        }
     }
 
     public InitialTradeParams? initialTradeParams { get; private set; }
@@ -429,6 +456,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public SingleTrader DeleteModules()
     {
         ClearCallbacks();
+        Strategy = null;
 
         initialTradeParams = null;
 
@@ -453,7 +481,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public TradeSignals ExecuteStrategy(int barIndex)
     {
-        return TradeSignals.None;
+        int i = barIndex;
+
+        if (Strategy is null)
+            return TradeSignals.None;
+
+        return Strategy.OnStep(i);
     }
     
     public void MapStrategyCommandsToTradeCommands(TradeSignals strategySignal)

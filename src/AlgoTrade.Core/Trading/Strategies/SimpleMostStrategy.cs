@@ -55,7 +55,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["Choice"] = choice;
 
             // Initialize base strategy
-            Initialize(data, indicators);
+            // Initialize(data, indicators);
         }
 
         public override void OnInit()
@@ -70,7 +70,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 // Implement edildikten sonra bu satır çalışacak
                 (_most, _exmov) = Indicators.Trend.MOST(_period, _percent);
 
-                LogManager.Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}");
+                LogManager.Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
             }
             catch (NotImplementedException)
             {

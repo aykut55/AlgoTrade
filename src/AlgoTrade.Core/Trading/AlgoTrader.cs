@@ -3,6 +3,8 @@ using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Strategies;
+using AlgoTrade.Core.Trading.Strategy;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -28,6 +30,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private TimeManager? _timer;
     private SingleTrader? singleTrader { get; set; }
     public IndicatorManager? indicators { get; private set; }
+    private IStrategy? strategy;
+    private readonly StrategyRegistry _strategyRegistry = new();
+    private string? _currentStrategyName;
+    private Dictionary<string, object>? _currentStrategyParams;
+    public IReadOnlyCollection<string> AvailableStrategies => _strategyRegistry.GetStrategyNames();
 
     #endregion
 
@@ -138,11 +145,58 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _timer = timer;
     }
 
+    public void ConfigureStrategy(string strategyName, Dictionary<string, object> parameters)
+    {
+        if (string.IsNullOrWhiteSpace(strategyName))
+            throw new ArgumentException("Strategy name cannot be null or empty.", nameof(strategyName));
+
+        _currentStrategyName = strategyName.Trim();
+        _currentStrategyParams = new Dictionary<string, object>(parameters ?? new Dictionary<string, object>(), StringComparer.OrdinalIgnoreCase);
+        if (!_currentStrategyParams.ContainsKey("choice"))
+        {
+            _currentStrategyParams["choice"] = 0;
+        }
+        StrategyName = _currentStrategyName;
+    }
+
+    public void ConfigureStrategyFromConfig(string configFilePath, string strategyName, string? version = null)
+    {
+        if (string.IsNullOrWhiteSpace(configFilePath))
+            throw new ArgumentException("Config file path cannot be null or empty.", nameof(configFilePath));
+
+        if (!File.Exists(configFilePath))
+            throw new FileNotFoundException($"Strategy config file not found: {configFilePath}");
+
+        var loader = new StrategyConfigLoader(configFilePath);
+        loader.LoadFromFile();
+
+        StrategyConfiguration? config = version is null
+            ? loader.GetFirstConfigurationForStrategy(strategyName)
+            : loader.GetConfiguration(strategyName, version);
+
+        if (config is null)
+            throw new InvalidOperationException($"Strategy configuration not found: strategy='{strategyName}', version='{version ?? "first"}'.");
+
+        ConfigureStrategy(config.StrategyName, config.GetParameterValues());
+    }
+
     public void Reset()
     {
         _data = new();
         IsInitialized = false;
         IsRunning = false;
+
+        SymbolName = "...";
+        SymbolPeriod = "...";
+        SystemId = "...";
+        SystemName = "...";
+        StrategyId = "...";
+        StrategyName = "...";
+
+        strategy?.Dispose();
+        strategy = null;
+        _currentStrategyName = null;
+        _currentStrategyParams = null;
     }
 
     public void Initialize()
@@ -177,9 +231,27 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 indicators = null;
             }
 
+            Log("\nCreating indicators...");
+
             indicators = new IndicatorManager(this.Data);
             if (indicators == null)
-                return;
+                throw new InvalidOperationException("indicators can not be created...");
+
+            // *****************************************************************************
+            // StrategyRegistry - beg
+            // *****************************************************************************
+            if (strategy != null)
+            {
+                Log("Disposing previous strategy instance...");
+                strategy.Dispose();
+                strategy = null;
+            }
+
+            Log("\nCreating strategy...");
+
+            strategy = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
+            if (strategy == null)
+                throw new InvalidOperationException("strategy can not be created...");
 
 
             // *****************************************************************************
@@ -195,11 +267,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             singleTrader = new SingleTrader(0, "singleTrader", this.Data, indicators, _logger);
             if (singleTrader == null)
-                throw new InvalidOperationException("singleTrader not not be created...");
+                throw new InvalidOperationException("singleTrader can not be created...");
 
             // Assign callbacks
             singleTrader.ClearCallbacks()
                         .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            // Assign strategy            
+            singleTrader.SetStrategy(strategy);
+            Log($"\nStrategy configured: {_currentStrategyName}");
 
             // Reset
             singleTrader.Reset();
@@ -218,7 +294,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
             singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
 
-            // Init
+            // Apply user flags
             OnApplyUserFlags(singleTrader);
 
             // Init
@@ -315,9 +391,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         }
 
         // Update state flags
-        singleTrader.IsRunning = false;
-        singleTrader.IsStopped = true;
-        Log($"\nSingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
+        if (singleTrader is not null)
+        {
+            singleTrader.IsRunning = false;
+            singleTrader.IsStopped = true;
+            Log($"\nSingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
+        }
 
         Log("");
         Log($"AlgoTrader '{Name}' completed. Processed {totalBars} bars.");
@@ -342,5 +421,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     public void Dispose()
     {
+        strategy?.Dispose();
+        strategy = null;
+
+        singleTrader?.Dispose();
+        singleTrader = null;
+
+        indicators?.Dispose();
+        indicators = null;
     }
+
 }

@@ -7,7 +7,7 @@ namespace AlgoTrade.Core.Trading.Strategy
     /// Strategy interface
     /// All trading strategies must implement this interface
     /// </summary>
-    public interface IStrategy
+    public interface IStrategy : IDisposable
     {
         /// <summary>
         /// Strategy name

@@ -59,7 +59,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["Max"] = max;
             Parameters["Choice"] = choice;
 
-            Initialize(data, indicators);
+            // Initialize base strategy
+            // Initialize(data, indicators);
         }
 
         public override void OnInit()
