@@ -21,6 +21,7 @@ AlgoTrader? algoTrader = null;
 TimeManager timer = TimeManager.GetInstance();
 LogManager logger = LogManager.GetInstance();
 DateTime? _progressStartTime = null;
+TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
 
@@ -428,7 +429,7 @@ async Task runAlgoTrade()
         }
 
         // Set run mode
-        algoTrader.SingleTraderRunMode = TraderRunMode.TradeAndQuery;
+        algoTrader.SingleTraderRunMode = selectedRunMode;
 
         if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
         {
@@ -465,6 +466,25 @@ async Task runAlgoTrade()
     {
     }
 }
+
+TraderRunMode showRunModeMenu()
+{
+    Console.WriteLine();
+    Console.WriteLine("Run Mode Seçimi:");
+    Console.WriteLine("  [1] TradeOnly");
+    Console.WriteLine("  [2] TradeAndQuery");
+    Console.WriteLine("  [3] QueryOnly");
+    Console.Write("\nSeçiminiz (default: 2): ");
+
+    var input = Console.ReadLine()?.Trim();
+    return input switch
+    {
+        "1" => TraderRunMode.TradeOnly,
+        "3" => TraderRunMode.QueryOnly,
+        _ => TraderRunMode.TradeAndQuery
+    };
+}
+
 void showMainMenu()
 {
     Console.WriteLine();
@@ -503,9 +523,11 @@ async Task main()
                 readStockData();
                 break;
             case "2":
+                selectedRunMode = showRunModeMenu();
                 await runAlgoTrade();
                 break;
             case "3":
+                selectedRunMode = showRunModeMenu();
                 readStockData();
                 await runAlgoTrade();
                 break;
