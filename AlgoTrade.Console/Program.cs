@@ -114,6 +114,31 @@ void ConfigureStrategy()
     }
 }
 
+void ConfigureQuery()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    string configPath = Path.Combine(AppSettings.InputsDir, "QueryConfig.txt");
+
+    if (File.Exists(configPath))
+    {
+        algoTrader.ConfigureQueryFromConfig(configPath, "SimpleQuery1", "v1-Default");
+        LogManager.LogRaw($"\nQuery loaded from config: {configPath}");
+    }
+    else
+    {
+        LogManager.LogRaw($"\nQuery config file not found: {configPath}");
+        algoTrader.ConfigureQuery("SimpleQuery1", new Dictionary<string, object>
+        {
+            ["ma8Period"] = 8,
+            ["ma200Period"] = 200,
+            ["choice"] = 0
+        });
+        LogManager.LogRaw("\nQuery config file not found, fallback query configured from in-code parameters.");
+    }
+}
+
 void readStockData()
 {
     try
@@ -402,8 +427,27 @@ async Task runAlgoTrade()
             algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
         }
 
-        // Set strategy
-        ConfigureStrategy();
+        // Set run mode
+        algoTrader.SingleTraderRunMode = TraderRunMode.TradeAndQuery;
+
+        if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
+        {
+            // Set strategy
+            ConfigureStrategy();
+        }
+        else if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
+        {
+            // Set strategy
+            ConfigureStrategy();
+
+            // Set query
+            ConfigureQuery();
+        }
+        else if (algoTrader.SingleTraderRunMode == TraderRunMode.QueryOnly)
+        {
+            // Set query
+            ConfigureQuery();
+        }
 
         algoTrader.Initialize();
 

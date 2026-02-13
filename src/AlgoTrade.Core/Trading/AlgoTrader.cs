@@ -3,6 +3,8 @@ using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Queries;
+using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Strategy;
 
@@ -24,6 +26,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public string SystemName { get; set; } = "...";
     public string StrategyId { get; set; } = "...";
     public string StrategyName { get; set; } = "...";
+    public string QueryId { get; set; } = "...";
+    public string QueryName { get; set; } = "...";
+    public bool QueryIsEnabled { get; private set; }
+    public TraderRunMode SingleTraderRunMode { get; set; } = TraderRunMode.TradeAndQuery;
 
     // Internal
     private LogManager? _logger;
@@ -31,10 +37,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTrader? singleTrader { get; set; }
     public IndicatorManager? indicators { get; private set; }
     private IStrategy? strategy;
+    private IQuery? query;
     private readonly StrategyRegistry _strategyRegistry = new();
+    private readonly QueryRegistry _queryRegistry = new();
     private string? _currentStrategyName;
     private Dictionary<string, object>? _currentStrategyParams;
+    private string? _currentQueryName;
+    private Dictionary<string, object>? _currentQueryParams;
     public IReadOnlyCollection<string> AvailableStrategies => _strategyRegistry.GetStrategyNames();
+    public IReadOnlyCollection<string> AvailableQueries => _queryRegistry.GetQueryNames();
 
     #endregion
 
@@ -180,6 +191,43 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         ConfigureStrategy(config.StrategyName, config.GetParameterValues());
     }
 
+    public void ConfigureQuery(string queryName, Dictionary<string, object> parameters)
+    {
+        if (string.IsNullOrWhiteSpace(queryName))
+            throw new ArgumentException("Query name cannot be null or empty.", nameof(queryName));
+
+        _currentQueryName = queryName.Trim();
+        _currentQueryParams = new Dictionary<string, object>(parameters ?? new Dictionary<string, object>(), StringComparer.OrdinalIgnoreCase);
+        QueryName = _currentQueryName;
+        QueryIsEnabled = true;
+    }
+
+    public void SetQueryEnabled(bool enabled)
+    {
+        QueryIsEnabled = enabled;
+    }
+
+    public void ConfigureQueryFromConfig(string configFilePath, string queryName, string? version = null)
+    {
+        if (string.IsNullOrWhiteSpace(configFilePath))
+            throw new ArgumentException("Config file path cannot be null or empty.", nameof(configFilePath));
+
+        if (!File.Exists(configFilePath))
+            throw new FileNotFoundException($"Query config file not found: {configFilePath}");
+
+        var loader = new QueryConfigLoader(configFilePath);
+        loader.LoadFromFile();
+
+        QueryConfiguration? config = version is null
+            ? loader.GetFirstConfigurationForQuery(queryName)
+            : loader.GetConfiguration(queryName, version);
+
+        if (config is null)
+            throw new InvalidOperationException($"Query configuration not found: query='{queryName}', version='{version ?? "first"}'.");
+
+        ConfigureQuery(config.QueryName, config.GetParameterValues());
+    }
+
     public void Reset()
     {
         _data = new();
@@ -192,11 +240,19 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         SystemName = "...";
         StrategyId = "...";
         StrategyName = "...";
+        QueryId = "...";
+        QueryName = "...";
+        QueryIsEnabled = false;
 
         strategy?.Dispose();
         strategy = null;
         _currentStrategyName = null;
         _currentStrategyParams = null;
+
+        query?.Dispose();
+        query = null;
+        _currentQueryName = null;
+        _currentQueryParams = null;
     }
 
     public void Initialize()
@@ -253,6 +309,27 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (strategy == null)
                 throw new InvalidOperationException("strategy can not be created...");
 
+            // *****************************************************************************
+            // QueryRegistry - beg
+            // *****************************************************************************
+            if (query != null)
+            {
+                Log("Disposing previous query instance...");
+                query.Dispose();
+                query = null;
+            }
+
+            if (QueryIsEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(_currentQueryName))
+                    throw new InvalidOperationException("QueryIsEnabled is true but query name is not configured. Call ConfigureQuery(...) first.");
+
+                Log("\nCreating query...");
+
+                query = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
+                if (query == null)
+                    throw new InvalidOperationException("query can not be created...");
+            }
 
             // *****************************************************************************
             // SingleTrader - beg
@@ -273,9 +350,36 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.ClearCallbacks()
                         .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
 
-            // Assign strategy            
-            singleTrader.SetStrategy(strategy);
-            Log($"\nStrategy configured: {_currentStrategyName}");
+            // Assign runMode
+            singleTrader.RunMode = SingleTraderRunMode;
+            if (singleTrader.RunMode == TraderRunMode.TradeOnly)
+            {
+                // Assign strategy            
+                singleTrader.SetStrategy(strategy);
+                Log($"\nStrategy configured: {_currentStrategyName}");
+            }
+            else if (singleTrader.RunMode == TraderRunMode.TradeAndQuery)
+            {
+                // Assign strategy            
+                singleTrader.SetStrategy(strategy);
+                Log($"\nStrategy configured: {_currentStrategyName}");
+
+                // Assign query    
+                if (query is not null)
+                {
+                    singleTrader.SetQuery(query);
+                    Log($"\nQuery configured: {_currentQueryName}");
+                }
+            }
+            else if (singleTrader.RunMode == TraderRunMode.QueryOnly)
+            {
+                // Assign query    
+                if (query is not null)
+                {
+                    singleTrader.SetQuery(query);
+                    Log($"\nQuery configured: {_currentQueryName}");
+                }
+            }
 
             // Reset
             singleTrader.Reset();
@@ -287,6 +391,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.SystemName             = this.SystemName;
             singleTrader.StrategyId             = this.StrategyId;
             singleTrader.StrategyName           = this.StrategyName;
+            singleTrader.QueryId                = this.QueryId;
+            singleTrader.QueryName              = this.QueryName;
             singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             
@@ -344,14 +450,17 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.LastExecutionTimeStop = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             singleTrader.LastExecutionTimeInMSec = _timer!.GetElapsedTime("2").ToString();
 
-            // Tarama bilgileri: (Finalize gerek kalmadan alinabilir)
-            var yon           = singleTrader.SonYon;                    // "A"
-            var kacBarOnce    = singleTrader.SonSinyaldenBeriBarSayisi; // 5
-            var karZarar      = singleTrader.SonKarZararFiyat;          // 125.50
-            var karZararYuzde = singleTrader.SonKarZararYuzde;          // 0.85
-            var ozet          = singleTrader.TaramaOzeti;               // "A | Bar:5 | KZ:125.50 | %:0.85"
+            if (this.SingleTraderRunMode == TraderRunMode.TradeOnly || this.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
+            {
+                // Tarama bilgileri: (Finalize gerek kalmadan alinabilir)
+                var yon           = singleTrader.SonYon;                    // "A"
+                var kacBarOnce    = singleTrader.SonSinyaldenBeriBarSayisi; // 5
+                var karZarar      = singleTrader.SonKarZararFiyat;          // 125.50
+                var karZararYuzde = singleTrader.SonKarZararYuzde;          // 0.85
+                var ozet          = singleTrader.TaramaOzeti;               // "A | Bar:5 | KZ:125.50 | %:0.85"
 
-            Log($"\nScreening summary... : {ozet}");
+                Log($"\nScreening summary... : {ozet}");
+            }
 
             Log("\nFinalizing singleTrader...");
 
@@ -367,6 +476,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             }
 
             _timer!.StopTimer("3");
+
+
+            if (this.SingleTraderRunMode == TraderRunMode.TradeAndQuery || this.SingleTraderRunMode == TraderRunMode.QueryOnly)
+            {
+                var sorguOzeti = singleTrader.SorguOzeti;
+
+                Log($"\nQuery summary... : {sorguOzeti}");
+            }
 
             _timer!.StopTimer("1");
 
@@ -423,6 +540,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     {
         strategy?.Dispose();
         strategy = null;
+
+        query?.Dispose();
+        query = null;
 
         singleTrader?.Dispose();
         singleTrader = null;

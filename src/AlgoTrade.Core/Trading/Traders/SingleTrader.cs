@@ -3,12 +3,20 @@ using AlgoTrade.Core.DataProvider;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategy;
 // using AlgoTrade.Core.Trading.Core; // already included above
 using MathNet.Numerics.Statistics;
 using static AlgoTrade.Core.StockDataReader.StockDataReader;
 
 namespace AlgoTrade.Core.Trading;
+
+public enum TraderRunMode
+{
+    TradeOnly = 0,
+    TradeAndQuery = 1,
+    QueryOnly = 2
+}
 
 public class SingleTrader : MarketDataProvider, IDisposable
 {
@@ -35,6 +43,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public string SystemName { get; set; }
     public string StrategyId { get; set; }
     public string StrategyName { get; set; }
+    public string QueryId { get; set; }
+    public string QueryName { get; set; }
 
     // Execution Time Tracking
     public string LastExecutionId { get; set; }
@@ -59,6 +69,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
     }
 
     public IStrategy? Strategy { get; private set; }
+    public IQuery? Query { get; private set; }
+    public List<string> QueryColumnNames { get; private set; } = new();
+    public List<object> LastQueryResult { get; private set; } = new();
+    public List<Dictionary<string, object>> QueryResults { get; private set; } = new();
 
     public void SetStrategy(IStrategy strategy)
     {
@@ -81,6 +95,34 @@ public class SingleTrader : MarketDataProvider, IDisposable
         else
         {
             throw new InvalidOperationException("Strategy must inherit from BaseStrategy.");
+        }
+    }
+
+    public void SetQuery(IQuery query)
+    {
+        if (query is null)
+            throw new ArgumentNullException(nameof(query));
+
+        if (_data == null || _data.Count == 0)
+            throw new InvalidOperationException("Trader data is not initialized.");
+
+        if (_indicators is null)
+            throw new InvalidOperationException("IndicatorManager is not initialized.");
+
+        Query = query;
+        QueryColumnNames.Clear();
+        LastQueryResult.Clear();
+        QueryResults.Clear();
+
+        if (query is BaseQuery baseQuery)
+        {
+            baseQuery.SetTrader(this);
+            baseQuery.SetLogger(_logger);
+            baseQuery.Initialize(_data, _indicators);
+        }
+        else
+        {
+            throw new InvalidOperationException("Query must inherit from BaseQuery.");
         }
     }
 
@@ -127,6 +169,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool IsRunning { get; internal set; }
     public bool IsStopped { get; internal set; }
     public bool IsStopRequested { get; internal set; }
+    public TraderRunMode RunMode { get; set; } = TraderRunMode.TradeAndQuery;
     #endregion
 
     #region ScreeningProperties
@@ -181,6 +224,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
     /// Tarama özet bilgisi - tek satırda tüm bilgiler
     /// </summary>
     public string TaramaOzeti => $"{SonYon} | Bar:{SonSinyaldenBeriBarSayisi} | KZ:{SonKarZararFiyat:F2} | %:{SonKarZararYuzde:F2}";
+
+    /// <summary>
+    /// Sorgu özet bilgisi - son query çıktısının tek satır özeti
+    /// </summary>
+    public string SorguOzeti { get; set; } = "...";
 
     // ═══════════════════════════════════════════════════════════════════════
     #endregion
@@ -275,12 +323,18 @@ public class SingleTrader : MarketDataProvider, IDisposable
         SystemName = "...";
         StrategyId = "...";
         StrategyName = "...";
+        QueryId = "...";
+        QueryName = "...";
         LastResetTime = "...";
         LastExecutionId = "...";
         LastExecutionTime = "...";
         LastExecutionTimeStart = "...";
         LastExecutionTimeStop = "...";
         LastExecutionTimeInMSec = "...";
+        QueryColumnNames.Clear();
+        LastQueryResult.Clear();
+        QueryResults.Clear();
+        SorguOzeti = "...";
 
         OnReset?.Invoke(this, 0);
 
@@ -328,18 +382,50 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         OnRun?.Invoke(this, 0);
 
-        ExecutePreOrderMethods(i);
+        if (RunMode == TraderRunMode.TradeOnly)
+        {
+            ExecutePreOrderMethods(i);
 
-        if (i < 1)
-            return;
+            if (i < 1)
+                return;
 
-        this.strategySignal = ExecuteStrategy(i);
+            this.strategySignal = ExecuteStrategy(i);
 
-        MapStrategyCommandsToTradeCommands(this.strategySignal);
+            MapStrategyCommandsToTradeCommands(this.strategySignal);
 
-        ApplyTimingFilters(i);
+            ApplyTimingFilters(i);
 
-        ExecutePostOrderMethods(i);
+            ExecutePostOrderMethods(i);
+
+        }
+        else if (RunMode == TraderRunMode.TradeAndQuery)
+        {
+            ExecutePreOrderMethods(i);
+
+            if (i < 1)
+                return;
+
+            this.strategySignal = ExecuteStrategy(i);
+
+            MapStrategyCommandsToTradeCommands(this.strategySignal);
+
+            ApplyTimingFilters(i);
+
+            ExecutePostOrderMethods(i);
+
+            ExecuteQuery(i);
+        }
+        else if (RunMode == TraderRunMode.QueryOnly)
+        {
+            if (i < 1)
+                return;
+
+            ExecuteQuery(i);
+        }
+        else
+        {
+
+        }
 
         OnRun?.Invoke(this, 1);
 
@@ -352,13 +438,41 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         OnFinal?.Invoke(this, 0);
 
-        Log($"\nCalculating statistics...");
+        if (this.RunMode == TraderRunMode.TradeOnly)
+        {
+            Log($"\nCalculating statistics...");
 
-        CalculateStatistics();
+            CalculateStatistics();
 
-        if (saveStatisticsToFile) {
-            Log($"\nSaving statistics to files...");
-            WriteStatisticsToFile(outputDir ?? AppSettings.LogsDir);
+            if (saveStatisticsToFile)
+            {
+                Log($"\nSaving statistics to files...");
+                WriteStatisticsToFile(outputDir ?? AppSettings.LogsDir);
+            }
+        }
+        else if (this.RunMode == TraderRunMode.TradeAndQuery)
+        {
+            Log($"\nCalculating statistics...");
+
+            CalculateStatistics();
+
+            if (saveStatisticsToFile)
+            {
+                Log($"\nSaving statistics to files...");
+                WriteStatisticsToFile(outputDir ?? AppSettings.LogsDir);
+            }
+
+            if (this.QueryColumnNames.Count > 0 && this.LastQueryResult.Count == this.QueryColumnNames.Count)
+            {
+                this.SorguOzeti = string.Join(", ", this.QueryColumnNames.Zip(this.LastQueryResult, (col, val) => $"{col}={val}"));
+            }
+        }
+        else if (this.RunMode == TraderRunMode.QueryOnly)
+        {
+            if (this.QueryColumnNames.Count > 0 && this.LastQueryResult.Count == this.QueryColumnNames.Count)
+            {
+                this.SorguOzeti = string.Join(", ", this.QueryColumnNames.Zip(this.LastQueryResult, (col, val) => $"{col}={val}"));
+            }
         }
 
         OnFinal?.Invoke(this, 1);
@@ -457,6 +571,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         ClearCallbacks();
         Strategy = null;
+        Query = null;
+        QueryColumnNames.Clear();
+        LastQueryResult.Clear();
+        QueryResults.Clear();
 
         initialTradeParams = null;
 
@@ -487,6 +605,37 @@ public class SingleTrader : MarketDataProvider, IDisposable
             return TradeSignals.None;
 
         return Strategy.OnStep(i);
+    }
+
+    public IReadOnlyList<object> ExecuteQuery(int barIndex)
+    {
+        int i = barIndex;
+
+        if (Query is null)
+            return Array.Empty<object>();
+
+        var values = Query.OnExecute(i);
+
+        QueryColumnNames = new List<string>(Query.ColumnNames);
+        LastQueryResult = new List<object>(values);
+
+        if (values.Count > 0 && QueryColumnNames.Count == values.Count)
+        {
+            var row = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["BarIndex"] = i,
+                ["DateTime"] = Data[i].DateTime
+            };
+
+            for (int idx = 0; idx < QueryColumnNames.Count; idx++)
+            {
+                row[QueryColumnNames[idx]] = values[idx];
+            }
+
+            QueryResults.Add(row);
+        }
+
+        return values;
     }
     
     public void MapStrategyCommandsToTradeCommands(TradeSignals strategySignal)
