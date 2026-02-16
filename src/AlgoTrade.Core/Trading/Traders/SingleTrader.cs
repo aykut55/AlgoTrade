@@ -476,7 +476,14 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         int totalBars = GetDataCount();
         double percentage = (i + 1) / (double)totalBars * 100.0;
-        OnProgress?.Invoke(this, i + 1, totalBars, percentage);
+
+        int updateFreq = 5;
+        int prevPercentBucket = (int)(((i) / (double)totalBars * 100.0) / updateFreq);
+        int currPercentBucket = (int)(percentage / updateFreq);
+        if (currPercentBucket > prevPercentBucket || i + 1 >= totalBars)
+        {
+            OnProgress?.Invoke(this, i + 1, totalBars, percentage);
+        }
     }
 
     public void Finalize(bool saveStatisticsToFile = true, string? outputDir = null)

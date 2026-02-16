@@ -740,7 +740,7 @@ void showMainMenu()
     Console.WriteLine("║  [5] Run Interactive Script (console paste)         ║");
     Console.WriteLine("║  [0] Çıkış                                          ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════╝");
-    Console.Write("\nSeçiminiz: ");
+    Console.Write("\nSeçiminiz (default: 3): ");
 }
 
 async Task main()
@@ -760,6 +760,7 @@ async Task main()
     {
         showMainMenu();
         var input = Console.ReadLine()?.Trim();
+        if (string.IsNullOrEmpty(input)) input = "3";
 
         switch (input)
         {

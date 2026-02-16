@@ -7,6 +7,7 @@ using AlgoTrade.Core.Trading.Queries;
 using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Strategy;
+using static Nessos.LinqOptimizer.Core.QueryExpr;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -106,7 +107,26 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     private void OnSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars, double percentage)
     {
+        if (_logger == null) return;
 
+        /*
+         * Cok yavasladigi icin kapatildi
+
+
+         * 
+         */
+
+        var consoleLogger = LogManager.GetConsoleLogger();
+
+        if (currentBar >= totalBars)
+        {
+            consoleLogger.Write($"\r\tProgress         : {currentBar}/{totalBars} ({percentage:F1}%)");
+            consoleLogger.WriteLine("");
+        }
+        else
+        {
+            consoleLogger.Write($"\r\tProgress         : {currentBar}/{totalBars} ({percentage:F1}%)");
+        }
     }
     private void OnApplyUserFlags(SingleTrader trader)
     {
