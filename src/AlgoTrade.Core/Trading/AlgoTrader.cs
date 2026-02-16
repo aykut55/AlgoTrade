@@ -42,6 +42,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private LogManager? _logger;
     private TimeManager? _timer;
     private SingleTrader? singleTrader { get; set; }
+    public SingleTrader? SingleTrader => singleTrader;
     public IndicatorManager? indicators { get; private set; }
     private IStrategy? strategy;
     private IQuery? query;

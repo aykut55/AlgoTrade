@@ -1,6 +1,7 @@
 using AlgoTrade.Core;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Logging.Sinks;
+using AlgoTrade.Core.Scripting;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading;
@@ -486,6 +487,228 @@ async Task runAlgoTrade()
     }
 }
 
+// =============================================================================
+// Script Support
+// =============================================================================
+ScriptExecutor scriptExecutor = new ScriptExecutor();
+CancellationTokenSource? scriptCts = null;
+
+string readScriptFromFile()
+{
+    string defaultDir = Path.Combine(AppSettings.InputsDir, "scripts");
+    if (!Directory.Exists(defaultDir))
+        Directory.CreateDirectory(defaultDir);
+
+    Console.Write($"\nScript dosya yolu (default: {defaultDir}\\): ");
+    var filePath = Console.ReadLine()?.Trim();
+
+    if (string.IsNullOrEmpty(filePath))
+    {
+        // List available scripts in default dir
+        var files = Directory.GetFiles(defaultDir, "*.csx");
+        if (files.Length == 0)
+        {
+            LogManager.LogRaw($"Dizinde script bulunamadi: {defaultDir}");
+            return "";
+        }
+
+        Console.WriteLine("\nMevcut scriptler:");
+        for (int idx = 0; idx < files.Length; idx++)
+            Console.WriteLine($"  [{idx + 1}] {Path.GetFileName(files[idx])}");
+
+        Console.Write("\nSeçiminiz: ");
+        var choice = Console.ReadLine()?.Trim();
+        if (int.TryParse(choice, out int sel) && sel >= 1 && sel <= files.Length)
+            filePath = files[sel - 1];
+        else
+            return "";
+    }
+
+    if (!File.Exists(filePath))
+    {
+        LogManager.LogRaw($"Dosya bulunamadi: {filePath}");
+        return "";
+    }
+
+    return File.ReadAllText(filePath);
+}
+
+string readScriptFromConsole()
+{
+    Console.WriteLine("\nScript kodunu yapistirin (bos satir + ENTER ile bitirin):");
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+
+    var lines = new List<string>();
+    int emptyCount = 0;
+
+    while (true)
+    {
+        var line = Console.ReadLine();
+        if (line == null) break;
+
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            emptyCount++;
+            if (emptyCount >= 2) break;  // 2 ardisik bos satir = bitis
+            lines.Add(line);
+        }
+        else
+        {
+            emptyCount = 0;
+            lines.Add(line);
+        }
+    }
+
+    Console.WriteLine("─────────────────────────────────────────────────────────");
+    return string.Join(Environment.NewLine, lines).TrimEnd();
+}
+
+async Task<ScriptExecutionResult> executeScriptWithCancellation(string code, ScriptGlobals globals)
+{
+    scriptCts = new CancellationTokenSource();
+
+    // ESC dinle - ayri thread
+    var escTask = Task.Run(() =>
+    {
+        while (!scriptCts.Token.IsCancellationRequested)
+        {
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true);
+                if (key.Key == ConsoleKey.Escape)
+                {
+                    LogManager.LogRaw("\n[ESC] Script durdurma istegi gonderildi...", ConsoleColor.Yellow);
+                    scriptCts.Cancel();
+                    scriptExecutor.Cancel();
+                    break;
+                }
+            }
+            Thread.Sleep(100);
+        }
+    });
+
+    LogManager.LogRaw("\n[INFO] Script calisiyor... (ESC ile durdurabilirsiniz)\n", ConsoleColor.Cyan);
+
+    var result = await scriptExecutor.ExecuteAsync(code, globals, scriptCts.Token);
+
+    scriptCts.Cancel();  // ESC listener'i durdur
+    try { await escTask; } catch { }
+
+    return result;
+}
+
+void printScriptResult(ScriptExecutionResult result)
+{
+    Console.WriteLine();
+    if (result.Success)
+    {
+        LogManager.LogRaw($"[OK] Script basariyla tamamlandi ({result.ExecutionTime.TotalMilliseconds:F0} ms)", ConsoleColor.Green);
+        if (result.ReturnValue != null)
+            LogManager.LogRaw($"[RETURN] {result.ReturnValue}", ConsoleColor.Cyan);
+    }
+    else
+    {
+        if (result.CompilationErrors != null && result.CompilationErrors.Count > 0)
+        {
+            LogManager.LogRaw("[HATA] Derleme hatalari:", ConsoleColor.Red);
+            foreach (var err in result.CompilationErrors)
+                LogManager.LogRaw($"  {err}", ConsoleColor.Red);
+        }
+        else if (result.Error != null)
+        {
+            LogManager.LogRaw($"[HATA] {result.Error}", ConsoleColor.Red);
+            if (result.StackTrace != null)
+                LogManager.LogRaw($"[STACK] {result.StackTrace}", ConsoleColor.DarkYellow);
+        }
+    }
+}
+
+async Task runFullScript()
+{
+    try
+    {
+        var code = readScriptFromFile();
+        if (string.IsNullOrEmpty(code))
+        {
+            LogManager.LogRaw("Script okunamadi veya bos.");
+            return;
+        }
+
+        LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+
+        // Full mode: yeni AlgoTrader olustur, script her seyi kendisi yapar
+        var scriptAlgoTrader = new AlgoTrader("ScriptAlgoTrader");
+        scriptAlgoTrader.RegisterLogger(logger);
+        scriptAlgoTrader.RegisterTimer(timer);
+
+        var globals = new ScriptGlobals(
+            scriptAlgoTrader,
+            stockDataList ?? new List<StockData>(),
+            msg => LogManager.LogRaw(msg),
+            (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
+        );
+
+        var result = await executeScriptWithCancellation(code, globals);
+
+        globals.Cleanup();
+        printScriptResult(result);
+
+        scriptAlgoTrader.Dispose();
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"Script calistirma hatasi: {ex.Message}", ex);
+    }
+}
+
+async Task runInteractiveScript()
+{
+    try
+    {
+        if (algoTrader == null)
+        {
+            LogManager.LogRaw("\n[UYARI] AlgoTrader henuz olusturulmadi. Once menu [2] veya [3] calistirin,");
+            LogManager.LogRaw("        veya bu script icinde algoTrader'i kendiniz konfigure edin.");
+
+            // Yine de bos algoTrader ile devam etsin mi?
+            algoTrader = new AlgoTrader("InteractiveAlgoTrader");
+            algoTrader.RegisterLogger(logger);
+            algoTrader.RegisterTimer(timer);
+
+            if (stockDataList != null && stockDataList.Count > 0)
+            {
+                algoTrader.SetData(stockDataList);
+                LogManager.LogRaw($"[INFO] Mevcut stockData ({stockDataList.Count} bar) AlgoTrader'a atandi.");
+            }
+        }
+
+        var code = readScriptFromConsole();
+        if (string.IsNullOrEmpty(code))
+        {
+            LogManager.LogRaw("Script bos.");
+            return;
+        }
+
+        LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+
+        var globals = new ScriptGlobals(
+            algoTrader,
+            stockDataList ?? new List<StockData>(),
+            msg => LogManager.LogRaw(msg),
+            (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
+        );
+
+        var result = await executeScriptWithCancellation(code, globals);
+
+        globals.Cleanup();
+        printScriptResult(result);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"Script calistirma hatasi: {ex.Message}", ex);
+    }
+}
+
 TraderRunMode showRunModeMenu()
 {
     Console.WriteLine();
@@ -513,6 +736,8 @@ void showMainMenu()
     Console.WriteLine("║  [1] Read Stock Data                                ║");
     Console.WriteLine("║  [2] Run SingleTrader With Progress                 ║");
     Console.WriteLine("║  [3] Read Data + Run SingleTrader With Progress     ║");
+    Console.WriteLine("║  [4] Run Full Script (from file)                    ║");
+    Console.WriteLine("║  [5] Run Interactive Script (console paste)         ║");
     Console.WriteLine("║  [0] Çıkış                                          ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════╝");
     Console.Write("\nSeçiminiz: ");
@@ -549,6 +774,12 @@ async Task main()
                 selectedRunMode = showRunModeMenu();
                 readStockData();
                 await runAlgoTrade();
+                break;
+            case "4":
+                await runFullScript();
+                break;
+            case "5":
+                await runInteractiveScript();
                 break;
             case "0":
                 running = false;
