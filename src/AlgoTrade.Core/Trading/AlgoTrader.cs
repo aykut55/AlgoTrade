@@ -44,6 +44,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private TimeManager? _timer;
     private SingleTrader? singleTrader { get; set; }
     public SingleTrader? SingleTrader => singleTrader;
+    private MultipleTrader? multipleTrader { get; set; }
+    public MultipleTrader? MultipleTrader => multipleTrader;
     public IndicatorManager? indicators { get; private set; }
     private IStrategy? strategy;
     private IQuery? query;
@@ -134,7 +136,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         trader.ConfigureUserFlagsOnce();
 
         int traderId = trader.GetId();
-        if (traderId == 0)
+        if (traderId == -1)
+        {
+            // mainTrader icin
+        }
+        else if(traderId == 0)
         {
             // 0 id'li trader icin
         }
@@ -564,6 +570,266 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     }
 
+    public async Task RunMultipleTraderWithProgressAsync(CancellationToken cancellationToken = default)
+    {
+        int totalBars = 0;
+
+        if (!IsInitialized) {
+            throw new InvalidOperationException("AlgoTrader not initialized. Call Initialize() first.");
+        }
+
+        try
+        {
+            _timer!.RestartTimer("0");
+
+            totalBars = GetDataCount();
+
+            Log($"AlgoTrader '{Name}' MultipleTrader started. Total bars: {totalBars}");
+
+            // *****************************************************************************
+            // Indicators
+            // *****************************************************************************
+            if (indicators != null) {
+                Log("Disposing previous indicators instance...");
+                indicators.Dispose();
+                indicators = null;
+            }
+
+            Log("\nCreating indicators...");
+
+            indicators = new IndicatorManager(this.Data);
+            if (indicators == null)
+                throw new InvalidOperationException("indicators can not be created...");
+
+            // *****************************************************************************
+            // StrategyRegistry
+            // *****************************************************************************
+            if (strategy != null)
+            {
+                Log("Disposing previous strategy instance...");
+                strategy.Dispose();
+                strategy = null;
+            }
+
+            Log("\nCreating strategy...");
+
+            strategy = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
+            if (strategy == null)
+                throw new InvalidOperationException("strategy can not be created...");
+
+            // *****************************************************************************
+            // QueryRegistry
+            // *****************************************************************************
+            if (query != null)
+            {
+                Log("Disposing previous query instance...");
+                query.Dispose();
+                query = null;
+            }
+
+            if (QueryIsEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(_currentQueryName))
+                    throw new InvalidOperationException("QueryIsEnabled is true but query name is not configured. Call ConfigureQuery(...) first.");
+
+                Log("\nCreating query...");
+
+                query = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
+                if (query == null)
+                    throw new InvalidOperationException("query can not be created...");
+            }
+
+            // *****************************************************************************
+            // MultipleTrader - Cleanup previous run
+            // *****************************************************************************
+            if (multipleTrader != null)
+            {
+                Log("Disposing previous multipleTrader instance...");
+                multipleTrader.Dispose();
+                multipleTrader = null;
+            }
+
+            Log("\nCreating multipleTrader...");
+
+            multipleTrader = new MultipleTrader(0, this.Data, indicators, _logger);
+
+            multipleTrader.Reset();
+
+            var mainTrader = multipleTrader.GetMainTrader();
+
+            // Assign callbacks to mainTrader
+            mainTrader.ClearCallbacks()
+                       .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            mainTrader.Reset();
+
+            // Configure position sizing for mainTrader
+            mainTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            mainTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            // Assign runMode
+            mainTrader.RunMode = SingleTraderRunMode;
+
+            // Apply user flags
+            OnApplyUserFlags(mainTrader);
+
+            // Configure equity curve filter
+            setSingleTraderConfigureEquityCurveFilter(mainTrader);
+
+            mainTrader.Init();
+
+            // *****************************************************************************
+            // Create child SingleTraders and add to MultipleTrader
+            // *****************************************************************************
+            {
+                var childTrader = new SingleTrader(0, "childTrader_0", this.Data, indicators, _logger);
+
+                childTrader.ClearCallbacks()
+                           .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+                childTrader.RunMode = SingleTraderRunMode;
+
+                if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
+                    childTrader.SetStrategy(strategy);
+
+                if ((childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly) && query is not null)
+                    childTrader.SetQuery(query);
+
+                childTrader.Reset();
+
+                // Set attributes
+                childTrader.SymbolName             = this.SymbolName;
+                childTrader.SymbolPeriod           = this.SymbolPeriod;
+                childTrader.SystemId               = this.SystemId;
+                childTrader.SystemName             = this.SystemName;
+                childTrader.StrategyId             = this.StrategyId;
+                childTrader.StrategyName           = this.StrategyName;
+                childTrader.QueryId                = this.QueryId;
+                childTrader.QueryName              = this.QueryName;
+                childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+                childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+                childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+                childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+                OnApplyUserFlags(childTrader);
+
+                setSingleTraderConfigureEquityCurveFilter(childTrader);
+
+                childTrader.Init();
+
+                multipleTrader.AddTrader(childTrader);
+            }
+
+            multipleTrader.Init();
+
+            // *****************************************************************************
+            // MultipleTrader - Run
+            // *****************************************************************************
+
+            Log("\nRunning multipleTrader...");
+
+            _timer!.RestartTimer("1");
+            _timer!.RestartTimer("2");
+
+            IsRunning = true;
+            await Task.Run(() =>
+            {
+                multipleTrader.IsStarted = true;
+                multipleTrader.IsRunning = true;
+                multipleTrader.IsStopped = false;
+                multipleTrader.IsStopRequested = false;
+
+                for (int i = 0; i < totalBars; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (multipleTrader.IsStopRequested)
+                    {
+                        Log($"MultipleTrader stopped by user request at bar {i}/{totalBars}");
+                        break;
+                    }
+
+                    multipleTrader.Run(i);
+
+                    double percentage = (i + 1) / (double)totalBars * 100.0;
+                    OnTraderProgress?.Invoke(i + 1, totalBars, percentage);
+                }
+
+            }, cancellationToken);
+            IsRunning = false;
+
+            _timer!.StopTimer("2");
+
+            var tradersCount = multipleTrader.Traders.Count;
+            for (int i = 0; i < tradersCount; i++)
+            {
+                var singleTrader = multipleTrader.Traders[i];
+                // Tarama bilgileri
+                var _yon           = singleTrader.SonYon;                    // "A"
+                var _kacBarOnce    = singleTrader.SonSinyaldenBeriBarSayisi; // 5
+                var _karZarar      = singleTrader.SonKarZararFiyat;          // 125.50
+                var _karZararYuzde = singleTrader.SonKarZararYuzde;          // 0.85
+                var _ozet          = singleTrader.TaramaOzeti;               // "A | Bar:5 | KZ:125.50 | %:0.85"
+            }
+
+            // Tarama bilgileri: (Finalize gerek kalmadan alinabilir)
+            var yon           = mainTrader.SonYon;                    // "A"
+            var kacBarOnce    = mainTrader.SonSinyaldenBeriBarSayisi; // 5
+            var karZarar      = mainTrader.SonKarZararFiyat;          // 125.50
+            var karZararYuzde = mainTrader.SonKarZararYuzde;          // 0.85
+            var ozet          = mainTrader.TaramaOzeti;               // "A | Bar:5 | KZ:125.50 | %:0.85"
+
+
+            // *****************************************************************************
+            // MultipleTrader - Finalize
+            // *****************************************************************************
+
+            Log("\nFinalizing multipleTrader...");
+
+            _timer!.RestartTimer("3");
+
+            if (multipleTrader.IsStopRequested)
+                multipleTrader.Finalize(false);
+            else
+                multipleTrader.Finalize(true);
+
+            _timer!.StopTimer("3");
+
+            _timer!.StopTimer("1");
+            _timer!.StopTimer("0");
+
+            var t0 = _timer!.GetElapsedTime("0");
+            var t1 = _timer!.GetElapsedTime("1");
+            var t2 = _timer!.GetElapsedTime("2");
+            var t3 = _timer!.GetElapsedTime("3");
+
+            Log($"\nt0 = {t0} msec. <==> RunMultipleTraderWithProgressAsync elapsed time");
+            Log($"\nt1 = {t1} msec. <==> Running + Finalizing multipleTrader elapsed time");
+            Log($"\nt2 = {t2} msec. <==> Running multipleTrader elapsed time");
+            Log($"\nt3 = {t3} msec. <==> Finalizing multipleTrader elapsed time");
+        }
+        catch (Exception ex)
+        {
+            Log($"An error occurred while running in RunMultipleTraderWithProgressAsync(): {ex.Message}");
+        }
+        finally
+        {
+        }
+
+        // Update state flags
+        if (multipleTrader is not null)
+        {
+            multipleTrader.IsRunning = false;
+            multipleTrader.IsStopped = true;
+            Log($"\nMultipleTrader finished - IsRunning: {multipleTrader.IsRunning}, IsStopped: {multipleTrader.IsStopped}");
+        }
+
+        Log("");
+        Log($"AlgoTrader '{Name}' MultipleTrader completed. Processed {totalBars} bars.");
+        Log("");
+    }
+
     public event Action<int, int, double>? OnTraderProgress;
 
     public event Action<string>? MessageReceived;
@@ -589,6 +855,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
         singleTrader?.Dispose();
         singleTrader = null;
+
+        multipleTrader?.Dispose();
+        multipleTrader = null;
 
         indicators?.Dispose();
         indicators = null;

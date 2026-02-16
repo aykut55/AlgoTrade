@@ -487,6 +487,68 @@ async Task runAlgoTrade()
     }
 }
 
+async Task runMultipleTraderAlgoTrade()
+{
+    try
+    {
+        if (!stockDataReader!.IsDataReady)
+            return;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Running MultipleTrader AlgoTrader");
+
+        algoTrader = new AlgoTrader("AlgoTrader");
+
+        algoTrader.OnTraderProgress += OnTraderProgress;
+        algoTrader.RegisterLogger(logger);
+        algoTrader.RegisterTimer(timer);
+
+        algoTrader.Reset();
+        algoTrader.SetData(stockDataReader!.GetData());
+
+        // Set symbol/system info from metadata
+        if (stockMetaData != null)
+        {
+            algoTrader.SymbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        }
+
+        // Set run mode
+        algoTrader.SingleTraderRunMode = selectedRunMode;
+
+        if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
+        {
+            ConfigureStrategy();
+        }
+        else if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
+        {
+            ConfigureStrategy();
+            ConfigureQuery();
+        }
+        else if (algoTrader.SingleTraderRunMode == TraderRunMode.QueryOnly)
+        {
+            ConfigureQuery();
+        }
+
+        ConfigureEquityCurveFilter();
+
+        algoTrader.Initialize();
+
+        var sb = algoTrader.GetDataInfo();
+        LogManager.LogRaw("");
+        LogManager.LogRaw(sb.ToString());
+
+        await algoTrader.RunMultipleTraderWithProgressAsync();
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred while running MultipleTrader: {ex.Message}", ex);
+    }
+    finally
+    {
+    }
+}
+
 // =============================================================================
 // Script Support
 // =============================================================================
@@ -738,6 +800,8 @@ void showMainMenu()
     Console.WriteLine("║  [3] Read Data + Run SingleTrader With Progress     ║");
     Console.WriteLine("║  [4] Run Full Script (from file)                    ║");
     Console.WriteLine("║  [5] Run Interactive Script (console paste)         ║");
+    Console.WriteLine("║  [6] Run MultipleTrader With Progress               ║");
+    Console.WriteLine("║  [7] Read Data + Run MultipleTrader With Progress   ║");
     Console.WriteLine("║  [0] Çıkış                                          ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════╝");
     Console.Write("\nSeçiminiz (default: 3): ");
@@ -781,6 +845,15 @@ async Task main()
                 break;
             case "5":
                 await runInteractiveScript();
+                break;
+            case "6":
+                selectedRunMode = showRunModeMenu();
+                await runMultipleTraderAlgoTrade();
+                break;
+            case "7":
+                selectedRunMode = showRunModeMenu();
+                readStockData();
+                await runMultipleTraderAlgoTrade();
                 break;
             case "0":
                 running = false;
