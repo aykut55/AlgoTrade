@@ -430,11 +430,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             MapStrategyCommandsToTradeCommands(this.strategySignal);
 
-            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek 
             ApplyTimingFilters(i);
 
             ApplyEquityCurveFilter(i);
-            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek
+
+            ResolveFilterDecisions(i);
 
             ExecutePostOrderMethods(i);
 
@@ -450,11 +450,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             MapStrategyCommandsToTradeCommands(this.strategySignal);
 
-            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek
             ApplyTimingFilters(i);
 
             ApplyEquityCurveFilter(i);
-            // Sıralama önemli : TODO : ApplyTimingFilters ve ApplyEquityCurveFilter leri analiz ederek,  this.signals.IsTradeEnabled'e karar verilecek
+
+            ResolveFilterDecisions(i);
 
             ExecutePostOrderMethods(i);
 
@@ -1763,9 +1763,22 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         int i = barIndex;
 
-        // ----------------------------------------------------------------------------
-        // TODO: İki filtre birlikte çalışınca aktif et
-        // this.signals.IsTradeEnabled = this.signals.IsTimingFiltersTradeEnabled && this.signals.IsEquityCurveTradeEnabled;
+        /*
+         * ============================================================================================
+            Not : 
+            Asagidaki degiskenlere göre karar verilmesine gerek kalmadi
+            ResolveFilterDecisions() içerisinde filtreler işleniyor ve asagidaki degiskenler setleniyor
+                this.signals.None;
+                this.signals.Al;
+                this.signals.Sat;
+                this.signals.FlatOl;
+
+            this.signals.IsPozKapatEnabled,              this.signals.GunSonuPozKapatEnabled
+            this.signals.TimeFilteringEnabled,           this.signals.IsTimingFiltersTradeEnabled 
+            this.signals.EquityCurveFilteringEnabled,    this.signals.IsEquityCurveTradeEnabled
+            this.signals.IsTradeEnabled
+        * ============================================================================================
+        */
 
         // ----------------------------------------------------------------------------
         OnBeforeOrder?.Invoke(this, barIndex);
@@ -1824,14 +1837,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         CalculateBalance(i);
 
         // ----------------------------------------------------------------------------
-        if (this.signals.IsTradeEnabled)
-        {
-            this.signals.IsTradeEnabled = true;
-        }
-        else
-        {
-            this.signals.IsTradeEnabled = false;
-        }
         this.lists.IsTradeEnabledList[i] = this.signals.IsTradeEnabled ? 1 : 0;
         this.lists.IsPozKapatEnabledList[i] = this.signals.IsPozKapatEnabled ? 1 : 0;
     }
@@ -2141,8 +2146,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
 
         return 0;
-    }
-    
+    }    
     public void ApplyTimingFilters(int barIndex)
     {
         int i = barIndex;
@@ -2158,60 +2162,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
             CheckOrderTimeEligibility(i, filterMode, ref isTradeEnabled, ref isPozKapatEnabled, ref checkResult);
 
             this.signals.IsTimingFiltersTradeEnabled = isTradeEnabled;
-            this.signals.IsTradeEnabled = isTradeEnabled;
             this.signals.IsPozKapatEnabled = isPozKapatEnabled;
-        }
-
-        // --------------------------------------------------------------------------------------------------------------------------------------------
-        var isSonYonA = is_son_yon_a();
-
-        var isSonYonS = is_son_yon_s();
-
-        var isSonYonF = is_son_yon_f();
-
-        // --------------------------------------------------------------------------------------------------------------------------------------------
-        if (this.signals.IsPozKapatEnabled || this.signals.GunSonuPozKapatEnabled)
-        {
-            if (this.signals.IsPozKapatEnabled)
-            {
-                if (isSonYonF)
-                {
-                    this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
-                    this.signals.None = true;
-                }
-                else
-                {
-                    this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
-                    this.signals.FlatOl = true;
-                }
-            }
-            else if (this.signals.GunSonuPozKapatEnabled)
-            {
-                bool pozKapat = this.ClosePositionEOD(i, this.signals.GunSonuPozKapatEnabled);
-                if (pozKapat)
-                {
-                    if (isSonYonF)
-                    {
-                        this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
-                        this.signals.None = true;
-                    }
-                    else
-                    {
-                        this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
-                        this.signals.FlatOl = true;
-                        this.signals.GunSonuPozKapatildi = true;
-                    }
-                }
-            }
-        }
-        else
-        {
-            if (!this.signals.IsTradeEnabled)
-            {
-                // Zaman filtresi trade'e izin vermiyor, emirleri iptal et
-                this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
-                this.signals.None = true;
-            }
         }
     }
     public void ConfigureEquityCurveFilter(bool isPercent, double profitThreshold, double lossThreshold, ConfirmationTrigger trigger)
@@ -2222,7 +2173,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.confirmationTrigger = trigger;
         this._equityCurveConfirmed = false;
     }
-
     public void ApplyEquityCurveFilter(int barIndex)
     {
         int i = barIndex;
@@ -2308,16 +2258,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
             }
             else
             {
-                // Eşik geçilmedi - sadece giriş sinyallerini iptal et
-                // Çıkış sinyallerine (FlatOl/KarAl/ZararKes) dokunma
-                this.signals.Al = false;
-                this.signals.Sat = false;
-                this.signals.None = true;
                 this.signals.IsEquityCurveTradeEnabled = false;
             }
-
-            // TODO: İki filtre birlikte çalışınca aktif et
-            // this.signals.IsTradeEnabled = this.signals.IsTimingFiltersTradeEnabled && this.signals.IsEquityCurveTradeEnabled;
 
         }
     }
@@ -2336,7 +2278,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // Direkt erişim O(1) maliyetli
         return Data[i].Date != Data[i + 1].Date;
     }
-
     public bool ClosePositionEOD_2(int i, bool gunSonuPozKapatEnabled = true, int hour = 18, int minute = 0)
     {
         // Optimizasyon: Önce disabled kontrolü yap
@@ -2359,7 +2300,83 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return false;
     }
+    public void ResolveFilterDecisions(int barIndex)
+    {
+        int i = barIndex;
 
+        var isSonYonA = is_son_yon_a();
+        var isSonYonS = is_son_yon_s();
+        var isSonYonF = is_son_yon_f();
+
+        // Öncelik 1: PozKapat → return
+        // Öncelik 2: GunSonuPozKapat → return
+        // Öncelik 3: timingBlocked → return
+        // Öncelik 4: equityBlocked → soft block
+
+        this.signals.IsTradeEnabled = false;
+
+        // ---- Öncelik 1: PozKapat (hard override - her şeyi ezer) ----
+        if (this.signals.IsPozKapatEnabled)
+        {
+            if (isSonYonF)
+            {
+                this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                this.signals.None = true;
+            }
+            else
+            {
+                this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                this.signals.FlatOl = true;
+            }
+
+            return;
+        }
+
+        // ---- Öncelik 2: GunSonuPozKapat (hard override - her şeyi ezer) ----
+        if (this.signals.GunSonuPozKapatEnabled)
+        {
+            bool pozKapat = this.ClosePositionEOD(i, this.signals.GunSonuPozKapatEnabled);
+            if (pozKapat)
+            {
+                if (isSonYonF)
+                {
+                    this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                    this.signals.None = true;
+                }
+                else
+                {
+                    this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+                    this.signals.FlatOl = true;
+                    this.signals.GunSonuPozKapatildi = true;
+                }
+
+                return;
+            }
+        }
+
+        // ---- Öncelik 3: Timing → hard block (tüm sinyalleri öldür) ----
+        bool timingBlocked = this.signals.TimeFilteringEnabled && !this.signals.IsTimingFiltersTradeEnabled;
+        if (timingBlocked)
+        {
+            this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+            this.signals.None = true;
+            return;
+        }
+
+        // ---- Öncelik 4: EquityCurve → soft block (sadece giriş sinyallerini iptal et) ----
+        bool equityBlocked = this.signals.EquityCurveFilteringEnabled && !this.signals.IsEquityCurveTradeEnabled;
+        if (equityBlocked)
+        {
+            this.signals.Al = false;
+            this.signals.Sat = false;
+            this.signals.None = true;
+        }
+
+        // ---- IsTradeEnabled birleşik hesaplama (Option C) ----
+        bool filter1 = (!this.signals.TimeFilteringEnabled || this.signals.IsTimingFiltersTradeEnabled);
+        bool filter2 = (!this.signals.EquityCurveFilteringEnabled || this.signals.IsEquityCurveTradeEnabled);
+        this.signals.IsTradeEnabled = filter1 && filter2;
+    }
     public SingleTrader ConfigureUserFlagsOnce()
     {
         if (_data == null || _data.Count == 0)
