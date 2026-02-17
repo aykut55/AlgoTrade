@@ -286,6 +286,8 @@ multipleTrader.IsRunning = true;
 multipleTrader.IsStopped = false;
 multipleTrader.IsStopRequested = false;
 
+int updateFreq = 5;
+
 for (int i = 0; i < totalBars; i++)
 {
     if (IsCancellationRequested)
@@ -301,6 +303,15 @@ for (int i = 0; i < totalBars; i++)
     }
 
     multipleTrader.Run(i);
+
+    // Progress reporting
+    double percentage = (i + 1) / (double)totalBars * 100.0;
+    int prevPercentBucket = (int)(((i) / (double)totalBars * 100.0) / updateFreq);
+    int currPercentBucket = (int)(percentage / updateFreq);
+    if (currPercentBucket > prevPercentBucket || i + 1 >= totalBars)
+    {
+        Log($"Progress: {i + 1}/{totalBars} ({percentage:F1}%)");
+    }
 }
 
 sw.Stop();
