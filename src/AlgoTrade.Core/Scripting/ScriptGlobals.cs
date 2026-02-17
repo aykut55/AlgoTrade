@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Indicators;
 
@@ -27,6 +28,18 @@ namespace AlgoTrade.Core.Scripting
         // Store subscribed handlers for cleanup
         private Action<SingleTrader, int, int, double>? _progressHandler;
         private Action<SingleTrader, string, int>? _signalHandler;
+
+        /// <summary>
+        /// CancellationToken - ESC ile iptal edildiginde true olur.
+        /// Script icindeki dongulerde bunu kontrol edin.
+        /// </summary>
+        private CancellationTokenSource? _cts;
+        public bool IsCancellationRequested => _cts?.Token.IsCancellationRequested ?? false;
+
+        public void SetCancellationTokenSource(CancellationTokenSource cts)
+        {
+            _cts = cts;
+        }
 
         public ScriptGlobals(
             AlgoTrader trader,

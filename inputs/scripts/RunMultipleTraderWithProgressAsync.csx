@@ -288,6 +288,12 @@ multipleTrader.IsStopRequested = false;
 
 for (int i = 0; i < totalBars; i++)
 {
+    if (IsCancellationRequested)
+    {
+        Log($"Script cancelled by ESC at bar {i}/{totalBars}");
+        break;
+    }
+
     if (multipleTrader.IsStopRequested)
     {
         Log($"MultipleTrader stopped by user request at bar {i}/{totalBars}");
@@ -322,7 +328,7 @@ sw.Restart();
 multipleTrader.Finalize();
 
 // Dosyaya yazma
-if (!multipleTrader.IsStopRequested)
+if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
 {
     if (mainTrader.SaveStatisticsToFile)
     {

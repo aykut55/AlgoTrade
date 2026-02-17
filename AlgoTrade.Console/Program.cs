@@ -693,6 +693,9 @@ async Task<ScriptExecutionResult> executeScriptWithCancellation(string code, Scr
 {
     scriptCts = new CancellationTokenSource();
 
+    // Script'e cancellation token'i aktar
+    globals.SetCancellationTokenSource(scriptCts);
+
     // ESC dinle - ayri thread
     var escTask = Task.Run(() =>
     {

@@ -188,6 +188,12 @@ singleTrader.IsStopRequested = false;
 
 for (int i = 0; i < totalBars; i++)
 {
+    if (IsCancellationRequested)
+    {
+        Log($"Script cancelled by ESC at bar {i}/{totalBars}");
+        break;
+    }
+
     if (singleTrader.IsStopRequested)
     {
         Log($"SingleTrader stopped by user request at bar {i}/{totalBars}");
@@ -221,7 +227,7 @@ sw.Restart();
 
 singleTrader.Finalize();
 
-if (!singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
+if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
 {
     Log("\nSaving statistics to files...");
     singleTrader.WriteStatisticsToFile(AppSettings.LogsDir);
