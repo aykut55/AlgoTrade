@@ -956,13 +956,12 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [1] Read Stock Data                                             ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [2] Run SingleTrader With Progress                          ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [2] Run SingleTrader With Progress                              ║");
-    Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [3] Read Data + Run SingleTrader With Progress                  ║");
+    Console.WriteLine("║        [3] Run MultipleTrader With Progress                        ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [4] Run MultipleTrader With Progress                            ║");
+    Console.WriteLine("║    [4] Read Data + Run SingleTrader With Progress                  ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [5] Read Data + Run MultipleTrader With Progress                ║");
     Console.WriteLine("║                                                                    ║");
@@ -975,7 +974,7 @@ void showMainMenu()
     Console.WriteLine("║    [0] Exit                                                        ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
-    Console.Write("\nSeçiminiz (default: 3): ");
+    Console.Write("\nSeçiminiz (default: 6): ");
 }
 
 async Task main()
@@ -995,7 +994,7 @@ async Task main()
     {
         showMainMenu();
         var input = Console.ReadLine()?.Trim();
-        if (string.IsNullOrEmpty(input)) input = "3";
+        if (string.IsNullOrEmpty(input)) input = "6";
 
         switch (input)
         {
@@ -1008,12 +1007,12 @@ async Task main()
                 break;
             case "3":
                 selectedRunMode = showRunModeMenu();
-                readStockData();
-                await runAlgoTrade();
+                await runMultipleTraderAlgoTrade();
                 break;
             case "4":
                 selectedRunMode = showRunModeMenu();
-                await runMultipleTraderAlgoTrade();
+                readStockData();
+                await runAlgoTrade();
                 break;
             case "5":
                 selectedRunMode = showRunModeMenu();
