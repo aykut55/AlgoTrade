@@ -834,6 +834,91 @@ async Task runInteractiveScript()
     }
 }
 
+async Task runFullScriptMultipleTrader()
+{
+    try
+    {
+        var code = readScriptFromFile();
+        if (string.IsNullOrEmpty(code))
+        {
+            LogManager.LogRaw("Script okunamadi veya bos.");
+            return;
+        }
+
+        LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+
+        // Full mode: yeni AlgoTrader olustur, script her seyi kendisi yapar
+        var scriptAlgoTrader = new AlgoTrader("ScriptMultipleTrader");
+        scriptAlgoTrader.RegisterLogger(logger);
+        scriptAlgoTrader.RegisterTimer(timer);
+
+        var globals = new ScriptGlobals(
+            scriptAlgoTrader,
+            stockDataList ?? new List<StockData>(),
+            msg => LogManager.LogRaw(msg),
+            (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
+        );
+
+        var result = await executeScriptWithCancellation(code, globals);
+
+        globals.Cleanup();
+        printScriptResult(result);
+
+        scriptAlgoTrader.Dispose();
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"Script calistirma hatasi: {ex.Message}", ex);
+    }
+}
+
+async Task runInteractiveScriptMultipleTrader()
+{
+    try
+    {
+        if (algoTrader == null)
+        {
+            LogManager.LogRaw("\n[UYARI] AlgoTrader henuz olusturulmadi. Once menu [6] veya [7] calistirin,");
+            LogManager.LogRaw("        veya bu script icinde algoTrader'i kendiniz konfigure edin.");
+
+            algoTrader = new AlgoTrader("InteractiveMultipleTrader");
+            algoTrader.RegisterLogger(logger);
+            algoTrader.RegisterTimer(timer);
+
+            if (stockDataList != null && stockDataList.Count > 0)
+            {
+                algoTrader.SetData(stockDataList);
+                LogManager.LogRaw($"[INFO] Mevcut stockData ({stockDataList.Count} bar) AlgoTrader'a atandi.");
+            }
+        }
+
+        var code = readScriptFromConsole();
+        if (string.IsNullOrEmpty(code))
+        {
+            LogManager.LogRaw("Script bos.");
+            return;
+        }
+
+        LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+
+        var globals = new ScriptGlobals(
+            algoTrader,
+            stockDataList ?? new List<StockData>(),
+            msg => LogManager.LogRaw(msg),
+            (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
+        );
+
+        var result = await executeScriptWithCancellation(code, globals);
+
+        globals.Cleanup();
+        printScriptResult(result);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"Script calistirma hatasi: {ex.Message}", ex);
+    }
+}
+
 TraderRunMode showRunModeMenu()
 {
     Console.WriteLine();
@@ -865,6 +950,8 @@ void showMainMenu()
     Console.WriteLine("║  [5] Run Interactive Script (console paste)         ║");
     Console.WriteLine("║  [6] Run MultipleTrader With Progress               ║");
     Console.WriteLine("║  [7] Read Data + Run MultipleTrader With Progress   ║");
+    Console.WriteLine("║  [8] Run Full Script - MultipleTrader (from file)   ║");
+    Console.WriteLine("║  [9] Run Interactive Script - MultipleTrader        ║");
     Console.WriteLine("║  [0] Çıkış                                          ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════╝");
     Console.Write("\nSeçiminiz (default: 3): ");
@@ -917,6 +1004,12 @@ async Task main()
                 selectedRunMode = showRunModeMenu();
                 readStockData();
                 await runMultipleTraderAlgoTrade();
+                break;
+            case "8":
+                await runFullScriptMultipleTrader();
+                break;
+            case "9":
+                await runInteractiveScriptMultipleTrader();
                 break;
             case "0":
                 running = false;

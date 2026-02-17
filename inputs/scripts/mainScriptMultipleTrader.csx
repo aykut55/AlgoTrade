@@ -1,0 +1,395 @@
+using System;
+using System.IO;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using AlgoTrade.Core;
+using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.Logging.Sinks;
+using AlgoTrade.Core.Scripting;
+using AlgoTrade.Core.StockDataReader;
+using AlgoTrade.Core.Timer;
+using AlgoTrade.Core.Trading;
+
+bool addHeadTailInfo = false;
+var sb = new StringBuilder();
+ConsoleLogger ? consoleLogger = null;
+List<StockData>? stockDataList = null;
+StockDataReader? stockDataReader = null;
+ConcurrentDictionary<string, string>? stockMetaData = null;
+AlgoTrader? algoTrader = null;
+TimeManager timer = TimeManager.GetInstance();
+LogManager logger = LogManager.GetInstance();
+DateTime? _progressStartTime = null;
+TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
+
+string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
+
+void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
+{
+    if (sender.IsMetaDataRead)
+    {
+        var stockMetaData = sender.GetMetaData();
+
+        var kayitZamani = stockMetaData.GetValueOrDefault("Kayit_Zamani", "N/A");
+        var grafikSembol = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+        var grafikPeriyot = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        var barCount = stockMetaData.GetValueOrDefault("BarCount", "N/A");
+        var baslangicTarihi = stockMetaData.GetValueOrDefault("Baslangic_Tarihi", "N/A");
+        var bitisTarihi = stockMetaData.GetValueOrDefault("Bitis_Tarihi", "N/A");
+        var format = stockMetaData.GetValueOrDefault("Format", "N/A");
+
+        int padding = 18;
+        sb.Clear();
+        sb.AppendLine($"{"\tKayit Zamani".PadRight(padding)}: {kayitZamani}");
+        sb.AppendLine($"{"\tGrafikSembol".PadRight(padding)}: {grafikSembol}");
+        sb.AppendLine($"{"\tGrafikPeriyot".PadRight(padding)}: {grafikPeriyot}");
+        sb.AppendLine($"{"\tBarCount".PadRight(padding)}: {barCount}");
+        sb.AppendLine($"{"\tBaslangic Tarihi".PadRight(padding)}: {baslangicTarihi}");
+        sb.AppendLine($"{"\tBitis Tarihi".PadRight(padding)}: {bitisTarihi}");
+        sb.Append($"{"\tFormat".PadRight(padding)}: {format}");
+
+        LogManager.LogRaw(sb.ToString());
+    }
+}
+
+void OnProgress(StockDataReader sender, int count, bool isCompleted)
+{
+    if (isCompleted)
+    {
+        consoleLogger.Write($"\r\tRecord count     : {count}");
+        consoleLogger.WriteLine("");
+    }
+    else
+    {
+        consoleLogger.Write($"\r\tRecord no        : {count}");
+    }
+}
+
+void OnReadData(StockDataReader sender, List<StockData> data, long elapsedMs)
+{
+}
+
+void OnTraderProgress(int currentBar, int totalBars, double percentage)
+{
+}
+
+void ConfigureStrategies()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    algoTrader.ClearStrategyConfigs();
+
+    // Id=0 : SimpleMostStrategy
+    algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 21,
+        ["percent"] = 1.0,
+        ["choice"] = 0
+    });
+
+    // Id=1 : SimpleMostStrategy (farklı parametrelerle)
+    algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["percent"] = 0.5,
+        ["choice"] = 0
+    });
+}
+
+void ConfigureQueries()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    algoTrader.ClearQueryConfigs();
+
+    // Id=0 : SimpleQuery1
+    algoTrader.AddQueryConfig(0, "SimpleQuery1", new Dictionary<string, object>
+    {
+        ["ma8Period"] = 8,
+        ["ma200Period"] = 200,
+        ["choice"] = 0
+    });
+
+    // Id=1 : SimpleQuery1 (farklı parametrelerle)
+    algoTrader.AddQueryConfig(1, "SimpleQuery1", new Dictionary<string, object>
+    {
+        ["ma8Period"] = 5,
+        ["ma200Period"] = 100,
+        ["choice"] = 0
+    });
+}
+
+void ConfigureEquityCurveFilters()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    algoTrader.ClearEquityCurveFilterConfigs();
+
+    // Id=0
+    algoTrader.AddEquityCurveFilterConfig(0,
+        enabled: false,
+        thresholdTypeIsPercent: true,
+        profitThreshold: 0.05,
+        lossThreshold: -0.05,
+        trigger: ConfirmationTrigger.Both);
+
+    // Id=1
+    algoTrader.AddEquityCurveFilterConfig(1,
+        enabled: false,
+        thresholdTypeIsPercent: true,
+        profitThreshold: 0.05,
+        lossThreshold: -0.05,
+        trigger: ConfirmationTrigger.Both);
+}
+
+void readStockData()
+{
+    try
+    {
+        if (!File.Exists(stockDataFullFileName))
+        {
+            LogManager.LogRaw($"File does not exist : {stockDataFullFileName}");
+        }
+        else
+        {
+            stockDataReader = new StockDataReader();
+            stockDataReader.OnReadMetaData += OnReadMetaData;
+            stockDataReader.OnReadData += OnReadData;
+            stockDataReader.OnProgress += OnProgress;
+
+            string fileName = Path.GetFileName(stockDataFullFileName);
+            string fileDir = Path.GetDirectoryName(stockDataFullFileName)!;
+            string filePath = Path.Combine(fileDir, fileName);
+
+            LogManager.LogRaw("");
+            LogManager.LogRaw($"Reading Meta Data from   : {filePath}");
+
+            stockDataReader.Clear();
+
+            stockDataReader.ReStartTimer();
+
+            stockMetaData = stockDataReader.ReadMetaData(filePath);
+
+            stockDataReader.StopTimer();
+
+            long t1 = stockDataReader.GetElapsedTimeMsec();
+
+            LogManager.DisableConsoleSink();
+            {
+                sb.Clear();
+                sb.Append("is completed in ");
+                sb.Append($"{t1} ms.");
+                LogManager.LogRaw(sb.ToString());
+
+                consoleLogger.Write("is completed in ");
+                consoleLogger.Write($"{t1}", ConsoleColor.Green);
+                consoleLogger.WriteLine(" ms.");
+
+                LogManager.EnableConsoleSink();
+            }
+
+            if (stockDataReader.IsMetaDataRead)
+            {
+                var barCount = stockMetaData.GetValueOrDefault("BarCount", "N/A");
+                var baslangicTarihi = stockMetaData.GetValueOrDefault("Baslangic_Tarihi", "N/A");
+                var bitisTarihi = stockMetaData.GetValueOrDefault("Bitis_Tarihi", "N/A");
+
+                LogManager.LogRaw("");
+
+                StockDataReader.FilterMode mode = StockDataReader.FilterMode.All;
+
+                LogManager.LogRaw($"Loading data from        : {filePath}");
+
+                stockDataReader.ReStartTimer();
+
+                stockDataReader.ReadDataFast(filePath);
+
+                stockDataReader.StopTimer();
+
+                long t2 = stockDataReader.GetElapsedTimeMsec();
+
+                LogManager.DisableConsoleSink();
+                {
+                    sb.Clear();
+                    sb.Append("is completed in ");
+                    sb.Append($"{t2} ms.");
+                    LogManager.LogRaw(sb.ToString());
+
+                    consoleLogger.Write("is completed in ");
+                    consoleLogger.Write($"{t2}", ConsoleColor.Green);
+                    consoleLogger.WriteLine(" ms.");
+
+                    LogManager.EnableConsoleSink();
+                }
+
+                stockDataList = stockDataReader.GetData();
+
+                LogManager.LogRaw($"{"\n\tData count".PadRight(18)} : {stockDataReader.GetDataCount()}");
+
+                if (addHeadTailInfo)
+                {
+                    LogManager.LogRaw("");
+                    LogManager.LogRaw(stockDataReader.Head());
+
+                    LogManager.LogRaw("");
+                    LogManager.LogRaw(stockDataReader.Tail());
+                }
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred while reading data: {ex.Message}", ex);
+    }
+    finally
+    {
+    }
+}
+
+async Task runMultipleTraderAlgoTrade()
+{
+    try
+    {
+        if (!stockDataReader!.IsDataReady)
+            return;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Running MultipleTrader AlgoTrader");
+
+        algoTrader = new AlgoTrader("AlgoTrader");
+
+        algoTrader.OnTraderProgress += OnTraderProgress;
+        algoTrader.RegisterLogger(logger);
+        algoTrader.RegisterTimer(timer);
+
+        algoTrader.Reset();
+        algoTrader.SetData(stockDataReader!.GetData());
+
+        // Set symbol/system info from metadata
+        if (stockMetaData != null)
+        {
+            algoTrader.SymbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        }
+
+        // Set run mode
+        algoTrader.SingleTraderRunMode = selectedRunMode;
+
+        ConfigureStrategies();
+
+        ConfigureQueries();
+
+        ConfigureEquityCurveFilters();
+
+        algoTrader.Initialize();
+
+        var sb = algoTrader.GetDataInfo();
+        LogManager.LogRaw("");
+        LogManager.LogRaw(sb.ToString());
+
+        await algoTrader.RunMultipleTraderWithProgressAsync();
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred while running MultipleTrader: {ex.Message}", ex);
+    }
+    finally
+    {
+    }
+}
+
+TraderRunMode showRunModeMenu()
+{
+    Console.WriteLine();
+    Console.WriteLine("Run Mode Secimi:");
+    Console.WriteLine("  [1] TradeOnly");
+    Console.WriteLine("  [2] TradeAndQuery");
+    Console.WriteLine("  [3] QueryOnly");
+    Console.Write("\nSeciminiz (default: 2): ");
+
+    var input = Console.ReadLine()?.Trim();
+    return input switch
+    {
+        "1" => TraderRunMode.TradeOnly,
+        "3" => TraderRunMode.QueryOnly,
+        _ => TraderRunMode.TradeAndQuery
+    };
+}
+
+void showMainMenu()
+{
+    Console.WriteLine();
+    Console.WriteLine("╔═════════════════════════════════════════════════════╗");
+    Console.WriteLine("║   AlgoTrade - MultipleTrader Script Menu            ║");
+    Console.WriteLine("╠═════════════════════════════════════════════════════╣");
+    Console.WriteLine("║  [1] Read Stock Data                                ║");
+    Console.WriteLine("║  [2] Run MultipleTrader With Progress               ║");
+    Console.WriteLine("║  [3] Read Data + Run MultipleTrader With Progress   ║");
+    Console.WriteLine("║  [0] Cikis                                          ║");
+    Console.WriteLine("╚═════════════════════════════════════════════════════╝");
+    Console.Write("\nSeciminiz (default: 3): ");
+}
+
+async Task main()
+{
+    AppSettings.EnsureDirectories();
+
+    logger.RegisterSink(new ConsoleSink());
+    logger.RegisterSink(new DebugSink());
+    logger.RegisterSink(new FileSink(AppSettings.LogsDir, "app.log"));
+    consoleLogger = LogManager.GetConsoleLogger();
+    consoleLogger.Clear();
+
+    LogManager.LogRaw("Application started (MultipleTrader Script)", ConsoleColor.Green);
+
+    bool running = true;
+    while (running)
+    {
+        showMainMenu();
+        var input = Console.ReadLine()?.Trim();
+        if (string.IsNullOrEmpty(input)) input = "3";
+
+        switch (input)
+        {
+            case "1":
+                readStockData();
+                break;
+            case "2":
+                selectedRunMode = showRunModeMenu();
+                await runMultipleTraderAlgoTrade();
+                break;
+            case "3":
+                selectedRunMode = showRunModeMenu();
+                readStockData();
+                await runMultipleTraderAlgoTrade();
+                break;
+            case "0":
+                running = false;
+                break;
+            default:
+                Console.WriteLine("Gecersiz secim!");
+                break;
+        }
+    }
+
+    LogManager.LogRaw("Application finished", ConsoleColor.Green);
+
+    algoTrader?.Dispose();
+    stockDataReader?.Dispose();
+    LogManager.Instance.Dispose();
+
+    algoTrader = null;
+    stockDataReader = null;
+    stockDataList = null;
+    stockMetaData = null;
+}
+
+Console.WriteLine("[mainScriptMultipleTrader.csx] Script basariyla yuklendi ve calisti!");
+await main();
