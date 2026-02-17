@@ -763,12 +763,14 @@ async Task runFullScript()
             return;
         }
 
-        LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+        LogManager.LogRaw($"\nScript dosyasi: {scriptFilePath}");
+        LogManager.LogRaw($"Script boyutu: {code.Length} karakter");
 
         var sourceDir = Path.GetDirectoryName(scriptFilePath);
+        var scriptName = Path.GetFileNameWithoutExtension(scriptFilePath);
 
         // Full mode: yeni AlgoTrader olustur, script her seyi kendisi yapar
-        var scriptAlgoTrader = new AlgoTrader("ScriptAlgoTrader");
+        var scriptAlgoTrader = new AlgoTrader(scriptName);
         scriptAlgoTrader.RegisterLogger(logger);
         scriptAlgoTrader.RegisterTimer(timer);
 
@@ -841,45 +843,8 @@ async Task runInteractiveScript()
     }
 }
 
-async Task runFullScriptMultipleTrader()
-{
-    try
-    {
-        var (code, scriptFilePath) = readScriptFromFile();
-        if (string.IsNullOrEmpty(code))
-        {
-            LogManager.LogRaw("Script okunamadi veya bos.");
-            return;
-        }
-
-        LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
-
-        var sourceDir = Path.GetDirectoryName(scriptFilePath);
-
-        // Full mode: yeni AlgoTrader olustur, script her seyi kendisi yapar
-        var scriptAlgoTrader = new AlgoTrader("ScriptMultipleTrader");
-        scriptAlgoTrader.RegisterLogger(logger);
-        scriptAlgoTrader.RegisterTimer(timer);
-
-        var globals = new ScriptGlobals(
-            scriptAlgoTrader,
-            stockDataList ?? new List<StockData>(),
-            msg => LogManager.LogRaw(msg),
-            (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
-        );
-
-        var result = await executeScriptWithCancellation(code, globals, sourceDir);
-
-        globals.Cleanup();
-        printScriptResult(result);
-
-        scriptAlgoTrader.Dispose();
-    }
-    catch (Exception ex)
-    {
-        LogManager.LogError($"Script calistirma hatasi: {ex.Message}", ex);
-    }
-}
+// TODO: Ileride silinecek - runFullScript() ile merge edildi
+// async Task runFullScriptMultipleTrader() { ... }
 
 // TODO: Ileride silinecek - Moduler script yapisi (#load) ile artik gerek kalmadi, menuden de kaldirildi
 async Task runInteractiveScriptMultipleTrader()
@@ -966,9 +931,7 @@ void showMainMenu()
     Console.WriteLine("║    [5] Read Data + Run MultipleTrader With Progress                ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [6] Run Full Script - SingleTrader (from file)                  ║", ConsoleColor.Green);
-    Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [7] Run Full Script - MultipleTrader (from file)                ║", ConsoleColor.Green);
+    Console.WriteLine("║    [6] Run Full Script (from file)                                 ║", ConsoleColor.Green);
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0] Exit                                                        ║");
@@ -1021,9 +984,6 @@ async Task main()
                 break;
             case "6":
                 await runFullScript();
-                break;
-            case "7":
-                await runFullScriptMultipleTrader();
                 break;
             case "0":
                 running = false;

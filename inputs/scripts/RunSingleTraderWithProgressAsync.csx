@@ -169,6 +169,61 @@ singleTrader.ConfigureEquityCurveFilter(
 // Enable saving statistics
 singleTrader.SaveStatisticsToFile = saveStatisticsToFile;
 
+// =============================================================================
+// 6b. Callbacks
+// =============================================================================
+Action<SingleTrader, int> onReset = (trader, barIndex) =>
+{
+    Log($"[CB] onReset: trader={trader.GetName()}");
+};
+
+Action<SingleTrader, int> onInit = (trader, barIndex) =>
+{
+    // Log($"[CB] onInit: trader={trader.GetName()}");
+};
+
+Action<SingleTrader, int> onRun = (trader, barIndex) =>
+{
+    // Log($"[CB] onRun: bar={barIndex}");
+};
+
+Action<SingleTrader, int> onFinal = (trader, barIndex) =>
+{
+    // Log($"[CB] onFinal: trader={trader.GetName()}");
+};
+
+Action<SingleTrader, int> onBeforeOrders = (trader, barIndex) =>
+{
+    // Log($"[CB] onBeforeOrders: bar={barIndex}");
+};
+
+Action<SingleTrader, string, int> onNotifySignal = (trader, signal, barIndex) =>
+{
+    // Log($"[CB] onNotifySignal: signal={signal}, bar={barIndex}");
+};
+
+Action<SingleTrader, int> onAfterOrders = (trader, barIndex) =>
+{
+    // Log($"[CB] onAfterOrders: bar={barIndex}");
+};
+
+Action<SingleTrader, int, int, double> onProgress = (trader, current, total, percentage) =>
+{
+    // Log($"[CB] onProgress: {current}/{total} ({percentage:F1}%)");
+};
+
+singleTrader.ClearCallbacks()
+    .SetCallbacks(
+        onReset: onReset,
+        onInit: onInit,
+        onRun: onRun,
+        onFinal: onFinal,
+        onBeforeOrders: onBeforeOrders,
+        onNotifySignal: onNotifySignal,
+        onAfterOrders: onAfterOrders,
+        onProgress: onProgress
+    );
+
 // Init
 singleTrader.Init();
 
