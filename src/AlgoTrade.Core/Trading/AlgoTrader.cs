@@ -224,6 +224,27 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         OnMessage($"AlgoTrader '{Name}' durduruldu.");
     }
 
+    public int DeleteAllFilesInDirectory(string directoryPath, bool includeSubdirectories = false)
+    {
+        if (string.IsNullOrWhiteSpace(directoryPath))
+            throw new ArgumentException("Directory path cannot be null or empty.", nameof(directoryPath));
+
+        if (!Directory.Exists(directoryPath))
+            throw new DirectoryNotFoundException($"Directory not found: {directoryPath}");
+
+        var searchOption = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+        var files = Directory.GetFiles(directoryPath, "*", searchOption);
+
+        int deletedCount = 0;
+        foreach (var file in files)
+        {
+            File.Delete(file);
+            deletedCount++;
+        }
+
+        return deletedCount;
+    }
+
     public void SetData(List<StockData> data)
     {
         _data = data;

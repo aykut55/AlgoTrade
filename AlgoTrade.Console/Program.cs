@@ -158,6 +158,31 @@ void ConfigureEquityCurveFilter()
     algoTrader.ConfirmationTrigger = ConfirmationTrigger.Both;
 }
 
+void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectories = false)
+{
+    if (string.IsNullOrWhiteSpace(directoryPath))
+        throw new ArgumentException("Directory path cannot be null or empty.", nameof(directoryPath));
+
+    string targetDirectory = directoryPath;
+
+    if (!Directory.Exists(targetDirectory))
+    {
+        LogManager.LogRaw($"\nDirectory not found: {targetDirectory}");
+        return;
+    }
+
+    var searchOption = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
+    var files = Directory.GetFiles(targetDirectory, "*", searchOption);
+    int deletedCount = 0;
+    foreach (var file in files)
+    {
+        File.Delete(file);
+        deletedCount++;
+    }
+
+    LogManager.LogRaw($"\nDeleted file count: {deletedCount} \n\t(Directory: {targetDirectory})");
+}
+
 
 void ConfigureStrategies()
 {
@@ -951,6 +976,11 @@ async Task main()
     try { consoleLogger.Clear(); } catch { }
 
     LogManager.LogRaw("Application started", ConsoleColor.Green);
+
+    DeleteFilesInGivenDirectory(AppSettings.LogsDir);
+    
+    LogManager.LogRaw("");
+    LogManager.LogRaw(AppSettings.LogsDir + " cleared...");
 
     bool running = true;
     while (running)
