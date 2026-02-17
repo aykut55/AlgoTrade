@@ -158,6 +158,79 @@ void ConfigureEquityCurveFilter()
     algoTrader.ConfirmationTrigger = ConfirmationTrigger.Both;
 }
 
+
+void ConfigureStrategies()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    algoTrader.ClearStrategyConfigs();
+
+    // Id=0 : SimpleMostStrategy
+    algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 21,
+        ["percent"] = 1.0,
+        ["choice"] = 0
+    });
+
+    // Id=1 : SimpleMostStrategy (farklı parametrelerle)
+    algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["percent"] = 0.5,
+        ["choice"] = 0
+    });
+}
+
+void ConfigureQueries()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    algoTrader.ClearQueryConfigs();
+
+    // Id=0 : SimpleQuery1
+    algoTrader.AddQueryConfig(0, "SimpleQuery1", new Dictionary<string, object>
+    {
+        ["ma8Period"] = 8,
+        ["ma200Period"] = 200,
+        ["choice"] = 0
+    });
+
+    // Id=1 : SimpleQuery1 (farklı parametrelerle)
+    algoTrader.AddQueryConfig(1, "SimpleQuery1", new Dictionary<string, object>
+    {
+        ["ma8Period"] = 5,
+        ["ma200Period"] = 100,
+        ["choice"] = 0
+    });
+}
+
+void ConfigureEquityCurveFilters()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    algoTrader.ClearEquityCurveFilterConfigs();
+
+    // Id=0
+    algoTrader.AddEquityCurveFilterConfig(0,
+        enabled: false,
+        thresholdTypeIsPercent: true,
+        profitThreshold: 0.05,
+        lossThreshold: -0.05,
+        trigger: ConfirmationTrigger.Both);
+
+    // Id=1
+    algoTrader.AddEquityCurveFilterConfig(1,
+        enabled: false,
+        thresholdTypeIsPercent: true,
+        profitThreshold: 0.05,
+        lossThreshold: -0.05,
+        trigger: ConfirmationTrigger.Both);
+}
+
 void readStockData()
 {
     try
@@ -516,21 +589,11 @@ async Task runMultipleTraderAlgoTrade()
         // Set run mode
         algoTrader.SingleTraderRunMode = selectedRunMode;
 
-        if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
-        {
-            ConfigureStrategy();
-        }
-        else if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
-        {
-            ConfigureStrategy();
-            ConfigureQuery();
-        }
-        else if (algoTrader.SingleTraderRunMode == TraderRunMode.QueryOnly)
-        {
-            ConfigureQuery();
-        }
+        ConfigureStrategies();
 
-        ConfigureEquityCurveFilter();
+        ConfigureQueries();
+
+        ConfigureEquityCurveFilters();
 
         algoTrader.Initialize();
 

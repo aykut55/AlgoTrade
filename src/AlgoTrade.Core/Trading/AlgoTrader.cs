@@ -58,6 +58,18 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public IReadOnlyCollection<string> AvailableStrategies => _strategyRegistry.GetStrategyNames();
     public IReadOnlyCollection<string> AvailableQueries => _queryRegistry.GetQueryNames();
 
+    // Strategy list for MultipleTrader
+    private readonly List<StrategyConfigEntry> _strategyConfigs = new();
+    public IReadOnlyList<StrategyConfigEntry> StrategyConfigs => _strategyConfigs;
+
+    // Query list for MultipleTrader
+    private readonly List<QueryConfigEntry> _queryConfigs = new();
+    public IReadOnlyList<QueryConfigEntry> QueryConfigs => _queryConfigs;
+
+    // EquityCurveFilter list for MultipleTrader
+    private readonly List<EquityCurveFilterConfigEntry> _equityCurveFilterConfigs = new();
+    public IReadOnlyList<EquityCurveFilterConfigEntry> EquityCurveFilterConfigs => _equityCurveFilterConfigs;
+
     #endregion
 
     public AlgoTrader(string name)
@@ -172,7 +184,33 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             lossThreshold: this.LossConfirmationThreshold,
             trigger: this.ConfirmationTrigger
         );
-    }    
+    }
+
+    private IStrategy getStrategy(int id)
+    {
+        var config = _strategyConfigs.FirstOrDefault(s => s.Id == id);
+        if (config == null)
+            throw new InvalidOperationException($"Strategy config not found for Id: {id}");
+
+        var s = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, config.StrategyName, config.Parameters);
+        if (s == null)
+            throw new InvalidOperationException($"Strategy '{config.StrategyName}' (Id: {id}) can not be created...");
+
+        return s;
+    }
+
+    private IQuery getQuery(int id)
+    {
+        var config = _queryConfigs.FirstOrDefault(q => q.Id == id);
+        if (config == null)
+            throw new InvalidOperationException($"Query config not found for Id: {id}");
+
+        var q = _queryRegistry.CreateQuery(this.Data, indicators, _logger, config.QueryName, config.Parameters);
+        if (q == null)
+            throw new InvalidOperationException($"Query '{config.QueryName}' (Id: {id}) can not be created...");
+
+        return q;
+    }
 
     public void Start()
     {
@@ -271,6 +309,40 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             throw new InvalidOperationException($"Query configuration not found: query='{queryName}', version='{version ?? "first"}'.");
 
         ConfigureQuery(config.QueryName, config.GetParameterValues());
+    }
+
+    // ==========================================================================
+    // Multiple Strategy/Query/EquityCurveFilter Configuration (for MultipleTrader)
+    // ==========================================================================
+
+    public void AddStrategyConfig(int id, string strategyName, Dictionary<string, object> parameters)
+    {
+        _strategyConfigs.Add(new StrategyConfigEntry(id, strategyName, new Dictionary<string, object>(parameters, StringComparer.OrdinalIgnoreCase)));
+    }
+
+    public void ClearStrategyConfigs()
+    {
+        _strategyConfigs.Clear();
+    }
+
+    public void AddQueryConfig(int id, string queryName, Dictionary<string, object> parameters)
+    {
+        _queryConfigs.Add(new QueryConfigEntry(id, queryName, new Dictionary<string, object>(parameters, StringComparer.OrdinalIgnoreCase)));
+    }
+
+    public void ClearQueryConfigs()
+    {
+        _queryConfigs.Clear();
+    }
+
+    public void AddEquityCurveFilterConfig(int id, bool enabled, bool thresholdTypeIsPercent, double profitThreshold, double lossThreshold, ConfirmationTrigger trigger)
+    {
+        _equityCurveFilterConfigs.Add(new EquityCurveFilterConfigEntry(id, enabled, thresholdTypeIsPercent, profitThreshold, lossThreshold, trigger));
+    }
+
+    public void ClearEquityCurveFilterConfigs()
+    {
+        _equityCurveFilterConfigs.Clear();
     }
 
     public void Reset()
@@ -570,8 +642,158 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     }
 
+    void createChildTraders()
+    {
+        int childId = 0;
+
+        {
+            childId = 0;
+
+            var childTrader = new SingleTrader(childId, "childTrader_0", this.Data, indicators, _logger);
+
+            childTrader.ClearCallbacks()
+                       .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.RunMode = SingleTraderRunMode;
+
+            if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
+            {
+                strategy = getStrategy(0);
+                childTrader.SetStrategy(strategy);
+            }
+
+            if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
+            {
+                query = getQuery(0);
+                childTrader.SetQuery(query);
+            }
+
+            childTrader.Reset();
+
+            // Set attributes
+            childTrader.SymbolName = this.SymbolName;
+            childTrader.SymbolPeriod = this.SymbolPeriod;
+            /*childTrader.SystemId               = this.SystemId;
+            childTrader.SystemName             = this.SystemName;
+            childTrader.StrategyId             = this.StrategyId;
+            childTrader.StrategyName           = this.StrategyName;
+            childTrader.QueryId                = this.QueryId;
+            childTrader.QueryName              = this.QueryName;*/
+            childTrader.LastExecutionTime = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            OnApplyUserFlags(childTrader);
+
+            setSingleTraderConfigureEquityCurveFilter(childTrader);
+
+            childTrader.Init();
+
+            multipleTrader.AddTrader(childTrader);
+        }
+        {
+            childId = 1;
+
+            var childTrader = new SingleTrader(childId, "childTrader_1", this.Data, indicators, _logger);
+
+            childTrader.ClearCallbacks()
+                       .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.RunMode = SingleTraderRunMode;
+
+            if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
+            {
+                strategy = getStrategy(1);
+                childTrader.SetStrategy(strategy);
+            }
+
+            if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
+            {
+                query = getQuery(1);
+                childTrader.SetQuery(query);
+            }
+
+            childTrader.Reset();
+
+            // Set attributes
+            childTrader.SymbolName = this.SymbolName;
+            childTrader.SymbolPeriod = this.SymbolPeriod;
+            /*childTrader.SystemId               = this.SystemId;
+            childTrader.SystemName             = this.SystemName;
+            childTrader.StrategyId             = this.StrategyId;
+            childTrader.StrategyName           = this.StrategyName;
+            childTrader.QueryId                = this.QueryId;
+            childTrader.QueryName              = this.QueryName;*/
+            childTrader.LastExecutionTime = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            OnApplyUserFlags(childTrader);
+
+            setSingleTraderConfigureEquityCurveFilter(childTrader);
+
+            childTrader.Init();
+
+            multipleTrader.AddTrader(childTrader);
+        }
+        {
+            childId = 2;
+
+            var childTrader = new SingleTrader(childId, "childTrader_2", this.Data, indicators, _logger);
+
+            childTrader.ClearCallbacks()
+                       .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.RunMode = SingleTraderRunMode;
+
+            if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
+            {
+                strategy = getStrategy(1);
+                childTrader.SetStrategy(strategy);
+            }
+
+            if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
+            {
+                query = getQuery(1);
+                childTrader.SetQuery(query);
+            }
+
+            childTrader.Reset();
+
+            // Set attributes
+            childTrader.SymbolName = this.SymbolName;
+            childTrader.SymbolPeriod = this.SymbolPeriod;
+            /*childTrader.SystemId               = this.SystemId;
+            childTrader.SystemName             = this.SystemName;
+            childTrader.StrategyId             = this.StrategyId;
+            childTrader.StrategyName           = this.StrategyName;
+            childTrader.QueryId                = this.QueryId;
+            childTrader.QueryName              = this.QueryName;*/
+            childTrader.LastExecutionTime = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            OnApplyUserFlags(childTrader);
+
+            setSingleTraderConfigureEquityCurveFilter(childTrader);
+
+            childTrader.Init();
+
+            multipleTrader.AddTrader(childTrader);
+        }
+
+    }
+
     public async Task RunMultipleTraderWithProgressAsync(CancellationToken cancellationToken = default)
     {
+        int childId = -1;
+
         int totalBars = 0;
 
         if (!IsInitialized) {
@@ -600,44 +822,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             indicators = new IndicatorManager(this.Data);
             if (indicators == null)
                 throw new InvalidOperationException("indicators can not be created...");
-
-            // *****************************************************************************
-            // StrategyRegistry
-            // *****************************************************************************
-            if (strategy != null)
-            {
-                Log("Disposing previous strategy instance...");
-                strategy.Dispose();
-                strategy = null;
-            }
-
-            Log("\nCreating strategy...");
-
-            strategy = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
-            if (strategy == null)
-                throw new InvalidOperationException("strategy can not be created...");
-
-            // *****************************************************************************
-            // QueryRegistry
-            // *****************************************************************************
-            if (query != null)
-            {
-                Log("Disposing previous query instance...");
-                query.Dispose();
-                query = null;
-            }
-
-            if (QueryIsEnabled)
-            {
-                if (string.IsNullOrWhiteSpace(_currentQueryName))
-                    throw new InvalidOperationException("QueryIsEnabled is true but query name is not configured. Call ConfigureQuery(...) first.");
-
-                Log("\nCreating query...");
-
-                query = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
-                if (query == null)
-                    throw new InvalidOperationException("query can not be created...");
-            }
 
             // *****************************************************************************
             // MultipleTrader - Cleanup previous run
@@ -681,45 +865,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // *****************************************************************************
             // Create child SingleTraders and add to MultipleTrader
             // *****************************************************************************
-            {
-                var childTrader = new SingleTrader(0, "childTrader_0", this.Data, indicators, _logger);
-
-                childTrader.ClearCallbacks()
-                           .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
-
-                childTrader.RunMode = SingleTraderRunMode;
-
-                if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
-                    childTrader.SetStrategy(strategy);
-
-                if ((childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly) && query is not null)
-                    childTrader.SetQuery(query);
-
-                childTrader.Reset();
-
-                // Set attributes
-                childTrader.SymbolName             = this.SymbolName;
-                childTrader.SymbolPeriod           = this.SymbolPeriod;
-                childTrader.SystemId               = this.SystemId;
-                childTrader.SystemName             = this.SystemName;
-                childTrader.StrategyId             = this.StrategyId;
-                childTrader.StrategyName           = this.StrategyName;
-                childTrader.QueryId                = this.QueryId;
-                childTrader.QueryName              = this.QueryName;
-                childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-                childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-
-                childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-                childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-                OnApplyUserFlags(childTrader);
-
-                setSingleTraderConfigureEquityCurveFilter(childTrader);
-
-                childTrader.Init();
-
-                multipleTrader.AddTrader(childTrader);
-            }
+            createChildTraders();
 
             multipleTrader.Init();
 
@@ -863,4 +1009,56 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         indicators = null;
     }
 
+}
+
+// ==========================================================================
+// Config entry types for MultipleTrader strategy/query/filter lists
+// ==========================================================================
+
+public class StrategyConfigEntry
+{
+    public int Id { get; }
+    public string StrategyName { get; }
+    public Dictionary<string, object> Parameters { get; }
+
+    public StrategyConfigEntry(int id, string strategyName, Dictionary<string, object> parameters)
+    {
+        Id = id;
+        StrategyName = strategyName;
+        Parameters = parameters;
+    }
+}
+
+public class QueryConfigEntry
+{
+    public int Id { get; }
+    public string QueryName { get; }
+    public Dictionary<string, object> Parameters { get; }
+
+    public QueryConfigEntry(int id, string queryName, Dictionary<string, object> parameters)
+    {
+        Id = id;
+        QueryName = queryName;
+        Parameters = parameters;
+    }
+}
+
+public class EquityCurveFilterConfigEntry
+{
+    public int Id { get; }
+    public bool Enabled { get; }
+    public bool ThresholdTypeIsPercent { get; }
+    public double ProfitConfirmationThreshold { get; }
+    public double LossConfirmationThreshold { get; }
+    public ConfirmationTrigger ConfirmationTrigger { get; }
+
+    public EquityCurveFilterConfigEntry(int id, bool enabled, bool thresholdTypeIsPercent, double profitThreshold, double lossThreshold, ConfirmationTrigger trigger)
+    {
+        Id = id;
+        Enabled = enabled;
+        ThresholdTypeIsPercent = thresholdTypeIsPercent;
+        ProfitConfirmationThreshold = profitThreshold;
+        LossConfirmationThreshold = lossThreshold;
+        ConfirmationTrigger = trigger;
+    }
 }
