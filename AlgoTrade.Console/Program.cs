@@ -618,7 +618,7 @@ async Task runMultipleTraderAlgoTrade()
 ScriptExecutor scriptExecutor = new ScriptExecutor();
 CancellationTokenSource? scriptCts = null;
 
-string readScriptFromFile()
+(string code, string filePath) readScriptFromFile()
 {
     string defaultDir = Path.Combine(AppSettings.InputsDir, "scripts");
     if (!Directory.Exists(defaultDir))
@@ -634,7 +634,7 @@ string readScriptFromFile()
         if (files.Length == 0)
         {
             LogManager.LogRaw($"Dizinde script bulunamadi: {defaultDir}");
-            return "";
+            return ("", "");
         }
 
         Console.WriteLine("\nMevcut scriptler:");
@@ -646,16 +646,16 @@ string readScriptFromFile()
         if (int.TryParse(choice, out int sel) && sel >= 1 && sel <= files.Length)
             filePath = files[sel - 1];
         else
-            return "";
+            return ("", "");
     }
 
     if (!File.Exists(filePath))
     {
         LogManager.LogRaw($"Dosya bulunamadi: {filePath}");
-        return "";
+        return ("", "");
     }
 
-    return File.ReadAllText(filePath);
+    return (File.ReadAllText(filePath), filePath);
 }
 
 string readScriptFromConsole()
@@ -688,7 +688,7 @@ string readScriptFromConsole()
     return string.Join(Environment.NewLine, lines).TrimEnd();
 }
 
-async Task<ScriptExecutionResult> executeScriptWithCancellation(string code, ScriptGlobals globals)
+async Task<ScriptExecutionResult> executeScriptWithCancellation(string code, ScriptGlobals globals, string? sourceDirectory = null)
 {
     scriptCts = new CancellationTokenSource();
 
@@ -714,7 +714,7 @@ async Task<ScriptExecutionResult> executeScriptWithCancellation(string code, Scr
 
     LogManager.LogRaw("\n[INFO] Script calisiyor... (ESC ile durdurabilirsiniz)\n", ConsoleColor.Cyan);
 
-    var result = await scriptExecutor.ExecuteAsync(code, globals, scriptCts.Token);
+    var result = await scriptExecutor.ExecuteAsync(code, globals, scriptCts.Token, sourceDirectory);
 
     scriptCts.Cancel();  // ESC listener'i durdur
     try { await escTask; } catch { }
@@ -752,7 +752,7 @@ async Task runFullScript()
 {
     try
     {
-        var code = readScriptFromFile();
+        var (code, scriptFilePath) = readScriptFromFile();
         if (string.IsNullOrEmpty(code))
         {
             LogManager.LogRaw("Script okunamadi veya bos.");
@@ -760,6 +760,8 @@ async Task runFullScript()
         }
 
         LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+
+        var sourceDir = Path.GetDirectoryName(scriptFilePath);
 
         // Full mode: yeni AlgoTrader olustur, script her seyi kendisi yapar
         var scriptAlgoTrader = new AlgoTrader("ScriptAlgoTrader");
@@ -773,7 +775,7 @@ async Task runFullScript()
             (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
         );
 
-        var result = await executeScriptWithCancellation(code, globals);
+        var result = await executeScriptWithCancellation(code, globals, sourceDir);
 
         globals.Cleanup();
         printScriptResult(result);
@@ -838,7 +840,7 @@ async Task runFullScriptMultipleTrader()
 {
     try
     {
-        var code = readScriptFromFile();
+        var (code, scriptFilePath) = readScriptFromFile();
         if (string.IsNullOrEmpty(code))
         {
             LogManager.LogRaw("Script okunamadi veya bos.");
@@ -846,6 +848,8 @@ async Task runFullScriptMultipleTrader()
         }
 
         LogManager.LogRaw($"\nScript boyutu: {code.Length} karakter");
+
+        var sourceDir = Path.GetDirectoryName(scriptFilePath);
 
         // Full mode: yeni AlgoTrader olustur, script her seyi kendisi yapar
         var scriptAlgoTrader = new AlgoTrader("ScriptMultipleTrader");
@@ -859,7 +863,7 @@ async Task runFullScriptMultipleTrader()
             (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}")
         );
 
-        var result = await executeScriptWithCancellation(code, globals);
+        var result = await executeScriptWithCancellation(code, globals, sourceDir);
 
         globals.Cleanup();
         printScriptResult(result);
@@ -946,7 +950,9 @@ void showMainMenu()
     Console.WriteLine("║  [1] Read Stock Data                                ║");
     Console.WriteLine("║  [2] Run SingleTrader With Progress                 ║");
     Console.WriteLine("║  [3] Read Data + Run SingleTrader With Progress     ║");
+    Console.WriteLine("║                                                     ║");
     Console.WriteLine("║  [4] Run Full Script (from file)                    ║");
+    Console.WriteLine("║                                                     ║");
     Console.WriteLine("║  [5] Run Interactive Script (console paste)         ║");
     Console.WriteLine("║  [6] Run MultipleTrader With Progress               ║");
     Console.WriteLine("║  [7] Read Data + Run MultipleTrader With Progress   ║");

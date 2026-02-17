@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 
@@ -52,14 +54,75 @@ namespace AlgoTrade.Core.Scripting
         }
 
         /// <summary>
-        /// Compile a script without executing it. Returns compilation errors if any.
+        /// Pre-process #load directives: resolve and inline referenced .csx files.
+        /// All using statements are collected and moved to the top of the final code.
         /// </summary>
-        public ScriptExecutionResult CompileScript(string code)
+        private string PreProcessLoadDirectives(string code, string? sourceDirectory)
+        {
+            if (string.IsNullOrEmpty(sourceDirectory))
+                return code;
+
+            // Match #load "filename.csx" directives
+            var loadRegex = new Regex(@"^\s*#load\s+""([^""]+)""", RegexOptions.Multiline);
+            var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            string ProcessCode(string source, string baseDir)
+            {
+                return loadRegex.Replace(source, match =>
+                {
+                    var fileName = match.Groups[1].Value;
+                    var fullPath = Path.GetFullPath(Path.Combine(baseDir, fileName));
+
+                    if (processedFiles.Contains(fullPath))
+                        return $"// #load \"{fileName}\" (already loaded)";
+
+                    if (!File.Exists(fullPath))
+                        return $"// #load \"{fileName}\" (file not found: {fullPath})";
+
+                    processedFiles.Add(fullPath);
+                    var loadedCode = File.ReadAllText(fullPath);
+                    var loadedDir = Path.GetDirectoryName(fullPath)!;
+
+                    // Recursive: process #load in loaded files too
+                    loadedCode = ProcessCode(loadedCode, loadedDir);
+
+                    return $"// === #load \"{fileName}\" - beg ===\n{loadedCode}\n// === #load \"{fileName}\" - end ===";
+                });
+            }
+
+            var inlinedCode = ProcessCode(code, sourceDirectory);
+
+            // Collect all using statements and move to top
+            var usingRegex = new Regex(@"^\s*using\s+[^(][^;]+;\s*$", RegexOptions.Multiline);
+            var usings = new HashSet<string>();
+            var codeWithoutUsings = usingRegex.Replace(inlinedCode, match =>
+            {
+                usings.Add(match.Value.Trim());
+                return ""; // remove from original position
+            });
+
+            if (usings.Count > 0)
+            {
+                var usingBlock = string.Join("\n", usings.OrderBy(u => u));
+                return usingBlock + "\n\n" + codeWithoutUsings;
+            }
+
+            return inlinedCode;
+        }
+
+        /// <summary>
+        /// Compile a script without executing it. Returns compilation errors if any.
+        /// sourceDirectory: script dosyasının bulunduğu dizin (#load direktifleri için)
+        /// </summary>
+        public ScriptExecutionResult CompileScript(string code, string? sourceDirectory = null)
         {
             var result = new ScriptExecutionResult();
 
             try
             {
+                // Pre-process #load directives
+                code = PreProcessLoadDirectives(code, sourceDirectory);
+
                 _compiledScript = CSharpScript.Create<object>(
                     code,
                     _scriptOptions,
@@ -140,13 +203,15 @@ namespace AlgoTrade.Core.Scripting
 
         /// <summary>
         /// Compile and run a script in one call (convenience method)
+        /// sourceDirectory: script dosyasının bulunduğu dizin (#load direktifleri için)
         /// </summary>
         public async Task<ScriptExecutionResult> ExecuteAsync(
             string code,
             ScriptGlobals globals,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string? sourceDirectory = null)
         {
-            var compileResult = CompileScript(code);
+            var compileResult = CompileScript(code, sourceDirectory);
             if (!compileResult.Success)
                 return compileResult;
 

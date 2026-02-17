@@ -27,10 +27,10 @@ public class MultipleTrader
     public int CurrentIndex { get; private set; }
 
     // State flags
-    public bool IsStarted { get; internal set; }
-    public bool IsRunning { get; internal set; }
-    public bool IsStopped { get; internal set; }
-    public bool IsStopRequested { get; internal set; }
+    public bool IsStarted { get; set; }
+    public bool IsRunning { get; set; }
+    public bool IsStopped { get; set; }
+    public bool IsStopRequested { get; set; }
 
     private SingleTrader _mainTrader;
 

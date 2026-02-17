@@ -312,6 +312,52 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     }
 
     // ==========================================================================
+    // Public Factory Methods (for .csx scripts - inlined execution)
+    // ==========================================================================
+
+    public IndicatorManager CreateIndicators()
+    {
+        if (indicators != null)
+        {
+            indicators.Dispose();
+            indicators = null;
+        }
+
+        indicators = new IndicatorManager(this.Data);
+        if (indicators == null)
+            throw new InvalidOperationException("indicators can not be created...");
+
+        return indicators;
+    }
+
+    public IStrategy CreateConfiguredStrategy(IndicatorManager indicators)
+    {
+        if (string.IsNullOrWhiteSpace(_currentStrategyName))
+            throw new InvalidOperationException("Strategy not configured. Call ConfigureStrategy(...) first.");
+
+        var s = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
+        if (s == null)
+            throw new InvalidOperationException($"Strategy '{_currentStrategyName}' can not be created...");
+
+        return s;
+    }
+
+    public IQuery? CreateConfiguredQuery(IndicatorManager indicators)
+    {
+        if (!QueryIsEnabled)
+            return null;
+
+        if (string.IsNullOrWhiteSpace(_currentQueryName))
+            throw new InvalidOperationException("QueryIsEnabled is true but query name is not configured. Call ConfigureQuery(...) first.");
+
+        var q = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
+        if (q == null)
+            throw new InvalidOperationException($"Query '{_currentQueryName}' can not be created...");
+
+        return q;
+    }
+
+    // ==========================================================================
     // Multiple Strategy/Query/EquityCurveFilter Configuration (for MultipleTrader)
     // ==========================================================================
 

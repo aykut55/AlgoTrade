@@ -180,10 +180,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     #region StateFlags
     // State flags
-    public bool IsStarted { get; internal set; }
-    public bool IsRunning { get; internal set; }
-    public bool IsStopped { get; internal set; }
-    public bool IsStopRequested { get; internal set; }
+    public bool IsStarted { get; set; }
+    public bool IsRunning { get; set; }
+    public bool IsStopped { get; set; }
+    public bool IsStopRequested { get; set; }
     public bool SaveStatisticsToFile { get; set; } = true;
     public TraderRunMode RunMode { get; set; } = TraderRunMode.TradeAndQuery;
     #endregion
