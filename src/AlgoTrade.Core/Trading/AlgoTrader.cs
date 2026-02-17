@@ -196,6 +196,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         if (s == null)
             throw new InvalidOperationException($"Strategy '{config.StrategyName}' (Id: {id}) can not be created...");
 
+        s.OnInit();
         return s;
     }
 
@@ -209,6 +210,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         if (q == null)
             throw new InvalidOperationException($"Query '{config.QueryName}' (Id: {id}) can not be created...");
 
+        q.OnInit();
         return q;
     }
 
@@ -339,6 +341,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         if (s == null)
             throw new InvalidOperationException($"Strategy '{_currentStrategyName}' can not be created...");
 
+        s.OnInit();
         return s;
     }
 
@@ -354,6 +357,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         if (q == null)
             throw new InvalidOperationException($"Query '{_currentQueryName}' can not be created...");
 
+        q.OnInit();
         return q;
     }
 
@@ -471,6 +475,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             strategy = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
             if (strategy == null)
                 throw new InvalidOperationException("strategy can not be created...");
+            strategy.OnInit();
 
             // *****************************************************************************
             // QueryRegistry - beg
@@ -492,6 +497,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 query = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
                 if (query == null)
                     throw new InvalidOperationException("query can not be created...");
+
+                query.OnInit();
             }
 
             // *****************************************************************************

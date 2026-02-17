@@ -948,7 +948,7 @@ async Task main()
     logger.RegisterSink(new DebugSink());
     logger.RegisterSink(new FileSink(AppSettings.LogsDir, "app.log"));
     consoleLogger = LogManager.GetConsoleLogger();
-    consoleLogger.Clear();
+    try { consoleLogger.Clear(); } catch { }
 
     LogManager.LogRaw("Application started", ConsoleColor.Green);
 
@@ -1006,5 +1006,14 @@ async Task main()
     stockMetaData = null;
 }
 
-await main();
+try
+{
+    await main();
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"FATAL ERROR: {ex}");
+    Console.WriteLine("Press any key to exit...");
+    Console.ReadKey();
+}
 

@@ -50,7 +50,7 @@ namespace AlgoTrade.Core.Trading.Queries
             Parameters["choice"] = choice;
 
             // Initialize base query
-            // Initialize(data, indicators);
+            Initialize(data, indicators);
         }
 
         public override void OnInit()
