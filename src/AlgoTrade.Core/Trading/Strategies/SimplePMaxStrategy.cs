@@ -65,7 +65,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["Choice"] = choice;
 
             // Initialize base strategy
-            // Initialize(data, indicators);
+            Initialize(data, indicators);
         }
 
         public override void OnInit()

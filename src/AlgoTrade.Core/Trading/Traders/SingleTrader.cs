@@ -96,7 +96,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (strategy is BaseStrategy baseStrategy)
         {
             baseStrategy.SetTrader(this);
-            baseStrategy.Initialize(_data, _indicators);
         }
         else
         {
@@ -124,7 +123,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             baseQuery.SetTrader(this);
             baseQuery.SetLogger(_logger);
-            baseQuery.Initialize(_data, _indicators);
         }
         else
         {
