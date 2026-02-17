@@ -46,6 +46,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public SingleTrader? SingleTrader => singleTrader;
     private MultipleTrader? multipleTrader { get; set; }
     public MultipleTrader? MultipleTrader => multipleTrader;
+    private SingleTraderOptimizer? singleTraderOptimizer { get; set; }
+    public SingleTraderOptimizer? SingleTraderOptimizer => singleTraderOptimizer;
     public IndicatorManager? indicators { get; private set; }
     private IStrategy? strategy;
     private IQuery? query;
@@ -1079,9 +1081,169 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     public async Task RunSingleTraderOptWithProgressAsync(CancellationToken cancellationToken = default)
     {
+        int totalBars = 0;
 
+        if (!IsInitialized)
+        {
+            throw new InvalidOperationException("AlgoTrader not initialized. Call Initialize() first.");
+        }
+
+        try
+        {
+            _timer!.RestartTimer("0");
+
+            totalBars = GetDataCount();
+
+            Log($"AlgoTrader '{Name}' started. Total bars: {totalBars}");
+
+            // *****************************************************************************
+            // Indicators - beg
+            // *****************************************************************************
+            if (indicators != null)
+            {
+                Log("Disposing previous indicators instance...");
+                indicators.Dispose();
+                indicators = null;
+            }
+
+            Log("\nCreating indicators...");
+
+            indicators = new IndicatorManager(this.Data);
+            if (indicators == null)
+                throw new InvalidOperationException("indicators can not be created...");
+
+            /*
+            // *****************************************************************************
+            // StrategyRegistry - beg (Optimizasyonda factory her kombinasyonda kendi olusturuyor)
+            // *****************************************************************************
+            if (strategy != null)
+            {
+                Log("Disposing previous strategy instance...");
+                strategy.Dispose();
+                strategy = null;
+            }
+
+            Log("\nCreating strategy...");
+
+            strategy = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
+            if (strategy == null)
+                throw new InvalidOperationException("strategy can not be created...");
+
+            // *****************************************************************************
+            // QueryRegistry - beg (Optimizasyonda sadece TradeOnly, query gereksiz)
+            // *****************************************************************************
+            if (query != null)
+            {
+                Log("Disposing previous query instance...");
+                query.Dispose();
+                query = null;
+            }
+
+            if (QueryIsEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(_currentQueryName))
+                    throw new InvalidOperationException("QueryIsEnabled is true but query name is not configured. Call ConfigureQuery(...) first.");
+
+                Log("\nCreating query...");
+
+                query = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
+                if (query == null)
+                    throw new InvalidOperationException("query can not be created...");
+            }
+            */
+
+            // *****************************************************************************
+            // SingleTraderOptimizer - beg
+            // *****************************************************************************
+            if (singleTraderOptimizer != null)
+            {
+                Log("Disposing previous singleTraderOptimizer instance...");
+                singleTraderOptimizer.Dispose();
+                singleTraderOptimizer = null;
+            }
+
+            Log("\nCreating singleTraderOptimizer...");
+
+            singleTraderOptimizer = new SingleTraderOptimizer(0, this.Data, indicators, _logger);
+
+            // Parametre range'leri (hardcoded)
+            singleTraderOptimizer.AddParameterRange("period", 10, 50, 10);
+            singleTraderOptimizer.AddParameterRange("percent", 1.0, 3.0, 1.0);
+
+            // Strategy factory - her kombinasyon icin strateji olusturur
+            singleTraderOptimizer.SetStrategyFactory((data, ind, parameters) =>
+            {
+                int period = Convert.ToInt32(parameters["period"]);
+                double percent = Convert.ToDouble(parameters["percent"], System.Globalization.CultureInfo.InvariantCulture);
+                return _strategyRegistry.CreateStrategy(data, ind, _logger, _currentStrategyName, new Dictionary<string, object>
+                {
+                    ["period"] = period,
+                    ["percent"] = percent,
+                    ["choice"] = 0
+                });
+            });
+
+            // Kombinasyonlari uret
+            singleTraderOptimizer.GenerateParameterCombinations();
+            Log($"Total combinations: {singleTraderOptimizer.AllCombinations.Count}");
+
+            // Progress callback
+            singleTraderOptimizer.OnOptimizationProgress = (current, total) =>
+            {
+                double pct = (double)current / total * 100.0;
+                OnTraderProgress?.Invoke(current, total, pct);
+            };
+
+            // Run optimization
+            _timer!.RestartTimer("1");
+
+            await Task.Run(() =>
+            {
+                singleTraderOptimizer.Reset();
+                singleTraderOptimizer.Init();
+                singleTraderOptimizer.Run();
+            }, cancellationToken);
+
+            _timer!.StopTimer("1");
+
+            var bestResult = singleTraderOptimizer.GetBestResult();
+            if (bestResult != null)
+            {
+                Log($"\n=== BEST RESULT ===");
+                foreach (var kvp in bestResult.Parameters)
+                    Log($"  {kvp.Key}: {kvp.Value}");
+                Log($"  NetProfit: {bestResult.NetProfit:F2}");
+                Log($"  WinRate: {bestResult.WinRate:F2}%");
+                Log($"  ProfitFactor: {bestResult.ProfitFactor:F2}");
+            }
+
+            _timer!.StopTimer("0");
+            var t0 = _timer!.GetElapsedTime("0");
+            var t1 = _timer!.GetElapsedTime("1");
+            Log($"\nt0 = {t0} msec. <==> RunSingleTraderOptWithProgressAsync total elapsed time");
+            Log($"\nt1 = {t1} msec. <==> Optimization elapsed time");
+        }
+        catch (Exception ex)
+        {
+            Log($"An error occurred while running in RunSingleTraderWithProgressAsync(): {ex.Message}");
+        }
+        finally
+        {
+        }
+
+        // Update state flags
+        if (singleTrader is not null)
+        {
+            singleTrader.IsRunning = false;
+            singleTrader.IsStopped = true;
+            Log($"\nSingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
+        }
+
+        Log("");
+        Log($"AlgoTrader '{Name}' completed. Processed {totalBars} bars.");
+        Log("");
     }
-    
+
     public event Action<int, int, double>? OnTraderProgress;
 
     public event Action<string>? MessageReceived;
@@ -1110,6 +1272,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
         multipleTrader?.Dispose();
         multipleTrader = null;
+
+        singleTraderOptimizer?.Dispose();
+        singleTraderOptimizer = null;
 
         indicators?.Dispose();
         indicators = null;
