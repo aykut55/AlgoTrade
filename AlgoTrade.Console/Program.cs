@@ -637,6 +637,75 @@ async Task runMultipleTraderAlgoTrade()
     }
 }
 
+async Task runSingleTraderOptimization()
+{
+    try
+    {
+        if (!stockDataReader!.IsDataReady)
+            return;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Running AlgoTrader");
+
+        algoTrader = new AlgoTrader("AlgoTrader");
+
+        algoTrader.OnTraderProgress += OnTraderProgress;
+        algoTrader.RegisterLogger(logger);
+        algoTrader.RegisterTimer(timer);
+
+        algoTrader.Reset();
+        algoTrader.SetData(stockDataReader!.GetData());
+
+        // Set symbol/system info from metadata
+        if (stockMetaData != null)
+        {
+            algoTrader.SymbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        }
+
+        // TODO 1453 : Buranın asagisi copy-paste ile geldi, refactor edilebilir.
+        // Set run mode
+        algoTrader.SingleTraderRunMode = selectedRunMode;
+
+        if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
+        {
+            // Set strategy
+            ConfigureStrategy();
+        }
+        else if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
+        {
+            // Set strategy
+            ConfigureStrategy();
+
+            // Set query
+            ConfigureQuery();
+        }
+        else if (algoTrader.SingleTraderRunMode == TraderRunMode.QueryOnly)
+        {
+            // Set query
+            ConfigureQuery();
+        }
+
+        ConfigureEquityCurveFilter();
+        // TODO 1453 : Buranın yukarısı copy-paste ile geldi, refactor edilebilir.
+
+        algoTrader.Initialize();
+
+        var sb = algoTrader.GetDataInfo();
+        LogManager.LogRaw("");
+        LogManager.LogRaw(sb.ToString());
+
+        await algoTrader.RunSingleTraderOptWithProgressAsync();
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred while reading data: {ex.Message}", ex);
+    }
+    finally
+    {
+    }
+}
+
 // =============================================================================
 // Script Support
 // =============================================================================
@@ -950,19 +1019,23 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║        [3] Run MultipleTrader With Progress                        ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [4] Read Data + Run SingleTrader With Progress                  ║");
-    Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [5] Read Data + Run MultipleTrader With Progress                ║");
+    Console.WriteLine("║        [4] Run SingleTraderOpt With Progress                       ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [6] Run Full Script (from file)                                 ║", ConsoleColor.Green);
+    Console.WriteLine("║    [5] Read Data + Run SingleTrader With Progress                  ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [6] Read Data + Run MultipleTrader With Progress                ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [7] Read Data + Run SingleTraderOpt With Progress               ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [8] Run Full Script (from file)                                 ║", ConsoleColor.Green);
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0] Exit                                                        ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
-    Console.Write("\nSeçiminiz (default: 6): ");
+    Console.Write("\nSeçiminiz (default: 8): ");
 }
 
 async Task main()
@@ -987,7 +1060,7 @@ async Task main()
     {
         showMainMenu();
         var input = Console.ReadLine()?.Trim();
-        if (string.IsNullOrEmpty(input)) input = "6";
+        if (string.IsNullOrEmpty(input)) input = "8";
 
         switch (input)
         {
@@ -1003,16 +1076,23 @@ async Task main()
                 await runMultipleTraderAlgoTrade();
                 break;
             case "4":
-                selectedRunMode = showRunModeMenu();
-                readStockData();
-                await runAlgoTrade();
+                await runSingleTraderOptimization();
                 break;
             case "5":
                 selectedRunMode = showRunModeMenu();
                 readStockData();
-                await runMultipleTraderAlgoTrade();
+                await runAlgoTrade();
                 break;
             case "6":
+                selectedRunMode = showRunModeMenu();
+                readStockData();
+                await runMultipleTraderAlgoTrade();
+                break;
+            case "7":
+                readStockData();
+                await runSingleTraderOptimization();
+                break;
+            case "8":
                 await runFullScript();
                 break;
             case "0":

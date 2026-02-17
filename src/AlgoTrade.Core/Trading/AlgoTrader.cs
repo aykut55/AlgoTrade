@@ -1077,6 +1077,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         Log("");
     }
 
+    public async Task RunSingleTraderOptWithProgressAsync(CancellationToken cancellationToken = default)
+    {
+
+    }
+    
     public event Action<int, int, double>? OnTraderProgress;
 
     public event Action<string>? MessageReceived;
