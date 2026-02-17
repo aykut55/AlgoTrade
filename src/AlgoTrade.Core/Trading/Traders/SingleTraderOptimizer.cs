@@ -172,8 +172,6 @@ public class SingleTraderOptimizer : IDisposable
 
     public SingleTrader createSingleTrader()
     {
-        LogManager.LogRaw("\nCreating singleTrader...");
-
         var singleTrader = new SingleTrader(0, "singleTrader", this.Data, Indicators, Logger);
         if (singleTrader == null)
             throw new InvalidOperationException("singleTrader can not be created...");
@@ -342,6 +340,8 @@ public class SingleTraderOptimizer : IDisposable
 
 
             // Temizlik
+            strategy?.Dispose();
+            strategy = null;
             singleTrader.Dispose();
             singleTrader = null;
         }
