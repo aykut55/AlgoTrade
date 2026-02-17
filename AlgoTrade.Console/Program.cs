@@ -944,31 +944,31 @@ TraderRunMode showRunModeMenu()
 void showMainMenu()
 {
     Console.WriteLine();
-    Console.WriteLine("╔═════════════════════════════════════════════════════╗");
-    Console.WriteLine("║        AlgoTrade - Ana Menü                         ║");
-    Console.WriteLine("╠═════════════════════════════════════════════════════╣");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [1] Read Stock Data                                ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [2] Run SingleTrader With Progress                 ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [3] Read Data + Run SingleTrader With Progress     ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [4] Run Full Script (from file)                    ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [5] Run Interactive Script (console paste)         ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [6] Run MultipleTrader With Progress               ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [7] Read Data + Run MultipleTrader With Progress   ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [8] Run Full Script - MultipleTrader (from file)   ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [9] Run Interactive Script - MultipleTrader        ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("║  [0] Çıkış                                          ║");
-    Console.WriteLine("║                                                     ║");
-    Console.WriteLine("╚═════════════════════════════════════════════════════╝");
+    Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║        AlgoTrade - Main Menu                                       ║");
+    Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [1] Read Stock Data                                             ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [2] Run SingleTrader With Progress                              ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [3] Read Data + Run SingleTrader With Progress              ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [4] Run Full Script - SingleTrader (from file)              ║", ConsoleColor.Green);
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [5] Run Interactive Script (console paste)                  ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [6] Run MultipleTrader With Progress                            ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [7] Read Data + Run MultipleTrader With Progress            ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [8] Run Full Script - MultipleTrader (from file)            ║", ConsoleColor.Green);
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║        [9] Run Interactive Script - MultipleTrader                 ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [0] Exit                                                        ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
     Console.Write("\nSeçiminiz (default: 3): ");
 }
 
