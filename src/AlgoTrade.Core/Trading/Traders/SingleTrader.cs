@@ -184,6 +184,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool IsRunning { get; internal set; }
     public bool IsStopped { get; internal set; }
     public bool IsStopRequested { get; internal set; }
+    public bool SaveStatisticsToFile { get; set; } = true;
     public TraderRunMode RunMode { get; set; } = TraderRunMode.TradeAndQuery;
     #endregion
 
@@ -386,6 +387,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         confirmationTrigger = ConfirmationTrigger.Both;
         _equityCurveConfirmed = false;
 
+        // Enable savingStatistics
+        SaveStatisticsToFile = true;
+
         // Reset state flags
         IsStarted = false;
         IsRunning = false;
@@ -486,7 +490,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
     }
 
-    public void Finalize(bool saveStatisticsToFile = true, string? outputDir = null)
+    public void Finalize()
     {
         OnFinal?.Invoke(this, 0);
 
@@ -495,24 +499,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
             Log($"\nCalculating statistics...");
 
             CalculateStatistics();
-
-            if (saveStatisticsToFile)
-            {
-                Log($"\nSaving statistics to files...");
-                WriteStatisticsToFile(outputDir ?? AppSettings.LogsDir);
-            }
         }
         else if (this.RunMode == TraderRunMode.TradeAndQuery)
         {
             Log($"\nCalculating statistics...");
 
             CalculateStatistics();
-
-            if (saveStatisticsToFile)
-            {
-                Log($"\nSaving statistics to files...");
-                WriteStatisticsToFile(outputDir ?? AppSettings.LogsDir);
-            }
 
             if (this.QueryColumnNames.Count > 0 && this.LastQueryResult.Count == this.QueryColumnNames.Count)
             {

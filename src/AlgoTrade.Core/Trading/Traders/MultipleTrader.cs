@@ -263,29 +263,18 @@ public class MultipleTrader
 
     #region Finalize
 
-    public void Finalize(bool saveStatisticsToFile = true)
+    public void Finalize()
     {
         CurrentIndex = 0;
         foreach (var trader in Traders)
         {
-            trader.Finalize(false);
+            trader.Finalize();
         }
 
         if (!IsInitialized)
             throw new InvalidOperationException("Trader not initialized");
 
-        //_mainTrader.OnFinal?.Invoke(_mainTrader, 0);
-
         _mainTrader.CalculateStatistics();
-
-        // Write MultipleTrader lists to file (both TXT and CSV formats) (TODO)
-        //if (saveStatisticsToFile)
-            //WriteMultipleTraderListsToFiles();
-
-        if (saveStatisticsToFile)
-            _mainTrader.WriteStatisticsToFile(AppSettings.LogsDir);
-
-        //_mainTrader.OnFinal?.Invoke(_mainTrader, 1);
     }
 
     #endregion

@@ -524,6 +524,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Configure equity curve filter
             setSingleTraderConfigureEquityCurveFilter(singleTrader);
 
+            // Enable savingStatistics
+            singleTrader.SaveStatisticsToFile = true;
+
             // Init
             singleTrader.Init();
 
@@ -587,13 +590,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             _timer!.RestartTimer("3");
 
-            if (singleTrader.IsStopRequested)
+            singleTrader.Finalize();
+
+            // Dosyaya yazma: stop edilmediyse ve kullanıcı istiyorsa yaz
+            if (!singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
             {
-                singleTrader.Finalize(false);
-            }
-            else
-            {
-                singleTrader.Finalize(true);
+                Log($"\nSaving statistics to files...");
+                singleTrader.WriteStatisticsToFile(AppSettings.LogsDir);
             }
 
             _timer!.StopTimer("3");
@@ -689,6 +692,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             setSingleTraderConfigureEquityCurveFilter(childTrader);
 
+            // Enable savingStatistics
+            childTrader.SaveStatisticsToFile = true;
+
             childTrader.Init();
 
             multipleTrader.AddTrader(childTrader);
@@ -736,6 +742,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             setSingleTraderConfigureEquityCurveFilter(childTrader);
 
+            // Enable savingStatistics
+            childTrader.SaveStatisticsToFile = true;
+
             childTrader.Init();
 
             multipleTrader.AddTrader(childTrader);
@@ -782,6 +791,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(childTrader);
 
             setSingleTraderConfigureEquityCurveFilter(childTrader);
+
+            // Enable savingStatistics
+            childTrader.SaveStatisticsToFile = true;
 
             childTrader.Init();
 
@@ -860,6 +872,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Configure equity curve filter
             setSingleTraderConfigureEquityCurveFilter(mainTrader);
 
+            // Enable savingStatistics
+            mainTrader.SaveStatisticsToFile = true;
+
             mainTrader.Init();
 
             // *****************************************************************************
@@ -935,10 +950,23 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             _timer!.RestartTimer("3");
 
-            if (multipleTrader.IsStopRequested)
-                multipleTrader.Finalize(false);
-            else
-                multipleTrader.Finalize(true);
+            multipleTrader.Finalize();
+
+            // Dosyaya yazma: stop edilmediyse yaz
+            if (!multipleTrader.IsStopRequested)
+            {
+                if (mainTrader.SaveStatisticsToFile)
+                {
+                    Log($"\nSaving mainTrader statistics to files...");
+                    mainTrader.WriteStatisticsToFile(AppSettings.LogsDir);
+                }
+
+                foreach (var childTrader in multipleTrader.Traders)
+                {
+                    if (childTrader.SaveStatisticsToFile)
+                        childTrader.WriteStatisticsToFile(AppSettings.LogsDir);
+                }
+            }
 
             _timer!.StopTimer("3");
 
