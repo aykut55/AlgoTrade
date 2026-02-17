@@ -330,6 +330,10 @@ multipleTrader.Finalize();
 // Dosyaya yazma
 if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
 {
+    // MultipleTrader bar-by-bar lists (Yon/Seviye/Sinyal per trader)
+    Log("\nSaving MultipleTraderLists to files...");
+    multipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
+
     if (mainTrader.SaveStatisticsToFile)
     {
         Log("\nSaving mainTrader statistics to files...");

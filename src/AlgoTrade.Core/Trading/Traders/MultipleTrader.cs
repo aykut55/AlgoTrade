@@ -323,6 +323,218 @@ public class MultipleTrader
         }
     }
 
+    #endregion
+
+    #region MultipleTrader Lists Export
+
+    /// <summary>
+    /// Write MultipleTrader lists to both TXT and CSV files
+    /// </summary>
+    public void WriteMultipleTraderListsToFiles(string logDir, bool saveListsToFileTxt = true, bool saveListsToFileCsv = true)
+    {
+        if (saveListsToFileTxt)
+            WriteMultipleTraderListsToTxt(logDir);
+        if (saveListsToFileCsv)
+            WriteMultipleTraderListsToCsv(logDir);
+    }
+
+    /// <summary>
+    /// Write MultipleTrader lists to TXT file (tabular format with fixed-width columns)
+    /// </summary>
+    private void WriteMultipleTraderListsToTxt(string logDir)
+    {
+        if (_mainTrader == null || Data == null || Data.Count == 0)
+            return;
+
+        if (!System.IO.Directory.Exists(logDir))
+            System.IO.Directory.CreateDirectory(logDir);
+
+        var filePath = System.IO.Path.Combine(logDir, "MultipleTraderLists.txt");
+
+        using (var writer = new System.IO.StreamWriter(filePath, append: false, System.Text.Encoding.UTF8))
+        {
+            // Title
+            writer.WriteLine($"MULTIPLE TRADER BAR-BY-BAR DATA");
+            writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            writer.WriteLine("".PadRight(300, '='));
+
+            // Header
+            WriteHeaderTxt(writer);
+
+            // Data rows
+            for (int i = 0; i < Data.Count; i++)
+            {
+                WriteBarDataTxt(writer, i);
+            }
+
+            writer.WriteLine("".PadRight(300, '='));
+        }
+
+        LogManager.LogRaw($"MultipleTraderLists.txt written to: {filePath}");
+    }
+
+    private void WriteHeaderTxt(System.IO.StreamWriter writer)
+    {
+        var header = $"{"BarNo",7} | " +
+                    $"{"Date",10} | " +
+                    $"{"Time",8} | " +
+                    $"{"Open",10} | " +
+                    $"{"High",10} | " +
+                    $"{"Low",10} | " +
+                    $"{"Close",10} | " +
+                    $"{"Volume",10}";
+
+        // MainTrader columns
+        header += $" | {"MainYon",7} | {"MainSvy",10} | {"MainSny",7}";
+
+        // Other trader columns
+        for (int t = 0; t < Traders.Count; t++)
+        {
+            header += $" | {$"T{t}Yon",7} | {$"T{t}Svy",10} | {$"T{t}Sny",7}";
+        }
+
+        writer.WriteLine(header);
+    }
+
+    private void WriteBarDataTxt(System.IO.StreamWriter writer, int barIndex)
+    {
+        var bar = Data[barIndex];
+
+        var line = $"{barIndex,7} | " +
+                  $"{bar.Date:yyyy.MM.dd} | " +
+                  $"{bar.DateTime:HH:mm:ss} | " +
+                  $"{bar.Open,10:F2} | " +
+                  $"{bar.High,10:F2} | " +
+                  $"{bar.Low,10:F2} | " +
+                  $"{bar.Close,10:F2} | " +
+                  $"{bar.Volume,10:F0}";
+
+        // MainTrader data
+        line += $" | {GetYon(_mainTrader, barIndex),7} | " +
+               $"{GetSeviye(_mainTrader, barIndex),10:F2} | " +
+               $"{GetSinyal(_mainTrader, barIndex),7:F2}";
+
+        // Other traders data
+        foreach (var trader in Traders)
+        {
+            line += $" | {GetYon(trader, barIndex),7} | " +
+                   $"{GetSeviye(trader, barIndex),10:F2} | " +
+                   $"{GetSinyal(trader, barIndex),7:F2}";
+        }
+
+        writer.WriteLine(line);
+    }
+
+    /// <summary>
+    /// Write MultipleTrader lists to CSV file (semicolon separated)
+    /// </summary>
+    private void WriteMultipleTraderListsToCsv(string logDir)
+    {
+        if (_mainTrader == null || Data == null || Data.Count == 0)
+            return;
+
+        if (!System.IO.Directory.Exists(logDir))
+            System.IO.Directory.CreateDirectory(logDir);
+
+        var filePath = System.IO.Path.Combine(logDir, "MultipleTraderLists.csv");
+
+        using (var writer = new System.IO.StreamWriter(filePath, append: false, System.Text.Encoding.UTF8))
+        {
+            // Header
+            WriteHeaderCsv(writer);
+
+            // Data rows
+            for (int i = 0; i < Data.Count; i++)
+            {
+                WriteBarDataCsv(writer, i);
+            }
+        }
+
+        LogManager.LogRaw($"MultipleTraderLists.csv written to: {filePath}");
+    }
+
+    private void WriteHeaderCsv(System.IO.StreamWriter writer)
+    {
+        var header = "BarNo;Date;Time;Open;High;Low;Close;Volume";
+
+        // MainTrader columns
+        header += ";MainTrader_Yon;MainTrader_Seviye;MainTrader_Sinyal";
+
+        // Other trader columns
+        for (int t = 0; t < Traders.Count; t++)
+        {
+            header += $";Trader{t}_Yon;Trader{t}_Seviye;Trader{t}_Sinyal";
+        }
+
+        writer.WriteLine(header);
+    }
+
+    private void WriteBarDataCsv(System.IO.StreamWriter writer, int barIndex)
+    {
+        var bar = Data[barIndex];
+
+        var line = $"{barIndex};" +
+                  $"{bar.Date:yyyy.MM.dd};" +
+                  $"{bar.DateTime:HH:mm:ss};" +
+                  $"{bar.Open:F2};" +
+                  $"{bar.High:F2};" +
+                  $"{bar.Low:F2};" +
+                  $"{bar.Close:F2};" +
+                  $"{bar.Volume:F0}";
+
+        // MainTrader data
+        line += $";{GetYon(_mainTrader, barIndex)};" +
+               $"{GetSeviye(_mainTrader, barIndex):F2};" +
+               $"{GetSinyal(_mainTrader, barIndex):F2}";
+
+        // Other traders data
+        foreach (var trader in Traders)
+        {
+            line += $";{GetYon(trader, barIndex)};" +
+                   $"{GetSeviye(trader, barIndex):F2};" +
+                   $"{GetSinyal(trader, barIndex):F2}";
+        }
+
+        writer.WriteLine(line);
+    }
+
+    private string GetYon(SingleTrader trader, int barIndex)
+    {
+        if (trader == null || trader.lists == null || trader.lists.YonList == null)
+            return "";
+
+        if (barIndex < 0 || barIndex >= trader.lists.YonList.Count)
+            return "";
+
+        return trader.lists.YonList[barIndex] ?? "";
+    }
+
+    private double GetSeviye(SingleTrader trader, int barIndex)
+    {
+        if (trader == null || trader.lists == null || trader.lists.SeviyeList == null)
+            return 0.0;
+
+        if (barIndex < 0 || barIndex >= trader.lists.SeviyeList.Count)
+            return 0.0;
+
+        return trader.lists.SeviyeList[barIndex];
+    }
+
+    private double GetSinyal(SingleTrader trader, int barIndex)
+    {
+        if (trader == null || trader.lists == null || trader.lists.SinyalList == null)
+            return 0.0;
+
+        if (barIndex < 0 || barIndex >= trader.lists.SinyalList.Count)
+            return 0.0;
+
+        return trader.lists.SinyalList[barIndex];
+    }
+
+    #endregion
+
+    #region Dispose
+
     /// <summary>
     /// Dispose mainTrader and all traders
     /// </summary>
