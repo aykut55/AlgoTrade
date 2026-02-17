@@ -175,7 +175,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         trader.StopTimeStr = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
     }
 
-    private void setSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
+    public void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
     {
         trader.signals.EquityCurveFilteringEnabled = this.EquityCurveFilteringEnabled;
         trader.ConfigureEquityCurveFilter(
@@ -186,7 +186,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         );
     }
 
-    private IStrategy getStrategy(int id)
+    public IStrategy GetStrategy(int id)
     {
         var config = _strategyConfigs.FirstOrDefault(s => s.Id == id);
         if (config == null)
@@ -199,7 +199,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         return s;
     }
 
-    private IQuery getQuery(int id)
+    public IQuery GetQuery(int id)
     {
         var config = _queryConfigs.FirstOrDefault(q => q.Id == id);
         if (config == null)
@@ -568,7 +568,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(singleTrader);
             
             // Configure equity curve filter
-            setSingleTraderConfigureEquityCurveFilter(singleTrader);
+            SetSingleTraderConfigureEquityCurveFilter(singleTrader);
 
             // Enable savingStatistics
             singleTrader.SaveStatisticsToFile = true;
@@ -707,13 +707,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
             {
-                strategy = getStrategy(0);
+                strategy = GetStrategy(0);
                 childTrader.SetStrategy(strategy);
             }
 
             if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
             {
-                query = getQuery(0);
+                query = GetQuery(0);
                 childTrader.SetQuery(query);
             }
 
@@ -736,7 +736,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             OnApplyUserFlags(childTrader);
 
-            setSingleTraderConfigureEquityCurveFilter(childTrader);
+            SetSingleTraderConfigureEquityCurveFilter(childTrader);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -757,13 +757,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
             {
-                strategy = getStrategy(1);
+                strategy = GetStrategy(1);
                 childTrader.SetStrategy(strategy);
             }
 
             if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
             {
-                query = getQuery(1);
+                query = GetQuery(1);
                 childTrader.SetQuery(query);
             }
 
@@ -786,7 +786,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             OnApplyUserFlags(childTrader);
 
-            setSingleTraderConfigureEquityCurveFilter(childTrader);
+            SetSingleTraderConfigureEquityCurveFilter(childTrader);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -807,13 +807,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
             {
-                strategy = getStrategy(1);
+                strategy = GetStrategy(1);
                 childTrader.SetStrategy(strategy);
             }
 
             if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
             {
-                query = getQuery(1);
+                query = GetQuery(1);
                 childTrader.SetQuery(query);
             }
 
@@ -836,7 +836,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             OnApplyUserFlags(childTrader);
 
-            setSingleTraderConfigureEquityCurveFilter(childTrader);
+            SetSingleTraderConfigureEquityCurveFilter(childTrader);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -916,7 +916,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(mainTrader);
 
             // Configure equity curve filter
-            setSingleTraderConfigureEquityCurveFilter(mainTrader);
+            SetSingleTraderConfigureEquityCurveFilter(mainTrader);
 
             // Enable savingStatistics
             mainTrader.SaveStatisticsToFile = true;

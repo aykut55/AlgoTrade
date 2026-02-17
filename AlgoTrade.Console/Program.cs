@@ -658,6 +658,7 @@ CancellationTokenSource? scriptCts = null;
     return (File.ReadAllText(filePath), filePath);
 }
 
+// TODO: Ileride silinecek - Moduler script yapisi (#load) ile artik gerek kalmadi
 string readScriptFromConsole()
 {
     Console.WriteLine("\nScript kodunu yapistirin (bos satir + ENTER ile bitirin):");
@@ -788,6 +789,7 @@ async Task runFullScript()
     }
 }
 
+// TODO: Ileride silinecek - Moduler script yapisi (#load) ile artik gerek kalmadi, menuден de kaldirildi
 async Task runInteractiveScript()
 {
     try
@@ -876,6 +878,7 @@ async Task runFullScriptMultipleTrader()
     }
 }
 
+// TODO: Ileride silinecek - Moduler script yapisi (#load) ile artik gerek kalmadi, menuden de kaldirildi
 async Task runInteractiveScriptMultipleTrader()
 {
     try
@@ -950,21 +953,21 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [1] Read Stock Data                                             ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [2] Run SingleTrader With Progress                              ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║        [3] Read Data + Run SingleTrader With Progress              ║");
+    Console.WriteLine("║    [3] Read Data + Run SingleTrader With Progress                  ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║        [4] Run Full Script - SingleTrader (from file)              ║", ConsoleColor.Green);
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║        [5] Run Interactive Script (console paste)                  ║");
+    Console.WriteLine("║    [4] Run MultipleTrader With Progress                            ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [6] Run MultipleTrader With Progress                            ║");
+    Console.WriteLine("║    [5] Read Data + Run MultipleTrader With Progress                ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║        [7] Read Data + Run MultipleTrader With Progress            ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║        [8] Run Full Script - MultipleTrader (from file)            ║", ConsoleColor.Green);
+    Console.WriteLine("║    [6] Run Full Script - SingleTrader (from file)                  ║", ConsoleColor.Green);
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║        [9] Run Interactive Script - MultipleTrader                 ║");
+    Console.WriteLine("║    [7] Run Full Script - MultipleTrader (from file)                ║", ConsoleColor.Green);
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0] Exit                                                        ║");
     Console.WriteLine("║                                                                    ║");
@@ -1006,25 +1009,19 @@ async Task main()
                 await runAlgoTrade();
                 break;
             case "4":
-                await runFullScript();
-                break;
-            case "5":
-                await runInteractiveScript();
-                break;
-            case "6":
                 selectedRunMode = showRunModeMenu();
                 await runMultipleTraderAlgoTrade();
                 break;
-            case "7":
+            case "5":
                 selectedRunMode = showRunModeMenu();
                 readStockData();
                 await runMultipleTraderAlgoTrade();
                 break;
-            case "8":
-                await runFullScriptMultipleTrader();
+            case "6":
+                await runFullScript();
                 break;
-            case "9":
-                await runInteractiveScriptMultipleTrader();
+            case "7":
+                await runFullScriptMultipleTrader();
                 break;
             case "0":
                 running = false;
