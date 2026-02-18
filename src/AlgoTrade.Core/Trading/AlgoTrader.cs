@@ -818,16 +818,16 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
 
             // Manually assign custom output file names (as requested)
-            singleTrader.FullStatsTxtFileName = "SingleTraderStatistics.txt";
-            singleTrader.FullStatsCsvFileName = "SingleTraderStatistics.csv";
-            singleTrader.MinimalStatsTxtFileName = "SingleTraderStatisticsMinimal.txt";
-            singleTrader.MinimalStatsCsvFileName = "SingleTraderStatisticsMinimal.csv";
-            singleTrader.FullListsTxtFileName = "SingleTraderLists.txt";
-            singleTrader.FullListsCsvFileName = "SingleTraderLists.csv";
-            singleTrader.MinimalListsTxtFileName = "SingleTraderListsMinimal.txt";
-            singleTrader.MinimalListsCsvFileName = "SingleTraderListsMinimal.csv";
-            singleTrader.FullStatsTxtFormattedFileName = "SingleTraderStatisticsFormatted.txt";
-            singleTrader.MinimalStatsTxtFormattedFileName = "SingleTraderStatisticsFormatted.txt";
+            singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
+            singleTrader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
+            singleTrader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
+            singleTrader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
+            singleTrader.FullListsTxtFileName                = "SingleTraderLists.txt";
+            singleTrader.FullListsCsvFileName                = "SingleTraderLists.csv";
+            singleTrader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
+            singleTrader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
+            singleTrader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
+            singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsFormatted.txt";
 
             // Init
             singleTrader.Init();
