@@ -1079,6 +1079,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         Log("");
     }
 
+
+    public event Action<int, int, double>? OnTraderProgress;
+    private void OnOptimizationProgress(int current, int total)
+    {
+        double pct = (double)current / total * 100.0;
+        OnTraderProgress?.Invoke(current, total, pct);
+    }
+
     public async Task RunSingleTraderOptWithProgressAsync(CancellationToken cancellationToken = default)
     {
         int totalBars = 0;
@@ -1166,9 +1174,16 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             singleTraderOptimizer = new SingleTraderOptimizer(0, this.Data, indicators, _logger);
 
+            // Progress callback
+            singleTraderOptimizer.OnOptimizationProgress += OnOptimizationProgress;
+
             // Parametre range'leri (hardcoded)
             singleTraderOptimizer.AddParameterRange("period", 10, 50, 10);
             singleTraderOptimizer.AddParameterRange("percent", 1.0, 3.0, 1.0);
+
+            // Kombinasyonlari uret
+            singleTraderOptimizer.GenerateParameterCombinations();
+            Log($"Total combinations: {singleTraderOptimizer.AllCombinations.Count}");
 
             // Strategy factory - her kombinasyon icin strateji olusturur
             singleTraderOptimizer.SetStrategyFactory((data, ind, parameters) =>
@@ -1182,17 +1197,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                     ["choice"] = 0
                 });
             });
-
-            // Kombinasyonlari uret
-            singleTraderOptimizer.GenerateParameterCombinations();
-            Log($"Total combinations: {singleTraderOptimizer.AllCombinations.Count}");
-
-            // Progress callback
-            singleTraderOptimizer.OnOptimizationProgress = (current, total) =>
-            {
-                double pct = (double)current / total * 100.0;
-                OnTraderProgress?.Invoke(current, total, pct);
-            };
 
             // Run optimization
             _timer!.RestartTimer("1");
@@ -1243,8 +1247,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         Log($"AlgoTrader '{Name}' completed. Processed {totalBars} bars.");
         Log("");
     }
-
-    public event Action<int, int, double>? OnTraderProgress;
 
     public event Action<string>? MessageReceived;
 
