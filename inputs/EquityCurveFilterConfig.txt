@@ -1,10 +1,10 @@
 # EquityCurveFilter Configuration File
-# Format: Version|enabled:bool|thresholdType:string(percent|absolute)|profitThreshold:double|lossThreshold:double|trigger:string(None|Profit|Loss|Both)
+# Format: Version|enabled:bool|thresholdType:string(percent|absolute)|profitThreshold:double|lossThreshold:double|trigger:string(ProfitOnly|LossOnly|Both)
 #
 # thresholdType: percent = yuzdesel esik, absolute = mutlak deger esik
-# trigger: None = filtre yok, Profit = sadece kar onay, Loss = sadece zarar onay, Both = her ikisi
+# trigger: ProfitOnly = sadece kar onay, LossOnly = sadece zarar onay, Both = her ikisi
 
 v1-Disabled|enabled:bool:false|thresholdType:string:percent|profitThreshold:double:0.05|lossThreshold:double:-0.05|trigger:string:Both
 v2-PercentBoth|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.05|lossThreshold:double:-0.05|trigger:string:Both
-v3-PercentProfit|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.10|lossThreshold:double:-0.10|trigger:string:Profit
+v3-PercentProfit|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.10|lossThreshold:double:-0.10|trigger:string:ProfitOnly
 v4-AbsoluteBoth|enabled:bool:true|thresholdType:string:absolute|profitThreshold:double:1000|lossThreshold:double:-1000|trigger:string:Both
