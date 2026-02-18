@@ -1,0 +1,7 @@
+# Optimization Configuration File
+# Format: StrategyName|Version|paramName:min:max:step|...|fixed:paramName:type:value|...
+#
+# Range parameters   : paramName:min:max:step       (optimizer tarafindan kombinasyonlar uretilir)
+# Fixed parameters   : fixed:paramName:type:value   (her kombinasyonda sabit deger olarak kullanilir)
+
+SimpleMostStrategy|v1-Opt|period:10:50:10|percent:1.0:3.0:1.0|fixed:choice:int:0

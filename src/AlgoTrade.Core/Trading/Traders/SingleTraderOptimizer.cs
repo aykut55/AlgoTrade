@@ -112,10 +112,10 @@ public class SingleTraderOptimizer : IDisposable
     public event Action<SingleTraderOptimizer, SingleTrader, int>? OnReadOptimizationResultsFile;  // (this, singleTrader, currentCombination)
 
     // State flags
-    public bool IsStarted { get; private set; }
-    public bool IsRunning { get; private set; }
-    public bool IsStopped { get; private set; }
-    public bool IsStopRequested { get; private set; }
+    public bool IsStarted { get; internal set; }
+    public bool IsRunning { get; internal set; }
+    public bool IsStopped { get; internal set; }
+    public bool IsStopRequested { get; internal set; }
 
     // Save intermediate results
     public int SaveEveryN { get; set; }  // Her kaç kombinasyonda bir ara sonuç kaydet (0 = disable)

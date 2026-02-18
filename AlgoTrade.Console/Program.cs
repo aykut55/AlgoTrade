@@ -232,6 +232,43 @@ void ConfigureQueries()
     });
 }
 
+void ConfigureOptimization()
+{
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    string configPath = Path.Combine(AppSettings.InputsDir, "OptimizationConfig.txt");
+
+    if (File.Exists(configPath))
+    {
+        algoTrader.ConfigureOptimizationFromConfig(configPath, "SimpleMostStrategy", "v1-Opt");
+        LogManager.LogRaw($"\nOptimization loaded from config: {configPath}");
+    }
+    else
+    {
+        LogManager.LogRaw($"\nOptimization config file not found: {configPath}");
+
+        algoTrader.ClearOptimizationParameterRanges();
+        algoTrader.AddOptimizationParameterRange("period", 10, 50, 10);
+        algoTrader.AddOptimizationParameterRange("percent", 1.0, 3.0, 1.0);
+
+        // Strategy factory - her kombinasyon için strateji oluşturur
+        algoTrader.SetOptimizationStrategyFactory((data, ind, parameters) =>
+        {
+            int period = Convert.ToInt32(parameters["period"]);
+            double percent = Convert.ToDouble(parameters["percent"], System.Globalization.CultureInfo.InvariantCulture);
+            return algoTrader.CreateStrategyFromRegistry(data, ind, "SimpleMostStrategy", new Dictionary<string, object>
+            {
+                ["period"] = period,
+                ["percent"] = percent,
+                ["choice"] = 0
+            });
+        });
+
+        LogManager.LogRaw("\nOptimization config file not found, fallback optimization configured from in-code parameters.");
+    }
+}
+
 void ConfigureEquityCurveFilters()
 {
     if (algoTrader is null)
@@ -645,7 +682,7 @@ async Task runSingleTraderOptimization()
             return;
 
         LogManager.LogRaw("");
-        LogManager.LogRaw($"Running AlgoTrader");
+        LogManager.LogRaw($"Running SingleTraderOptimization");
 
         algoTrader = new AlgoTrader("AlgoTrader");
 
@@ -663,31 +700,12 @@ async Task runSingleTraderOptimization()
             algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
         }
 
-        // TODO 1453 : Buranın asagisi copy-paste ile geldi, refactor edilebilir.
-        // Set run mode
-        algoTrader.SingleTraderRunMode = selectedRunMode;
+        // TODO : Su an SingleTraderOptimizer.SetSingleTraderConfigureEquityCurveFilter() body'si bos (TODO).
+        // Ileride equity curve filter ile optimization yapilmak istendiginde, once o metod implement edilmeli,
+        // sonra buradaki ConfigureEquityCurveFilter() anlamli hale gelecek.
+        //ConfigureEquityCurveFilter();
 
-        if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
-        {
-            // Set strategy
-            ConfigureStrategy();
-        }
-        else if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
-        {
-            // Set strategy
-            ConfigureStrategy();
-
-            // Set query
-            ConfigureQuery();
-        }
-        else if (algoTrader.SingleTraderRunMode == TraderRunMode.QueryOnly)
-        {
-            // Set query
-            ConfigureQuery();
-        }
-
-        ConfigureEquityCurveFilter();
-        // TODO 1453 : Buranın yukarısı copy-paste ile geldi, refactor edilebilir.
+        ConfigureOptimization();
 
         algoTrader.Initialize();
 

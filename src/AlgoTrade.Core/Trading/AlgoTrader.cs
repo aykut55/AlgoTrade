@@ -68,6 +68,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private readonly List<QueryConfigEntry> _queryConfigs = new();
     public IReadOnlyList<QueryConfigEntry> QueryConfigs => _queryConfigs;
 
+    // Optimization config for SingleTraderOptimizer
+    private readonly List<OptimizationParameterRangeEntry> _optimizationParameterRanges = new();
+    public IReadOnlyList<OptimizationParameterRangeEntry> OptimizationParameterRanges => _optimizationParameterRanges;
+    private StrategyFactory? _optimizationStrategyFactory;
+
     // EquityCurveFilter list for MultipleTrader
     private readonly List<EquityCurveFilterConfigEntry> _equityCurveFilterConfigs = new();
     public IReadOnlyList<EquityCurveFilterConfigEntry> EquityCurveFilterConfigs => _equityCurveFilterConfigs;
@@ -412,6 +417,71 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public void ClearEquityCurveFilterConfigs()
     {
         _equityCurveFilterConfigs.Clear();
+    }
+
+    // ==========================================================================
+    // Optimization Configuration (for SingleTraderOptimizer)
+    // ==========================================================================
+
+    public void AddOptimizationParameterRange(string name, double min, double max, double step)
+    {
+        _optimizationParameterRanges.Add(new OptimizationParameterRangeEntry(name, min, max, step));
+    }
+
+    public void ClearOptimizationParameterRanges()
+    {
+        _optimizationParameterRanges.Clear();
+    }
+
+    public void SetOptimizationStrategyFactory(StrategyFactory factory)
+    {
+        _optimizationStrategyFactory = factory ?? throw new ArgumentNullException(nameof(factory));
+    }
+
+    public IStrategy CreateStrategyFromRegistry(List<StockData> data, IndicatorManager ind, string strategyName, Dictionary<string, object> parameters)
+    {
+        return _strategyRegistry.CreateStrategy(data, ind, _logger, strategyName, parameters);
+    }
+
+    public void ConfigureOptimizationFromConfig(string configFilePath, string strategyName, string? version = null)
+    {
+        if (string.IsNullOrWhiteSpace(configFilePath))
+            throw new ArgumentException("Config file path cannot be null or empty.", nameof(configFilePath));
+
+        if (!File.Exists(configFilePath))
+            throw new FileNotFoundException($"Optimization config file not found: {configFilePath}");
+
+        var loader = new Strategies.OptimizationConfigLoader(configFilePath);
+        loader.LoadFromFile();
+
+        var config = version is null
+            ? loader.GetFirstConfigurationForStrategy(strategyName)
+            : loader.GetConfiguration(strategyName, version);
+
+        if (config is null)
+            throw new InvalidOperationException($"Optimization configuration not found: strategy='{strategyName}', version='{version ?? "first"}'.");
+
+        // Parameter ranges
+        ClearOptimizationParameterRanges();
+        foreach (var range in config.ParameterRanges)
+        {
+            AddOptimizationParameterRange(range.Name, range.Min, range.Max, range.Step);
+        }
+
+        // Strategy factory: range params + fixed params -> strateji
+        var fixedParams = config.GetFixedParameterValues();
+        var factoryStrategyName = config.StrategyName;
+
+        SetOptimizationStrategyFactory((data, ind, parameters) =>
+        {
+            // Merge: range params (optimizer'dan) + fixed params (config'den)
+            var merged = new Dictionary<string, object>(fixedParams, StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in parameters)
+            {
+                merged[kvp.Key] = kvp.Value;
+            }
+            return _strategyRegistry.CreateStrategy(data, ind, _logger, factoryStrategyName, merged);
+        });
     }
 
     public void Reset()
@@ -1157,46 +1227,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (indicators == null)
                 throw new InvalidOperationException("indicators can not be created...");
 
-            /*
-            // *****************************************************************************
-            // StrategyRegistry - beg (Optimizasyonda factory her kombinasyonda kendi olusturuyor)
-            // *****************************************************************************
-            if (strategy != null)
-            {
-                Log("Disposing previous strategy instance...");
-                strategy.Dispose();
-                strategy = null;
-            }
-
-            Log("\nCreating strategy...");
-
-            strategy = _strategyRegistry.CreateStrategy(this.Data, indicators, _logger, _currentStrategyName, _currentStrategyParams);
-            if (strategy == null)
-                throw new InvalidOperationException("strategy can not be created...");
-
-            // *****************************************************************************
-            // QueryRegistry - beg (Optimizasyonda sadece TradeOnly, query gereksiz)
-            // *****************************************************************************
-            if (query != null)
-            {
-                Log("Disposing previous query instance...");
-                query.Dispose();
-                query = null;
-            }
-
-            if (QueryIsEnabled)
-            {
-                if (string.IsNullOrWhiteSpace(_currentQueryName))
-                    throw new InvalidOperationException("QueryIsEnabled is true but query name is not configured. Call ConfigureQuery(...) first.");
-
-                Log("\nCreating query...");
-
-                query = _queryRegistry.CreateQuery(this.Data, indicators, _logger, _currentQueryName, _currentQueryParams);
-                if (query == null)
-                    throw new InvalidOperationException("query can not be created...");
-            }
-            */
-
             // *****************************************************************************
             // SingleTraderOptimizer - beg
             // *****************************************************************************
@@ -1224,29 +1254,42 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                                                                 appendEnabled);
             */
 
-            // Parametre range'leri (hardcoded)
-            singleTraderOptimizer.AddParameterRange("period", 10, 50, 10);
-            singleTraderOptimizer.AddParameterRange("percent", 1.0, 3.0, 1.0);
+            // Parametre range'leri (stored config'den)
+            if (_optimizationParameterRanges.Count == 0)
+                throw new InvalidOperationException("No optimization parameter ranges configured. Call AddOptimizationParameterRange() first.");
+
+            foreach (var range in _optimizationParameterRanges)
+            {
+                singleTraderOptimizer.AddParameterRange(range.Name, range.Min, range.Max, range.Step);
+            }
 
             // Kombinasyonlari uret
             singleTraderOptimizer.GenerateParameterCombinations();
             Log($"Total combinations: {singleTraderOptimizer.AllCombinations.Count}");
 
-            // Strategy factory - her kombinasyon icin strateji olusturur
-            singleTraderOptimizer.SetStrategyFactory((data, ind, parameters) =>
+            // Strategy factory - stored config'den veya fallback
+            if (_optimizationStrategyFactory != null)
             {
-                int period = Convert.ToInt32(parameters["period"]);
-                double percent = Convert.ToDouble(parameters["percent"], System.Globalization.CultureInfo.InvariantCulture);
-                return _strategyRegistry.CreateStrategy(data, ind, _logger, _currentStrategyName, new Dictionary<string, object>
+                singleTraderOptimizer.SetStrategyFactory(_optimizationStrategyFactory);
+            }
+            else
+            {
+                // Fallback: _currentStrategyName + parametrelerden otomatik factory
+                var strategyName = _currentStrategyName;
+                singleTraderOptimizer.SetStrategyFactory((data, ind, parameters) =>
                 {
-                    ["period"] = period,
-                    ["percent"] = percent,
-                    ["choice"] = 0
+                    return _strategyRegistry.CreateStrategy(data, ind, _logger, strategyName, parameters);
                 });
-            });
+            }
 
             // Run optimization
             _timer!.RestartTimer("1");
+
+            // Set state flags
+            singleTraderOptimizer.IsStarted = true;
+            singleTraderOptimizer.IsRunning = true;
+            singleTraderOptimizer.IsStopped = false;
+            singleTraderOptimizer.IsStopRequested = false;
 
             await Task.Run(() =>
             {
@@ -1276,18 +1319,18 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         }
         catch (Exception ex)
         {
-            Log($"An error occurred while running in RunSingleTraderWithProgressAsync(): {ex.Message}");
+            Log($"An error occurred while running in RunSingleTraderOptWithProgressAsync(): {ex.Message}");
         }
         finally
         {
         }
 
         // Update state flags
-        if (singleTrader is not null)
+        if (singleTraderOptimizer is not null)
         {
-            singleTrader.IsRunning = false;
-            singleTrader.IsStopped = true;
-            Log($"\nSingleTrader finished - IsRunning: {singleTrader.IsRunning}, IsStopped: {singleTrader.IsStopped}");
+            singleTraderOptimizer.IsRunning = false;
+            singleTraderOptimizer.IsStopped = true;
+            Log($"\nSingleTraderOptimizer finished - IsRunning: {singleTraderOptimizer.IsRunning}, IsStopped: {singleTraderOptimizer.IsStopped}");
         }
 
         Log("");
@@ -1380,5 +1423,21 @@ public class EquityCurveFilterConfigEntry
         ProfitConfirmationThreshold = profitThreshold;
         LossConfirmationThreshold = lossThreshold;
         ConfirmationTrigger = trigger;
+    }
+}
+
+public class OptimizationParameterRangeEntry
+{
+    public string Name { get; }
+    public double Min { get; }
+    public double Max { get; }
+    public double Step { get; }
+
+    public OptimizationParameterRangeEntry(string name, double min, double max, double step)
+    {
+        Name = name;
+        Min = min;
+        Max = max;
+        Step = step;
     }
 }
