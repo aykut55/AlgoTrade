@@ -15,6 +15,9 @@ using System.Diagnostics;
 using System.Text;
 using static Nessos.LinqOptimizer.Core.QueryExpr;
 
+Console.OutputEncoding = Encoding.UTF8;
+Console.InputEncoding = Encoding.UTF8;
+
 bool addHeadTailInfo = false;
 var sb = new StringBuilder();
 ConsoleLogger ? consoleLogger = null;
@@ -26,6 +29,14 @@ TimeManager timer = TimeManager.GetInstance();
 LogManager logger = LogManager.GetInstance();
 DateTime? _progressStartTime = null;
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
+
+// If true, show config selection menus; if false, pick defaults from files
+bool bShowConfigSelectionMenuSingleTrader = false;
+bool bShowConfigSelectionMenuSingleTraderOpt = false;
+bool bShowConfigSelectionMenuMultiTrader = false;
+
+// If true show Run Mode menu; if false pick default 1 (TradeOnly)
+bool bShowRunModeMenu = false;
 
 string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
 
@@ -216,7 +227,7 @@ List<(string name, string version)>? ShowMultiConfigSelectionMenu(
     return selections;
 }
 
-void ConfigureStrategy()
+void ConfigureStrategy(bool bShowConfigSelectionMenu = true)
 {
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
@@ -229,15 +240,24 @@ void ConfigureStrategy()
         loader.LoadFromFile();
         var allConfigs = loader.GetAllConfigurations();
 
-        var menuItems = allConfigs
-            .Select(c => (c.StrategyName, c.Version, c.GetParametersDisplayString()))
-            .ToList();
+        if (bShowConfigSelectionMenu)
+        {
+            var menuItems = allConfigs
+                .Select(c => (c.StrategyName, c.Version, c.GetParametersDisplayString()))
+                .ToList();
 
-        var selected = ShowConfigSelectionMenu("Strategy", menuItems);
-        if (selected is null) return;
+            var selected = ShowConfigSelectionMenu("Strategy", menuItems);
+            if (selected is null) return;
 
-        algoTrader.ConfigureStrategyFromConfig(configPath, selected.Value.name, selected.Value.version);
-        LogManager.LogRaw($"\nStrategy loaded from config: {selected.Value.name} | {selected.Value.version}");
+            algoTrader.ConfigureStrategyFromConfig(configPath, selected.Value.name, selected.Value.version);
+            LogManager.LogRaw($"\nStrategy loaded from config: {selected.Value.name} | {selected.Value.version}");
+        }
+        else
+        {
+            var first = allConfigs.First();
+            algoTrader.ConfigureStrategyFromConfig(configPath, first.StrategyName, first.Version);
+            LogManager.LogRaw($"\nStrategy loaded from config (default): {first.StrategyName} | {first.Version}");
+        }
     }
     else
     {
@@ -252,7 +272,7 @@ void ConfigureStrategy()
     }
 }
 
-void ConfigureQuery()
+void ConfigureQuery(bool bShowConfigSelectionMenu = true)
 {
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
@@ -265,15 +285,24 @@ void ConfigureQuery()
         loader.LoadFromFile();
         var allConfigs = loader.GetAllConfigurations();
 
-        var menuItems = allConfigs
-            .Select(c => (c.QueryName, c.Version, c.GetParametersDisplayString()))
-            .ToList();
+        if (bShowConfigSelectionMenu)
+        {
+            var menuItems = allConfigs
+                .Select(c => (c.QueryName, c.Version, c.GetParametersDisplayString()))
+                .ToList();
 
-        var selected = ShowConfigSelectionMenu("Query", menuItems);
-        if (selected is null) return;
+            var selected = ShowConfigSelectionMenu("Query", menuItems);
+            if (selected is null) return;
 
-        algoTrader.ConfigureQueryFromConfig(configPath, selected.Value.name, selected.Value.version);
-        LogManager.LogRaw($"\nQuery loaded from config: {selected.Value.name} | {selected.Value.version}");
+            algoTrader.ConfigureQueryFromConfig(configPath, selected.Value.name, selected.Value.version);
+            LogManager.LogRaw($"\nQuery loaded from config: {selected.Value.name} | {selected.Value.version}");
+        }
+        else
+        {
+            var first = allConfigs.First();
+            algoTrader.ConfigureQueryFromConfig(configPath, first.QueryName, first.Version);
+            LogManager.LogRaw($"\nQuery loaded from config (default): {first.QueryName} | {first.Version}");
+        }
     }
     else
     {
@@ -288,7 +317,7 @@ void ConfigureQuery()
     }
 }
 
-void ConfigureEquityCurveFilter()
+void ConfigureEquityCurveFilter(bool bShowConfigSelectionMenu = true)
 {
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
@@ -301,16 +330,26 @@ void ConfigureEquityCurveFilter()
         loader.LoadFromFile();
         var allConfigs = loader.GetAllConfigurations();
 
-        var menuItems = allConfigs
-            .Select(c => ("EquityCurveFilter", c.Version, c.GetDisplayString()))
-            .ToList();
+        if (bShowConfigSelectionMenu)
+        {
+            var menuItems = allConfigs
+                .Select(c => ("EquityCurveFilter", c.Version, c.GetDisplayString()))
+                .ToList();
 
-        var selected = ShowConfigSelectionMenu("EquityCurveFilter", menuItems);
-        if (selected is null) return;
+            var selected = ShowConfigSelectionMenu("EquityCurveFilter", menuItems);
+            if (selected is null) return;
 
-        algoTrader.ClearEquityCurveFilterConfigs();
-        algoTrader.ConfigureEquityCurveFilterFromConfig(configPath, selected.Value.version, id: 0);
-        LogManager.LogRaw($"\nEquityCurveFilter loaded from config: {selected.Value.version}");
+            algoTrader.ClearEquityCurveFilterConfigs();
+            algoTrader.ConfigureEquityCurveFilterFromConfig(configPath, selected.Value.version, id: 0);
+            LogManager.LogRaw($"\nEquityCurveFilter loaded from config: {selected.Value.version}");
+        }
+        else
+        {
+            var first = allConfigs.First();
+            algoTrader.ClearEquityCurveFilterConfigs();
+            algoTrader.ConfigureEquityCurveFilterFromConfig(configPath, first.Version, id: 0);
+            LogManager.LogRaw($"\nEquityCurveFilter loaded from config (default): {first.Version}");
+        }
     }
     else
     {
@@ -810,11 +849,14 @@ void readStockData()
     }
 }
 
-async Task runAlgoTrade()
+async Task runSingleTraderAlgoTrade()
 {
     try
     {
         if (!stockDataReader!.IsDataReady)
+            return;
+
+        if (stockMetaData == null) 
             return;
 
         LogManager.LogRaw("");
@@ -830,11 +872,8 @@ async Task runAlgoTrade()
         algoTrader.SetData(stockDataReader!.GetData());
 
         // Set symbol/system info from metadata
-        if (stockMetaData != null)
-        {
-            algoTrader.SymbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
-            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
-        }
+        algoTrader.SymbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
+        algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
 
         // Set run mode
         algoTrader.SingleTraderRunMode = selectedRunMode;
@@ -842,23 +881,23 @@ async Task runAlgoTrade()
         if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeOnly)
         {
             // Set strategy
-            ConfigureStrategy();
+            ConfigureStrategy(bShowConfigSelectionMenuSingleTrader);
         }
         else if (algoTrader.SingleTraderRunMode == TraderRunMode.TradeAndQuery)
         {
             // Set strategy
-            ConfigureStrategy();
+            ConfigureStrategy(bShowConfigSelectionMenuSingleTrader);
 
             // Set query
-            ConfigureQuery();
+            ConfigureQuery(bShowConfigSelectionMenuSingleTrader);
         }
         else if (algoTrader.SingleTraderRunMode == TraderRunMode.QueryOnly)
         {
             // Set query
-            ConfigureQuery();
+            ConfigureQuery(bShowConfigSelectionMenuSingleTrader);
         }
 
-        ConfigureEquityCurveFilter();
+        ConfigureEquityCurveFilter(bShowConfigSelectionMenuSingleTrader);
 
         algoTrader.Initialize();
 
@@ -955,7 +994,7 @@ async Task runSingleTraderOptimization()
             algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
         }
 
-        ConfigureEquityCurveFilter();
+        ConfigureEquityCurveFilter(bShowConfigSelectionMenuSingleTraderOpt);
 
         ConfigureOptimization();
 
@@ -1356,23 +1395,23 @@ async Task main()
                 readStockData();
                 break;
             case "2":
-                selectedRunMode = showRunModeMenu();
-                await runAlgoTrade();
+                selectedRunMode = bShowRunModeMenu ? showRunModeMenu() : TraderRunMode.TradeOnly;
+                await runSingleTraderAlgoTrade();
                 break;
             case "3":
-                selectedRunMode = showRunModeMenu();
+                selectedRunMode = bShowRunModeMenu ? showRunModeMenu() : TraderRunMode.TradeOnly;
                 await runMultipleTraderAlgoTrade();
                 break;
             case "4":
                 await runSingleTraderOptimization();
                 break;
             case "5":
-                selectedRunMode = showRunModeMenu();
+                selectedRunMode = bShowRunModeMenu ? showRunModeMenu() : TraderRunMode.TradeOnly;
                 readStockData();
-                await runAlgoTrade();
+                await runSingleTraderAlgoTrade();
                 break;
             case "6":
-                selectedRunMode = showRunModeMenu();
+                selectedRunMode = bShowRunModeMenu ? showRunModeMenu() : TraderRunMode.TradeOnly;
                 readStockData();
                 await runMultipleTraderAlgoTrade();
                 break;

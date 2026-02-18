@@ -248,7 +248,29 @@ public class SingleTrader : MarketDataProvider, IDisposable
     #endregion
 
     #region Statistics
+    // Output file names for statistics (configurable)
+    public string FullStatsTxtFileName { get; set; } = "SingleTraderStatistics.txt";
+    public string FullStatsCsvFileName { get; set; } = "SingleTraderStatistics.csv";
+    public string MinimalStatsTxtFileName { get; set; } = "SingleTraderStatisticsMinimal.txt";
+    public string MinimalStatsCsvFileName { get; set; } = "SingleTraderStatisticsMinimal.csv";
+    public string FullListsTxtFileName { get; set; } = "SingleTraderLists.txt";
+    public string FullListsCsvFileName { get; set; } = "SingleTraderLists.csv";
+    public string MinimalListsTxtFileName { get; set; } = "SingleTraderListsMinimal.txt";
+    public string MinimalListsCsvFileName { get; set; } = "SingleTraderListsMinimal.csv";
+    public string FullStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsFormatted.txt";
+    public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsFormattedMinimal.txt";
 
+    // Per-output enable flags (used during WriteStatisticsToFile)
+    public bool SaveFullStatsTxtEnabled { get; set; } = true;
+    public bool SaveFullStatsCsvEnabled { get; set; } = true;
+    public bool SaveMinimalStatsTxtEnabled { get; set; } = true;
+    public bool SaveMinimalStatsCsvEnabled { get; set; } = true;
+    public bool SaveFullListsTxtEnabled { get; set; } = true;
+    public bool SaveFullListsCsvEnabled { get; set; } = true;
+    public bool SaveMinimalListsTxtEnabled { get; set; } = true;
+    public bool SaveMinimalListsCsvEnabled { get; set; } = true;
+    public bool SaveFullStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
     #endregion
 
     public bool is_son_yon_f()
@@ -413,8 +435,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         int i = barIndex;
 
-        //if (!IsInitialized)
-        //throw new InvalidOperationException("Trader not initialized");
+        if (!IsInitialized)
+            throw new InvalidOperationException("Trader not initialized");
 
         if (i >= Data.Count)
             return;
@@ -490,6 +512,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public void Finalize()
     {
+        if (!IsInitialized)
+            throw new InvalidOperationException("Trader not initialized");
+
         OnFinal?.Invoke(this, 0);
 
         if (this.RunMode == TraderRunMode.TradeOnly)
@@ -2407,17 +2432,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.signals.IsTradeEnabled = false;
         this.signals.IsPozKapatEnabled = false;
 
-        // Then Needed Set
-        this.signals.AlEnabled = true;
-        this.signals.SatEnabled = true;
-        this.signals.FlatOlEnabled = true;
-        this.signals.PasGecEnabled = false;
-        this.signals.KarAlEnabled = false;
-        this.signals.ZararKesEnabled = false;
-        this.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-        this.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
-        this.signals.EquityCurveFilteringEnabled = false;
-
         return this;
     }
 
@@ -2429,77 +2443,66 @@ public class SingleTrader : MarketDataProvider, IDisposable
         statistics.Hesapla(lastBarIndex);
     }
 
-    public void WriteStatisticsToFile(
-        string outputDir,
-        bool saveFullStatsTxt = true,
-        bool saveFullStatsCsv = true,
-        bool saveMinimalStatsTxt = true,
-        bool saveMinimalStatsCsv = true,
-        bool saveFullListsTxt = true,
-        bool saveFullListsCsv = true,
-        bool saveMinimalListsTxt = true,
-        bool saveMinimalListsCsv = true,
-        bool saveFullStatsTxtFormatted = true,
-        bool saveMinimalStatsTxtFormatted = true)
+    public void WriteStatisticsToFile(string outputDir)
     {
-        if (saveFullStatsTxt)
+        if (this.SaveFullStatsTxtEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderStatistics.txt...");
-            statistics.SaveToTxt(Path.Combine(outputDir, "SingleTraderStatistics.txt"));
+            Log($"\n\tSaving statistics to {FullStatsTxtFileName}...");
+            statistics.SaveToTxt(Path.Combine(outputDir, FullStatsTxtFileName));
         }
 
-        if (saveFullStatsCsv)
+        if (this.SaveFullStatsCsvEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderStatistics.csv...");
-            statistics.SaveToCsv(Path.Combine(outputDir, "SingleTraderStatistics.csv"));
+            Log($"\n\tSaving statistics to {FullStatsCsvFileName}...");
+            statistics.SaveToCsv(Path.Combine(outputDir, FullStatsCsvFileName));
         }
 
-        if (saveMinimalStatsTxt)
+        if (this.SaveMinimalStatsTxtEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderStatisticsMinimal.txt...");
-            statistics.SaveToTxtMinimal(Path.Combine(outputDir, "SingleTraderStatisticsMinimal.txt"));
+            Log($"\n\tSaving statistics to {MinimalStatsTxtFileName}...");
+            statistics.SaveToTxtMinimal(Path.Combine(outputDir, MinimalStatsTxtFileName));
         }
 
-        if (saveMinimalStatsCsv)
+        if (this.SaveMinimalStatsCsvEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderStatisticsMinimal.csv...");
-            statistics.SaveToCsvMinimal(Path.Combine(outputDir, "SingleTraderStatisticsMinimal.csv"));
+            Log($"\n\tSaving statistics to {MinimalStatsCsvFileName}...");
+            statistics.SaveToCsvMinimal(Path.Combine(outputDir, MinimalStatsCsvFileName));
         }
 
-        if (saveFullListsTxt)
+        if (this.SaveFullListsTxtEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderLists.txt...");
-            statistics.SaveListsToTxt(Path.Combine(outputDir, "SingleTraderLists.txt"));
+            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
+            statistics.SaveListsToTxt(Path.Combine(outputDir, FullListsTxtFileName));
         }
 
-        if (saveFullListsCsv)
+        if (this.SaveFullListsCsvEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderLists.csv...");
-            statistics.SaveListsToCsv(Path.Combine(outputDir, "SingleTraderLists.csv"));
+            Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
+            statistics.SaveListsToCsv(Path.Combine(outputDir, FullListsCsvFileName));
         }
 
-        if (saveMinimalListsTxt)
+        if (this.SaveMinimalListsTxtEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderListsMinimal.txt...");
-            statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, "SingleTraderListsMinimal.txt"));
+            Log($"\n\tSaving statistics to {MinimalListsTxtFileName}...");
+            statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, MinimalListsTxtFileName));
         }
 
-        if (saveMinimalListsCsv)
+        if (this.SaveMinimalListsCsvEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderListsMinimal.csv...");
-            statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, "SingleTraderListsMinimal.csv"));
+            Log($"\n\tSaving statistics to {MinimalListsCsvFileName}...");
+            statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, MinimalListsCsvFileName));
         }
 
-        if (saveFullStatsTxtFormatted)
+        if (this.SaveFullStatsTxtFormattedEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderStatisticsFormatted.txt...");
-            statistics.SaveToTxtFormatted(Path.Combine(outputDir, "SingleTraderStatisticsFormatted.txt"));
+            Log($"\n\tSaving statistics to {FullStatsTxtFormattedFileName}...");
+            statistics.SaveToTxtFormatted(Path.Combine(outputDir, FullStatsTxtFormattedFileName));
         }
 
-        if (saveMinimalStatsTxtFormatted)
+        if (this.SaveMinimalStatsTxtFormattedEnabled)
         {
-            Log($"\n\tSaving statistics to SingleTraderStatisticsFormattedMinimal.txt...");
-            statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, "SingleTraderStatisticsFormattedMinimal.txt"));
+            Log($"\n\tSaving statistics to {MinimalStatsTxtFormattedFileName}...");
+            statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, MinimalStatsTxtFormattedFileName));
         }
     }
     private void Log(string message)

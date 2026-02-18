@@ -159,29 +159,82 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         int traderId = trader.GetId();
         if (traderId == -1)
         {
-            // mainTrader icin
+            // mainTrader icin (MultiTrader için anlamlı)
+
+            trader.signals.AlEnabled = true;
+            trader.signals.SatEnabled = true;
+            trader.signals.FlatOlEnabled = true;
+            trader.signals.PasGecEnabled = false;
+            trader.signals.KarAlEnabled = false;
+            trader.signals.ZararKesEnabled = false;
+            trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+
+            var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+            trader.StartDateTimeStr = dateTimes[0];
+            trader.StopDateTimeStr  = dateTimes[1];
+
+            var startDateTime       = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StartDateStr     = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
+            trader.StartTimeStr     = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
+
+            var stopDateTime        = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
+            trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
         }
         else if(traderId == 0)
         {
-            // 0 id'li trader icin
+            // 0 id'li trader icin (SingleTrader için bu default'dur)
+
+            trader.signals.AlEnabled = true;
+            trader.signals.SatEnabled = true;
+            trader.signals.FlatOlEnabled = true;
+            trader.signals.PasGecEnabled = false;
+            trader.signals.KarAlEnabled = false;
+            trader.signals.ZararKesEnabled = false;
+            trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+
+            var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+            trader.StartDateTimeStr = dateTimes[0];
+            trader.StopDateTimeStr  = dateTimes[1];
+
+            var startDateTime       = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StartDateStr     = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
+            trader.StartTimeStr     = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
+
+            var stopDateTime        = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
+            trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
         }
         else if (traderId == 1)
         {
             // 1 id'li trader icin
+
+            trader.signals.AlEnabled = true;
+            trader.signals.SatEnabled = true;
+            trader.signals.FlatOlEnabled = true;
+            trader.signals.PasGecEnabled = false;
+            trader.signals.KarAlEnabled = false;
+            trader.signals.ZararKesEnabled = false;
+            trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+
+            var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+            trader.StartDateTimeStr = dateTimes[0];
+            trader.StopDateTimeStr  = dateTimes[1];
+
+            var startDateTime       = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StartDateStr     = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
+            trader.StartTimeStr     = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
+
+            var stopDateTime        = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
+            trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
         }
-
-        var dateTimes = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
-
-        trader.StartDateTimeStr = dateTimes[0];
-        trader.StopDateTimeStr = dateTimes[1];
-
-        var startDateTime = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
-        trader.StartDateStr = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
-        trader.StartTimeStr = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
-
-        var stopDateTime = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
-        trader.StopDateStr = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
-        trader.StopTimeStr = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
     }
 
     public void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader, int id = 0)
@@ -751,6 +804,30 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Enable savingStatistics
             singleTrader.SaveStatisticsToFile = true;
+
+            // Enable all per-output statistics flags explicitly
+            singleTrader.SaveFullStatsTxtEnabled             = true;
+            singleTrader.SaveFullStatsCsvEnabled             = true;
+            singleTrader.SaveMinimalStatsTxtEnabled          = true;
+            singleTrader.SaveMinimalStatsCsvEnabled          = true;
+            singleTrader.SaveFullListsTxtEnabled             = true;
+            singleTrader.SaveFullListsCsvEnabled             = true;
+            singleTrader.SaveMinimalListsTxtEnabled          = true;
+            singleTrader.SaveMinimalListsCsvEnabled          = true;
+            singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
+            singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
+
+            // Manually assign custom output file names (as requested)
+            singleTrader.FullStatsTxtFileName = "SingleTraderStatistics.txt";
+            singleTrader.FullStatsCsvFileName = "SingleTraderStatistics.csv";
+            singleTrader.MinimalStatsTxtFileName = "SingleTraderStatisticsMinimal.txt";
+            singleTrader.MinimalStatsCsvFileName = "SingleTraderStatisticsMinimal.csv";
+            singleTrader.FullListsTxtFileName = "SingleTraderLists.txt";
+            singleTrader.FullListsCsvFileName = "SingleTraderLists.csv";
+            singleTrader.MinimalListsTxtFileName = "SingleTraderListsMinimal.txt";
+            singleTrader.MinimalListsCsvFileName = "SingleTraderListsMinimal.csv";
+            singleTrader.FullStatsTxtFormattedFileName = "SingleTraderStatisticsFormatted.txt";
+            singleTrader.MinimalStatsTxtFormattedFileName = "SingleTraderStatisticsFormatted.txt";
 
             // Init
             singleTrader.Init();
