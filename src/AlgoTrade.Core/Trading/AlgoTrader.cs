@@ -1027,6 +1027,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // *****************************************************************************
             // Create child SingleTraders and add to MultipleTrader
             // *****************************************************************************
+            // TODO : createChildTraders leri Program.cs seviyesinde yapılmasını sağlamak...
             createChildTraders();
 
             multipleTrader.Init();
