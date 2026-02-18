@@ -435,6 +435,28 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _strategyConfigs.Clear();
     }
 
+    public void ConfigureStrategiesFromConfig(string configFilePath, List<(string name, string version)> selections)
+    {
+        if (string.IsNullOrWhiteSpace(configFilePath))
+            throw new ArgumentException("Config file path cannot be null or empty.", nameof(configFilePath));
+
+        if (!File.Exists(configFilePath))
+            throw new FileNotFoundException($"Strategy config file not found: {configFilePath}");
+
+        var loader = new StrategyConfigLoader(configFilePath);
+        loader.LoadFromFile();
+
+        for (int i = 0; i < selections.Count; i++)
+        {
+            var (name, version) = selections[i];
+            var config = loader.GetConfiguration(name, version);
+            if (config is null)
+                throw new InvalidOperationException($"Strategy configuration not found: strategy='{name}', version='{version}'.");
+
+            AddStrategyConfig(i, config.StrategyName, config.GetParameterValues());
+        }
+    }
+
     public void AddQueryConfig(int id, string queryName, Dictionary<string, object> parameters)
     {
         _queryConfigs.Add(new QueryConfigEntry(id, queryName, new Dictionary<string, object>(parameters, StringComparer.OrdinalIgnoreCase)));
@@ -443,6 +465,28 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public void ClearQueryConfigs()
     {
         _queryConfigs.Clear();
+    }
+
+    public void ConfigureQueriesFromConfig(string configFilePath, List<(string name, string version)> selections)
+    {
+        if (string.IsNullOrWhiteSpace(configFilePath))
+            throw new ArgumentException("Config file path cannot be null or empty.", nameof(configFilePath));
+
+        if (!File.Exists(configFilePath))
+            throw new FileNotFoundException($"Query config file not found: {configFilePath}");
+
+        var loader = new QueryConfigLoader(configFilePath);
+        loader.LoadFromFile();
+
+        for (int i = 0; i < selections.Count; i++)
+        {
+            var (name, version) = selections[i];
+            var config = loader.GetConfiguration(name, version);
+            if (config is null)
+                throw new InvalidOperationException($"Query configuration not found: query='{name}', version='{version}'.");
+
+            AddQueryConfig(i, config.QueryName, config.GetParameterValues());
+        }
     }
 
     public void AddEquityCurveFilterConfig(int id, bool enabled, bool thresholdTypeIsPercent, double profitThreshold, double lossThreshold, ConfirmationTrigger trigger)

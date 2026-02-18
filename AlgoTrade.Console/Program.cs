@@ -147,6 +147,75 @@ void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, do
     return (configs[0].name, configs[0].version);
 }
 
+List<(string name, string version)>? ShowMultiConfigSelectionMenu(
+    string configType,
+    List<(string name, string version, string display)> configs,
+    int timeoutSeconds = 15)
+{
+    if (configs.Count == 0)
+    {
+        LogManager.LogRaw($"\n{configType} config dosyasinda yapilandirma bulunamadi.");
+        return null;
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"{configType} Config Secimi (MultiTrader - virgul ile coklu secim, ornek: 1,3,5 | all=tumunu sec):");
+    for (int i = 0; i < configs.Count; i++)
+    {
+        var c = configs[i];
+        Console.WriteLine($"  [{i + 1}] {c.name} | {c.version} | {c.display}");
+    }
+    Console.WriteLine();
+
+    string? input = null;
+    for (int i = timeoutSeconds; i > 0; i--)
+    {
+        Console.Write($"\rSeciminiz (default: all) ({i} sn): ");
+        if (Console.KeyAvailable)
+        {
+            input = Console.ReadLine()?.Trim();
+            break;
+        }
+        Thread.Sleep(1000);
+    }
+
+    if (input == null)
+    {
+        Console.Write($"\rSeciminiz (default: all) (0 sn): ");
+        Console.WriteLine();
+        Console.WriteLine("Zaman asimi - tum config'ler secildi.");
+    }
+
+    // all veya bos → tumu sec
+    if (string.IsNullOrEmpty(input) || input.Equals("all", StringComparison.OrdinalIgnoreCase))
+    {
+        return configs.Select(c => (c.name, c.version)).ToList();
+    }
+
+    // Virgul ile ayrilmis numaralar: "1,3,5"
+    var selections = new List<(string name, string version)>();
+    var parts = input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    foreach (var part in parts)
+    {
+        if (int.TryParse(part, out int sel) && sel >= 1 && sel <= configs.Count)
+        {
+            selections.Add((configs[sel - 1].name, configs[sel - 1].version));
+        }
+        else
+        {
+            Console.WriteLine($"Gecersiz numara: {part} — atlanıyor.");
+        }
+    }
+
+    if (selections.Count == 0)
+    {
+        Console.WriteLine("Gecersiz secim - tum config'ler secildi.");
+        return configs.Select(c => (c.name, c.version)).ToList();
+    }
+
+    return selections;
+}
+
 void ConfigureStrategy()
 {
     if (algoTrader is null)
@@ -288,23 +357,46 @@ void ConfigureStrategies()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    algoTrader.ClearStrategyConfigs();
+    string configPath = Path.Combine(AppSettings.InputsDir, "StrategyConfig.txt");
 
-    // Id=0 : SimpleMostStrategy
-    algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, object>
+    if (File.Exists(configPath))
     {
-        ["period"] = 21,
-        ["percent"] = 1.0,
-        ["choice"] = 0
-    });
+        var loader = new StrategyConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
 
-    // Id=1 : SimpleMostStrategy (farklı parametrelerle)
-    algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
+        var menuItems = allConfigs
+            .Select(c => (c.StrategyName, c.Version, c.GetParametersDisplayString()))
+            .ToList();
+
+        var selections = ShowMultiConfigSelectionMenu("Strategy", menuItems);
+        if (selections is null) return;
+
+        algoTrader.ClearStrategyConfigs();
+        algoTrader.ConfigureStrategiesFromConfig(configPath, selections);
+
+        LogManager.LogRaw($"\nStrategies loaded from config ({selections.Count} adet):");
+        for (int i = 0; i < selections.Count; i++)
+            LogManager.LogRaw($"  Id={i}: {selections[i].name} | {selections[i].version}");
+    }
+    else
     {
-        ["period"] = 14,
-        ["percent"] = 0.5,
-        ["choice"] = 0
-    });
+        LogManager.LogRaw($"\nStrategy config file not found: {configPath}");
+        algoTrader.ClearStrategyConfigs();
+        algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, object>
+        {
+            ["period"] = 21,
+            ["percent"] = 1.0,
+            ["choice"] = 0
+        });
+        algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
+        {
+            ["period"] = 14,
+            ["percent"] = 0.5,
+            ["choice"] = 0
+        });
+        LogManager.LogRaw("\nStrategy config file not found, fallback configured from in-code parameters.");
+    }
 }
 
 void ConfigureQueries()
@@ -312,23 +404,46 @@ void ConfigureQueries()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    algoTrader.ClearQueryConfigs();
+    string configPath = Path.Combine(AppSettings.InputsDir, "QueryConfig.txt");
 
-    // Id=0 : SimpleQuery1
-    algoTrader.AddQueryConfig(0, "SimpleQuery1", new Dictionary<string, object>
+    if (File.Exists(configPath))
     {
-        ["ma8Period"] = 8,
-        ["ma200Period"] = 200,
-        ["choice"] = 0
-    });
+        var loader = new QueryConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
 
-    // Id=1 : SimpleQuery1 (farklı parametrelerle)
-    algoTrader.AddQueryConfig(1, "SimpleQuery1", new Dictionary<string, object>
+        var menuItems = allConfigs
+            .Select(c => (c.QueryName, c.Version, c.GetParametersDisplayString()))
+            .ToList();
+
+        var selections = ShowMultiConfigSelectionMenu("Query", menuItems);
+        if (selections is null) return;
+
+        algoTrader.ClearQueryConfigs();
+        algoTrader.ConfigureQueriesFromConfig(configPath, selections);
+
+        LogManager.LogRaw($"\nQueries loaded from config ({selections.Count} adet):");
+        for (int i = 0; i < selections.Count; i++)
+            LogManager.LogRaw($"  Id={i}: {selections[i].name} | {selections[i].version}");
+    }
+    else
     {
-        ["ma8Period"] = 5,
-        ["ma200Period"] = 100,
-        ["choice"] = 0
-    });
+        LogManager.LogRaw($"\nQuery config file not found: {configPath}");
+        algoTrader.ClearQueryConfigs();
+        algoTrader.AddQueryConfig(0, "SimpleQuery1", new Dictionary<string, object>
+        {
+            ["ma8Period"] = 8,
+            ["ma200Period"] = 200,
+            ["choice"] = 0
+        });
+        algoTrader.AddQueryConfig(1, "SimpleQuery1", new Dictionary<string, object>
+        {
+            ["ma8Period"] = 5,
+            ["ma200Period"] = 100,
+            ["choice"] = 0
+        });
+        LogManager.LogRaw("\nQuery config file not found, fallback configured from in-code parameters.");
+    }
 }
 
 void ConfigureOptimization()
