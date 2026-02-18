@@ -267,6 +267,10 @@ void ConfigureOptimization()
 
         LogManager.LogRaw("\nOptimization config file not found, fallback optimization configured from in-code parameters.");
     }
+
+    // Optimization range: FullOpt (default) or PartialOpt
+    // -1 = en bastan / en sona kadar (FullOpt)
+    algoTrader.SetOptimizationRange(from: -1, to: -1);
 }
 
 void ConfigureEquityCurveFilters()

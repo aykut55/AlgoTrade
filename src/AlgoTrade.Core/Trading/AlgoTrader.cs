@@ -72,6 +72,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private readonly List<OptimizationParameterRangeEntry> _optimizationParameterRanges = new();
     public IReadOnlyList<OptimizationParameterRangeEntry> OptimizationParameterRanges => _optimizationParameterRanges;
     private StrategyFactory? _optimizationStrategyFactory;
+    public int OptimizationFrom { get; set; } = -1;   // -1 = en bastan
+    public int OptimizationTo { get; set; } = -1;     // -1 = en sona kadar
 
     // EquityCurveFilter list for MultipleTrader
     private readonly List<EquityCurveFilterConfigEntry> _equityCurveFilterConfigs = new();
@@ -436,6 +438,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public void SetOptimizationStrategyFactory(StrategyFactory factory)
     {
         _optimizationStrategyFactory = factory ?? throw new ArgumentNullException(nameof(factory));
+    }
+
+    public void SetOptimizationRange(int from, int to)
+    {
+        OptimizationFrom = from;
+        OptimizationTo = to;
     }
 
     public IStrategy CreateStrategyFromRegistry(List<StockData> data, IndicatorManager ind, string strategyName, Dictionary<string, object> parameters)
@@ -1284,6 +1292,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Run optimization
             _timer!.RestartTimer("1");
+
+            // Set optimization range (PartialOpt)
+            singleTraderOptimizer.OptimizationFrom = OptimizationFrom;
+            singleTraderOptimizer.OptimizationTo = OptimizationTo;
 
             // Set state flags
             singleTraderOptimizer.IsStarted = true;

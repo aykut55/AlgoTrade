@@ -117,6 +117,10 @@ public class SingleTraderOptimizer : IDisposable
     public bool IsStopped { get; internal set; }
     public bool IsStopRequested { get; internal set; }
 
+    // Optimization range (PartialOpt)
+    public int OptimizationFrom { get; set; } = -1;   // -1 = en bastan
+    public int OptimizationTo { get; set; } = -1;     // -1 = en sona kadar
+
     // Save intermediate results
     public int SaveEveryN { get; set; }  // Her kaç kombinasyonda bir ara sonuç kaydet (0 = disable)
     public event Action<List<OptimizationResult>, int>? OnSaveResults;  // (results, currentCombination)
@@ -271,7 +275,11 @@ public class SingleTraderOptimizer : IDisposable
         int totalCombinations = AllCombinations.Count;
         int currentCombination = 0;
 
-        LogManager.LogRaw($"Starting optimization: {totalCombinations} combinations to test");
+        // Resolve From/To (-1 means start/end)
+        int effectiveFrom = OptimizationFrom == -1 ? 1 : OptimizationFrom;
+        int effectiveTo = OptimizationTo == -1 ? totalCombinations : OptimizationTo;
+
+        LogManager.LogRaw($"Starting optimization: {totalCombinations} combinations total, running [{effectiveFrom}-{effectiveTo}]");
         foreach (var range in ParameterRanges)
         {
             LogManager.LogRaw($"  - {range.Name}: {range.Min} to {range.Max} (step: {range.Step})");
@@ -280,8 +288,6 @@ public class SingleTraderOptimizer : IDisposable
         // Her kombinasyon icin
         foreach (var paramCombo in AllCombinations)
         {
-            LogManager.LogRaw($"");
-
             cancellationToken.ThrowIfCancellationRequested();
 
             if (IsStopRequested)
@@ -291,6 +297,14 @@ public class SingleTraderOptimizer : IDisposable
             }
 
             currentCombination++;
+
+            // PartialOpt: skip combinations outside [From-To] range
+            if (currentCombination < effectiveFrom)
+                continue;
+            if (currentCombination > effectiveTo)
+                break;
+
+            LogManager.LogRaw($"");
 
             // Progress raporla
             OnOptimizationProgress?.Invoke(currentCombination, totalCombinations);
