@@ -5,6 +5,8 @@ using AlgoTrade.Core.Scripting;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Trading.Strategies;
+using AlgoTrade.Core.Trading.Queries;
 using ScottPlot.Colormaps;
 using System;
 using System.Collections.Concurrent;
@@ -91,6 +93,59 @@ void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, do
     // Not: Her yeni run oncesi _progressStartTime = null yapilmali.
 }
 
+(string name, string version)? ShowConfigSelectionMenu(
+    string configType,
+    List<(string name, string version, string display)> configs,
+    int timeoutSeconds = 10)
+{
+    if (configs.Count == 0)
+    {
+        LogManager.LogRaw($"\n{configType} config dosyasinda yapilandirma bulunamadi.");
+        return null;
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"{configType} Config Secimi:");
+    for (int i = 0; i < configs.Count; i++)
+    {
+        var c = configs[i];
+        Console.WriteLine($"  [{i + 1}] {c.name} | {c.version} | {c.display}");
+    }
+    Console.WriteLine();
+
+    string? input = null;
+    for (int i = timeoutSeconds; i > 0; i--)
+    {
+        Console.Write($"\rSeciminiz (default: 1) ({i} sn): ");
+        if (Console.KeyAvailable)
+        {
+            input = Console.ReadLine()?.Trim();
+            break;
+        }
+        Thread.Sleep(1000);
+    }
+
+    if (input == null)
+    {
+        Console.Write($"\rSeciminiz (default: 1) (0 sn): ");
+        Console.WriteLine();
+        Console.WriteLine("Zaman asimi - ilk config secildi.");
+    }
+
+    if (string.IsNullOrEmpty(input))
+    {
+        return (configs[0].name, configs[0].version);
+    }
+
+    if (int.TryParse(input, out int sel) && sel >= 1 && sel <= configs.Count)
+    {
+        return (configs[sel - 1].name, configs[sel - 1].version);
+    }
+
+    Console.WriteLine("Gecersiz secim - ilk config secildi.");
+    return (configs[0].name, configs[0].version);
+}
+
 void ConfigureStrategy()
 {
     if (algoTrader is null)
@@ -100,8 +155,19 @@ void ConfigureStrategy()
 
     if (File.Exists(configPath))
     {
-        algoTrader.ConfigureStrategyFromConfig(configPath, "SimpleMostStrategy", "v1-Default");
-        LogManager.LogRaw($"\nStrategy loaded from config: {configPath}");
+        var loader = new StrategyConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
+
+        var menuItems = allConfigs
+            .Select(c => (c.StrategyName, c.Version, c.GetParametersDisplayString()))
+            .ToList();
+
+        var selected = ShowConfigSelectionMenu("Strategy", menuItems);
+        if (selected is null) return;
+
+        algoTrader.ConfigureStrategyFromConfig(configPath, selected.Value.name, selected.Value.version);
+        LogManager.LogRaw($"\nStrategy loaded from config: {selected.Value.name} | {selected.Value.version}");
     }
     else
     {
@@ -125,8 +191,19 @@ void ConfigureQuery()
 
     if (File.Exists(configPath))
     {
-        algoTrader.ConfigureQueryFromConfig(configPath, "SimpleQuery1", "v1-Default");
-        LogManager.LogRaw($"\nQuery loaded from config: {configPath}");
+        var loader = new QueryConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
+
+        var menuItems = allConfigs
+            .Select(c => (c.QueryName, c.Version, c.GetParametersDisplayString()))
+            .ToList();
+
+        var selected = ShowConfigSelectionMenu("Query", menuItems);
+        if (selected is null) return;
+
+        algoTrader.ConfigureQueryFromConfig(configPath, selected.Value.name, selected.Value.version);
+        LogManager.LogRaw($"\nQuery loaded from config: {selected.Value.name} | {selected.Value.version}");
     }
     else
     {
@@ -241,8 +318,19 @@ void ConfigureOptimization()
 
     if (File.Exists(configPath))
     {
-        algoTrader.ConfigureOptimizationFromConfig(configPath, "SimpleMostStrategy", "v1-Opt");
-        LogManager.LogRaw($"\nOptimization loaded from config: {configPath}");
+        var loader = new OptimizationConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
+
+        var menuItems = allConfigs
+            .Select(c => (c.StrategyName, c.Version, c.GetDisplayString()))
+            .ToList();
+
+        var selected = ShowConfigSelectionMenu("Optimization", menuItems);
+        if (selected is null) return;
+
+        algoTrader.ConfigureOptimizationFromConfig(configPath, selected.Value.name, selected.Value.version);
+        LogManager.LogRaw($"\nOptimization loaded from config: {selected.Value.name} | {selected.Value.version}");
     }
     else
     {
@@ -1010,21 +1098,39 @@ async Task runInteractiveScriptMultipleTrader()
     }
 }
 
-TraderRunMode showRunModeMenu()
+TraderRunMode showRunModeMenu(int timeoutSeconds = 10)
 {
     Console.WriteLine();
-    Console.WriteLine("Run Mode Seçimi:");
+    Console.WriteLine("Run Mode Secimi:");
     Console.WriteLine("  [1] TradeOnly");
     Console.WriteLine("  [2] TradeAndQuery");
     Console.WriteLine("  [3] QueryOnly");
-    Console.Write("\nSeçiminiz (default: 2): ");
+    Console.WriteLine();
 
-    var input = Console.ReadLine()?.Trim();
-    return input switch
+    string? input = null;
+    for (int i = timeoutSeconds; i > 0; i--)
     {
-        "1" => TraderRunMode.TradeOnly,
+        Console.Write($"\rSeciminiz (default: 1) ({i} sn): ");
+        if (Console.KeyAvailable)
+        {
+            input = Console.ReadLine()?.Trim();
+            break;
+        }
+        Thread.Sleep(1000);
+    }
+
+    if (input == null)
+    {
+        Console.Write($"\rSeciminiz (default: 1) (0 sn): ");
+        Console.WriteLine();
+        Console.WriteLine("Zaman asimi - TradeOnly secildi.");
+    }
+
+    return (input ?? "1") switch
+    {
+        "2" => TraderRunMode.TradeAndQuery,
         "3" => TraderRunMode.QueryOnly,
-        _ => TraderRunMode.TradeAndQuery
+        _ => TraderRunMode.TradeOnly
     };
 }
 
