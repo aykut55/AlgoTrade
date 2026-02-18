@@ -1085,8 +1085,45 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     {
         double pct = (double)current / total * 100.0;
         OnTraderProgress?.Invoke(current, total, pct);
+
+        /*
+                             var elapsed = System.DateTime.Now - startTime;
+                            var percentComplete = (double)currentCombination / totalCombinations * 100.0;
+
+                            // Estimated time remaining
+                            var estimatedTotal = elapsed.TotalSeconds / percentComplete * 100.0;
+                            var estimatedRemaining = TimeSpan.FromSeconds(estimatedTotal - elapsed.TotalSeconds);
+
+                            var progressInfo = new BacktestProgressInfo
+                            {
+                                CurrentBar = currentCombination,
+                                TotalBars = totalCombinations,
+                                PercentComplete = percentComplete,
+                                StatusMessage = $"Testing combination {currentCombination}/{totalCombinations}",
+                                ElapsedTime = elapsed,
+                                EstimatedTimeRemaining = estimatedRemaining
+                            };
+         */
     }
 
+    private void OnSingleTraderProgressCallback(int current, int total)
+    {
+        double pct = (double)current / total * 100.0;
+        OnTraderProgress?.Invoke(current, total, pct);
+        /*
+                var percentComplete = (double)currentBar / totalBarsInner * 100.0;
+
+                var progressInfo = new BacktestProgressInfo
+                {
+                    CurrentBar = currentBar,
+                    TotalBars = totalBarsInner,
+                    PercentComplete = percentComplete,
+                    StatusMessage = $"Processing bar {currentBar}/{totalBarsInner}",
+                    ElapsedTime = TimeSpan.Zero,
+                    EstimatedTimeRemaining = TimeSpan.Zero
+                };
+        */
+    }
     public async Task RunSingleTraderOptWithProgressAsync(CancellationToken cancellationToken = default)
     {
         int totalBars = 0;
@@ -1175,7 +1212,17 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTraderOptimizer = new SingleTraderOptimizer(0, this.Data, indicators, _logger);
 
             // Progress callback
-            singleTraderOptimizer.OnOptimizationProgress += OnOptimizationProgress;
+            singleTraderOptimizer.OnOptimizationProgress += OnOptimizationProgress;                                     // singleTraderOptimizer.OnOptimizationProgress = (currentCombination, totalCombinations)
+            singleTraderOptimizer.OnSingleTraderProgressCallback += OnSingleTraderProgressCallback;                    // (currentBar, totalBarsInner)
+
+            /*
+            bool csvFileLoggingEnabled = true;   // CSV enabled - for fast processing later
+            bool txtFileLoggingEnabled = true;   // TXT enabled - for human readable logs
+            bool appendEnabled = true;
+            singleTraderOptimizer.SetOptimizationLogFileParams(csvFileLoggingEnabled, "logs\\singleTraderOptLog.csv",
+                                                                txtFileLoggingEnabled, "logs\\singleTraderOptLog.txt",
+                                                                appendEnabled);
+            */
 
             // Parametre range'leri (hardcoded)
             singleTraderOptimizer.AddParameterRange("period", 10, 50, 10);
@@ -1205,7 +1252,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             {
                 singleTraderOptimizer.Reset();
                 singleTraderOptimizer.Init();
-                singleTraderOptimizer.Run();
+                singleTraderOptimizer.Run(cancellationToken);
             }, cancellationToken);
 
             _timer!.StopTimer("1");

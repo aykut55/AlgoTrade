@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Indicators;
@@ -230,25 +231,23 @@ public class SingleTraderOptimizer : IDisposable
         return singleTrader;
     }
 
-    public void runSingleTrader(SingleTrader singleTrader, int totalBars)
+    public void runSingleTrader(SingleTrader singleTrader, int totalBars, CancellationToken cancellationToken = default)
     {
         for (int i = 0; i < totalBars; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (i % 1000 == 0)
                 OnSingleTraderProgressCallback?.Invoke(i, totalBars);
 
-            /*
-            TODO : Yukarıdaki TODO'ya gore burası acılacak
-            if (IsStopRequested) {
+            if (IsStopRequested)
                 break;
-            }
-            */
 
             singleTrader.Run(i);
         }
     }
     
-    public OptimizationResult? Run()
+    public OptimizationResult? Run(CancellationToken cancellationToken = default)
     {
         if (!IsInitialized)
             throw new InvalidOperationException("Optimizer not initialized");
@@ -283,6 +282,8 @@ public class SingleTraderOptimizer : IDisposable
         {
             LogManager.LogRaw($"");
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (IsStopRequested)
             {
                 LogManager.LogRaw($"Optimization stopped at combination {currentCombination}/{totalCombinations}");
@@ -313,7 +314,7 @@ public class SingleTraderOptimizer : IDisposable
             singleTrader.IsStopRequested = false;
 
             // Run singleTrader
-            runSingleTrader(singleTrader, totalBars);
+            runSingleTrader(singleTrader, totalBars, cancellationToken);
 
             // Collect singleTrader statistics
             singleTrader.Finalize();
