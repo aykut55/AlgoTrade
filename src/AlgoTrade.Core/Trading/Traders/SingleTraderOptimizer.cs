@@ -1037,9 +1037,20 @@ public class SingleTraderOptimizer : IDisposable
         trader.ConfigureUserFlagsOnce();
     }
 
+    public EquityCurveFilterConfigEntry? EquityCurveFilterConfig { get; set; }
+
     private void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
     {
-        // TODO: Equity curve filter konfigurasyonu ileride eklenecek
+        if (EquityCurveFilterConfig is null)
+            return;
+
+        trader.signals.EquityCurveFilteringEnabled = EquityCurveFilterConfig.Enabled;
+        trader.ConfigureEquityCurveFilter(
+            isPercent: EquityCurveFilterConfig.ThresholdTypeIsPercent,
+            profitThreshold: EquityCurveFilterConfig.ProfitConfirmationThreshold,
+            lossThreshold: EquityCurveFilterConfig.LossConfirmationThreshold,
+            trigger: EquityCurveFilterConfig.ConfirmationTrigger
+        );
     }
 
     #endregion

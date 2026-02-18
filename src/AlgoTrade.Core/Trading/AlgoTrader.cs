@@ -184,14 +184,28 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         trader.StopTimeStr = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
     }
 
-    public void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
+    public void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader, int id = 0)
     {
-        trader.signals.EquityCurveFilteringEnabled = this.EquityCurveFilteringEnabled;
+        var config = _equityCurveFilterConfigs.FirstOrDefault(c => c.Id == id);
+        if (config is null)
+        {
+            // Listede yoksa AlgoTrader property'lerinden oku (backward compat / fallback)
+            trader.signals.EquityCurveFilteringEnabled = this.EquityCurveFilteringEnabled;
+            trader.ConfigureEquityCurveFilter(
+                isPercent: this.ThresholdTypeIsPercent,
+                profitThreshold: this.ProfitConfirmationThreshold,
+                lossThreshold: this.LossConfirmationThreshold,
+                trigger: this.ConfirmationTrigger
+            );
+            return;
+        }
+
+        trader.signals.EquityCurveFilteringEnabled = config.Enabled;
         trader.ConfigureEquityCurveFilter(
-            isPercent: this.ThresholdTypeIsPercent,
-            profitThreshold: this.ProfitConfirmationThreshold,
-            lossThreshold: this.LossConfirmationThreshold,
-            trigger: this.ConfirmationTrigger
+            isPercent: config.ThresholdTypeIsPercent,
+            profitThreshold: config.ProfitConfirmationThreshold,
+            lossThreshold: config.LossConfirmationThreshold,
+            trigger: config.ConfirmationTrigger
         );
     }
 
@@ -339,6 +353,26 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             throw new InvalidOperationException($"Query configuration not found: query='{queryName}', version='{version ?? "first"}'.");
 
         ConfigureQuery(config.QueryName, config.GetParameterValues());
+    }
+
+    public void ConfigureEquityCurveFilterFromConfig(string configFilePath, string version, int id = 0)
+    {
+        if (string.IsNullOrWhiteSpace(configFilePath))
+            throw new ArgumentException("Config file path cannot be null or empty.", nameof(configFilePath));
+
+        if (!File.Exists(configFilePath))
+            throw new FileNotFoundException($"EquityCurveFilter config file not found: {configFilePath}");
+
+        var loader = new EquityCurve.EquityCurveFilterConfigLoader(configFilePath);
+        loader.LoadFromFile();
+
+        var config = loader.GetConfiguration(version);
+
+        if (config is null)
+            throw new InvalidOperationException($"EquityCurveFilter configuration not found: version='{version}'.");
+
+        AddEquityCurveFilterConfig(id, config.Enabled, config.ThresholdTypeIsPercent,
+            config.ProfitThreshold, config.LossThreshold, config.Trigger);
     }
 
     // ==========================================================================
@@ -837,7 +871,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             OnApplyUserFlags(childTrader);
 
-            SetSingleTraderConfigureEquityCurveFilter(childTrader);
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -887,7 +921,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             OnApplyUserFlags(childTrader);
 
-            SetSingleTraderConfigureEquityCurveFilter(childTrader);
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -937,7 +971,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             OnApplyUserFlags(childTrader);
 
-            SetSingleTraderConfigureEquityCurveFilter(childTrader);
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -1297,6 +1331,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Set optimization range (PartialOpt)
             singleTraderOptimizer.OptimizationFrom = OptimizationFrom;
             singleTraderOptimizer.OptimizationTo = OptimizationTo;
+
+            // Set equity curve filter config (id=0 varsa optimizer'a aktar)
+            var ecfConfig = _equityCurveFilterConfigs.FirstOrDefault(c => c.Id == 0);
+            singleTraderOptimizer.EquityCurveFilterConfig = ecfConfig;
 
             // Set state flags
             singleTraderOptimizer.IsStarted = true;

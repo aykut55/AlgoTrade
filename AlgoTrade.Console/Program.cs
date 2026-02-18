@@ -7,6 +7,7 @@ using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Queries;
+using AlgoTrade.Core.Trading.EquityCurve;
 using ScottPlot.Colormaps;
 using System;
 using System.Collections.Concurrent;
@@ -220,19 +221,40 @@ void ConfigureQuery()
 
 void ConfigureEquityCurveFilter()
 {
-    algoTrader.EquityCurveFilteringEnabled = false;
-    algoTrader.ThresholdTypeIsPercent = true;
-    if (algoTrader.ThresholdTypeIsPercent)
+    if (algoTrader is null)
+        throw new InvalidOperationException("AlgoTrader instance is null.");
+
+    string configPath = Path.Combine(AppSettings.InputsDir, "EquityCurveFilterConfig.txt");
+
+    if (File.Exists(configPath))
     {
-        algoTrader.ProfitConfirmationThreshold = 0.05;
-        algoTrader.LossConfirmationThreshold = -0.05;
+        var loader = new EquityCurveFilterConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
+
+        var menuItems = allConfigs
+            .Select(c => ("EquityCurveFilter", c.Version, c.GetDisplayString()))
+            .ToList();
+
+        var selected = ShowConfigSelectionMenu("EquityCurveFilter", menuItems);
+        if (selected is null) return;
+
+        algoTrader.ClearEquityCurveFilterConfigs();
+        algoTrader.ConfigureEquityCurveFilterFromConfig(configPath, selected.Value.version, id: 0);
+        LogManager.LogRaw($"\nEquityCurveFilter loaded from config: {selected.Value.version}");
     }
     else
     {
-        algoTrader.ProfitConfirmationThreshold = 1000;
-        algoTrader.LossConfirmationThreshold = -1000;
+        LogManager.LogRaw($"\nEquityCurveFilter config file not found: {configPath}");
+        algoTrader.ClearEquityCurveFilterConfigs();
+        algoTrader.AddEquityCurveFilterConfig(0,
+            enabled: false,
+            thresholdTypeIsPercent: true,
+            profitThreshold: 0.05,
+            lossThreshold: -0.05,
+            trigger: ConfirmationTrigger.Both);
+        LogManager.LogRaw("\nEquityCurveFilter config file not found, fallback configured from in-code parameters.");
     }
-    algoTrader.ConfirmationTrigger = ConfirmationTrigger.Both;
 }
 
 void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectories = false)
@@ -366,23 +388,49 @@ void ConfigureEquityCurveFilters()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    algoTrader.ClearEquityCurveFilterConfigs();
+    string configPath = Path.Combine(AppSettings.InputsDir, "EquityCurveFilterConfig.txt");
 
-    // Id=0
-    algoTrader.AddEquityCurveFilterConfig(0,
-        enabled: false,
-        thresholdTypeIsPercent: true,
-        profitThreshold: 0.05,
-        lossThreshold: -0.05,
-        trigger: ConfirmationTrigger.Both);
+    if (File.Exists(configPath))
+    {
+        var loader = new EquityCurveFilterConfigLoader(configPath);
+        loader.LoadFromFile();
+        var allConfigs = loader.GetAllConfigurations();
 
-    // Id=1
-    algoTrader.AddEquityCurveFilterConfig(1,
-        enabled: false,
-        thresholdTypeIsPercent: true,
-        profitThreshold: 0.05,
-        lossThreshold: -0.05,
-        trigger: ConfirmationTrigger.Both);
+        var menuItems = allConfigs
+            .Select(c => ("EquityCurveFilter", c.Version, c.GetDisplayString()))
+            .ToList();
+
+        // Her childTrader icin ayri secim
+        int childCount = algoTrader.StrategyConfigs.Count;
+        algoTrader.ClearEquityCurveFilterConfigs();
+
+        for (int i = 0; i < childCount; i++)
+        {
+            LogManager.LogRaw($"\n--- ChildTrader Id={i} icin EquityCurveFilter ---");
+            var selected = ShowConfigSelectionMenu($"EquityCurveFilter (Id={i})", menuItems);
+            if (selected is null) return;
+
+            algoTrader.ConfigureEquityCurveFilterFromConfig(configPath, selected.Value.version, id: i);
+            LogManager.LogRaw($"EquityCurveFilter Id={i} loaded: {selected.Value.version}");
+        }
+    }
+    else
+    {
+        LogManager.LogRaw($"\nEquityCurveFilter config file not found: {configPath}");
+        algoTrader.ClearEquityCurveFilterConfigs();
+
+        int childCount = algoTrader.StrategyConfigs.Count;
+        for (int i = 0; i < childCount; i++)
+        {
+            algoTrader.AddEquityCurveFilterConfig(i,
+                enabled: false,
+                thresholdTypeIsPercent: true,
+                profitThreshold: 0.05,
+                lossThreshold: -0.05,
+                trigger: ConfirmationTrigger.Both);
+        }
+        LogManager.LogRaw("\nEquityCurveFilter config file not found, fallback configured from in-code parameters.");
+    }
 }
 
 void readStockData()
@@ -792,10 +840,7 @@ async Task runSingleTraderOptimization()
             algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
         }
 
-        // TODO : Su an SingleTraderOptimizer.SetSingleTraderConfigureEquityCurveFilter() body'si bos (TODO).
-        // Ileride equity curve filter ile optimization yapilmak istendiginde, once o metod implement edilmeli,
-        // sonra buradaki ConfigureEquityCurveFilter() anlamli hale gelecek.
-        //ConfigureEquityCurveFilter();
+        ConfigureEquityCurveFilter();
 
         ConfigureOptimization();
 
