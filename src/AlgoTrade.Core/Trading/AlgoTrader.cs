@@ -807,15 +807,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Enable all per-output statistics flags explicitly
             singleTrader.SaveFullStatsTxtEnabled             = true;
-            singleTrader.SaveFullStatsCsvEnabled             = true;
-            singleTrader.SaveMinimalStatsTxtEnabled          = true;
-            singleTrader.SaveMinimalStatsCsvEnabled          = true;
+            singleTrader.SaveFullStatsCsvEnabled             = false;
+            singleTrader.SaveMinimalStatsTxtEnabled          = false;
+            singleTrader.SaveMinimalStatsCsvEnabled          = false;
             singleTrader.SaveFullListsTxtEnabled             = true;
-            singleTrader.SaveFullListsCsvEnabled             = true;
-            singleTrader.SaveMinimalListsTxtEnabled          = true;
-            singleTrader.SaveMinimalListsCsvEnabled          = true;
-            singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
-            singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
+            singleTrader.SaveFullListsCsvEnabled             = false;
+            singleTrader.SaveMinimalListsTxtEnabled          = false;
+            singleTrader.SaveMinimalListsCsvEnabled          = false;
+            singleTrader.SaveFullStatsTxtFormattedEnabled    = false;
+            singleTrader.SaveMinimalStatsTxtFormattedEnabled = false;
 
             // Manually assign custom output file names (as requested)
             singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
