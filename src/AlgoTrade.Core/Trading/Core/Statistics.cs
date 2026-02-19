@@ -77,6 +77,7 @@ namespace AlgoTrade.Core.Trading.Statistics
         #region Time Statistics
 
         public double ToplamGecenSureAy { get; set; }
+        public double ToplamGecenSureHafta { get; set; }
         public int ToplamGecenSureGun { get; set; }
         public int ToplamGecenSureSaat { get; set; }
         public int ToplamGecenSureDakika { get; set; }
@@ -468,13 +469,15 @@ namespace AlgoTrade.Core.Trading.Statistics
             double sureSaat = elapsed.TotalHours;
             int sureGun = elapsed.Days;
             double sureAy = sureGun / 30.4;
+            double sureHafta = sureGun / 7.0;
 
             ToplamGecenSureAy      = sureAy;
+            ToplamGecenSureHafta   = sureHafta;
             ToplamGecenSureGun     = sureGun;
             ToplamGecenSureSaat    = (int)sureSaat;
             ToplamGecenSureDakika  = (int)sureDakika;
             OrtAylikIslemSayisi    = ToplamGecenSureAy > 0 ? 1.0 * IslemSayisi / ToplamGecenSureAy : 0;
-            OrtHaftalikIslemSayisi = 0.0;
+            OrtHaftalikIslemSayisi = ToplamGecenSureHafta > 0 ? 1.0 * IslemSayisi / ToplamGecenSureHafta : 0;
             OrtGunlukIslemSayisi   = ToplamGecenSureGun > 0 ? 1.0 * IslemSayisi / ToplamGecenSureGun : 0;
             OrtSaatlikIslemSayisi  = ToplamGecenSureSaat > 0 ? 1.0 * IslemSayisi / ToplamGecenSureSaat : 0;
 
@@ -686,6 +689,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
             // --- Time Statistics ---
             Add("ToplamGecenSureAy", ToplamGecenSureAy, "F1");
+            Add("ToplamGecenSureHafta", ToplamGecenSureHafta, "F1");
             Add("ToplamGecenSureGun", ToplamGecenSureGun);
             Add("ToplamGecenSureSaat", ToplamGecenSureSaat);
             Add("ToplamGecenSureDakika", ToplamGecenSureDakika);
@@ -1206,6 +1210,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             // === Time Statistics ===
             sb.AppendLine("┌─ TIME STATISTICS ──────────────────────────────────────────────────────────┐");
             sb.AppendLine($"│ Total Months             : {GetValue("ToplamGecenSureAy"),-50} │");
+            sb.AppendLine($"│ Total Weeks              : {GetValue("ToplamGecenSureHafta"),-50} │");
             sb.AppendLine($"│ Total Days               : {GetValue("ToplamGecenSureGun"),-50} │");
             sb.AppendLine($"│ Total Hours              : {GetValue("ToplamGecenSureSaat"),-50} │");
             sb.AppendLine($"│ Total Minutes            : {GetValue("ToplamGecenSureDakika"),-50} │");
@@ -1466,6 +1471,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
             // --- Time Statistics ---
             Add("ToplamGecenSureAy", ToplamGecenSureAy, "F1");
+            Add("ToplamGecenSureHafta", ToplamGecenSureHafta, "F1");
             Add("ToplamGecenSureGun", ToplamGecenSureGun);
             Add("ToplamGecenSureSaat", ToplamGecenSureSaat);
             Add("ToplamGecenSureDakika", ToplamGecenSureDakika);
@@ -1781,6 +1787,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             // === Time Statistics ===
             sb.AppendLine("┌─ TIME STATISTICS ──────────────────────────────────────────────────────────┐");
             sb.AppendLine($"│ Total Months             : {GetValue("ToplamGecenSureAy"),-50} │");
+            sb.AppendLine($"│ Total Weeks              : {GetValue("ToplamGecenSureHafta"),-50} │");
             sb.AppendLine($"│ Total Days               : {GetValue("ToplamGecenSureGun"),-50} │");
             sb.AppendLine($"│ Total Hours              : {GetValue("ToplamGecenSureSaat"),-50} │");
             sb.AppendLine($"│ Total Minutes            : {GetValue("ToplamGecenSureDakika"),-50} │");
@@ -1916,6 +1923,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
             // --- Time Statistics ---
             public double ToplamGecenSureAy;
+            public double ToplamGecenSureHafta;
             public int ToplamGecenSureGun;
             public int ToplamGecenSureSaat;
             public int ToplamGecenSureDakika;
@@ -2085,7 +2093,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "ToplamBarSayisi;SecilenBarNumarasi;SecilenBarTarihSaati;SecilenBarTarihi;SecilenBarSaati;" +
                        "IlkBarTarihSaati;IlkBarTarihi;IlkBarSaati;SonBarTarihSaati;SonBarTarihi;SonBarSaati;" +
                        "IlkBarIndex;SonBarIndex;SonBarAcilisFiyati;SonBarYuksekFiyati;SonBarDusukFiyati;SonBarKapanisFiyati;" +
-                       "ToplamGecenSureAy;ToplamGecenSureGun;ToplamGecenSureSaat;ToplamGecenSureDakika;" +
+                       "ToplamGecenSureAy;ToplamGecenSureHafta;ToplamGecenSureGun;ToplamGecenSureSaat;ToplamGecenSureDakika;" +
                        "OrtAylikIslemSayisi;OrtHaftalikIslemSayisi;OrtGunlukIslemSayisi;OrtSaatlikIslemSayisi;" +
                        //"IlkBakiyeFiyat;IlkBakiyePuan;BakiyeFiyat;BakiyePuan;GetiriFiyat;GetiriPuan;GetiriFiyatYuzde;GetiriPuanYuzde;" +  // Silinecek
                        "IlkBakiyeFiyat;BakiyeFiyat;GetiriFiyat;GetiriFiyatYuzde;" +
@@ -2124,7 +2132,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{ToplamBarSayisi};{SecilenBarNumarasi};{SecilenBarTarihSaati};{SecilenBarTarihi};{SecilenBarSaati};" +
                        $"{IlkBarTarihSaati};{IlkBarTarihi};{IlkBarSaati};{SonBarTarihSaati};{SonBarTarihi};{SonBarSaati};" +
                        $"{IlkBarIndex};{SonBarIndex};{SonBarAcilisFiyati:F4};{SonBarYuksekFiyati:F4};{SonBarDusukFiyati:F4};{SonBarKapanisFiyati:F4};" +
-                       $"{ToplamGecenSureAy:F1};{ToplamGecenSureGun};{ToplamGecenSureSaat};{ToplamGecenSureDakika};" +
+                       $"{ToplamGecenSureAy:F1};{ToplamGecenSureHafta:F1};{ToplamGecenSureGun};{ToplamGecenSureSaat};{ToplamGecenSureDakika};" +
                        $"{OrtAylikIslemSayisi:F2};{OrtHaftalikIslemSayisi:F2};{OrtGunlukIslemSayisi:F2};{OrtSaatlikIslemSayisi:F2};" +
                        //$"{IlkBakiyeFiyat:F2};{IlkBakiyePuan:F2};{BakiyeFiyat:F2};{BakiyePuan:F2};{GetiriFiyat:F2};{GetiriPuan:F4};{GetiriFiyatYuzde:F2};{GetiriPuanYuzde:F2};" +  // Silinecek
                        $"{IlkBakiyeFiyat:F2};{BakiyeFiyat:F2};{GetiriFiyat:F2};{GetiriFiyatYuzde:F2};" +
@@ -2268,6 +2276,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
                 // --- Time Statistics ---
                 ToplamGecenSureAy = ToplamGecenSureAy,
+                ToplamGecenSureHafta = ToplamGecenSureHafta,
                 ToplamGecenSureGun = ToplamGecenSureGun,
                 ToplamGecenSureSaat = ToplamGecenSureSaat,
                 ToplamGecenSureDakika = ToplamGecenSureDakika,
