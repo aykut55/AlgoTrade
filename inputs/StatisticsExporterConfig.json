@@ -13,8 +13,8 @@
         { "field": "Close", "header": "Close", "width": 10, "enabled": true },
         { "field": "Volume", "header": "Volume", "width": 10, "enabled": true },
         { "field": "Size", "header": "Size", "width": 10, "enabled": true },
-        { "field": "Diff", "header": "Diff", "width": 10, "enabled": true },
-        { "field": "ChangePct", "header": "ChangePct", "width": 10, "enabled": true },
+        { "field": "Diff", "header": "Change", "width": 10, "enabled": true },
+        { "field": "ChangePct", "header": "Change%", "width": 10, "enabled": true },
 
         { "field": "YonList", "header": "Yon", "width": 3, "enabled": true },
         { "field": "SeviyeList", "header": "Seviye", "width": 10, "enabled": true },

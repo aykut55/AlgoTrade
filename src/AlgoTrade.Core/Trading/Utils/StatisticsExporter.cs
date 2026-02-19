@@ -201,7 +201,7 @@ public class StatisticsExporter
         using StreamWriter writer = CreateSharedWriter(filePath);
         writer.WriteLine($"BAR-BY-BAR TRADING DATA (ALL) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
-        writer.WriteLine("".PadRight(500, '='));
+        writer.WriteLine("".PadRight(700, '='));
 
         var headerCells = new List<string>(columns.Count);
         foreach (var col in columns)
@@ -210,7 +210,7 @@ public class StatisticsExporter
             headerCells.Add((col.header ?? col.field ?? "").PadLeft(width));
         }
         writer.WriteLine(string.Join(" | ", headerCells));
-        writer.WriteLine("".PadRight(500, '-'));
+        writer.WriteLine("".PadRight(700, '-'));
 
         for (int i = 0; i < trader.Data.Count; i++)
         {
