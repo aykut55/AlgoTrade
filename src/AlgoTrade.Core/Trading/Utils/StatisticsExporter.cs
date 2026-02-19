@@ -271,34 +271,44 @@ public class StatisticsExporter
         if (columns == null || columns.Count == 0)
             throw new InvalidOperationException("Performans config has no enabled columns.");
 
+        var rows = _statistics.PerformansRows;
+
         using StreamWriter writer = CreateSharedWriter(filePath);
         writer.WriteLine($"SINGLE TRADER PERFORMANS (PROFILE: {profile}) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
-        writer.WriteLine("".PadRight(850, '='));
+        writer.WriteLine("".PadRight(200, '='));
 
+        var colWidths = new int[columns.Count];
         var headerCells = new List<string>(columns.Count);
-        foreach (var col in columns)
+        for (int c = 0; c < columns.Count; c++)
         {
+            var col = columns[c];
             int width = col.width > 0 ? col.width : 10;
-            headerCells.Add((col.header ?? col.field ?? "").PadLeft(width));
+            string header = col.header ?? col.field ?? "";
+            width = Math.Max(width, header.Length);
+            colWidths[c] = width;
+
+            bool leftAlign = IsLeftAlignedPerformansField(col.field ?? "");
+            headerCells.Add(leftAlign ? header.PadRight(width) : header.PadLeft(width));
         }
         writer.WriteLine(string.Join(" | ", headerCells));
-        writer.WriteLine("".PadRight(850, '-'));
+        writer.WriteLine("".PadRight(200, '-'));
 
-        for (int i = 0; i < trader.Data.Count; i++)
+        for (int i = 0; i < rows.Count; i++)
         {
             var rowCells = new List<string>(columns.Count);
-            foreach (var col in columns)
+            for (int c = 0; c < columns.Count; c++)
             {
-                int width = col.width > 0 ? col.width : 10;
-                string value = GetColumnValueByField(i, col.field ?? "");
-                bool leftAlign = IsLeftAlignedField(col.field ?? "");
+                var col = columns[c];
+                int width = colWidths[c];
+                string value = GetPerformansColumnValueByField(rows[i], i, col.field ?? "");
+                bool leftAlign = IsLeftAlignedPerformansField(col.field ?? "");
                 rowCells.Add(leftAlign ? value.PadRight(width) : value.PadLeft(width));
             }
             writer.WriteLine(string.Join(" | ", rowCells));
         }
 
-        writer.WriteLine("".PadRight(500, '='));
+        writer.WriteLine("".PadRight(200, '='));
     }
 
     public void SavePerformansToCsvFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json", string profile = "Full")
@@ -317,15 +327,17 @@ public class StatisticsExporter
         if (columns == null || columns.Count == 0)
             throw new InvalidOperationException("Performans config has no enabled columns.");
 
+        var rows = _statistics.PerformansRows;
+
         using StreamWriter writer = CreateSharedWriter(filePath);
         writer.WriteLine(string.Join(";", columns.ConvertAll(c => c.header ?? c.field ?? "")));
 
-        for (int i = 0; i < trader.Data.Count; i++)
+        for (int i = 0; i < rows.Count; i++)
         {
             var values = new List<string>(columns.Count);
             foreach (var col in columns)
             {
-                values.Add(GetColumnValueByField(i, col.field ?? ""));
+                values.Add(GetPerformansColumnValueByField(rows[i], i, col.field ?? ""));
             }
             writer.WriteLine(string.Join(";", values));
         }
@@ -982,6 +994,15 @@ public class StatisticsExporter
         return field == "Date" || field == "Time" || field == "YonList";
     }
 
+    private static bool IsLeftAlignedPerformansField(string field)
+    {
+        return field == "YonList" ||
+               field == "AcilisTarihi" ||
+               field == "AcilisSaati" ||
+               field == "KapanisTarihi" ||
+               field == "KapanisSaati";
+    }
+
     private string GetColumnValueByField(int i, string field)
     {
         var trader = _statistics.TraderForExport!;
@@ -1055,6 +1076,27 @@ public class StatisticsExporter
 
             "EmirKomutList" => trader.lists.EmirKomutList[i].ToString("F0"),
             "EmirStatusList" => trader.lists.EmirStatusList[i].ToString("F0"),
+            _ => ""
+        };
+    }
+
+    private string GetPerformansColumnValueByField(StatisticsModel.PerformansRow row, int rowIndex, string field)
+    {
+        return field switch
+        {
+            "No" => (rowIndex + 1).ToString(),
+            "YonList" => row.Yon,
+            "KontratSayisi" => row.KontratSayisi.ToString("F2"),
+            "AcilisTarihi" => row.AcilisTarihSaat.ToString("yyyy.MM.dd"),
+            "AcilisSaati" => row.AcilisTarihSaat.ToString("HH:mm:ss"),
+            "AcilisFiyati" => row.AcilisFiyati.ToString("F2"),
+            "KapanisTarihi" => row.KapanisTarihSaat.ToString("yyyy.MM.dd"),
+            "KapanisSaati" => row.KapanisTarihSaat.ToString("HH:mm:ss"),
+            "KapanisFiyati" => row.KapanisFiyati.ToString("F2"),
+            "KarZararPuan" => row.KarZararPuan.ToString("F2"),
+            "BakiyePuan" => row.BakiyePuan.ToString("F2"),
+            "GetiriPuan" => row.GetiriPuan.ToString("F2"),
+            "GetiriPuanYuzde" => row.GetiriPuanYuzde.ToString("F2"),
             _ => ""
         };
     }
@@ -1144,7 +1186,7 @@ public class StatisticsExporter
         public List<ColumnConfig> GetEnabledColumnsFromPerformans(string? profile = null)
         {
             var cols = TryGetColumnsFromPerformans(profile) ?? new List<ColumnConfig>();
-            NormalizeColumns(cols);
+            NormalizePerformansColumns(cols);
             return cols.FindAll(c => c.enabled);
         }
 
@@ -1212,6 +1254,44 @@ public class StatisticsExporter
                 }
 
                 // Default sensible width
+                if (c.width <= 0) c.width = 10;
+            }
+        }
+
+        private static void NormalizePerformansColumns(List<ColumnConfig> cols)
+        {
+            foreach (var c in cols)
+            {
+                if (string.IsNullOrWhiteSpace(c.field) && !string.IsNullOrWhiteSpace(c.feld))
+                    c.field = c.feld;
+                if ((c.width <= 0) && c.wdth.HasValue && c.wdth.Value > 0)
+                    c.width = c.wdth.Value;
+
+                switch (c.field)
+                {
+                    case "YonLst":
+                        c.field = "YonList";
+                        break;
+                    case "KontratSayst":
+                        c.field = "KontratSayisi";
+                        break;
+                    case "AcilisTar":
+                        c.field = "AcilisTarihi";
+                        break;
+                    case "AcilisSaat":
+                        c.field = "AcilisSaati";
+                        break;
+                    case "KapanisTar":
+                        c.field = "KapanisTarihi";
+                        break;
+                    case "KapanisSaat":
+                        c.field = "KapanisSaati";
+                        break;
+                    case "KarZarar":
+                        c.field = "KarZararPuan";
+                        break;
+                }
+
                 if (c.width <= 0) c.width = 10;
             }
         }

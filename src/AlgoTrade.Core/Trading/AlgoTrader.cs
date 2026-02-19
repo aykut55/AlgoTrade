@@ -816,6 +816,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.SaveMinimalListsCsvEnabled          = true;
             singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
             singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
+            singleTrader.SavePerformansTxtEnabled            = true;
+            singleTrader.SavePerformansCsvEnabled            = true;
 
             // Manually assign custom output file names (as requested)
             singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
@@ -828,6 +830,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
             singleTrader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
             singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+            singleTrader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
+            singleTrader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
 
             // Init
             singleTrader.Init();

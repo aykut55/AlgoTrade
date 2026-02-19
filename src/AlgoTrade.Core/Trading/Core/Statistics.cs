@@ -237,6 +237,27 @@ namespace AlgoTrade.Core.Trading.Statistics
 
         #endregion
 
+        #region Performans Trades
+
+        public sealed class PerformansRow
+        {
+            public int No { get; set; }
+            public string Yon { get; set; } = "";
+            public double KontratSayisi { get; set; }
+            public DateTime AcilisTarihSaat { get; set; }
+            public double AcilisFiyati { get; set; }
+            public DateTime KapanisTarihSaat { get; set; }
+            public double KapanisFiyati { get; set; }
+            public double KarZararPuan { get; set; }
+            public double BakiyePuan { get; set; }
+            public double GetiriPuan { get; set; }
+            public double GetiriPuanYuzde { get; set; }
+        }
+
+        public List<PerformansRow> PerformansRows { get; private set; } = new();
+
+        #endregion
+
         #region Asset Info
 
         public double HisseSayisi => Trader?.status?.HisseSayisi ?? 0;
@@ -442,6 +463,102 @@ namespace AlgoTrade.Core.Trading.Statistics
         {
             Trader = trader;
             return this;
+        }
+
+        public void CalculatePerformances(double bakiyePuan = 100000, double lotSayisi = 1.0, double varlikAdedCarpani = 1.0)
+        {
+            var varlikAdedSayisi = lotSayisi * varlikAdedCarpani;
+
+            if (Trader == null || Trader.Data == null || Trader.Data.Count == 0)
+                throw new ArgumentException("Trader data cannot be null or empty");
+            if (Trader.lists == null)
+                throw new InvalidOperationException("Lists are not initialized.");
+
+            PerformansRows.Clear();
+
+            string currentYon = "F";
+            int entryIndex = -1;
+            string entryYon = "";
+            double entryKontrat = 0.0;
+            double entryFiyat = 0.0;
+            DateTime entryTime = default;
+
+            double balancePuan = bakiyePuan;
+
+            int barCount = Trader.Data.Count;
+            for (int i = 0; i < barCount; i++)
+            {
+                string yon = Trader.lists.YonList[i];
+                if (string.IsNullOrWhiteSpace(yon))
+                    continue;
+
+                if (yon == "A" || yon == "S")
+                {
+                    if (currentYon == "A" || currentYon == "S")
+                    {
+                        double tradePnlPuan = Trader.lists.KarZararPuanList[i] * varlikAdedSayisi;
+                        balancePuan += tradePnlPuan;
+                        double getiriPuan = balancePuan - bakiyePuan;
+                        double getiriPuanYuzde = bakiyePuan != 0.0 ? 100.0 * getiriPuan / bakiyePuan : 0.0;
+
+                        PerformansRows.Add(new PerformansRow
+                        {
+                            No = PerformansRows.Count + 1,
+                            Yon = entryYon,
+                            KontratSayisi = varlikAdedSayisi,
+                            AcilisTarihSaat = entryTime,
+                            AcilisFiyati = entryFiyat,
+                            KapanisTarihSaat = Trader.Data[i].DateTime,
+                            KapanisFiyati = Trader.lists.SeviyeList[i],
+                            KarZararPuan = tradePnlPuan,
+                            BakiyePuan = balancePuan,
+                            GetiriPuan = getiriPuan,
+                            GetiriPuanYuzde = getiriPuanYuzde
+                        });
+                    }
+
+                    currentYon = yon;
+                    entryIndex = i;
+                    entryYon = yon;
+                    entryKontrat = varlikAdedSayisi;
+                    entryFiyat = Trader.lists.SeviyeList[i];
+                    entryTime = Trader.Data[i].DateTime;
+                    continue;
+                }
+
+                if (yon == "F")
+                {
+                    if (currentYon == "A" || currentYon == "S")
+                    {
+                        double tradePnlPuan = Trader.lists.KarZararPuanList[i] * varlikAdedSayisi;
+                        balancePuan += tradePnlPuan;
+                        double getiriPuan = balancePuan - bakiyePuan;
+                        double getiriPuanYuzde = bakiyePuan != 0.0 ? 100.0 * getiriPuan / bakiyePuan : 0.0;
+
+                        PerformansRows.Add(new PerformansRow
+                        {
+                            No = PerformansRows.Count + 1,
+                            Yon = entryYon,
+                            KontratSayisi = varlikAdedSayisi,
+                            AcilisTarihSaat = entryTime,
+                            AcilisFiyati = entryFiyat,
+                            KapanisTarihSaat = Trader.Data[i].DateTime,
+                            KapanisFiyati = Trader.lists.SeviyeList[i],
+                            KarZararPuan = tradePnlPuan,
+                            BakiyePuan = balancePuan,
+                            GetiriPuan = getiriPuan,
+                            GetiriPuanYuzde = getiriPuanYuzde
+                        });
+                    }
+
+                    currentYon = "F";
+                    entryIndex = -1;
+                    entryYon = "";
+                    entryKontrat = 0.0;
+                    entryFiyat = 0.0;
+                    entryTime = default;
+                }
+            }
         }
 
         public Statistics Reset()

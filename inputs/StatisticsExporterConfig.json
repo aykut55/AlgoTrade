@@ -159,17 +159,19 @@
         "listOutputs": {
           "full": {
             "columns": [
-              {"field": "No", "header": "No", "width": 7, "enabled": true},
+              {"field": "No", "header": "No", "width": 6, "enabled": true},
               {"field": "YonList", "header": "Yon", "width": 3, "enabled": true},
               {"field": "KontratSayisi", "header": "KontratSayisi", "width": 13, "enabled": true},
-              {"field": "AcilisTarihi", "header": "Açılış Tarihi", "width": 10, "enabled": true},
-              {"field": "AcilisSaati", "header": "Açılış Saati", "width": 10, "enabled": true},
-              {"field": "AcilisFiyati", "header": "Açılış Fiyatı", "width": 10, "enabled": true},
-              {"field": "KapanisTarihi", "header": "Kapanış Tarihi", "width": 10, "enabled": true},
-              {"field": "KapanisSaati", "header": "Kapanış Saati", "width": 10, "enabled": true},
-              {"field": "KapanisFiyati", "header": "Kapanış Fiyatı", "width": 10, "enabled": true},
+              {"field": "AcilisTarihi", "header": "Açılış Tarihi", "width": 13, "enabled": true},
+              {"field": "AcilisSaati", "header": "Açılış Saati", "width": 12, "enabled": true},
+              {"field": "AcilisFiyati", "header": "Açılış Fiyatı", "width": 13, "enabled": true},
+              {"field": "KapanisTarihi", "header": "Kapanış Tarihi", "width": 13, "enabled": true},
+              {"field": "KapanisSaati", "header": "Kapanış Saati", "width": 12, "enabled": true},
+              {"field": "KapanisFiyati", "header": "Kapanış Fiyatı", "width": 13, "enabled": true},
               {"field": "KarZararPuan", "header": "Kar/Zarar", "width": 10, "enabled": true},
-              {"field": "BakiyePuan", "header": "Bakiye Puan", "width": 12, "enabled": true}
+              {"field": "BakiyePuan", "header": "Bakiye Puan", "width": 12, "enabled": true},
+              {"field": "GetiriPuan", "header": "Getiri Puan", "width": 12, "enabled": true},
+              {"field": "GetiriPuanYuzde", "header": "Getiri %", "width": 10, "enabled": true}
             ]
           }
         }

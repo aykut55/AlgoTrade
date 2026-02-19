@@ -529,7 +529,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             CalculateStatistics();
 
-            CalculatePerformances();
+            Log($"\nCalculating performances...");
+
+            GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
+            CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
         }
         else if (this.RunMode == TraderRunMode.TradeAndQuery)
         {
@@ -537,7 +540,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             CalculateStatistics();
 
-            CalculatePerformances();
+            Log($"\nCalculating performances...");
+
+            GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
+            CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
 
             if (this.QueryColumnNames.Count > 0 && this.LastQueryResult.Count == this.QueryColumnNames.Count)
             {
@@ -2500,21 +2506,6 @@ public class SingleTrader : MarketDataProvider, IDisposable
             statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
         }
 
-        // Performans exports (from config profiles)
-        if (this.SavePerformansCsvEnabled)
-        {
-            Log($"\n\tSaving performans to {PerformansCsvFileName}...");
-            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
-                .SavePerformansToCsvFromConfig(Path.Combine(outputDir, PerformansCsvFileName), configPath, "Full");
-        }
-
-        if (this.SavePerformansTxtEnabled)
-        {
-            Log($"\n\tSaving performans to {PerformansTxtFileName}...");
-            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
-                .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), configPath, "Full");
-        }
-
         // ********************************************************************************************************
         // ********************************************************************************************************
         // ********************************************************************************************************
@@ -2539,31 +2530,52 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // ********************************************************************************************************
         // ********************************************************************************************************
 
-/*
-        if (this.SaveMinimalStatsCsvEnabled)
+        // Performans exports (from config profiles)
+        if (this.SavePerformansCsvEnabled)
         {
-            Log($"\n\tSaving statistics to {MinimalStatsCsvFileName}...");
-            statistics.SaveToCsvMinimal(Path.Combine(outputDir, MinimalStatsCsvFileName));
+            Log($"\n\tSaving performans to {PerformansCsvFileName}...");
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+                .SavePerformansToCsvFromConfig(Path.Combine(outputDir, PerformansCsvFileName), configPath, "Full");
         }
 
-        if (this.SaveMinimalListsCsvEnabled)
+        if (this.SavePerformansTxtEnabled)
         {
-            Log($"\n\tSaving statistics to {MinimalListsCsvFileName}...");
-            statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, MinimalListsCsvFileName));
+            Log($"\n\tSaving performans to {PerformansTxtFileName}...");
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+                .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), configPath, "Full");
         }
 
-        if (this.SaveMinimalStatsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {MinimalStatsTxtFileName}...");
-            statistics.SaveToTxtMinimal(Path.Combine(outputDir, MinimalStatsTxtFileName));
-        }
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
 
-        if (this.SaveMinimalListsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {MinimalListsTxtFileName}...");
-            statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, MinimalListsTxtFileName));
-        }
-*/
+        /*
+                if (this.SaveMinimalStatsCsvEnabled)
+                {
+                    Log($"\n\tSaving statistics to {MinimalStatsCsvFileName}...");
+                    statistics.SaveToCsvMinimal(Path.Combine(outputDir, MinimalStatsCsvFileName));
+                }
+
+                if (this.SaveMinimalListsCsvEnabled)
+                {
+                    Log($"\n\tSaving statistics to {MinimalListsCsvFileName}...");
+                    statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, MinimalListsCsvFileName));
+                }
+
+                if (this.SaveMinimalStatsTxtEnabled)
+                {
+                    Log($"\n\tSaving statistics to {MinimalStatsTxtFileName}...");
+                    statistics.SaveToTxtMinimal(Path.Combine(outputDir, MinimalStatsTxtFileName));
+                }
+
+                if (this.SaveMinimalListsTxtEnabled)
+                {
+                    Log($"\n\tSaving statistics to {MinimalListsTxtFileName}...");
+                    statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, MinimalListsTxtFileName));
+                }
+        */
         if (this.SaveFullStatsTxtFormattedEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsTxtFormattedFileName}...");
@@ -2577,6 +2589,31 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
 
     }
+
+    public void CalculatePerformances(double bakiyePuan = 100000, double lotSayisi = 1.0, double varlikAdedCarpani = 1.0)
+    {
+        if (_data == null || _data.Count == 0)
+            throw new ArgumentException("Data cannot be null or empty");
+        statistics.CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
+    }
+
+    private void GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani)
+    {
+        bakiyePuan = initialTradeParams?.IlkBakiyePuan ?? 100000.0;
+        varlikAdedCarpani = initialTradeParams?.VarlikAdedCarpani ?? 1.0;
+
+        lotSayisi = initialTradeParams?.LotSayisi ?? 0.0;
+        if (lotSayisi <= 0.0)
+            lotSayisi = initialTradeParams?.KontratSayisi ?? 0.0;
+        if (lotSayisi <= 0.0)
+        {
+            lotSayisi = initialTradeParams?.VarlikAdedSayisi ?? 1.0;
+            varlikAdedCarpani = 1.0;
+        }
+        if (lotSayisi <= 0.0)
+            lotSayisi = initialTradeParams?.HisseSayisi ?? 1.0;
+    }
+    
     private void Log(string message)
     {
         if (_logger == null) return;
