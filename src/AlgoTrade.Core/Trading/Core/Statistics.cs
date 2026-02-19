@@ -992,30 +992,30 @@ namespace AlgoTrade.Core.Trading.Statistics
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
             // --- Periodic Returns ---
-            Add("GetiriPuanBuAy", GetiriPuanBuAy, "F4");
-            Add("GetiriPuanAy1", GetiriPuanAy1, "F4");
-            Add("GetiriPuanAy2", GetiriPuanAy2, "F4");
-            Add("GetiriPuanAy3", GetiriPuanAy3, "F4");
-            Add("GetiriPuanAy4", GetiriPuanAy4, "F4");
-            Add("GetiriPuanAy5", GetiriPuanAy5, "F4");
-            Add("GetiriPuanBuHafta", GetiriPuanBuHafta, "F4");
-            Add("GetiriPuanHafta1", GetiriPuanHafta1, "F4");
-            Add("GetiriPuanHafta2", GetiriPuanHafta2, "F4");
-            Add("GetiriPuanHafta3", GetiriPuanHafta3, "F4");
-            Add("GetiriPuanHafta4", GetiriPuanHafta4, "F4");
-            Add("GetiriPuanHafta5", GetiriPuanHafta5, "F4");
-            Add("GetiriPuanBuGun", GetiriPuanBuGun, "F4");
-            Add("GetiriPuanGun1", GetiriPuanGun1, "F4");
-            Add("GetiriPuanGun2", GetiriPuanGun2, "F4");
-            Add("GetiriPuanGun3", GetiriPuanGun3, "F4");
-            Add("GetiriPuanGun4", GetiriPuanGun4, "F4");
-            Add("GetiriPuanGun5", GetiriPuanGun5, "F4");
-            Add("GetiriPuanBuSaat", GetiriPuanBuSaat, "F4");
-            Add("GetiriPuanSaat1", GetiriPuanSaat1, "F4");
-            Add("GetiriPuanSaat2", GetiriPuanSaat2, "F4");
-            Add("GetiriPuanSaat3", GetiriPuanSaat3, "F4");
-            Add("GetiriPuanSaat4", GetiriPuanSaat4, "F4");
-            Add("GetiriPuanSaat5", GetiriPuanSaat5, "F4");
+            Add("GetiriPuanBuAy", GetiriPuanBuAy, "F2");
+            Add("GetiriPuanAy1", GetiriPuanAy1, "F2");
+            Add("GetiriPuanAy2", GetiriPuanAy2, "F2");
+            Add("GetiriPuanAy3", GetiriPuanAy3, "F2");
+            Add("GetiriPuanAy4", GetiriPuanAy4, "F2");
+            Add("GetiriPuanAy5", GetiriPuanAy5, "F2");
+            Add("GetiriPuanBuHafta", GetiriPuanBuHafta, "F2");
+            Add("GetiriPuanHafta1", GetiriPuanHafta1, "F2");
+            Add("GetiriPuanHafta2", GetiriPuanHafta2, "F2");
+            Add("GetiriPuanHafta3", GetiriPuanHafta3, "F2");
+            Add("GetiriPuanHafta4", GetiriPuanHafta4, "F2");
+            Add("GetiriPuanHafta5", GetiriPuanHafta5, "F2");
+            Add("GetiriPuanBuGun", GetiriPuanBuGun, "F2");
+            Add("GetiriPuanGun1", GetiriPuanGun1, "F2");
+            Add("GetiriPuanGun2", GetiriPuanGun2, "F2");
+            Add("GetiriPuanGun3", GetiriPuanGun3, "F2");
+            Add("GetiriPuanGun4", GetiriPuanGun4, "F2");
+            Add("GetiriPuanGun5", GetiriPuanGun5, "F2");
+            Add("GetiriPuanBuSaat", GetiriPuanBuSaat, "F2");
+            Add("GetiriPuanSaat1", GetiriPuanSaat1, "F2");
+            Add("GetiriPuanSaat2", GetiriPuanSaat2, "F2");
+            Add("GetiriPuanSaat3", GetiriPuanSaat3, "F2");
+            Add("GetiriPuanSaat4", GetiriPuanSaat4, "F2");
+            Add("GetiriPuanSaat5", GetiriPuanSaat5, "F2");
 
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
@@ -1170,10 +1170,6 @@ namespace AlgoTrade.Core.Trading.Statistics
                     $"{"GetFiyatN",12} | " +
                     $"{"GetPuan%N",10} | " +
                     $"{"GetFiyat%N",10} | " +
-                    $"{"GetKz",10} | " +
-                    $"{"GetKzNet",10} | " +
-                    $"{"GetKzSis",10} | " +
-                    $"{"GetKzSisN",10} | " +
                     $"{"EmirKmt",7} | " +
                     $"{"EmirSts",7} | " +
                     $"{"TrdEnbl",7} | " +
@@ -1261,15 +1257,12 @@ namespace AlgoTrade.Core.Trading.Statistics
                     "BarNo;Date;Time;Open;High;Low;Close;Volume;" +
                     "Yon;Seviye;Sinyal;" +
                     "KarZararPuan;KarZararFiyat;KarZararPuanYuzde;KarZararFiyatYuzde;" +
-                    "KarZararFiyat;KarZararFiyatYuzde;" +
                     "KarAl;ZararKes;IzleyenStop;" +
                     "IslemSayisi;AlisSayisi;SatisSayisi;FlatSayisi;PassSayisi;" +
                     "KontratSayisi;VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KomisyonVarlikAdedSayisi;KomisyonVarlikAdedSayisiMicro;KomisyonIslemSayisi;KomisyonFiyat;" +
                     "KardaBarSayisi;ZarardaBarSayisi;" +
                     "BakiyePuan;BakiyeFiyat;GetiriPuan;GetiriFiyat;GetiriPuanYuzde;GetiriFiyatYuzde;" +
-                    "BakiyeFiyat;GetiriFiyat;GetiriFiyatYuzde;" +
                     "BakiyePuanNet;BakiyeFiyatNet;GetiriPuanNet;GetiriFiyatNet;GetiriPuanYuzdeNet;GetiriFiyatYuzdeNet;" +
-                    "BakiyeFiyatNet;GetiriFiyatNet;GetiriFiyatYuzdeNet;" +
                     //"GetiriKz;GetiriKzNet;GetiriKzSistem;GetiriKzNetSistem;" +  // Silinecek
                     "EmirKomut;EmirStatus;" +
                     "IsTradeEnabled;IsPozKapatEnabled"
