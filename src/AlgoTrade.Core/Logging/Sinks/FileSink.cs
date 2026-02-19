@@ -85,7 +85,10 @@ namespace AlgoTrade.Core.Logging.Sinks
                     if (entriesToWrite.Count > 0)
                     {
                         var lines = entriesToWrite.Select(e => e.IsRaw ? e.Message : e.ToString(ShowTimestamp, ShowLevel, ShowSource));
-                        File.AppendAllLines(_filePath, lines);
+                        using var fs = new FileStream(_filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                        using var writer = new StreamWriter(fs, System.Text.Encoding.UTF8);
+                        foreach (var line in lines)
+                            writer.WriteLine(line);
                     }
                 }
                 catch (Exception ex)

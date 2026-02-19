@@ -381,13 +381,24 @@ void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectorie
     var searchOption = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
     var files = Directory.GetFiles(targetDirectory, "*", searchOption);
     int deletedCount = 0;
+    int skippedCount = 0;
     foreach (var file in files)
     {
-        File.Delete(file);
-        deletedCount++;
+        try
+        {
+            File.Delete(file);
+            deletedCount++;
+        }
+        catch (IOException)
+        {
+            skippedCount++;
+            LogManager.LogRaw($"\n\tSkipped (locked): {Path.GetFileName(file)}");
+        }
     }
 
     LogManager.LogRaw($"\nDeleted file count: {deletedCount} \n\t(Directory: {targetDirectory})");
+    if (skippedCount > 0)
+        LogManager.LogRaw($"\nSkipped (locked) file count: {skippedCount}");
 }
 
 
