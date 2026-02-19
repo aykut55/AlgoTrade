@@ -260,6 +260,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public string FullStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsFormatted.txt";
     public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsFormattedMinimal.txt";
 
+    // Performans outputs
+    public string PerformansTxtFileName { get; set; } = "SingleTraderPerformans.txt";
+    public string PerformansCsvFileName { get; set; } = "SingleTraderPerformans.csv";
+
     // Per-output enable flags (used during WriteStatisticsToFile)
     public bool SaveFullStatsTxtEnabled { get; set; } = true;
     public bool SaveFullStatsCsvEnabled { get; set; } = true;
@@ -271,6 +275,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool SaveMinimalListsCsvEnabled { get; set; } = true;
     public bool SaveFullStatsTxtFormattedEnabled { get; set; } = true;
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SavePerformansTxtEnabled { get; set; } = true;
+    public bool SavePerformansCsvEnabled { get; set; } = true;
     #endregion
 
     public bool is_son_yon_f()
@@ -522,12 +528,16 @@ public class SingleTrader : MarketDataProvider, IDisposable
             Log($"\nCalculating statistics...");
 
             CalculateStatistics();
+
+            CalculatePerformances();
         }
         else if (this.RunMode == TraderRunMode.TradeAndQuery)
         {
             Log($"\nCalculating statistics...");
 
             CalculateStatistics();
+
+            CalculatePerformances();
 
             if (this.QueryColumnNames.Count > 0 && this.LastQueryResult.Count == this.QueryColumnNames.Count)
             {
@@ -2488,6 +2498,21 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
             statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
+        }
+
+        // Performans exports (from config profiles)
+        if (this.SavePerformansCsvEnabled)
+        {
+            Log($"\n\tSaving performans to {PerformansCsvFileName}...");
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+                .SavePerformansToCsvFromConfig(Path.Combine(outputDir, PerformansCsvFileName), configPath, "Full");
+        }
+
+        if (this.SavePerformansTxtEnabled)
+        {
+            Log($"\n\tSaving performans to {PerformansTxtFileName}...");
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+                .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), configPath, "Full");
         }
 
         // ********************************************************************************************************

@@ -1,73 +1,179 @@
 {
-  "version": 1,
-  "description": "Statistics exporter column mapping and order for list outputs",
-  "listOutputs": {
-    "full": {
-      "columns": [
-        {"field": "BarNo", "header": "BarNo", "width": 7, "enabled": true},
-        {"field": "Date", "header": "Date", "width": 10, "enabled": true},
-        {"field": "Time", "header": "Time", "width": 8, "enabled": true},
-        {"field": "Open", "header": "Open", "width": 10, "enabled": true},
-        {"field": "High", "header": "High", "width": 10, "enabled": true},
-        {"field": "Low", "header": "Low", "width": 10, "enabled": true},
-        {"field": "Close", "header": "Close", "width": 10, "enabled": true},
-        {"field": "Volume", "header": "Volume", "width": 10, "enabled": true},
-        {"field": "Size", "header": "Size", "width": 10, "enabled": true},
-        {"field": "Diff", "header": "Change", "width": 10, "enabled": true},
-        {"field": "ChangePct", "header": "Change%", "width": 10, "enabled": true},
-        
-        {"field": "YonList", "header": "Yon", "width": 3, "enabled": true},
-        {"field": "SeviyeList", "header": "Seviye", "width": 10, "enabled": true},
-        {"field": "SinyalList", "header": "Sinyal", "width": 6, "enabled": true},
-        
-        {"field": "KarZararPuanList", "header": "KarZararPuan", "width": 12, "enabled": true},
-        {"field": "KarZararPuanYuzdeList", "header": "KarZararPuanYuzde", "width": 17, "enabled": true},
-        {"field": "BakiyePuanList", "header": "BakiyePuan", "width": 12, "enabled": true},
-        {"field": "GetiriPuanList", "header": "GetiriPuan", "width": 12, "enabled": true},
-        {"field": "GetiriPuanYuzdeList", "header": "GetiriPuanYuzde", "width": 15, "enabled": true},
-        {"field": "BakiyePuanNetList", "header": "BakiyePuanNet", "width": 13, "enabled": true},
-        {"field": "GetiriPuanNetList", "header": "GetiriPuanNet", "width": 13, "enabled": true},
-        {"field": "GetiriPuanYuzdeNetList", "header": "GetiriPuanYuzdeNet", "width": 18, "enabled": true},
-        
-        {"field": "KarZararFiyatList", "header": "KarZararFiyat", "width": 13, "enabled": true},
-        {"field": "KarZararFiyatYuzdeList", "header": "KarZararFiyatYuzde", "width": 18, "enabled": true},
-        {"field": "BakiyeFiyatList", "header": "BakiyeFiyat", "width": 12, "enabled": true},
-        {"field": "GetiriFiyatList", "header": "GetiriFiyat", "width": 12, "enabled": true},
-        {"field": "GetiriFiyatYuzdeList", "header": "GetiriFiyatYuzde", "width": 16, "enabled": true},
-        {"field": "BakiyeFiyatNetList", "header": "BakiyeFiyatNet", "width": 14, "enabled": true},
-        {"field": "GetiriFiyatNetList", "header": "GetiriFiyatNet", "width": 14, "enabled": true},
-        {"field": "GetiriFiyatYuzdeNetList", "header": "GetiriFiyatYuzdeNet", "width": 19, "enabled": true},
-        
-        {"field": "IslemSayisiList", "header": "IslemSayisi", "width": 11, "enabled": true},
-        {"field": "AlisSayisiList", "header": "AlisSayisi", "width": 10, "enabled": true},
-        {"field": "SatisSayisiList", "header": "SatisSayisi", "width": 11, "enabled": true},
-        {"field": "FlatSayisiList", "header": "FlatSayisi", "width": 10, "enabled": true},
-        {"field": "PassSayisiList", "header": "PassSayisi", "width": 10, "enabled": true},
-        
-        {"field": "KontratSayisiList", "header": "KontratSayisi", "width": 13, "enabled": true},
-        {"field": "VarlikAdedSayisiList", "header": "VarlikAdedSayisi", "width": 16, "enabled": true},
-        {"field": "VarlikAdedSayisiMicroList", "header": "VarlikAdedSayisiMicro", "width": 21, "enabled": true},
-        {"field": "SonVarlikAdedSayisiList", "header": "SonVarlikAdedSayisi", "width": 19, "enabled": true},
-        {"field": "SonVarlikAdedSayisiMicroList", "header": "SonVarlikAdedSayisiMicro", "width": 24, "enabled": true},
-        
-        {"field": "KomisyonVarlikAdedSayisiList", "header": "KomisyonVarlikAdedSayisi", "width": 24, "enabled": true},
-        {"field": "KomisyonVarlikAdedSayisiMicroList", "header": "KomisyonVarlikAdedSayisiMicro", "width": 29, "enabled": true},
-        {"field": "KomisyonIslemSayisiList", "header": "KomisyonIslemSayisi", "width": 19, "enabled": true},
-        {"field": "KomisyonFiyatList", "header": "KomisyonFiyat", "width": 13, "enabled": true},
-        
-        {"field": "IsTradeEnabledList", "header": "IsTradeEnabled", "width": 14, "enabled": true},
-        {"field": "IsPozKapatEnabledList", "header": "IsPozKapatEnabled", "width": 17, "enabled": true},
-        
-        {"field": "KarAlList", "header": "KarAl", "width": 10, "enabled": true},
-        {"field": "ZararKesList", "header": "ZararKes", "width": 10, "enabled": true},
-        
-        {"field": "IzleyenStopList", "header": "IzleyenStop", "width": 11, "enabled": true},
-        {"field": "KardaBarSayisiList", "header": "KardaBarSayisi", "width": 14, "enabled": true},
-        {"field": "ZarardaBarSayisiList", "header": "ZarardaBarSayisi", "width": 16, "enabled": true},
-        
-        {"field": "EmirKomutList", "header": "EmirKomut", "width": 9, "enabled": true},
-        {"field": "EmirStatusList", "header": "EmirStatus", "width": 10, "enabled": true}
-      ]
+  "SingleTrader": {
+    "SingleTraderLists": {
+      "version": 1,
+      "description": "Statistics exporter column mapping and order for list outputs",
+      "Full": {
+        "version": 1,
+        "description": "Full columns for SingleTrader lists",
+        "listOutputs": {
+          "full": {
+            "columns": [
+              {"field": "BarNo", "header": "BarNo", "width": 7, "enabled": true},
+              {"field": "Date", "header": "Date", "width": 10, "enabled": true},
+              {"field": "Time", "header": "Time", "width": 8, "enabled": true},
+              {"field": "Open", "header": "Open", "width": 10, "enabled": true},
+              {"field": "High", "header": "High", "width": 10, "enabled": true},
+              {"field": "Low", "header": "Low", "width": 10, "enabled": true},
+              {"field": "Close", "header": "Close", "width": 10, "enabled": true},
+              {"field": "Volume", "header": "Volume", "width": 10, "enabled": true},
+              {"field": "Size", "header": "Size", "width": 10, "enabled": true},
+              {"field": "Diff", "header": "Change", "width": 10, "enabled": true},
+              {"field": "ChangePct", "header": "Change%", "width": 10, "enabled": true},
+
+              {"field": "YonList", "header": "Yon", "width": 3, "enabled": true},
+              {"field": "SeviyeList", "header": "Seviye", "width": 10, "enabled": true},
+              {"field": "SinyalList", "header": "Sinyal", "width": 6, "enabled": true},
+
+              {"field": "KarZararPuanList", "header": "KarZararPuan", "width": 12, "enabled": true},
+              {"field": "KarZararPuanYuzdeList", "header": "KarZararPuanYuzde", "width": 17, "enabled": true},
+              {"field": "BakiyePuanList", "header": "BakiyePuan", "width": 12, "enabled": true},
+              {"field": "GetiriPuanList", "header": "GetiriPuan", "width": 12, "enabled": true},
+              {"field": "GetiriPuanYuzdeList", "header": "GetiriPuanYuzde", "width": 15, "enabled": true},
+              {"field": "BakiyePuanNetList", "header": "BakiyePuanNet", "width": 13, "enabled": true},
+              {"field": "GetiriPuanNetList", "header": "GetiriPuanNet", "width": 13, "enabled": true},
+              {"field": "GetiriPuanYuzdeNetList", "header": "GetiriPuanYuzdeNet", "width": 18, "enabled": true},
+
+              {"field": "KarZararFiyatList", "header": "KarZararFiyat", "width": 13, "enabled": true},
+              {"field": "KarZararFiyatYuzdeList", "header": "KarZararFiyatYuzde", "width": 18, "enabled": true},
+              {"field": "BakiyeFiyatList", "header": "BakiyeFiyat", "width": 12, "enabled": true},
+              {"field": "GetiriFiyatList", "header": "GetiriFiyat", "width": 12, "enabled": true},
+              {"field": "GetiriFiyatYuzdeList", "header": "GetiriFiyatYuzde", "width": 16, "enabled": true},
+              {"field": "BakiyeFiyatNetList", "header": "BakiyeFiyatNet", "width": 14, "enabled": true},
+              {"field": "GetiriFiyatNetList", "header": "GetiriFiyatNet", "width": 14, "enabled": true},
+              {"field": "GetiriFiyatYuzdeNetList", "header": "GetiriFiyatYuzdeNet", "width": 19, "enabled": true},
+
+              {"field": "IslemSayisiList", "header": "IslemSayisi", "width": 11, "enabled": true},
+              {"field": "AlisSayisiList", "header": "AlisSayisi", "width": 10, "enabled": true},
+              {"field": "SatisSayisiList", "header": "SatisSayisi", "width": 11, "enabled": true},
+              {"field": "FlatSayisiList", "header": "FlatSayisi", "width": 10, "enabled": true},
+              {"field": "PassSayisiList", "header": "PassSayisi", "width": 10, "enabled": true},
+
+              {"field": "KontratSayisiList", "header": "KontratSayisi", "width": 13, "enabled": true},
+              {"field": "VarlikAdedSayisiList", "header": "VarlikAdedSayisi", "width": 16, "enabled": true},
+              {"field": "VarlikAdedSayisiMicroList", "header": "VarlikAdedSayisiMicro", "width": 21, "enabled": true},
+              {"field": "SonVarlikAdedSayisiList", "header": "SonVarlikAdedSayisi", "width": 19, "enabled": true},
+              {"field": "SonVarlikAdedSayisiMicroList", "header": "SonVarlikAdedSayisiMicro", "width": 24, "enabled": true},
+
+              {"field": "KomisyonVarlikAdedSayisiList", "header": "KomisyonVarlikAdedSayisi", "width": 24, "enabled": true},
+              {"field": "KomisyonVarlikAdedSayisiMicroList", "header": "KomisyonVarlikAdedSayisiMicro", "width": 29, "enabled": true},
+              {"field": "KomisyonIslemSayisiList", "header": "KomisyonIslemSayisi", "width": 19, "enabled": true},
+              {"field": "KomisyonFiyatList", "header": "KomisyonFiyat", "width": 13, "enabled": true},
+
+              {"field": "IsTradeEnabledList", "header": "IsTradeEnabled", "width": 14, "enabled": true},
+              {"field": "IsPozKapatEnabledList", "header": "IsPozKapatEnabled", "width": 17, "enabled": true},
+
+              {"field": "KarAlList", "header": "KarAl", "width": 10, "enabled": true},
+              {"field": "ZararKesList", "header": "ZararKes", "width": 10, "enabled": true},
+
+              {"field": "IzleyenStopList", "header": "IzleyenStop", "width": 11, "enabled": true},
+              {"field": "KardaBarSayisiList", "header": "KardaBarSayisi", "width": 14, "enabled": true},
+              {"field": "ZarardaBarSayisiList", "header": "ZarardaBarSayisi", "width": 16, "enabled": true},
+
+              {"field": "EmirKomutList", "header": "EmirKomut", "width": 9, "enabled": true},
+              {"field": "EmirStatusList", "header": "EmirStatus", "width": 10, "enabled": true}
+            ]
+          }
+        }
+      },
+      "Minimal": {
+        "version": 1,
+        "description": "Minimal columns for SingleTrader lists (configure as needed)",
+        "listOutputs": {
+          "full": {
+            "columns": [
+              {"field": "BarNo", "header": "BarNo", "width": 7, "enabled": true},
+              {"field": "Date", "header": "Date", "width": 10, "enabled": true},
+              {"field": "Time", "header": "Time", "width": 8, "enabled": true},
+              {"field": "Open", "header": "Open", "width": 10, "enabled": true},
+              {"field": "High", "header": "High", "width": 10, "enabled": true},
+              {"field": "Low", "header": "Low", "width": 10, "enabled": true},
+              {"field": "Close", "header": "Close", "width": 10, "enabled": true},
+              {"field": "Volume", "header": "Volume", "width": 10, "enabled": true},
+              {"field": "Size", "header": "Size", "width": 10, "enabled": true},
+              {"field": "Diff", "header": "Change", "width": 10, "enabled": true},
+              {"field": "ChangePct", "header": "Change%", "width": 10, "enabled": true},
+
+              {"field": "YonList", "header": "Yon", "width": 3, "enabled": true},
+              {"field": "SeviyeList", "header": "Seviye", "width": 10, "enabled": true},
+              {"field": "SinyalList", "header": "Sinyal", "width": 6, "enabled": true},
+
+              {"field": "KarZararPuanList", "header": "KarZararPuan", "width": 12, "enabled": true},
+              {"field": "KarZararPuanYuzdeList", "header": "KarZararPuanYuzde", "width": 17, "enabled": true},
+              {"field": "BakiyePuanList", "header": "BakiyePuan", "width": 12, "enabled": true},
+              {"field": "GetiriPuanList", "header": "GetiriPuan", "width": 12, "enabled": true},
+              {"field": "GetiriPuanYuzdeList", "header": "GetiriPuanYuzde", "width": 15, "enabled": true},
+              {"field": "BakiyePuanNetList", "header": "BakiyePuanNet", "width": 13, "enabled": true},
+              {"field": "GetiriPuanNetList", "header": "GetiriPuanNet", "width": 13, "enabled": true},
+              {"field": "GetiriPuanYuzdeNetList", "header": "GetiriPuanYuzdeNet", "width": 18, "enabled": true},
+
+              {"field": "KarZararFiyatList", "header": "KarZararFiyat", "width": 13, "enabled": true},
+              {"field": "KarZararFiyatYuzdeList", "header": "KarZararFiyatYuzde", "width": 18, "enabled": true},
+              {"field": "BakiyeFiyatList", "header": "BakiyeFiyat", "width": 12, "enabled": true},
+              {"field": "GetiriFiyatList", "header": "GetiriFiyat", "width": 12, "enabled": true},
+              {"field": "GetiriFiyatYuzdeList", "header": "GetiriFiyatYuzde", "width": 16, "enabled": true},
+              {"field": "BakiyeFiyatNetList", "header": "BakiyeFiyatNet", "width": 14, "enabled": true},
+              {"field": "GetiriFiyatNetList", "header": "GetiriFiyatNet", "width": 14, "enabled": true},
+              {"field": "GetiriFiyatYuzdeNetList", "header": "GetiriFiyatYuzdeNet", "width": 19, "enabled": true},
+
+              {"field": "IslemSayisiList", "header": "IslemSayisi", "width": 11, "enabled": true},
+              {"field": "AlisSayisiList", "header": "AlisSayisi", "width": 10, "enabled": true},
+              {"field": "SatisSayisiList", "header": "SatisSayisi", "width": 11, "enabled": true},
+              {"field": "FlatSayisiList", "header": "FlatSayisi", "width": 10, "enabled": true},
+              {"field": "PassSayisiList", "header": "PassSayisi", "width": 10, "enabled": true},
+
+              {"field": "KontratSayisiList", "header": "KontratSayisi", "width": 13, "enabled": true},
+              {"field": "VarlikAdedSayisiList", "header": "VarlikAdedSayisi", "width": 16, "enabled": true},
+              {"field": "VarlikAdedSayisiMicroList", "header": "VarlikAdedSayisiMicro", "width": 21, "enabled": true},
+              {"field": "SonVarlikAdedSayisiList", "header": "SonVarlikAdedSayisi", "width": 19, "enabled": true},
+              {"field": "SonVarlikAdedSayisiMicroList", "header": "SonVarlikAdedSayisiMicro", "width": 24, "enabled": true},
+
+              {"field": "KomisyonVarlikAdedSayisiList", "header": "KomisyonVarlikAdedSayisi", "width": 24, "enabled": true},
+              {"field": "KomisyonVarlikAdedSayisiMicroList", "header": "KomisyonVarlikAdedSayisiMicro", "width": 29, "enabled": true},
+              {"field": "KomisyonIslemSayisiList", "header": "KomisyonIslemSayisi", "width": 19, "enabled": true},
+              {"field": "KomisyonFiyatList", "header": "KomisyonFiyat", "width": 13, "enabled": true},
+
+              {"field": "IsTradeEnabledList", "header": "IsTradeEnabled", "width": 14, "enabled": true},
+              {"field": "IsPozKapatEnabledList", "header": "IsPozKapatEnabled", "width": 17, "enabled": true},
+
+              {"field": "KarAlList", "header": "KarAl", "width": 10, "enabled": true},
+              {"field": "ZararKesList", "header": "ZararKes", "width": 10, "enabled": true},
+
+              {"field": "IzleyenStopList", "header": "IzleyenStop", "width": 11, "enabled": true},
+              {"field": "KardaBarSayisiList", "header": "KardaBarSayisi", "width": 14, "enabled": true},
+              {"field": "ZarardaBarSayisiList", "header": "ZarardaBarSayisi", "width": 16, "enabled": true},
+
+              {"field": "EmirKomutList", "header": "EmirKomut", "width": 9, "enabled": true},
+              {"field": "EmirStatusList", "header": "EmirStatus", "width": 10, "enabled": true}
+            ]
+          }
+        }
+      }
+    },
+    "SingleTraderPerformans": {
+      "version": 1,
+      "description": "SingleTrader performans ayarları (ilerde kullanılacak)",
+      "Full": {
+        "version": 1,
+        "description": "Performans için temel kolonlar",
+        "listOutputs": {
+          "full": {
+            "columns": [
+              {"field": "No", "header": "No", "width": 7, "enabled": true},
+              {"field": "YonList", "header": "Yon", "width": 3, "enabled": true},
+              {"field": "KontratSayisi", "header": "KontratSayisi", "width": 13, "enabled": true},
+              {"field": "AcilisTarihi", "header": "Açılış Tarihi", "width": 10, "enabled": true},
+              {"field": "AcilisSaati", "header": "Açılış Saati", "width": 10, "enabled": true},
+              {"field": "AcilisFiyati", "header": "Açılış Fiyatı", "width": 10, "enabled": true},
+              {"field": "KapanisTarihi", "header": "Kapanış Tarihi", "width": 10, "enabled": true},
+              {"field": "KapanisSaati", "header": "Kapanış Saati", "width": 10, "enabled": true},
+              {"field": "KapanisFiyati", "header": "Kapanış Fiyatı", "width": 10, "enabled": true},
+              {"field": "KarZararPuan", "header": "Kar/Zarar", "width": 10, "enabled": true},
+              {"field": "BakiyePuan", "header": "Bakiye Puan", "width": 12, "enabled": true}
+            ]
+          }
+        }
+      }
     }
   }
 }

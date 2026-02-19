@@ -191,11 +191,8 @@ public class StatisticsExporter
 
         var json = File.ReadAllText(resolvedConfigPath);
         var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json);
-        if (cfg?.listOutputs?.full?.columns == null || cfg.listOutputs.full.columns.Count == 0)
-            throw new InvalidOperationException("Statistics exporter config does not contain any columns.");
-
-        var columns = cfg.listOutputs.full.columns.FindAll(c => c.enabled);
-        if (columns.Count == 0)
+        var columns = cfg?.GetEnabledColumns();
+        if (columns == null || columns.Count == 0)
             throw new InvalidOperationException("Statistics exporter config has no enabled columns.");
 
         using StreamWriter writer = CreateSharedWriter(filePath);
@@ -240,12 +237,85 @@ public class StatisticsExporter
 
         var json = File.ReadAllText(resolvedConfigPath);
         var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json);
-        if (cfg?.listOutputs?.full?.columns == null || cfg.listOutputs.full.columns.Count == 0)
-            throw new InvalidOperationException("Statistics exporter config does not contain any columns.");
-
-        var columns = cfg.listOutputs.full.columns.FindAll(c => c.enabled);
-        if (columns.Count == 0)
+        var columns = cfg?.GetEnabledColumns();
+        if (columns == null || columns.Count == 0)
             throw new InvalidOperationException("Statistics exporter config has no enabled columns.");
+
+        using StreamWriter writer = CreateSharedWriter(filePath);
+        writer.WriteLine(string.Join(";", columns.ConvertAll(c => c.header ?? c.field ?? "")));
+
+        for (int i = 0; i < trader.Data.Count; i++)
+        {
+            var values = new List<string>(columns.Count);
+            foreach (var col in columns)
+            {
+                values.Add(GetColumnValueByField(i, col.field ?? ""));
+            }
+            writer.WriteLine(string.Join(";", values));
+        }
+    }
+
+    public void SavePerformansToTxtFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json", string profile = "Full")
+    {
+        var trader = _statistics.TraderForExport;
+        if (trader == null || trader.Data == null || trader.Data.Count == 0)
+            return;
+
+        var resolvedConfigPath = ResolveConfigPath(configPath);
+        if (resolvedConfigPath == null)
+            throw new FileNotFoundException("Statistics exporter config not found.", configPath);
+
+        var json = File.ReadAllText(resolvedConfigPath);
+        var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json);
+        var columns = cfg?.GetEnabledColumnsFromPerformans(profile);
+        if (columns == null || columns.Count == 0)
+            throw new InvalidOperationException("Performans config has no enabled columns.");
+
+        using StreamWriter writer = CreateSharedWriter(filePath);
+        writer.WriteLine($"SINGLE TRADER PERFORMANS (PROFILE: {profile}) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
+        writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        writer.WriteLine("".PadRight(850, '='));
+
+        var headerCells = new List<string>(columns.Count);
+        foreach (var col in columns)
+        {
+            int width = col.width > 0 ? col.width : 10;
+            headerCells.Add((col.header ?? col.field ?? "").PadLeft(width));
+        }
+        writer.WriteLine(string.Join(" | ", headerCells));
+        writer.WriteLine("".PadRight(850, '-'));
+
+        for (int i = 0; i < trader.Data.Count; i++)
+        {
+            var rowCells = new List<string>(columns.Count);
+            foreach (var col in columns)
+            {
+                int width = col.width > 0 ? col.width : 10;
+                string value = GetColumnValueByField(i, col.field ?? "");
+                bool leftAlign = IsLeftAlignedField(col.field ?? "");
+                rowCells.Add(leftAlign ? value.PadRight(width) : value.PadLeft(width));
+            }
+            writer.WriteLine(string.Join(" | ", rowCells));
+        }
+
+        writer.WriteLine("".PadRight(500, '='));
+    }
+
+    public void SavePerformansToCsvFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json", string profile = "Full")
+    {
+        var trader = _statistics.TraderForExport;
+        if (trader == null || trader.Data == null || trader.Data.Count == 0)
+            return;
+
+        var resolvedConfigPath = ResolveConfigPath(configPath);
+        if (resolvedConfigPath == null)
+            throw new FileNotFoundException("Statistics exporter config not found.", configPath);
+
+        var json = File.ReadAllText(resolvedConfigPath);
+        var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json);
+        var columns = cfg?.GetEnabledColumnsFromPerformans(profile);
+        if (columns == null || columns.Count == 0)
+            throw new InvalidOperationException("Performans config has no enabled columns.");
 
         using StreamWriter writer = CreateSharedWriter(filePath);
         writer.WriteLine(string.Join(";", columns.ConvertAll(c => c.header ?? c.field ?? "")));
@@ -882,15 +952,25 @@ public class StatisticsExporter
         if (File.Exists(baseCandidate))
             return baseCandidate;
 
-        // 3) Walk up from cwd and app base to find inputs/StatisticsExporterConfig.json
+        // 3) Walk up from cwd and app base to find inputs config file (tolerant to common typos)
         foreach (var start in new[] { Directory.GetCurrentDirectory(), baseDir })
         {
             var dir = new DirectoryInfo(start);
             for (int i = 0; i < 8 && dir != null; i++, dir = dir.Parent)
             {
-                var probe = Path.Combine(dir.FullName, "inputs", "StatisticsExporterConfig.json");
-                if (File.Exists(probe))
-                    return probe;
+                var inputsDir = Path.Combine(dir.FullName, "inputs");
+                var candidates = new[]
+                {
+                    "StatisticsExporterConfig.json",           // correct
+                    "StatstcsExporterConfg.json",              // user-typo variant 1
+                    "StatscsExporterConfg.json"                // user-typo variant 2
+                };
+                foreach (var name in candidates)
+                {
+                    var probe = Path.Combine(inputsDir, name);
+                    if (File.Exists(probe))
+                        return probe;
+                }
             }
         }
 
@@ -981,7 +1061,203 @@ public class StatisticsExporter
 
     private sealed class StatisticsExporterConfig
     {
+        // Backward-compatible root (old structure)
         public ListOutputs? listOutputs { get; set; }
+
+        // New structure root (with tolerant aliases)
+        public SingleTraderNode? SingleTrader { get; set; }
+        public SingleTraderNode? SngleTrader { get; set; } // alias tolerance
+        public SingleTraderNode? ngleTrader { get; set; }  // alias tolerance
+
+        public List<ColumnConfig>? TryGetColumns()
+        {
+            // Prefer new structure if present
+            var st = SingleTrader ?? SngleTrader ?? ngleTrader;
+            var lists = st?.SingleTraderLists;
+            if (lists == null)
+                lists = st?.SngleTraderLsts; // alias tolerance
+
+            // New: Full profile
+            var fullCols = lists?.Full?.listOutputs?.full?.columns
+                           ?? lists?.Full?.lstOutputs?.full?.columns;
+            if (fullCols != null && fullCols.Count > 0)
+                return fullCols;
+
+            // New: Minimal profile
+            var minimalCols = lists?.Minimal?.listOutputs?.full?.columns
+                               ?? lists?.Minimal?.lstOutputs?.full?.columns;
+            if (minimalCols != null && minimalCols.Count > 0)
+                return minimalCols;
+
+            // Transitional new-old mix: listOutputs directly under SingleTraderLists
+            var newOldCols = lists?.listOutputs?.full?.columns
+                             ?? lists?.lstOutputs?.full?.columns;
+            if (newOldCols != null && newOldCols.Count > 0)
+                return newOldCols;
+
+            // If lists not present, check Performans profiles (optional)
+            var perf = st?.SingleTraderPerformans ?? st?.SngleTraderPerformans ?? st?.ngleTraderPerformans;
+            var perfFull = perf?.Full?.listOutputs?.full?.columns
+                           ?? perf?.Full?.lstOutputs?.full?.columns;
+            if (perfFull != null && perfFull.Count > 0)
+                return perfFull;
+
+            var perfMinimal = perf?.Minimal?.listOutputs?.full?.columns
+                               ?? perf?.Minimal?.lstOutputs?.full?.columns;
+            if (perfMinimal != null && perfMinimal.Count > 0)
+                return perfMinimal;
+
+            // Fallback to old structure
+            return listOutputs?.full?.columns;
+        }
+
+        public List<ColumnConfig> GetEnabledColumns()
+        {
+            var cols = TryGetColumns() ?? new List<ColumnConfig>();
+            // Normalize alias keys and synonyms before filtering
+            NormalizeColumns(cols);
+            return cols.FindAll(c => c.enabled);
+        }
+
+        public List<ColumnConfig>? TryGetColumnsFromPerformans(string? profile = null)
+        {
+            var st = SingleTrader ?? SngleTrader ?? ngleTrader;
+            var perf = st?.SingleTraderPerformans ?? st?.SngleTraderPerformans ?? st?.ngleTraderPerformans;
+            if (perf == null)
+                return null;
+
+            TraderListProfile? chosen = null;
+            if (!string.IsNullOrWhiteSpace(profile))
+            {
+                if (string.Equals(profile, "Full", StringComparison.OrdinalIgnoreCase)) chosen = perf.Full;
+                else if (string.Equals(profile, "Minimal", StringComparison.OrdinalIgnoreCase)) chosen = perf.Minimal;
+            }
+
+            chosen ??= perf.Full ?? perf.Minimal;
+            if (chosen == null)
+                return null;
+
+            return chosen.listOutputs?.full?.columns
+                   ?? chosen.lstOutputs?.full?.columns;
+        }
+
+        public List<ColumnConfig> GetEnabledColumnsFromPerformans(string? profile = null)
+        {
+            var cols = TryGetColumnsFromPerformans(profile) ?? new List<ColumnConfig>();
+            NormalizeColumns(cols);
+            return cols.FindAll(c => c.enabled);
+        }
+
+        private static void NormalizeColumns(List<ColumnConfig> cols)
+        {
+            foreach (var c in cols)
+            {
+                // Accept alias keys from config
+                if (string.IsNullOrWhiteSpace(c.field) && !string.IsNullOrWhiteSpace(c.feld))
+                    c.field = c.feld;
+                if ((c.width <= 0) && c.wdth.HasValue && c.wdth.Value > 0)
+                    c.width = c.wdth.Value;
+
+                // Map common shorthand field names to internal names
+                switch (c.field)
+                {
+                    case "No":
+                        c.field = "BarNo";
+                        break;
+                    case "YonLst":
+                        c.field = "YonList";
+                        break;
+                    case "KontratSayst":
+                        c.field = "KontratSayisiList";
+                        break;
+                    case "AcilisTarihi":
+                        c.field = "Date";
+                        break;
+                    case "AcilisSaati":
+                        c.field = "Time";
+                        break;
+                    case "AcilisTar":
+                        c.field = "Date"; // bar date
+                        break;
+                    case "AcilisFiyati":
+                        c.field = "Open";
+                        break;
+                    case "KapanisTarihi":
+                        c.field = "Date";
+                        break;
+                    case "KapanisSaati":
+                        c.field = "Time";
+                        break;
+                    case "KapanisTar":
+                        c.field = "Date"; // bar date (close date aligns with bar date)
+                        break;
+                    case "KapanisFiyati":
+                        c.field = "Close";
+                        break;
+                    case "KarZararPuan":
+                        c.field = "KarZararPuanList";
+                        break;
+                    case "KarZarar":
+                        c.field = "KarZararFiyatList";
+                        break;
+                    case "BakiyePuan":
+                        c.field = "BakiyePuanList";
+                        break;
+                    case "BakiyeFiyat":
+                        c.field = "BakiyeFiyatList";
+                        break;
+                    case "BakiyeFiyatNet":
+                        c.field = "BakiyeFiyatNetList";
+                        break;
+                }
+
+                // Default sensible width
+                if (c.width <= 0) c.width = 10;
+            }
+        }
+    }
+
+    private sealed class SingleTraderNode
+    {
+        public SingleTraderListsNode? SingleTraderLists { get; set; }
+        public SingleTraderListsNode? SngleTraderLsts { get; set; } // alias tolerance
+        public SingleTraderPerformansNode? SingleTraderPerformans { get; set; }
+        public SingleTraderPerformansNode? SngleTraderPerformans { get; set; } // alias tolerance
+        public SingleTraderPerformansNode? ngleTraderPerformans { get; set; } // alias tolerance
+    }
+
+    private sealed class SingleTraderListsNode
+    {
+        public int version { get; set; }
+        public string? description { get; set; }
+        // Backward compat: old structure had listOutputs directly here
+        public ListOutputs? listOutputs { get; set; }
+
+        // New structure: profiles under SingleTraderLists
+        public TraderListProfile? Full { get; set; }
+        public TraderListProfile? Minimal { get; set; }
+        // Alias tolerance
+        public ListOutputs? lstOutputs { get; set; }
+    }
+
+    private sealed class TraderListProfile
+    {
+        public int? version { get; set; }
+        public int? verson { get; set; } // alias tolerance
+        public string? description { get; set; }
+        public string? descrpton { get; set; } // alias tolerance
+        public ListOutputs? listOutputs { get; set; }
+        public ListOutputs? lstOutputs { get; set; } // alias tolerance
+    }
+
+    private sealed class SingleTraderPerformansNode
+    {
+        public int? version { get; set; }
+        public int? verson { get; set; } // alias tolerance
+        public string? description { get; set; }
+        public string? descrpton { get; set; } // alias tolerance
+        public TraderListProfile? Full { get; set; }
+        public TraderListProfile? Minimal { get; set; }
     }
 
     private sealed class ListOutputs
@@ -997,8 +1273,10 @@ public class StatisticsExporter
     private sealed class ColumnConfig
     {
         public string? field { get; set; }
+        public string? feld { get; set; } // alias support
         public string? header { get; set; }
         public int width { get; set; }
+        public int? wdth { get; set; } // alias support
         public bool enabled { get; set; } = true;
     }
 }
