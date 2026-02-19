@@ -610,21 +610,41 @@ public class StatisticsExporter
             return "...";
         }
 
+        const int reportBoxWidth = 78;
+        static string CenterText(string text, int width)
+        {
+            if (text.Length >= width)
+                return text[..width];
+
+            var leftPadding = (width - text.Length) / 2;
+            return new string(' ', leftPadding) + text.PadRight(width - leftPadding);
+        }
+
         void AddSection(StringBuilder sb, string title, params (string Label, string Key)[] rows)
         {
-            sb.AppendLine($"[ {title} ]");
+            var boxWidth = reportBoxWidth;
+            const int labelWidth = 24;
+            var valueWidth = boxWidth - labelWidth - 6; // "| " + " : " + " |"
+
+            var headerDashCount = Math.Max(0, boxWidth - title.Length - 3); // "┌─ " + title + " ─┐"
+            sb.AppendLine($"┌─ {title} {new string('─', headerDashCount)}┐");
             foreach (var row in rows)
             {
-                sb.AppendLine($"{row.Label.PadRight(28)} : {GetValue(row.Key)}");
+                var value = GetValue(row.Key);
+                if (value.Length > valueWidth)
+                    value = value[..valueWidth];
+
+                sb.AppendLine($"│ {row.Label.PadRight(labelWidth)} : {value.PadRight(valueWidth)} │");
             }
+            sb.AppendLine($"└{new string('─', boxWidth)}┘");
             sb.AppendLine();
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine("================================================================================");
-        sb.AppendLine("                    SINGLE TRADER RUN RESULTS - DETAILED REPORT");
-        sb.AppendLine($"                    Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine("================================================================================");
+        sb.AppendLine($"┌{new string('─', reportBoxWidth)}┐");
+        sb.AppendLine($"│{CenterText("SINGLE TRADER RUN RESULTS - DETAILED REPORT", reportBoxWidth)}│");
+        sb.AppendLine($"│{CenterText($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}", reportBoxWidth)}│");
+        sb.AppendLine($"└{new string('─', reportBoxWidth)}┘");
         sb.AppendLine();
 
         AddSection(sb, "TRADER & SYSTEM INFORMATION",
@@ -840,9 +860,9 @@ public class StatisticsExporter
             ("Last Hour (Pts)", "GetiriPuanSaat1")
         );
 
-        sb.AppendLine("================================================================================");
-        sb.AppendLine("                              END OF REPORT");
-        sb.AppendLine("================================================================================");
+        sb.AppendLine($"┌{new string('─', reportBoxWidth)}┐");
+        sb.AppendLine($"│{CenterText("END OF REPORT", reportBoxWidth)}│");
+        sb.AppendLine($"└{new string('─', reportBoxWidth)}┘");
         return sb.ToString();
     }
 
