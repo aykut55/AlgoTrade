@@ -223,10 +223,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     /// <summary>
     /// Son bar için Kar/Zarar (yüzde olarak)
-    /// lists.KarZararPuanYuzdeList'ten alınır
+    /// lists.KarZararFiyatYuzdeList'ten alınır
     /// </summary>
-    public double SonKarZararYuzde => (lists?.KarZararPuanYuzdeList != null && Data.Count > 0)
-        ? lists.KarZararPuanYuzdeList[Data.Count - 1] : 0.0;
+    public double SonKarZararYuzde => (lists?.KarZararFiyatYuzdeList != null && Data.Count > 0)
+        ? lists.KarZararFiyatYuzdeList[Data.Count - 1] : 0.0;
 
     /// <summary>
     /// Son sinyal fiyatı (giriş fiyatı)
@@ -1483,13 +1483,13 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.lists.YonList[i] = "";
         this.lists.SeviyeList[i] = 0.0;
         this.lists.SinyalList[i] = 0.0;
-        this.lists.KarZararPuanList[i] = 0.0;
+        //this.lists.KarZararPuanList[i] = 0.0;          // Silinecek
         this.lists.KarZararFiyatList[i] = 0.0;
-        this.lists.KarZararPuanYuzdeList[i] = 0.0;
+        //this.lists.KarZararPuanYuzdeList[i] = 0.0;    // Silinecek
         this.lists.KarZararFiyatYuzdeList[i] = 0.0;
-        this.status.KarZararPuan = 0.0;
+        //this.status.KarZararPuan = 0.0;                // Silinecek
         this.status.KarZararFiyat = 0.0;
-        this.status.KarZararPuanYuzde = 0.0;
+        //this.status.KarZararPuanYuzde = 0.0;           // Silinecek
         this.status.KarZararFiyatYuzde = 0.0;
         this.lists.KarAlList[i] = 0.0;
         this.lists.ZararKesList[i] = 0.0;
@@ -1512,8 +1512,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.lists.ZarardaBarSayisiList[i] = 0;
         this.lists.BakiyeFiyatList[i] = this.status.BakiyeFiyat;
         this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.BakiyeFiyat;
-        this.lists.BakiyePuanList[i] = this.status.BakiyePuan;
-        this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;
+        //this.lists.BakiyePuanList[i] = this.status.BakiyePuan;  // Silinecek
+        //this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;  // Silinecek
         this.lists.EmirKomutList[i] = 0;
         this.lists.EmirStatusList[i] = 0;
         this.ExecutionStepNumber += 1;
@@ -1537,18 +1537,18 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.status.KontratSayisi = this.initialTradeParams.KontratSayisi;
         this.status.HisseSayisi = this.initialTradeParams.HisseSayisi;
         this.status.IlkBakiyeFiyat = this.initialTradeParams.IlkBakiyeFiyat;
-        this.status.IlkBakiyePuan = this.initialTradeParams.IlkBakiyePuan;
+        //this.status.IlkBakiyePuan = this.initialTradeParams.IlkBakiyePuan;  // Silinecek
         this.status.GetiriFiyatTipi = this.initialTradeParams.GetiriFiyatTipi;
         this.status.MicroLotSizeEnabled = this.initialTradeParams.MicroLotSizeEnabled;
         if (this.BakiyeInitialized == false)
         {
             this.BakiyeInitialized = true;
             this.status.BakiyeFiyat = this.status.IlkBakiyeFiyat;
-            this.status.BakiyePuan = this.status.IlkBakiyePuan;
+            //this.status.BakiyePuan = this.status.IlkBakiyePuan;  // Silinecek
             this.lists.BakiyeFiyatList[i] = this.status.BakiyeFiyat;
             this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.BakiyeFiyat;
-            this.lists.BakiyePuanList[i] = this.status.BakiyePuan;
-            this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;
+            //this.lists.BakiyePuanList[i] = this.status.BakiyePuan;  // Silinecek
+            //this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;  // Silinecek
         }
     }
 
@@ -1618,51 +1618,51 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // Calculate profit/loss based on position direction
         if (sonYon == "A")  // Long position (Al - Buy)
         {
-            status.KarZararPuan = anlikFiyat - sonFiyat;
-            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
-            lists.KarZararPuanList[i] = status.KarZararPuan;
+            //status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+            status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
+            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
-                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+                status.KarZararFiyatYuzde = 100.0 * (anlikFiyat - sonFiyat) / sonFiyat;
             else
                 status.KarZararFiyatYuzde = 0.0;
 
             lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
 
-            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
-            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+            //status.KarZararPuanYuzde = status.KarZararFiyatYuzde;  // Silinecek
+            //lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;  // Silinecek
         }
         else if (sonYon == "S")  // Short position (Sat - Sell)
         {
-            status.KarZararPuan = sonFiyat - anlikFiyat;
-            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
-            lists.KarZararPuanList[i] = status.KarZararPuan;
+            //status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+            status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
+            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
-                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+                status.KarZararFiyatYuzde = 100.0 * (sonFiyat - anlikFiyat) / sonFiyat;
             else
                 status.KarZararFiyatYuzde = 0.0;
 
             lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
 
-            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
-            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+            //status.KarZararPuanYuzde = status.KarZararFiyatYuzde;  // Silinecek
+            //lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;  // Silinecek
         }
 
         // Update bar count statistics
-        if (status.KarZararPuan > 0)
+        if (status.KarZararFiyat > 0)
         {
             status.KardaBarSayisi += 1;
             status.ZarardaBarSayisi -= 1;
         }
-        else if (status.KarZararPuan == 0)
+        else if (status.KarZararFiyat == 0)
         {
             status.KardaBarSayisi = 0;
             status.ZarardaBarSayisi = 0;
         }
-        else  // KarZararPuan < 0
+        else  // KarZararFiyat < 0
         {
             status.KardaBarSayisi -= 1;
             status.ZarardaBarSayisi += 1;
@@ -1712,51 +1712,51 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // Calculate profit/loss based on position direction
         if (sonYon == "A")  // Long position (Al - Buy)
         {
-            status.KarZararPuan = anlikFiyat - sonFiyat;
-            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
-            lists.KarZararPuanList[i] = status.KarZararPuan;
+            //status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+            status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
+            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
-                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+                status.KarZararFiyatYuzde = 100.0 * (anlikFiyat - sonFiyat) / sonFiyat;
             else
                 status.KarZararFiyatYuzde = 0.0;
 
             lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
 
-            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
-            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+            //status.KarZararPuanYuzde = status.KarZararFiyatYuzde;  // Silinecek
+            //lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;  // Silinecek
         }
         else if (sonYon == "S")  // Short position (Sat - Sell)
         {
-            status.KarZararPuan = sonFiyat - anlikFiyat;
-            status.KarZararFiyat = status.KarZararPuan * varlikAdedSayisi;
-            lists.KarZararPuanList[i] = status.KarZararPuan;
+            //status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+            status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
+            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
-                status.KarZararFiyatYuzde = 100.0 * status.KarZararPuan / sonFiyat;
+                status.KarZararFiyatYuzde = 100.0 * (sonFiyat - anlikFiyat) / sonFiyat;
             else
                 status.KarZararFiyatYuzde = 0.0;
 
             lists.KarZararFiyatYuzdeList[i] = status.KarZararFiyatYuzde;
 
-            status.KarZararPuanYuzde = status.KarZararFiyatYuzde;
-            lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;
+            //status.KarZararPuanYuzde = status.KarZararFiyatYuzde;  // Silinecek
+            //lists.KarZararPuanYuzdeList[i] = status.KarZararPuanYuzde;  // Silinecek
         }
 
         // Update bar count statistics
-        if (status.KarZararPuan > 0)
+        if (status.KarZararFiyat > 0)
         {
             status.KardaBarSayisi += 1;
             status.ZarardaBarSayisi -= 1;
         }
-        else if (status.KarZararPuan == 0)
+        else if (status.KarZararFiyat == 0)
         {
             status.KardaBarSayisi = 0;
             status.ZarardaBarSayisi = 0;
         }
-        else  // KarZararPuan < 0
+        else  // KarZararFiyat < 0
         {
             status.KardaBarSayisi -= 1;
             status.ZarardaBarSayisi += 1;
@@ -1764,7 +1764,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         return result;
     }
-    
+
     public void ExecutePreOrderMethods(int barIndex)
     {
         int i = barIndex;
@@ -1900,26 +1900,26 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         int i = barIndex;
 
-        // Bakiye (Puan)
-        this.lists.BakiyePuanList[i] = this.status.BakiyePuan + this.lists.KarZararPuanList[i];
-        this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.IlkBakiyePuan;
+        // Bakiye (Puan)  // Silinecek
+        //this.lists.BakiyePuanList[i] = this.status.BakiyePuan + this.lists.KarZararPuanList[i];  // Silinecek
+        //this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.IlkBakiyePuan;  // Silinecek
 
-        if (this.flags.BakiyeGuncelle)
-        {
-            this.status.BakiyePuan = this.lists.BakiyePuanList[i];
-            this.status.GetiriPuan = this.lists.GetiriPuanList[i];
-
-            if (this.lists.KarZararPuanList[i] >= 0)
-            {
-                this.status.ToplamKarPuan += this.lists.KarZararPuanList[i];
-            }
-            else if (this.lists.KarZararPuanList[i] < 0)
-            {
-                this.status.ToplamZararPuan += this.lists.KarZararPuanList[i];
-            }
-
-            this.status.NetKarPuan = this.status.ToplamKarPuan + this.status.ToplamZararPuan;
-        }
+        //if (this.flags.BakiyeGuncelle)  // Silinecek
+        //{  // Silinecek
+        //    this.status.BakiyePuan = this.lists.BakiyePuanList[i];  // Silinecek
+        //    this.status.GetiriPuan = this.lists.GetiriPuanList[i];  // Silinecek
+        //  // Silinecek
+        //    if (this.lists.KarZararPuanList[i] >= 0)  // Silinecek
+        //    {  // Silinecek
+        //        this.status.ToplamKarPuan += this.lists.KarZararPuanList[i];  // Silinecek
+        //    }  // Silinecek
+        //    else if (this.lists.KarZararPuanList[i] < 0)  // Silinecek
+        //    {  // Silinecek
+        //        this.status.ToplamZararPuan += this.lists.KarZararPuanList[i];  // Silinecek
+        //    }  // Silinecek
+        //  // Silinecek
+        //    this.status.NetKarPuan = this.status.ToplamKarPuan + this.status.ToplamZararPuan;  // Silinecek
+        //}  // Silinecek
 
         // Bakiye (Fiyat)
         this.lists.BakiyeFiyatList[i] = this.status.BakiyeFiyat + this.lists.KarZararFiyatList[i];
@@ -1942,15 +1942,15 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.status.NetKarFiyat = this.status.ToplamKarFiyat + this.status.ToplamZararFiyat;
         }
 
-        // Yüzde hesaplamaları (Puan)
-        if (this.status.IlkBakiyePuan != 0.0)
-        {
-            this.lists.GetiriPuanYuzdeList[i] = 100.0 * this.lists.GetiriPuanList[i] / this.status.IlkBakiyePuan;
-        }
-        else
-        {
-            this.lists.GetiriPuanYuzdeList[i] = 0.0;
-        }
+        // Yüzde hesaplamaları (Puan)  // Silinecek
+        //if (this.status.IlkBakiyePuan != 0.0)  // Silinecek
+        //{  // Silinecek
+        //    this.lists.GetiriPuanYuzdeList[i] = 100.0 * this.lists.GetiriPuanList[i] / this.status.IlkBakiyePuan;  // Silinecek
+        //}  // Silinecek
+        //else  // Silinecek
+        //{  // Silinecek
+        //    this.lists.GetiriPuanYuzdeList[i] = 0.0;  // Silinecek
+        //}  // Silinecek
 
         // Yüzde hesaplamaları (Fiyat)
         if (this.status.IlkBakiyeFiyat != 0.0)
@@ -1964,7 +1964,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         if (this.flags.BakiyeGuncelle)
         {
-            this.status.GetiriPuanYuzde = this.lists.GetiriPuanYuzdeList[i];
+            //this.status.GetiriPuanYuzde = this.lists.GetiriPuanYuzdeList[i];  // Silinecek
             this.status.GetiriFiyatYuzde = this.lists.GetiriFiyatYuzdeList[i];
         }
 
@@ -2024,11 +2024,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.status.GetiriFiyatNet = this.lists.GetiriFiyatNetList[barCount - 1];
             this.status.GetiriKzNet = this.lists.GetiriKzNet[barCount - 1];
             this.status.GetiriFiyatYuzdeNet = this.lists.GetiriFiyatYuzdeNetList[barCount - 1];
-            this.status.BakiyePuan = this.lists.BakiyePuanList[barCount - 1];
-            this.status.GetiriPuan = this.lists.GetiriPuanList[barCount - 1];
-            this.status.BakiyePuanNet = this.lists.BakiyePuanNetList[barCount - 1];
-            this.status.GetiriPuanNet = this.lists.GetiriPuanNetList[barCount - 1];
-            this.status.GetiriPuanYuzdeNet = this.lists.GetiriPuanYuzdeNetList[barCount - 1];
+            //this.status.BakiyePuan = this.lists.BakiyePuanList[barCount - 1];                   // Silinecek
+            //this.status.GetiriPuan = this.lists.GetiriPuanList[barCount - 1];                   // Silinecek
+            //this.status.BakiyePuanNet = this.lists.BakiyePuanNetList[barCount - 1];             // Silinecek
+            //this.status.GetiriPuanNet = this.lists.GetiriPuanNetList[barCount - 1];             // Silinecek
+            //this.status.GetiriPuanYuzdeNet = this.lists.GetiriPuanYuzdeNetList[barCount - 1];   // Silinecek
         }
 
         return result;

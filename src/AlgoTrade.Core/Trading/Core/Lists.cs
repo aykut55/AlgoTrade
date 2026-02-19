@@ -32,9 +32,9 @@ namespace AlgoTrade.Core.Trading.Core
 
         #region Profit/Loss Data
 
-        public List<double> KarZararPuanList { get; set; }
+        //public List<double> KarZararPuanList { get; set; }        // Silinecek
         public List<double> KarZararFiyatList { get; set; }
-        public List<double> KarZararPuanYuzdeList { get; set; }
+        //public List<double> KarZararPuanYuzdeList { get; set; }   // Silinecek
         public List<double> KarZararFiyatYuzdeList { get; set; }
 
         #endregion
@@ -85,32 +85,32 @@ namespace AlgoTrade.Core.Trading.Core
 
         #region Balance Data
 
-        public List<double> BakiyePuanList { get; set; }
+        //public List<double> BakiyePuanList { get; set; }  // Silinecek
         public List<double> BakiyeFiyatList { get; set; }
 
         #endregion
 
         #region Return Data (Getiri)
 
-        public List<double> GetiriPuanList { get; set; }
+        //public List<double> GetiriPuanList { get; set; }      // Silinecek
         public List<double> GetiriFiyatList { get; set; }
-        public List<double> GetiriPuanYuzdeList { get; set; }
+        //public List<double> GetiriPuanYuzdeList { get; set; } // Silinecek
         public List<double> GetiriFiyatYuzdeList { get; set; }
 
         #endregion
 
         #region Net Balance Data
 
-        public List<double> BakiyePuanNetList { get; set; }
+        //public List<double> BakiyePuanNetList { get; set; }  // Silinecek
         public List<double> BakiyeFiyatNetList { get; set; }
 
         #endregion
 
         #region Net Return Data
 
-        public List<double> GetiriPuanNetList { get; set; }
+        //public List<double> GetiriPuanNetList { get; set; }      // Silinecek
         public List<double> GetiriFiyatNetList { get; set; }
-        public List<double> GetiriPuanYuzdeNetList { get; set; }
+        //public List<double> GetiriPuanYuzdeNetList { get; set; } // Silinecek
         public List<double> GetiriFiyatYuzdeNetList { get; set; }
 
         #endregion
@@ -146,9 +146,9 @@ namespace AlgoTrade.Core.Trading.Core
             IsTradeEnabledList = new List<int>();
             IsPozKapatEnabledList = new List<int>();
 
-            KarZararPuanList = new List<double>();
+            //KarZararPuanList = new List<double>();       // Silinecek
             KarZararFiyatList = new List<double>();
-            KarZararPuanYuzdeList = new List<double>();
+            //KarZararPuanYuzdeList = new List<double>();  // Silinecek
             KarZararFiyatYuzdeList = new List<double>();
 
             KarAlList = new List<double>();
@@ -176,20 +176,20 @@ namespace AlgoTrade.Core.Trading.Core
             KardaBarSayisiList = new List<int>();
             ZarardaBarSayisiList = new List<int>();
 
-            BakiyePuanList = new List<double>();
+            //BakiyePuanList = new List<double>();  // Silinecek
             BakiyeFiyatList = new List<double>();
 
-            GetiriPuanList = new List<double>();
+            //GetiriPuanList = new List<double>();      // Silinecek
             GetiriFiyatList = new List<double>();
-            GetiriPuanYuzdeList = new List<double>();
+            //GetiriPuanYuzdeList = new List<double>(); // Silinecek
             GetiriFiyatYuzdeList = new List<double>();
 
-            BakiyePuanNetList = new List<double>();
+            //BakiyePuanNetList = new List<double>();  // Silinecek
             BakiyeFiyatNetList = new List<double>();
 
-            GetiriPuanNetList = new List<double>();
+            //GetiriPuanNetList = new List<double>();      // Silinecek
             GetiriFiyatNetList = new List<double>();
-            GetiriPuanYuzdeNetList = new List<double>();
+            //GetiriPuanYuzdeNetList = new List<double>(); // Silinecek
             GetiriFiyatYuzdeNetList = new List<double>();
 
             GetiriKz = new List<double>();
@@ -225,9 +225,9 @@ namespace AlgoTrade.Core.Trading.Core
             SeviyeList?.Clear();
             SinyalList?.Clear();
 
-            KarZararPuanList?.Clear();
+            //KarZararPuanList?.Clear();       // Silinecek
             KarZararFiyatList?.Clear();
-            KarZararPuanYuzdeList?.Clear();
+            //KarZararPuanYuzdeList?.Clear();  // Silinecek
             KarZararFiyatYuzdeList?.Clear();
 
             KarAlList?.Clear();
@@ -254,20 +254,20 @@ namespace AlgoTrade.Core.Trading.Core
             KardaBarSayisiList?.Clear();
             ZarardaBarSayisiList?.Clear();
 
-            BakiyePuanList?.Clear();
+            //BakiyePuanList?.Clear();  // Silinecek
             BakiyeFiyatList?.Clear();
 
-            GetiriPuanList?.Clear();
+            //GetiriPuanList?.Clear();      // Silinecek
             GetiriFiyatList?.Clear();
-            GetiriPuanYuzdeList?.Clear();
+            //GetiriPuanYuzdeList?.Clear(); // Silinecek
             GetiriFiyatYuzdeList?.Clear();
 
-            BakiyePuanNetList?.Clear();
+            //BakiyePuanNetList?.Clear();  // Silinecek
             BakiyeFiyatNetList?.Clear();
 
-            GetiriPuanNetList?.Clear();
+            //GetiriPuanNetList?.Clear();      // Silinecek
             GetiriFiyatNetList?.Clear();
-            GetiriPuanYuzdeNetList?.Clear();
+            //GetiriPuanYuzdeNetList?.Clear(); // Silinecek
             GetiriFiyatYuzdeNetList?.Clear();
 
             GetiriKz?.Clear();
@@ -322,13 +322,13 @@ namespace AlgoTrade.Core.Trading.Core
                 if (SeviyeList != null && SeviyeList.Count == n) SeviyeList[i] = 0.0;
                 if (SinyalList != null && SinyalList.Count == n) SinyalList[i] = 0.0;
 
-                if (KarZararPuanList != null && KarZararPuanList.Count == n) KarZararPuanList[i] = 0.0;
+                //if (KarZararPuanList != null && KarZararPuanList.Count == n) KarZararPuanList[i] = 0.0;       // Silinecek
                 if (KarZararFiyatList != null && KarZararFiyatList.Count == n) KarZararFiyatList[i] = 0.0;
-                if (KarZararPuanYuzdeList != null && KarZararPuanYuzdeList.Count == n) KarZararPuanYuzdeList[i] = 0.0;
+                //if (KarZararPuanYuzdeList != null && KarZararPuanYuzdeList.Count == n) KarZararPuanYuzdeList[i] = 0.0;  // Silinecek
                 if (KarZararFiyatYuzdeList != null && KarZararFiyatYuzdeList.Count == n) KarZararFiyatYuzdeList[i] = 0.0;
 
                 if (KarAlList != null && KarAlList.Count == n) KarAlList[i] = 0.0;
-                if (ZararKesList != null && ZararKesList.Count == n) ZararKesList[i] = 0.0; 
+                if (ZararKesList != null && ZararKesList.Count == n) ZararKesList[i] = 0.0;
                 if (IzleyenStopList != null && IzleyenStopList.Count == n) IzleyenStopList[i] = 0.0;
 
                 if (IslemSayisiList != null && IslemSayisiList.Count == n) IslemSayisiList[i] = 0;
@@ -351,20 +351,20 @@ namespace AlgoTrade.Core.Trading.Core
                 if (KardaBarSayisiList != null && KardaBarSayisiList.Count == n) KardaBarSayisiList[i] = 0;
                 if (ZarardaBarSayisiList != null && ZarardaBarSayisiList.Count == n) ZarardaBarSayisiList[i] = 0;
 
-                if (BakiyePuanList != null && BakiyePuanList.Count == n) BakiyePuanList[i] = 0.0;
+                //if (BakiyePuanList != null && BakiyePuanList.Count == n) BakiyePuanList[i] = 0.0;  // Silinecek
                 if (BakiyeFiyatList != null && BakiyeFiyatList.Count == n) BakiyeFiyatList[i] = 0.0;
 
-                if (GetiriPuanList != null && GetiriPuanList.Count == n) GetiriPuanList[i] = 0.0;
+                //if (GetiriPuanList != null && GetiriPuanList.Count == n) GetiriPuanList[i] = 0.0;          // Silinecek
                 if (GetiriFiyatList != null && GetiriFiyatList.Count == n) GetiriFiyatList[i] = 0.0;
-                if (GetiriPuanYuzdeList != null && GetiriPuanYuzdeList.Count == n) GetiriPuanYuzdeList[i] = 0.0;
+                //if (GetiriPuanYuzdeList != null && GetiriPuanYuzdeList.Count == n) GetiriPuanYuzdeList[i] = 0.0;  // Silinecek
                 if (GetiriFiyatYuzdeList != null && GetiriFiyatYuzdeList.Count == n) GetiriFiyatYuzdeList[i] = 0.0;
 
-                if (BakiyePuanNetList != null && BakiyePuanNetList.Count == n) BakiyePuanNetList[i] = 0.0;
+                //if (BakiyePuanNetList != null && BakiyePuanNetList.Count == n) BakiyePuanNetList[i] = 0.0;  // Silinecek
                 if (BakiyeFiyatNetList != null && BakiyeFiyatNetList.Count == n) BakiyeFiyatNetList[i] = 0.0;
 
-                if (GetiriPuanNetList != null && GetiriPuanNetList.Count == n) GetiriPuanNetList[i] = 0.0;
+                //if (GetiriPuanNetList != null && GetiriPuanNetList.Count == n) GetiriPuanNetList[i] = 0.0;          // Silinecek
                 if (GetiriFiyatNetList != null && GetiriFiyatNetList.Count == n) GetiriFiyatNetList[i] = 0.0;
-                if (GetiriPuanYuzdeNetList != null && GetiriPuanYuzdeNetList.Count == n) GetiriPuanYuzdeNetList[i] = 0.0;
+                //if (GetiriPuanYuzdeNetList != null && GetiriPuanYuzdeNetList.Count == n) GetiriPuanYuzdeNetList[i] = 0.0; // Silinecek
                 if (GetiriFiyatYuzdeNetList != null && GetiriFiyatYuzdeNetList.Count == n) GetiriFiyatYuzdeNetList[i] = 0.0;
 
                 if (GetiriKz != null && GetiriKz.Count == n) GetiriKz[i] = 0.0;
@@ -379,6 +379,7 @@ namespace AlgoTrade.Core.Trading.Core
                 if (IsPozKapatEnabledList != null && IsPozKapatEnabledList.Count == n) IsPozKapatEnabledList[i] = 0;
             }
         }
+
         public void CreateLists(int barCount)
         {
             BarCount = barCount;
@@ -391,9 +392,9 @@ namespace AlgoTrade.Core.Trading.Core
                 SeviyeList = new List<double>(new double[barCount]);
                 SinyalList = new List<double>(new double[barCount]);
 
-                KarZararPuanList = new List<double>(new double[barCount]);
+                //KarZararPuanList = new List<double>(new double[barCount]);       // Silinecek
                 KarZararFiyatList = new List<double>(new double[barCount]);
-                KarZararPuanYuzdeList = new List<double>(new double[barCount]);
+                //KarZararPuanYuzdeList = new List<double>(new double[barCount]);  // Silinecek
                 KarZararFiyatYuzdeList = new List<double>(new double[barCount]);
 
                 KarAlList = new List<double>(new double[barCount]);
@@ -420,20 +421,20 @@ namespace AlgoTrade.Core.Trading.Core
                 KardaBarSayisiList = new List<int>(new int[barCount]);
                 ZarardaBarSayisiList = new List<int>(new int[barCount]);
 
-                BakiyePuanList = new List<double>(new double[barCount]);
+                //BakiyePuanList = new List<double>(new double[barCount]);  // Silinecek
                 BakiyeFiyatList = new List<double>(new double[barCount]);
 
-                GetiriPuanList = new List<double>(new double[barCount]);
+                //GetiriPuanList = new List<double>(new double[barCount]);      // Silinecek
                 GetiriFiyatList = new List<double>(new double[barCount]);
-                GetiriPuanYuzdeList = new List<double>(new double[barCount]);
+                //GetiriPuanYuzdeList = new List<double>(new double[barCount]); // Silinecek
                 GetiriFiyatYuzdeList = new List<double>(new double[barCount]);
 
-                BakiyePuanNetList = new List<double>(new double[barCount]);
+                //BakiyePuanNetList = new List<double>(new double[barCount]);  // Silinecek
                 BakiyeFiyatNetList = new List<double>(new double[barCount]);
 
-                GetiriPuanNetList = new List<double>(new double[barCount]);
+                //GetiriPuanNetList = new List<double>(new double[barCount]);      // Silinecek
                 GetiriFiyatNetList = new List<double>(new double[barCount]);
-                GetiriPuanYuzdeNetList = new List<double>(new double[barCount]);
+                //GetiriPuanYuzdeNetList = new List<double>(new double[barCount]); // Silinecek
                 GetiriFiyatYuzdeNetList = new List<double>(new double[barCount]);
 
                 GetiriKz = new List<double>(new double[barCount]);

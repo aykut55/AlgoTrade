@@ -194,51 +194,51 @@ namespace AlgoTrade.Core.Trading.Core
             // Calculate profit/loss based on position direction
             if (sonYon == "A")  // Long position (Al - Buy)
             {
-                Status.KarZararPuan = anlikFiyat - sonFiyat;
-                Status.KarZararFiyat = Status.KarZararPuan * varlikAdedSayisi;
-                Lists.KarZararPuanList[i] = Status.KarZararPuan;
+                //Status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+                Status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
+                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
-                    Status.KarZararFiyatYuzde = 100.0 * Status.KarZararPuan / sonFiyat;
+                    Status.KarZararFiyatYuzde = 100.0 * (anlikFiyat - sonFiyat) / sonFiyat;
                 else
                     Status.KarZararFiyatYuzde = 0.0;
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
-                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
+                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
+                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
             }
             else if (sonYon == "S")  // Short position (Sat - Sell)
             {
-                Status.KarZararPuan = sonFiyat - anlikFiyat;
-                Status.KarZararFiyat = Status.KarZararPuan * varlikAdedSayisi;
-                Lists.KarZararPuanList[i] = Status.KarZararPuan;
+                //Status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+                Status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
+                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
-                    Status.KarZararFiyatYuzde = 100.0 * Status.KarZararPuan / sonFiyat;
+                    Status.KarZararFiyatYuzde = 100.0 * (sonFiyat - anlikFiyat) / sonFiyat;
                 else
                     Status.KarZararFiyatYuzde = 0.0;
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
-                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
+                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
+                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
             }
 
             // Update bar count statistics
-            if (Status.KarZararPuan > 0)
+            if (Status.KarZararFiyat > 0)
             {
                 Status.KardaBarSayisi += 1;
                 Status.ZarardaBarSayisi -= 1;
             }
-            else if (Status.KarZararPuan == 0)
+            else if (Status.KarZararFiyat == 0)
             {
                 Status.KardaBarSayisi = 0;
                 Status.ZarardaBarSayisi = 0;
             }
-            else  // KarZararPuan < 0
+            else  // KarZararFiyat < 0
             {
                 Status.KardaBarSayisi -= 1;
                 Status.ZarardaBarSayisi += 1;
@@ -288,51 +288,51 @@ namespace AlgoTrade.Core.Trading.Core
             // Calculate profit/loss based on position direction
             if (sonYon == "A")  // Long position (Al - Buy)
             {
-                Status.KarZararPuan = anlikFiyat - sonFiyat;
-                Status.KarZararFiyat = Status.KarZararPuan * varlikAdedSayisi;
-                Lists.KarZararPuanList[i] = Status.KarZararPuan;
+                //Status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+                Status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
+                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
-                    Status.KarZararFiyatYuzde = 100.0 * Status.KarZararPuan / sonFiyat;
+                    Status.KarZararFiyatYuzde = 100.0 * (anlikFiyat - sonFiyat) / sonFiyat;
                 else
                     Status.KarZararFiyatYuzde = 0.0;
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
-                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
+                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
+                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
             }
             else if (sonYon == "S")  // Short position (Sat - Sell)
             {
-                Status.KarZararPuan = sonFiyat - anlikFiyat;
-                Status.KarZararFiyat = Status.KarZararPuan * varlikAdedSayisi;
-                Lists.KarZararPuanList[i] = Status.KarZararPuan;
+                //Status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+                Status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
+                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
-                    Status.KarZararFiyatYuzde = 100.0 * Status.KarZararPuan / sonFiyat;
+                    Status.KarZararFiyatYuzde = 100.0 * (sonFiyat - anlikFiyat) / sonFiyat;
                 else
                     Status.KarZararFiyatYuzde = 0.0;
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
-                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
+                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
+                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
             }
 
             // Update bar count statistics
-            if (Status.KarZararPuan > 0)
+            if (Status.KarZararFiyat > 0)
             {
                 Status.KardaBarSayisi += 1;
                 Status.ZarardaBarSayisi -= 1;
             }
-            else if (Status.KarZararPuan == 0)
+            else if (Status.KarZararFiyat == 0)
             {
                 Status.KardaBarSayisi = 0;
                 Status.ZarardaBarSayisi = 0;
             }
-            else  // KarZararPuan < 0
+            else  // KarZararFiyat < 0
             {
                 Status.KardaBarSayisi -= 1;
                 Status.ZarardaBarSayisi += 1;

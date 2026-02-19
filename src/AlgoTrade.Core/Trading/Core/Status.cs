@@ -51,9 +51,9 @@ namespace AlgoTrade.Core.Trading.Core
 
         #region Profit/Loss
 
-        public double KarZararPuan { get; set; }
+        //public double KarZararPuan { get; set; }       // Silinecek
         public double KarZararFiyat { get; set; }
-        public double KarZararPuanYuzde { get; set; }
+        //public double KarZararPuanYuzde { get; set; }  // Silinecek
         public double KarZararFiyatYuzde { get; set; }
 
         #endregion
@@ -87,29 +87,29 @@ namespace AlgoTrade.Core.Trading.Core
         #region Balance
 
         public double IlkBakiyeFiyat { get; set; }
-        public double IlkBakiyePuan { get; set; }
+        //public double IlkBakiyePuan { get; set; }  // Silinecek
         public double BakiyeFiyat { get; set; }
-        public double BakiyePuan { get; set; }
+        //public double BakiyePuan { get; set; }     // Silinecek
 
         #endregion
 
         #region Returns (Getiri)
 
         public double GetiriFiyat { get; set; }
-        public double GetiriPuan { get; set; }
+        //public double GetiriPuan { get; set; }       // Silinecek
         public double GetiriFiyatYuzde { get; set; }
-        public double GetiriPuanYuzde { get; set; }
+        //public double GetiriPuanYuzde { get; set; }  // Silinecek
 
         #endregion
 
         #region Net Values
 
         public double BakiyeFiyatNet { get; set; }
-        public double BakiyePuanNet { get; set; }
+        //public double BakiyePuanNet { get; set; }         // Silinecek
         public double GetiriFiyatNet { get; set; }
-        public double GetiriPuanNet { get; set; }
+        //public double GetiriPuanNet { get; set; }         // Silinecek
         public double GetiriFiyatYuzdeNet { get; set; }
-        public double GetiriPuanYuzdeNet { get; set; }
+        //public double GetiriPuanYuzdeNet { get; set; }    // Silinecek
 
         #endregion
 
@@ -127,14 +127,14 @@ namespace AlgoTrade.Core.Trading.Core
         public string GetiriFiyatTipi { get; set; } = "TL";
 
         public bool MicroLotSizeEnabled { get; set; }
-        
+
         #endregion
 
         #region Summary
 
-        public double NetKarPuan { get; set; }
-        public double ToplamKarPuan { get; set; }
-        public double ToplamZararPuan { get; set; }
+        //public double NetKarPuan { get; set; }        // Silinecek
+        //public double ToplamKarPuan { get; set; }     // Silinecek
+        //public double ToplamZararPuan { get; set; }   // Silinecek
 
         public double NetKarFiyat { get; set; }
         public double ToplamKarFiyat { get; set; }
@@ -187,9 +187,9 @@ namespace AlgoTrade.Core.Trading.Core
             KardaBarSayisi = 0;
             ZarardaBarSayisi = 0;
 
-            KarZararPuan = 0.0;
+            //KarZararPuan = 0.0;    // Silinecek
             KarZararFiyat = 0.0;
-            KarZararPuanYuzde = 0.0;
+            //KarZararPuanYuzde = 0.0;  // Silinecek
             KarZararFiyatYuzde = 0.0;
 
             KomisyonIslemSayisi = 0;
@@ -207,21 +207,21 @@ namespace AlgoTrade.Core.Trading.Core
             HisseSayisi = 0;
 
             IlkBakiyeFiyat = 0.0;
-            IlkBakiyePuan = 0.0;
+            //IlkBakiyePuan = 0.0;  // Silinecek
             BakiyeFiyat = 0.0;
-            BakiyePuan = 0.0;
+            //BakiyePuan = 0.0;     // Silinecek
 
             GetiriFiyat = 0.0;
-            GetiriPuan = 0.0;
+            //GetiriPuan = 0.0;       // Silinecek
             GetiriFiyatYuzde = 0.0;
-            GetiriPuanYuzde = 0.0;
+            //GetiriPuanYuzde = 0.0;  // Silinecek
 
             BakiyeFiyatNet = 0.0;
-            BakiyePuanNet = 0.0;
+            //BakiyePuanNet = 0.0;       // Silinecek
             GetiriFiyatNet = 0.0;
-            GetiriPuanNet = 0.0;
+            //GetiriPuanNet = 0.0;       // Silinecek
             GetiriFiyatYuzdeNet = 0.0;
-            GetiriPuanYuzdeNet = 0.0;
+            //GetiriPuanYuzdeNet = 0.0;  // Silinecek
 
             GetiriKz = 0.0;
             GetiriKzNet = 0.0;
@@ -230,9 +230,9 @@ namespace AlgoTrade.Core.Trading.Core
 
             GetiriFiyatTipi = "TL";
 
-            NetKarPuan = 0.0;
-            ToplamKarPuan = 0.0;
-            ToplamZararPuan = 0.0;
+            //NetKarPuan = 0.0;      // Silinecek
+            //ToplamKarPuan = 0.0;   // Silinecek
+            //ToplamZararPuan = 0.0; // Silinecek
 
             NetKarFiyat = 0.0;
             ToplamKarFiyat = 0.0;
