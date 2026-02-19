@@ -2478,29 +2478,28 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         string configPath = Path.Combine(inputsDir, "StatisticsExporterConfig.json");
 
+        if (this.SaveFullListsCsvEnabled)
+        {
+            Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
+            statistics.SaveListsToCsvFromConfig(Path.Combine(outputDir, FullListsCsvFileName), configPath);
+        }
+
+        if (this.SaveFullListsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
+            statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
+        }
+
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+
         if (this.SaveFullStatsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsCsvFileName}...");
             statistics.SaveToCsv(Path.Combine(outputDir, FullStatsCsvFileName));
-        }
-
-        if (this.SaveMinimalStatsCsvEnabled)
-        {
-            Log($"\n\tSaving statistics to {MinimalStatsCsvFileName}...");
-            statistics.SaveToCsvMinimal(Path.Combine(outputDir, MinimalStatsCsvFileName));
-        }
-
-        if (this.SaveFullListsCsvEnabled)
-        {
-            Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
-            //statistics.SaveListsToCsv(Path.Combine(outputDir, FullListsCsvFileName));
-            statistics.SaveListsToCsvFromConfig(Path.Combine(outputDir, FullListsCsvFileName), configPath);
-        }
-
-        if (this.SaveMinimalListsCsvEnabled)
-        {
-            Log($"\n\tSaving statistics to {MinimalListsCsvFileName}...");
-            statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, MinimalListsCsvFileName));
         }
 
         if (this.SaveFullStatsTxtEnabled)
@@ -2509,17 +2508,28 @@ public class SingleTrader : MarketDataProvider, IDisposable
             statistics.SaveToTxt(Path.Combine(outputDir, FullStatsTxtFileName));
         }
 
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+        // ********************************************************************************************************
+
+        if (this.SaveMinimalStatsCsvEnabled)
+        {
+            Log($"\n\tSaving statistics to {MinimalStatsCsvFileName}...");
+            statistics.SaveToCsvMinimal(Path.Combine(outputDir, MinimalStatsCsvFileName));
+        }
+
+        if (this.SaveMinimalListsCsvEnabled)
+        {
+            Log($"\n\tSaving statistics to {MinimalListsCsvFileName}...");
+            statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, MinimalListsCsvFileName));
+        }
+
         if (this.SaveMinimalStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalStatsTxtFileName}...");
             statistics.SaveToTxtMinimal(Path.Combine(outputDir, MinimalStatsTxtFileName));
-        }
-
-        if (this.SaveFullListsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
-            //statistics.SaveListsToTxt(Path.Combine(outputDir, FullListsTxtFileName))
-            statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
         }
 
         if (this.SaveMinimalListsTxtEnabled)
@@ -2539,6 +2549,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
             Log($"\n\tSaving statistics to {MinimalStatsTxtFormattedFileName}...");
             statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, MinimalStatsTxtFormattedFileName));
         }
+
     }
     private void Log(string message)
     {
