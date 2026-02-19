@@ -2514,6 +2514,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // ********************************************************************************************************
         // ********************************************************************************************************
 
+/*
         if (this.SaveMinimalStatsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalStatsCsvFileName}...");
@@ -2537,7 +2538,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
             Log($"\n\tSaving statistics to {MinimalListsTxtFileName}...");
             statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, MinimalListsTxtFileName));
         }
-
+*/
         if (this.SaveFullStatsTxtFormattedEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsTxtFormattedFileName}...");

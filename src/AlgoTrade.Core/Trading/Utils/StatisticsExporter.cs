@@ -21,11 +21,11 @@ public class StatisticsExporter
     {
         _statistics.AssignToMapForExport();
         StringBuilder sb = new StringBuilder();
-        sb.AppendLine($"TRADING STATISTICS REPORT - {_statistics.SistemName} ({_statistics.GrafikSembol})");
-        sb.AppendLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         sb.AppendLine("================================================================================");
-        sb.AppendLine($"{"Property Name".PadRight(40)} : Value");
-        sb.AppendLine("--------------------------------------------------------------------------------");
+        sb.AppendLine($"                    SINGLE TRADER STATISTICS REPORT - ({_statistics.SistemName}-{_statistics.GrafikSembol})");
+        sb.AppendLine($"                    Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine("================================================================================");
+        sb.AppendLine();
 
         foreach (var kvp in _statistics.StatisticsMap)
         {
@@ -494,29 +494,7 @@ public class StatisticsExporter
     public void SaveToTxtFormatted(string filePath)
     {
         _statistics.AssignToMapForExport();
-        var sb = new StringBuilder();
-        sb.AppendLine("================================================================================");
-        sb.AppendLine("                    SINGLE TRADER RUN RESULTS - DETAILED REPORT");
-        sb.AppendLine($"                    Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine("================================================================================");
-        sb.AppendLine();
-
-        foreach (var kvp in _statistics.StatisticsMap)
-        {
-            if (kvp.Key.StartsWith(Separator))
-            {
-                sb.AppendLine();
-                continue;
-            }
-
-            sb.AppendLine($"{kvp.Key.PadRight(40)} : {kvp.Value}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("================================================================================");
-        sb.AppendLine("                              END OF REPORT");
-        sb.AppendLine("================================================================================");
-        WriteAllTextShared(filePath, sb.ToString());
+        WriteAllTextShared(filePath, BuildDetailedReport());
     }
 
     public void SaveToTxtMinimalFormatted(string filePath)
@@ -621,6 +599,251 @@ public class StatisticsExporter
         using var fs = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
         using var writer = new StreamWriter(fs, Encoding.UTF8);
         writer.Write(content);
+    }
+
+    private string BuildDetailedReport()
+    {
+        string GetValue(string key)
+        {
+            if (_statistics.StatisticsMap.TryGetValue(key, out var value))
+                return value?.ToString() ?? "...";
+            return "...";
+        }
+
+        void AddSection(StringBuilder sb, string title, params (string Label, string Key)[] rows)
+        {
+            sb.AppendLine($"[ {title} ]");
+            foreach (var row in rows)
+            {
+                sb.AppendLine($"{row.Label.PadRight(28)} : {GetValue(row.Key)}");
+            }
+            sb.AppendLine();
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("================================================================================");
+        sb.AppendLine("                    SINGLE TRADER RUN RESULTS - DETAILED REPORT");
+        sb.AppendLine($"                    Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine("================================================================================");
+        sb.AppendLine();
+
+        AddSection(sb, "TRADER & SYSTEM INFORMATION",
+            ("Trader ID", "TraderId"),
+            ("Trader Name", "TraderName"),
+            ("Symbol Name", "SymbolName"),
+            ("Symbol Period", "SymbolPeriod"),
+            ("System ID", "SystemId"),
+            ("System Name", "SystemName"),
+            ("Strategy ID", "StrategyId"),
+            ("Strategy Name", "StrategyName")
+        );
+
+        AddSection(sb, "EXECUTION INFORMATION",
+            ("Last Execution ID", "LastExecutionId"),
+            ("Last Execution Time", "LastExecutionTime"),
+            ("Execution Start", "LastExecutionTimeStart"),
+            ("Execution Stop", "LastExecutionTimeStop"),
+            ("Execution Time (ms)", "LastExecutionTimeInMSec"),
+            ("Last Reset Time", "LastResetTime"),
+            ("Statistics Calc Time", "LastStatisticsCalculationTime")
+        );
+
+        AddSection(sb, "BAR INFORMATION",
+            ("Total Bars", "ToplamBarSayisi"),
+            ("Selected Bar Number", "SecilenBarNumarasi"),
+            ("Selected Bar DateTime", "SecilenBarTarihSaati"),
+            ("Selected Bar Date", "SecilenBarTarihi"),
+            ("Selected Bar Time", "SecilenBarSaati"),
+            ("First Bar DateTime", "IlkBarTarihSaati"),
+            ("First Bar Date", "IlkBarTarihi"),
+            ("First Bar Time", "IlkBarSaati"),
+            ("Last Bar DateTime", "SonBarTarihSaati"),
+            ("Last Bar Date", "SonBarTarihi"),
+            ("Last Bar Time", "SonBarSaati"),
+            ("First Bar Index", "IlkBarIndex"),
+            ("Last Bar Index", "SonBarIndex"),
+            ("Last Bar Open", "SonBarAcilisFiyati"),
+            ("Last Bar High", "SonBarYuksekFiyati"),
+            ("Last Bar Low", "SonBarDusukFiyati"),
+            ("Last Bar Close", "SonBarKapanisFiyati")
+        );
+
+        AddSection(sb, "TIME STATISTICS",
+            ("Total Months", "ToplamGecenSureAy"),
+            ("Total Days", "ToplamGecenSureGun"),
+            ("Total Hours", "ToplamGecenSureSaat"),
+            ("Total Minutes", "ToplamGecenSureDakika"),
+            ("Avg Monthly Trades", "OrtAylikIslemSayisi"),
+            ("Avg Weekly Trades", "OrtHaftalikIslemSayisi"),
+            ("Avg Daily Trades", "OrtGunlukIslemSayisi"),
+            ("Avg Hourly Trades", "OrtSaatlikIslemSayisi")
+        );
+
+        AddSection(sb, "BALANCE & RETURNS",
+            ("Initial Balance (Price)", "IlkBakiyeFiyat"),
+            ("Initial Balance (Points)", "IlkBakiyePuan"),
+            ("Final Balance (Price)", "BakiyeFiyat"),
+            ("Final Balance (Points)", "BakiyePuan"),
+            ("Gross Return (Price)", "GetiriFiyat"),
+            ("Gross Return (Points)", "GetiriPuan"),
+            ("Gross Return % (Price)", "GetiriFiyatYuzde"),
+            ("Gross Return % (Points)", "GetiriPuanYuzde"),
+            ("Commission", "KomisyonFiyat"),
+            ("Net Balance (Price)", "BakiyeFiyatNet"),
+            ("Net Balance (Points)", "BakiyePuanNet"),
+            ("Net Return (Price)", "GetiriFiyatNet"),
+            ("Net Return (Points)", "GetiriPuanNet"),
+            ("Net Return % (Price)", "GetiriFiyatYuzdeNet"),
+            ("Net Return % (Points)", "GetiriPuanYuzdeNet"),
+            ("Return Kz", "GetiriKz"),
+            ("Return Kz Net", "GetiriKzNet"),
+            ("Return Kz System", "GetiriKzSistem"),
+            ("Return Kz System %", "GetiriKzSistemYuzde"),
+            ("Return Kz Net System", "GetiriKzNetSistem"),
+            ("Return Kz Net System %", "GetiriKzNetSistemYuzde")
+        );
+
+        AddSection(sb, "BALANCE MIN/MAX",
+            ("Min Balance (Price)", "MinBakiyeFiyat"),
+            ("Max Balance (Price)", "MaxBakiyeFiyat"),
+            ("Min Balance (Points)", "MinBakiyePuan"),
+            ("Max Balance (Points)", "MaxBakiyePuan"),
+            ("Min Balance %", "MinBakiyeFiyatYuzde"),
+            ("Max Balance %", "MaxBakiyeFiyatYuzde"),
+            ("Min Balance Index", "MinBakiyeFiyatIndex"),
+            ("Max Balance Index", "MaxBakiyeFiyatIndex"),
+            ("Min Balance Net", "MinBakiyeFiyatNet"),
+            ("Max Balance Net", "MaxBakiyeFiyatNet"),
+            ("Min Balance Net Index", "MinBakiyeFiyatNetIndex"),
+            ("Max Balance Net Index", "MaxBakiyeFiyatNetIndex"),
+            ("Min Balance Net %", "MinBakiyeFiyatNetYuzde"),
+            ("Max Balance Net %", "MaxBakiyeFiyatNetYuzde")
+        );
+
+        AddSection(sb, "TRADE COUNTS",
+            ("Total Trades", "IslemSayisi"),
+            ("Buy Trades", "AlisSayisi"),
+            ("Sell Trades", "SatisSayisi"),
+            ("Flat Count", "FlatSayisi"),
+            ("Pass Count", "PassSayisi"),
+            ("Take Profit Count", "KarAlSayisi"),
+            ("Stop Loss Count", "ZararKesSayisi"),
+            ("Winning Trades", "KazandiranIslemSayisi"),
+            ("Losing Trades", "KaybettirenIslemSayisi"),
+            ("Neutral Trades", "NotrIslemSayisi"),
+            ("Winning Buys", "KazandiranAlisSayisi"),
+            ("Losing Buys", "KaybettirenAlisSayisi"),
+            ("Neutral Buys", "NotrAlisSayisi"),
+            ("Winning Sells", "KazandiranSatisSayisi"),
+            ("Losing Sells", "KaybettirenSatisSayisi"),
+            ("Neutral Sells", "NotrSatisSayisi")
+        );
+
+        AddSection(sb, "COMMAND COUNTS",
+            ("Buy Commands", "AlKomutSayisi"),
+            ("Sell Commands", "SatKomutSayisi"),
+            ("Pass Commands", "PasGecKomutSayisi"),
+            ("Take Profit Commands", "KarAlKomutSayisi"),
+            ("Stop Loss Commands", "ZararKesKomutSayisi"),
+            ("Flat Commands", "FlatOlKomutSayisi")
+        );
+
+        AddSection(sb, "COMMISSION DETAILS",
+            ("Commission Trades", "KomisyonIslemSayisi"),
+            ("Commission Asset Count", "KomisyonVarlikAdedSayisi"),
+            ("Commission Micro", "KomisyonVarlikAdedSayisiMicro"),
+            ("Commission Multiplier", "KomisyonCarpan"),
+            ("Total Commission", "KomisyonFiyat"),
+            ("Commission %", "KomisyonFiyatYuzde"),
+            ("Include Commission", "KomisyonuDahilEt")
+        );
+
+        AddSection(sb, "PROFIT & LOSS",
+            ("P&L (Price)", "KarZararFiyat"),
+            ("P&L % (Price)", "KarZararFiyatYuzde"),
+            ("P&L (Points)", "KarZararPuan"),
+            ("Total Profit (Price)", "ToplamKarFiyat"),
+            ("Total Loss (Price)", "ToplamZararFiyat"),
+            ("Net Profit (Price)", "NetKarFiyat"),
+            ("Total Profit (Points)", "ToplamKarPuan"),
+            ("Total Loss (Points)", "ToplamZararPuan"),
+            ("Net Profit (Points)", "NetKarPuan"),
+            ("Max Profit (Price)", "MaxKarFiyat"),
+            ("Max Loss (Price)", "MaxZararFiyat"),
+            ("Max Profit (Points)", "MaxKarPuan"),
+            ("Max Loss (Points)", "MaxZararPuan"),
+            ("Bars in Profit", "KardaBarSayisi"),
+            ("Bars in Loss", "ZarardaBarSayisi"),
+            ("Win Rate", "KarliIslemOrani")
+        );
+
+        AddSection(sb, "RISK METRICS",
+            ("Max Drawdown", "GetiriMaxDD"),
+            ("Max Drawdown Date", "GetiriMaxDDTarih"),
+            ("Max Loss", "GetiriMaxKayip"),
+            ("Profit Factor", "ProfitFactor"),
+            ("Profit Factor (Net)", "ProfitFactorNet"),
+            ("Profit Factor (System)", "ProfitFactorSistem")
+        );
+
+        AddSection(sb, "SIGNALS & EXECUTION STATUS",
+            ("Signal", "Sinyal"),
+            ("Last Direction", "SonYon"),
+            ("Previous Direction", "PrevYon"),
+            ("Last Price", "SonFiyat"),
+            ("Last Buy Price", "SonAFiyat"),
+            ("Last Sell Price", "SonSFiyat"),
+            ("Last Flat Price", "SonFFiyat"),
+            ("Last Pass Price", "SonPFiyat"),
+            ("Previous Price", "PrevFiyat"),
+            ("Last Bar Number", "SonBarNo"),
+            ("Last Buy Bar Number", "SonABarNo"),
+            ("Last Sell Bar Number", "SonSBarNo"),
+            ("Order Command", "EmirKomut"),
+            ("Order Status", "EmirStatus")
+        );
+
+        AddSection(sb, "ASSET & POSITION INFO",
+            ("Share Count", "HisseSayisi"),
+            ("Contract Count", "KontratSayisi"),
+            ("Asset Multiplier", "VarlikAdedCarpani"),
+            ("Asset Count", "VarlikAdedSayisi"),
+            ("Asset Count (Micro)", "VarlikAdedSayisiMicro"),
+            ("Slippage Amount", "KaymaMiktari"),
+            ("Include Slippage", "KaymayiDahilEt"),
+            ("Micro Lot Size Enabled", "MicroLotSizeEnabled"),
+            ("Pyramiding Enabled", "PyramidingEnabled"),
+            ("Max Position Size Enabled", "MaxPositionSizeEnabled"),
+            ("Max Position Size", "MaxPositionSize"),
+            ("Max Position Size (Micro)", "MaxPositionSizeMicro")
+        );
+
+        AddSection(sb, "PERIODIC RETURNS (PRICE)",
+            ("This Month", "GetiriFiyatBuAy"),
+            ("Last Month", "GetiriFiyatAy1"),
+            ("This Week", "GetiriFiyatBuHafta"),
+            ("Last Week", "GetiriFiyatHafta1"),
+            ("Today", "GetiriFiyatBuGun"),
+            ("Yesterday", "GetiriFiyatGun1"),
+            ("This Hour", "GetiriFiyatBuSaat"),
+            ("Last Hour", "GetiriFiyatSaat1")
+        );
+
+        AddSection(sb, "PERIODIC RETURNS (POINTS)",
+            ("This Month (Pts)", "GetiriPuanBuAy"),
+            ("Last Month (Pts)", "GetiriPuanAy1"),
+            ("This Week (Pts)", "GetiriPuanBuHafta"),
+            ("Last Week (Pts)", "GetiriPuanHafta1"),
+            ("Today (Pts)", "GetiriPuanBuGun"),
+            ("Yesterday (Pts)", "GetiriPuanGun1"),
+            ("This Hour (Pts)", "GetiriPuanBuSaat"),
+            ("Last Hour (Pts)", "GetiriPuanSaat1")
+        );
+
+        sb.AppendLine("================================================================================");
+        sb.AppendLine("                              END OF REPORT");
+        sb.AppendLine("================================================================================");
+        return sb.ToString();
     }
 
     private static string? ResolveConfigPath(string configPath)

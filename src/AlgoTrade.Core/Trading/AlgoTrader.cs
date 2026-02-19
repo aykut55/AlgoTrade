@@ -827,7 +827,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
             singleTrader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
             singleTrader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-            singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsFormatted.txt";
+            singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
 
             // Init
             singleTrader.Init();
