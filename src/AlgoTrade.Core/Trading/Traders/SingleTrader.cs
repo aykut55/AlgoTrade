@@ -2476,22 +2476,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public void WriteStatisticsToFile(string outputDir)
     {
-        if (this.SaveFullStatsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {FullStatsTxtFileName}...");
-            statistics.SaveToTxt(Path.Combine(outputDir, FullStatsTxtFileName));
-        }
-
         if (this.SaveFullStatsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsCsvFileName}...");
             statistics.SaveToCsv(Path.Combine(outputDir, FullStatsCsvFileName));
-        }
-
-        if (this.SaveMinimalStatsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {MinimalStatsTxtFileName}...");
-            statistics.SaveToTxtMinimal(Path.Combine(outputDir, MinimalStatsTxtFileName));
         }
 
         if (this.SaveMinimalStatsCsvEnabled)
@@ -2500,28 +2488,40 @@ public class SingleTrader : MarketDataProvider, IDisposable
             statistics.SaveToCsvMinimal(Path.Combine(outputDir, MinimalStatsCsvFileName));
         }
 
-        if (this.SaveFullListsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
-            statistics.SaveListsToTxt(Path.Combine(outputDir, FullListsTxtFileName));
-        }
-
         if (this.SaveFullListsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
             statistics.SaveListsToCsv(Path.Combine(outputDir, FullListsCsvFileName));
         }
 
-        if (this.SaveMinimalListsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {MinimalListsTxtFileName}...");
-            statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, MinimalListsTxtFileName));
-        }
-
         if (this.SaveMinimalListsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalListsCsvFileName}...");
             statistics.SaveListsToCsvMinimal(Path.Combine(outputDir, MinimalListsCsvFileName));
+        }
+
+        if (this.SaveFullStatsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {FullStatsTxtFileName}...");
+            statistics.SaveToTxt(Path.Combine(outputDir, FullStatsTxtFileName));
+        }
+
+        if (this.SaveMinimalStatsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {MinimalStatsTxtFileName}...");
+            statistics.SaveToTxtMinimal(Path.Combine(outputDir, MinimalStatsTxtFileName));
+        }
+
+        if (this.SaveFullListsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
+            statistics.SaveListsToTxt(Path.Combine(outputDir, FullListsTxtFileName));
+        }
+
+        if (this.SaveMinimalListsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {MinimalListsTxtFileName}...");
+            statistics.SaveListsToTxtMinimal(Path.Combine(outputDir, MinimalListsTxtFileName));
         }
 
         if (this.SaveFullStatsTxtFormattedEnabled)
