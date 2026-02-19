@@ -32,7 +32,7 @@ namespace AlgoTrade.Core.Trading.Core
 
         #region Profit/Loss Data
 
-        //public List<double> KarZararPuanList { get; set; }        // Silinecek
+        public List<double> KarZararPuanList { get; set; }
         public List<double> KarZararFiyatList { get; set; }
         //public List<double> KarZararPuanYuzdeList { get; set; }   // Silinecek
         public List<double> KarZararFiyatYuzdeList { get; set; }
@@ -146,7 +146,7 @@ namespace AlgoTrade.Core.Trading.Core
             IsTradeEnabledList = new List<int>();
             IsPozKapatEnabledList = new List<int>();
 
-            //KarZararPuanList = new List<double>();       // Silinecek
+            KarZararPuanList = new List<double>();
             KarZararFiyatList = new List<double>();
             //KarZararPuanYuzdeList = new List<double>();  // Silinecek
             KarZararFiyatYuzdeList = new List<double>();
@@ -225,7 +225,7 @@ namespace AlgoTrade.Core.Trading.Core
             SeviyeList?.Clear();
             SinyalList?.Clear();
 
-            //KarZararPuanList?.Clear();       // Silinecek
+            KarZararPuanList?.Clear();
             KarZararFiyatList?.Clear();
             //KarZararPuanYuzdeList?.Clear();  // Silinecek
             KarZararFiyatYuzdeList?.Clear();
@@ -322,7 +322,7 @@ namespace AlgoTrade.Core.Trading.Core
                 if (SeviyeList != null && SeviyeList.Count == n) SeviyeList[i] = 0.0;
                 if (SinyalList != null && SinyalList.Count == n) SinyalList[i] = 0.0;
 
-                //if (KarZararPuanList != null && KarZararPuanList.Count == n) KarZararPuanList[i] = 0.0;       // Silinecek
+                if (KarZararPuanList != null && KarZararPuanList.Count == n) KarZararPuanList[i] = 0.0;
                 if (KarZararFiyatList != null && KarZararFiyatList.Count == n) KarZararFiyatList[i] = 0.0;
                 //if (KarZararPuanYuzdeList != null && KarZararPuanYuzdeList.Count == n) KarZararPuanYuzdeList[i] = 0.0;  // Silinecek
                 if (KarZararFiyatYuzdeList != null && KarZararFiyatYuzdeList.Count == n) KarZararFiyatYuzdeList[i] = 0.0;
@@ -392,7 +392,7 @@ namespace AlgoTrade.Core.Trading.Core
                 SeviyeList = new List<double>(new double[barCount]);
                 SinyalList = new List<double>(new double[barCount]);
 
-                //KarZararPuanList = new List<double>(new double[barCount]);       // Silinecek
+                KarZararPuanList = new List<double>(new double[barCount]);
                 KarZararFiyatList = new List<double>(new double[barCount]);
                 //KarZararPuanYuzdeList = new List<double>(new double[barCount]);  // Silinecek
                 KarZararFiyatYuzdeList = new List<double>(new double[barCount]);

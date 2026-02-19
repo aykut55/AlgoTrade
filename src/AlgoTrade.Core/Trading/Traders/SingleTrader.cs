@@ -1483,11 +1483,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
         this.lists.YonList[i] = "";
         this.lists.SeviyeList[i] = 0.0;
         this.lists.SinyalList[i] = 0.0;
-        //this.lists.KarZararPuanList[i] = 0.0;          // Silinecek
+        this.lists.KarZararPuanList[i] = 0.0;
         this.lists.KarZararFiyatList[i] = 0.0;
         //this.lists.KarZararPuanYuzdeList[i] = 0.0;    // Silinecek
         this.lists.KarZararFiyatYuzdeList[i] = 0.0;
-        //this.status.KarZararPuan = 0.0;                // Silinecek
+        this.status.KarZararPuan = 0.0;
         this.status.KarZararFiyat = 0.0;
         //this.status.KarZararPuanYuzde = 0.0;           // Silinecek
         this.status.KarZararFiyatYuzde = 0.0;
@@ -1618,9 +1618,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // Calculate profit/loss based on position direction
         if (sonYon == "A")  // Long position (Al - Buy)
         {
-            //status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+            status.KarZararPuan = anlikFiyat - sonFiyat;
             status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
-            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
+            lists.KarZararPuanList[i] = status.KarZararPuan;
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
@@ -1635,9 +1635,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
         else if (sonYon == "S")  // Short position (Sat - Sell)
         {
-            //status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+            status.KarZararPuan = sonFiyat - anlikFiyat;
             status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
-            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
+            lists.KarZararPuanList[i] = status.KarZararPuan;
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
@@ -1712,9 +1712,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // Calculate profit/loss based on position direction
         if (sonYon == "A")  // Long position (Al - Buy)
         {
-            //status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+            status.KarZararPuan = anlikFiyat - sonFiyat;
             status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
-            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
+            lists.KarZararPuanList[i] = status.KarZararPuan;
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)
@@ -1729,9 +1729,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
         else if (sonYon == "S")  // Short position (Sat - Sell)
         {
-            //status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+            status.KarZararPuan = sonFiyat - anlikFiyat;
             status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
-            //lists.KarZararPuanList[i] = status.KarZararPuan;  // Silinecek
+            lists.KarZararPuanList[i] = status.KarZararPuan;
             lists.KarZararFiyatList[i] = status.KarZararFiyat;
 
             if (sonFiyat != 0)

@@ -194,9 +194,9 @@ namespace AlgoTrade.Core.Trading.Core
             // Calculate profit/loss based on position direction
             if (sonYon == "A")  // Long position (Al - Buy)
             {
-                //Status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+                Status.KarZararPuan = anlikFiyat - sonFiyat;
                 Status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
-                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
+                Lists.KarZararPuanList[i] = Status.KarZararPuan;
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
@@ -211,9 +211,9 @@ namespace AlgoTrade.Core.Trading.Core
             }
             else if (sonYon == "S")  // Short position (Sat - Sell)
             {
-                //Status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+                Status.KarZararPuan = sonFiyat - anlikFiyat;
                 Status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
-                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
+                Lists.KarZararPuanList[i] = Status.KarZararPuan;
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
@@ -288,9 +288,9 @@ namespace AlgoTrade.Core.Trading.Core
             // Calculate profit/loss based on position direction
             if (sonYon == "A")  // Long position (Al - Buy)
             {
-                //Status.KarZararPuan = anlikFiyat - sonFiyat;  // Silinecek
+                Status.KarZararPuan = anlikFiyat - sonFiyat;
                 Status.KarZararFiyat = (anlikFiyat - sonFiyat) * varlikAdedSayisi;
-                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
+                Lists.KarZararPuanList[i] = Status.KarZararPuan;
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)
@@ -305,9 +305,9 @@ namespace AlgoTrade.Core.Trading.Core
             }
             else if (sonYon == "S")  // Short position (Sat - Sell)
             {
-                //Status.KarZararPuan = sonFiyat - anlikFiyat;  // Silinecek
+                Status.KarZararPuan = sonFiyat - anlikFiyat;
                 Status.KarZararFiyat = (sonFiyat - anlikFiyat) * varlikAdedSayisi;
-                //Lists.KarZararPuanList[i] = Status.KarZararPuan;  // Silinecek
+                Lists.KarZararPuanList[i] = Status.KarZararPuan;
                 Lists.KarZararFiyatList[i] = Status.KarZararFiyat;
 
                 if (sonFiyat != 0)

@@ -51,7 +51,7 @@ namespace AlgoTrade.Core.Trading.Core
 
         #region Profit/Loss
 
-        //public double KarZararPuan { get; set; }       // Silinecek
+        public double KarZararPuan { get; set; }
         public double KarZararFiyat { get; set; }
         //public double KarZararPuanYuzde { get; set; }  // Silinecek
         public double KarZararFiyatYuzde { get; set; }
@@ -187,7 +187,7 @@ namespace AlgoTrade.Core.Trading.Core
             KardaBarSayisi = 0;
             ZarardaBarSayisi = 0;
 
-            //KarZararPuan = 0.0;    // Silinecek
+            KarZararPuan = 0.0;
             KarZararFiyat = 0.0;
             //KarZararPuanYuzde = 0.0;  // Silinecek
             KarZararFiyatYuzde = 0.0;
