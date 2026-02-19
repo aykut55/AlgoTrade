@@ -168,7 +168,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.KarAlEnabled = false;
             trader.signals.ZararKesEnabled = false;
             trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled = false;               // DEFAULT = False, Ek maliyet getirir : 
             trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -190,11 +190,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.AlEnabled = true;
             trader.signals.SatEnabled = true;
             trader.signals.FlatOlEnabled = true;
-            trader.signals.PasGecEnabled = false;
-            trader.signals.KarAlEnabled = false;
-            trader.signals.ZararKesEnabled = false;
+            trader.signals.PasGecEnabled = true;
+            trader.signals.KarAlEnabled = true;
+            trader.signals.ZararKesEnabled = true;
             trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled = false;               // DEFAULT = False, Ek maliyet getirir : 
             trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -220,7 +220,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.KarAlEnabled = false;
             trader.signals.ZararKesEnabled = false;
             trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled = true;               // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled = false;               // DEFAULT = False, Ek maliyet getirir : 
             trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -807,15 +807,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Enable all per-output statistics flags explicitly
             singleTrader.SaveFullStatsTxtEnabled             = true;
-            singleTrader.SaveFullStatsCsvEnabled             = false;
-            singleTrader.SaveMinimalStatsTxtEnabled          = false;
-            singleTrader.SaveMinimalStatsCsvEnabled          = false;
+            singleTrader.SaveFullStatsCsvEnabled             = true;
+            singleTrader.SaveMinimalStatsTxtEnabled          = true;
+            singleTrader.SaveMinimalStatsCsvEnabled          = true;
             singleTrader.SaveFullListsTxtEnabled             = true;
-            singleTrader.SaveFullListsCsvEnabled             = false;
-            singleTrader.SaveMinimalListsTxtEnabled          = false;
-            singleTrader.SaveMinimalListsCsvEnabled          = false;
-            singleTrader.SaveFullStatsTxtFormattedEnabled    = false;
-            singleTrader.SaveMinimalStatsTxtFormattedEnabled = false;
+            singleTrader.SaveFullListsCsvEnabled             = true;
+            singleTrader.SaveMinimalListsTxtEnabled          = true;
+            singleTrader.SaveMinimalListsCsvEnabled          = true;
+            singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
+            singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
 
             // Manually assign custom output file names (as requested)
             singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";

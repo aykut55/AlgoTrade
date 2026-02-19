@@ -1431,6 +1431,37 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
 
         // ------------------------------------------------------------------------------
+        // Update totals
+        this.status.KazandiranIslemSayisi = this.status.KazandiranAlisSayisi + this.status.KazandiranSatisSayisi;
+        this.status.KaybettirenIslemSayisi = this.status.KaybettirenAlisSayisi + this.status.KaybettirenSatisSayisi;
+        this.status.NotrIslemSayisi = this.status.NotrAlisSayisi + this.status.NotrSatisSayisi;
+
+        // ------------------------------------------------------------------------------
+        // Reset bar counters if trade happened
+        if (this.flags.AGerceklesti || this.flags.SGerceklesti || this.flags.FGerceklesti)
+        {
+            this.status.KardaBarSayisi = 0;
+            this.status.ZarardaBarSayisi = 0;
+        }
+
+        // ------------------------------------------------------------------------------
+        // Enable calculations if trades exist
+        if (this.status.IslemSayisi > 0)
+        {
+            this.flags.AnlikKarZararHesaplaEnabled = true;
+            this.flags.KarAlYuzdeHesaplaEnabled = true;
+            this.flags.IzleyenStopYuzdeHesaplaEnabled = true;
+            this.flags.ZararKesYuzdeHesaplaEnabled = true;
+            this.flags.KarAlSeviyeHesaplaEnabled = true;
+            this.flags.ZararKesSeviyeHesaplaEnabled = true;
+        }
+
+        // ------------------------------------------------------------------------------
+        // Update lists
+        this.lists.EmirKomutList[i] = this.signals.EmirKomut;
+        this.lists.EmirStatusList[i] = this.signals.EmirStatus;
+
+        // ------------------------------------------------------------------------------
         // Reset flags
         this.flags.AGerceklesti = false;
         this.flags.SGerceklesti = false;
