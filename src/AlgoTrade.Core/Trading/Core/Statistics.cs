@@ -140,6 +140,8 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double NetKarPuan => Trader?.status?.NetKarPuan ?? 0;
         public double MaxKarFiyat { get; set; }
         public double MaxZararFiyat { get; set; }
+        public double MaxKarFiyatNet { get; set; }
+        public double MaxZararFiyatNet { get; set; }
         public double MaxKarPuan { get; set; }
         public double MaxZararPuan { get; set; }
         public int MaxZararFiyatIndex { get; set; }
@@ -195,6 +197,8 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double MaxBakiyePuan { get; set; }
         public double MinBakiyeFiyatYuzde { get; set; }
         public double MaxBakiyeFiyatYuzde { get; set; }
+        public double MinBakiyePuanYuzde { get; set; }
+        public double MaxBakiyePuanYuzde { get; set; }
         public int MinBakiyeFiyatIndex { get; set; }
         public int MaxBakiyeFiyatIndex { get; set; }
         public int MinBakiyePuanIndex { get; set; }
@@ -214,12 +218,19 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double GetiriMaxDD { get; set; }
         public string GetiriMaxDDTarih { get; set; }
         public double GetiriMaxKayip { get; set; }
+        public double GetiriMaxDDPuan { get; set; }
+        public string GetiriMaxDDPuanTarih { get; set; }
+        public double GetiriMaxKayipPuan { get; set; }
+        public double GetiriMaxDDNet { get; set; }
+        public string GetiriMaxDDNetTarih { get; set; }
+        public double GetiriMaxKayipNet { get; set; }
 
         #endregion
 
         #region Performance Metrics
 
         public double ProfitFactor { get; set; }
+        public double ProfitFactorPuan { get; set; }
         public double ProfitFactorNet { get; set; }  // Commission-adjusted profit factor
         public double ProfitFactorSistem { get; set; }
         public double KarliIslemOrani { get; set; }
@@ -286,6 +297,12 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double GetiriFiyatAy3 { get; set; }
         public double GetiriFiyatAy4 { get; set; }
         public double GetiriFiyatAy5 { get; set; }
+        public double GetiriFiyatNetBuAy { get; set; }
+        public double GetiriFiyatNetAy1 { get; set; }
+        public double GetiriFiyatNetAy2 { get; set; }
+        public double GetiriFiyatNetAy3 { get; set; }
+        public double GetiriFiyatNetAy4 { get; set; }
+        public double GetiriFiyatNetAy5 { get; set; }
         public double GetiriPuanBuAy { get; set; }
         public double GetiriPuanAy1 { get; set; }
         public double GetiriPuanAy2 { get; set; }
@@ -303,6 +320,12 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double GetiriFiyatHafta3 { get; set; }
         public double GetiriFiyatHafta4 { get; set; }
         public double GetiriFiyatHafta5 { get; set; }
+        public double GetiriFiyatNetBuHafta { get; set; }
+        public double GetiriFiyatNetHafta1 { get; set; }
+        public double GetiriFiyatNetHafta2 { get; set; }
+        public double GetiriFiyatNetHafta3 { get; set; }
+        public double GetiriFiyatNetHafta4 { get; set; }
+        public double GetiriFiyatNetHafta5 { get; set; }
         public double GetiriPuanBuHafta { get; set; }
         public double GetiriPuanHafta1 { get; set; }
         public double GetiriPuanHafta2 { get; set; }
@@ -320,6 +343,12 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double GetiriFiyatGun3 { get; set; }
         public double GetiriFiyatGun4 { get; set; }
         public double GetiriFiyatGun5 { get; set; }
+        public double GetiriFiyatNetBuGun { get; set; }
+        public double GetiriFiyatNetGun1 { get; set; }
+        public double GetiriFiyatNetGun2 { get; set; }
+        public double GetiriFiyatNetGun3 { get; set; }
+        public double GetiriFiyatNetGun4 { get; set; }
+        public double GetiriFiyatNetGun5 { get; set; }
         public double GetiriPuanBuGun { get; set; }
         public double GetiriPuanGun1 { get; set; }
         public double GetiriPuanGun2 { get; set; }
@@ -337,6 +366,12 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double GetiriFiyatSaat3 { get; set; }
         public double GetiriFiyatSaat4 { get; set; }
         public double GetiriFiyatSaat5 { get; set; }
+        public double GetiriFiyatNetBuSaat { get; set; }
+        public double GetiriFiyatNetSaat1 { get; set; }
+        public double GetiriFiyatNetSaat2 { get; set; }
+        public double GetiriFiyatNetSaat3 { get; set; }
+        public double GetiriFiyatNetSaat4 { get; set; }
+        public double GetiriFiyatNetSaat5 { get; set; }
         public double GetiriPuanBuSaat { get; set; }
         public double GetiriPuanSaat1 { get; set; }
         public double GetiriPuanSaat2 { get; set; }
@@ -423,7 +458,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             if (Trader == null)
                 return result;
 
-            ReadValues();
+            //ReadValues();
 
             Trader.LastStatisticsCalculationTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 
@@ -463,67 +498,55 @@ namespace AlgoTrade.Core.Trading.Statistics
             SonBarIndex             = lastBarIndex;
 
             // Calculate time elapsed
-            DateTime firstDate = Trader.Data[0].Date;
-            TimeSpan elapsed = DateTime.Now - firstDate;
-            double sureDakika = elapsed.TotalMinutes;
-            double sureSaat = elapsed.TotalHours;
-            int sureGun = elapsed.Days;
-            double sureAy = sureGun / 30.4;
-            double sureHafta = sureGun / 7.0;
+            DateTime firstDate      = Trader.Data[0].Date;
+            TimeSpan elapsed        = DateTime.Now - firstDate;
+            double sureDakika       = elapsed.TotalMinutes;
+            double sureSaat         = elapsed.TotalHours;
+            int sureGun             = elapsed.Days;
+            double sureAy           = sureGun / 30.4;
+            double sureHafta        = sureGun / 7.0;
+                                    
+            ToplamGecenSureAy       = sureAy;
+            ToplamGecenSureHafta    = sureHafta;
+            ToplamGecenSureGun      = sureGun;
+            ToplamGecenSureSaat     = (int)sureSaat;
+            ToplamGecenSureDakika   = (int)sureDakika;
+            OrtAylikIslemSayisi     = ToplamGecenSureAy > 0 ? 1.0 * IslemSayisi / ToplamGecenSureAy : 0;
+            OrtHaftalikIslemSayisi  = ToplamGecenSureHafta > 0 ? 1.0 * IslemSayisi / ToplamGecenSureHafta : 0;
+            OrtGunlukIslemSayisi    = ToplamGecenSureGun > 0 ? 1.0 * IslemSayisi / ToplamGecenSureGun : 0;
+            OrtSaatlikIslemSayisi   = ToplamGecenSureSaat > 0 ? 1.0 * IslemSayisi / ToplamGecenSureSaat : 0;
 
-            ToplamGecenSureAy      = sureAy;
-            ToplamGecenSureHafta   = sureHafta;
-            ToplamGecenSureGun     = sureGun;
-            ToplamGecenSureSaat    = (int)sureSaat;
-            ToplamGecenSureDakika  = (int)sureDakika;
-            OrtAylikIslemSayisi    = ToplamGecenSureAy > 0 ? 1.0 * IslemSayisi / ToplamGecenSureAy : 0;
-            OrtHaftalikIslemSayisi = ToplamGecenSureHafta > 0 ? 1.0 * IslemSayisi / ToplamGecenSureHafta : 0;
-            OrtGunlukIslemSayisi   = ToplamGecenSureGun > 0 ? 1.0 * IslemSayisi / ToplamGecenSureGun : 0;
-            OrtSaatlikIslemSayisi  = ToplamGecenSureSaat > 0 ? 1.0 * IslemSayisi / ToplamGecenSureSaat : 0;
+            // Maximum Drawdown hesaplaması (puan, brut fiyat, net fiyat)
+            var maxDDPuan           = CalculateMaxDD(Trader.lists.BakiyePuanList, IlkBakiyePuan);
+            var maxDDFiyat          = CalculateMaxDD(Trader.lists.BakiyeFiyatList, IlkBakiyeFiyat);
+            var maxDDNet            = CalculateMaxDD(Trader.lists.BakiyeFiyatNetList, IlkBakiyeFiyat);
+            
+            GetiriMaxDDPuan         = maxDDPuan.maxDDYuzde;
+            GetiriMaxDDPuanTarih    = maxDDPuan.maxDDTarih;
+            GetiriMaxKayipPuan      = maxDDPuan.maxDD;
 
-            // Maximum Drawdown hesaplaması
-            double maxBakiye = IlkBakiyeFiyat;
-            double maxDD = 0.0;
-            double maxDDYuzde = 0.0;
-            string maxDDTarih = "";
+            GetiriMaxDD             = maxDDFiyat.maxDDYuzde;
+            GetiriMaxDDTarih        = maxDDFiyat.maxDDTarih;
+            GetiriMaxKayip          = maxDDFiyat.maxDD;
 
-            for (int i = 0; i < Trader.Data.Count; i++)
-            {
-                double mevcutBakiye = Trader.lists.BakiyeFiyatList[i];
+            GetiriMaxDDNet          = maxDDNet.maxDDYuzde;
+            GetiriMaxDDNetTarih     = maxDDNet.maxDDTarih;
+            GetiriMaxKayipNet       = maxDDNet.maxDD;
+                                    
+            MaxKarPuan              = 0.0;
+            MaxZararPuan            = 0.0;
+            MinBakiyePuan           = IlkBakiyePuan;
+            MaxBakiyePuan           = IlkBakiyePuan;
 
-                // Yeni maksimum bakiye kontrolü
-                if (mevcutBakiye > maxBakiye)
-                {
-                    maxBakiye = mevcutBakiye;
-                }
-
-                // Drawdown hesapla (maksimum bakiyeden ne kadar düşmüş)
-                double drawdown = maxBakiye - mevcutBakiye;
-                double drawdownYuzde = maxBakiye > 0 ? (drawdown / maxBakiye) * 100.0 : 0.0;
-
-                // En büyük drawdown kontrolü
-                if (drawdownYuzde > maxDDYuzde)
-                {
-                    maxDDYuzde = drawdownYuzde;
-                    maxDD = drawdown;
-                    maxDDTarih = Trader.Data[i].DateTime.ToString("yyyy.MM.dd HH:mm:ss");
-                }
-            }
-
-            GetiriMaxDD            = maxDDYuzde;
-            GetiriMaxDDTarih       = maxDDTarih;
-            GetiriMaxKayip         = maxDD;
-
-            MaxKarFiyat            = 0.0;
-            MaxZararFiyat          = 0.0;
-            MaxKarPuan             = 0.0;
-            MaxZararPuan           = 0.0;
-            MinBakiyeFiyat         = IlkBakiyeFiyat;
-            MaxBakiyeFiyat         = IlkBakiyeFiyat;
-            MinBakiyeFiyatNet      = IlkBakiyeFiyat;
-            MaxBakiyeFiyatNet      = IlkBakiyeFiyat;
-            MinBakiyePuan          = IlkBakiyePuan;
-            MaxBakiyePuan          = IlkBakiyePuan;
+            MaxKarFiyat             = 0.0;
+            MaxZararFiyat           = 0.0;
+            MinBakiyeFiyat          = IlkBakiyeFiyat;
+            MaxBakiyeFiyat          = IlkBakiyeFiyat;
+                                    
+            MaxKarFiyatNet          = 0.0;
+            MaxZararFiyatNet        = 0.0;
+            MinBakiyeFiyatNet       = IlkBakiyeFiyat;
+            MaxBakiyeFiyatNet       = IlkBakiyeFiyat;
 
             // Toplam komisyonu al (son bar'daki kümülatif değer)
             KomisyonFiyat = lastBarIndex >= 0 ? Trader.lists.KomisyonFiyatList[lastBarIndex] : 0.0;
@@ -531,46 +554,17 @@ namespace AlgoTrade.Core.Trading.Statistics
             // Find min/max values
             for (int i = 1; i < Trader.Data.Count; i++)
             {
-                if (Trader.lists.KarZararFiyatList[i] < MaxZararFiyat)
+                if (Trader.lists.KarZararPuanList[i] > MaxKarPuan)
                 {
-                    MaxZararFiyat = Trader.lists.KarZararFiyatList[i];
-                    MaxZararFiyatIndex = i;
-                }
-                if (Trader.lists.KarZararFiyatList[i] > MaxKarFiyat)
-                {
-                    MaxKarFiyat = Trader.lists.KarZararFiyatList[i];
-                    MaxKarFiyatIndex = i;
+                    MaxKarPuan = Trader.lists.KarZararPuanList[i];
+                    MaxKarPuanIndex = i;
                 }
                 if (Trader.lists.KarZararPuanList[i] < MaxZararPuan)
                 {
                     MaxZararPuan = Trader.lists.KarZararPuanList[i];
                     MaxZararPuanIndex = i;
                 }
-                if (Trader.lists.KarZararPuanList[i] > MaxKarPuan)
-                {
-                    MaxKarPuan = Trader.lists.KarZararPuanList[i];
-                    MaxKarPuanIndex = i;
-                }
-                if (Trader.lists.BakiyeFiyatList[i] < MinBakiyeFiyat)
-                {
-                    MinBakiyeFiyat = Trader.lists.BakiyeFiyatList[i];
-                    MinBakiyeFiyatIndex = i;
-                }
-                if (Trader.lists.BakiyeFiyatList[i] > MaxBakiyeFiyat)
-                {
-                    MaxBakiyeFiyat = Trader.lists.BakiyeFiyatList[i];
-                    MaxBakiyeFiyatIndex = i;
-                }
-                if (Trader.lists.BakiyeFiyatNetList[i] < MinBakiyeFiyatNet)
-                {
-                    MinBakiyeFiyatNet = Trader.lists.BakiyeFiyatNetList[i];
-                    MinBakiyeFiyatNetIndex = i;
-                }
-                if (Trader.lists.BakiyeFiyatNetList[i] > MaxBakiyeFiyatNet)
-                {
-                    MaxBakiyeFiyatNet = Trader.lists.BakiyeFiyatNetList[i];
-                    MaxBakiyeFiyatNetIndex = i;
-                }
+
                 if (Trader.lists.BakiyePuanList[i] < MinBakiyePuan)
                 {
                     MinBakiyePuan = Trader.lists.BakiyePuanList[i];
@@ -581,25 +575,76 @@ namespace AlgoTrade.Core.Trading.Statistics
                     MaxBakiyePuan = Trader.lists.BakiyePuanList[i];
                     MaxBakiyePuanIndex = i;
                 }
+
+
+                if (Trader.lists.KarZararFiyatList[i] > MaxKarFiyat)
+                {
+                    MaxKarFiyat = Trader.lists.KarZararFiyatList[i];
+                    MaxKarFiyatIndex = i;
+                }
+                if (Trader.lists.KarZararFiyatList[i] < MaxZararFiyat)
+                {
+                    MaxZararFiyat = Trader.lists.KarZararFiyatList[i];
+                    MaxZararFiyatIndex = i;
+                }
+
+                if (Trader.lists.BakiyeFiyatList[i] < MinBakiyeFiyat)
+                {
+                    MinBakiyeFiyat = Trader.lists.BakiyeFiyatList[i];
+                    MinBakiyeFiyatIndex = i;
+                }
+                if (Trader.lists.BakiyeFiyatList[i] > MaxBakiyeFiyat)
+                {
+                    MaxBakiyeFiyat = Trader.lists.BakiyeFiyatList[i];
+                    MaxBakiyeFiyatIndex = i;
+                }
+
+                double komisyonDelta = Trader.lists.KomisyonFiyatList[i] - Trader.lists.KomisyonFiyatList[i - 1];
+                double karZararFiyatNet = Trader.lists.KarZararFiyatList[i] - komisyonDelta;
+
+                if (karZararFiyatNet > MaxKarFiyatNet)
+                {
+                    MaxKarFiyatNet = karZararFiyatNet;
+                }
+                if (karZararFiyatNet < MaxZararFiyatNet)
+                {
+                    MaxZararFiyatNet = karZararFiyatNet;
+                }
+
+                if (Trader.lists.BakiyeFiyatNetList[i] < MinBakiyeFiyatNet)
+                {
+                    MinBakiyeFiyatNet = Trader.lists.BakiyeFiyatNetList[i];
+                    MinBakiyeFiyatNetIndex = i;
+                }
+                if (Trader.lists.BakiyeFiyatNetList[i] > MaxBakiyeFiyatNet)
+                {
+                    MaxBakiyeFiyatNet = Trader.lists.BakiyeFiyatNetList[i];
+                    MaxBakiyeFiyatNetIndex = i;
+                }
             }
 
             // Calculate performance metrics
-            ProfitFactor           = Math.Abs(ToplamZararFiyat) > 0 ? ToplamKarFiyat / Math.Abs(ToplamZararFiyat) : 0;
-            // ProfitFactorNet: Commission-adjusted profit factor (commission added to loss side)
-            double totalLossWithCommission = Math.Abs(ToplamZararFiyat) + KomisyonFiyat;
-            ProfitFactorNet        = totalLossWithCommission > 0 ? ToplamKarFiyat / totalLossWithCommission : 0;
+            var profitFactors      = CalculateProfitFactors();
+            ProfitFactorPuan       = profitFactors.profitFactorPuan;
+            ProfitFactor           = profitFactors.profitFactorFiyat;
+            ProfitFactorNet        = profitFactors.profitFactorNet;
             ProfitFactorSistem     = 0.0;
-            KarliIslemOrani        = IslemSayisi > 0 ? (1.0 * KazandiranIslemSayisi) / (1.0 * IslemSayisi) * 100.0 : 0;
 
+            KarliIslemOrani        = IslemSayisi > 0 ? (1.0 * KazandiranIslemSayisi) / (1.0 * IslemSayisi) * 100.0 : 0;
+            
+            MinBakiyePuanYuzde     = IlkBakiyePuan != 0 ? (MinBakiyePuan - IlkBakiyePuan) * 100.0 / IlkBakiyePuan : 0;
+            MaxBakiyePuanYuzde     = IlkBakiyePuan != 0 ? (MaxBakiyePuan - IlkBakiyePuan) * 100.0 / IlkBakiyePuan : 0;
             MinBakiyeFiyatYuzde    = IlkBakiyeFiyat != 0 ? (MinBakiyeFiyat - IlkBakiyeFiyat) * 100.0 / IlkBakiyeFiyat : 0;
             MaxBakiyeFiyatYuzde    = IlkBakiyeFiyat != 0 ? (MaxBakiyeFiyat - IlkBakiyeFiyat) * 100.0 / IlkBakiyeFiyat : 0;
             MinBakiyeFiyatNetYuzde = IlkBakiyeFiyat != 0 ? (MinBakiyeFiyatNet - IlkBakiyeFiyat) * 100.0 / IlkBakiyeFiyat : 0;
             MaxBakiyeFiyatNetYuzde = IlkBakiyeFiyat != 0 ? (MaxBakiyeFiyatNet - IlkBakiyeFiyat) * 100.0 / IlkBakiyeFiyat : 0;
+
             KomisyonFiyatYuzde     = GetiriFiyatYuzde - GetiriFiyatYuzdeNet;
+
             //GetiriKzSistemYuzde    = 0.0;  // Silinecek
             //GetiriKzNetSistemYuzde = 0.0;  // Silinecek
 
-            GetiriIstatistikleriHesapla();
+            //GetiriIstatistikleriHesapla();
 
             AssignToMap();
 
@@ -618,6 +663,78 @@ namespace AlgoTrade.Core.Trading.Statistics
         {
             // TODO: Implement periodic return calculations
             // This would calculate monthly, weekly, daily, and hourly returns
+        }
+
+        private (double maxDDYuzde, double maxDD, string maxDDTarih) CalculateMaxDD(IList<double> bakiyeList, double ilkBakiye)
+        {
+            if (Trader?.Data == null || bakiyeList == null)
+            {
+                return (0.0, 0.0, "");
+            }
+
+            int count = Math.Min(Trader.Data.Count, bakiyeList.Count);
+            if (count <= 0)
+            {
+                return (0.0, 0.0, "");
+            }
+
+            double maxBakiye = ilkBakiye;
+            double maxDD = 0.0;
+            double maxDDYuzde = 0.0;
+            string maxDDTarih = "";
+
+            for (int i = 0; i < count; i++)
+            {
+                double mevcutBakiye = bakiyeList[i];
+
+                if (mevcutBakiye > maxBakiye)
+                {
+                    maxBakiye = mevcutBakiye;
+                }
+
+                double drawdown = maxBakiye - mevcutBakiye;
+                double drawdownYuzde = maxBakiye > 0 ? (drawdown / maxBakiye) * 100.0 : 0.0;
+
+                if (drawdownYuzde > maxDDYuzde)
+                {
+                    maxDDYuzde = drawdownYuzde;
+                    maxDD = drawdown;
+                    maxDDTarih = Trader.Data[i].DateTime.ToString("yyyy.MM.dd HH:mm:ss");
+                }
+            }
+
+            return (maxDDYuzde, maxDD, maxDDTarih);
+        }
+
+        private static double CalculateProfitFactor(double toplamKar, double toplamZarar)
+        {
+            return Math.Abs(toplamZarar) > 0 ? toplamKar / Math.Abs(toplamZarar) : 0.0;
+        }
+
+        private (double profitFactorFiyat, double profitFactorPuan, double profitFactorNet) CalculateProfitFactors()
+        {
+            double profitFactorFiyat = CalculateProfitFactor(ToplamKarFiyat, ToplamZararFiyat);
+            double profitFactorPuan = CalculateProfitFactor(ToplamKarPuan, ToplamZararPuan);
+
+            double toplamKarFiyatNet = 0.0;
+            double toplamZararFiyatNet = 0.0;
+            int count = Math.Min(Trader.Data.Count, Math.Min(Trader.lists.KarZararFiyatList.Count, Trader.lists.KomisyonFiyatList.Count));
+            for (int i = 1; i < count; i++)
+            {
+                double komisyonDelta = Trader.lists.KomisyonFiyatList[i] - Trader.lists.KomisyonFiyatList[i - 1];
+                double karZararFiyatNet = Trader.lists.KarZararFiyatList[i] - komisyonDelta;
+                if (karZararFiyatNet >= 0)
+                {
+                    toplamKarFiyatNet += karZararFiyatNet;
+                }
+                else
+                {
+                    toplamZararFiyatNet += karZararFiyatNet;
+                }
+            }
+
+            double profitFactorNet = CalculateProfitFactor(toplamKarFiyatNet, toplamZararFiyatNet);
+            return (profitFactorFiyat, profitFactorPuan, profitFactorNet);
         }
 
         private void AssignToMap()
@@ -669,6 +786,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("SecilenBarTarihSaati", SecilenBarTarihSaati);
             Add("SecilenBarTarihi", SecilenBarTarihi);
             Add("SecilenBarSaati", SecilenBarSaati);
+            Add("SecilenBarAcilisFiyati", SecilenBarAcilisFiyati, "F4");
+            Add("SecilenBarYuksekFiyati", SecilenBarYuksekFiyati, "F4");
+            Add("SecilenBarDusukFiyati", SecilenBarDusukFiyati, "F4");
+            Add("SecilenBarKapanisFiyati", SecilenBarKapanisFiyati, "F4");
 
             Add("IlkBarTarihSaati", IlkBarTarihSaati);
             Add("IlkBarTarihi", IlkBarTarihi);
@@ -715,6 +836,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("GetiriPuanNet", GetiriPuanNet, "F2");
             Add("GetiriFiyatYuzdeNet", GetiriFiyatYuzdeNet, "F2");
             Add("GetiriPuanYuzdeNet", GetiriPuanYuzdeNet, "F2");
+            Add("GetiriFiyatTipi", GetiriFiyatTipi);
             //Add("GetiriKz", GetiriKz, "F4");  // Silinecek
             //Add("GetiriKzNet", GetiriKzNet, "F4");  // Silinecek
             //Add("GetiriKzSistem", GetiriKzSistem, "F4");  // Silinecek
@@ -731,8 +853,12 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("MaxBakiyePuan", MaxBakiyePuan, "F2");
             Add("MinBakiyeFiyatYuzde", MinBakiyeFiyatYuzde, "F2");
             Add("MaxBakiyeFiyatYuzde", MaxBakiyeFiyatYuzde, "F2");
+            Add("MinBakiyePuanYuzde", MinBakiyePuanYuzde, "F2");
+            Add("MaxBakiyePuanYuzde", MaxBakiyePuanYuzde, "F2");
             Add("MinBakiyeFiyatIndex", MinBakiyeFiyatIndex);
             Add("MaxBakiyeFiyatIndex", MaxBakiyeFiyatIndex);
+            Add("MinBakiyePuanIndex", MinBakiyePuanIndex);
+            Add("MaxBakiyePuanIndex", MaxBakiyePuanIndex);
             Add("MinBakiyeFiyatNet", MinBakiyeFiyatNet, "F2");
             Add("MaxBakiyeFiyatNet", MaxBakiyeFiyatNet, "F2");
             Add("MinBakiyeFiyatNetIndex", MinBakiyeFiyatNetIndex);
@@ -795,8 +921,14 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("NetKarPuan", NetKarPuan, "F4");
             Add("MaxKarFiyat", MaxKarFiyat, "F2");
             Add("MaxZararFiyat", MaxZararFiyat, "F2");
+            Add("MaxKarFiyatNet", MaxKarFiyatNet, "F2");
+            Add("MaxZararFiyatNet", MaxZararFiyatNet, "F2");
             Add("MaxKarPuan", MaxKarPuan, "F4");
             Add("MaxZararPuan", MaxZararPuan, "F4");
+            Add("MaxKarFiyatIndex", MaxKarFiyatIndex);
+            Add("MaxZararFiyatIndex", MaxZararFiyatIndex);
+            Add("MaxKarPuanIndex", MaxKarPuanIndex);
+            Add("MaxZararPuanIndex", MaxZararPuanIndex);
             Add("KardaBarSayisi", KardaBarSayisi);
             Add("ZarardaBarSayisi", ZarardaBarSayisi);
             Add("KarliIslemOrani", KarliIslemOrani, "F2");
@@ -804,9 +936,16 @@ namespace AlgoTrade.Core.Trading.Statistics
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
             // --- Risk Metrics ---
+            Add("GetiriMaxDDPuan", GetiriMaxDDPuan, "F2");
+            Add("GetiriMaxDDPuanTarih", GetiriMaxDDPuanTarih);
+            Add("GetiriMaxKayipPuan", GetiriMaxKayipPuan, "F2");
             Add("GetiriMaxDD", GetiriMaxDD, "F2");
             Add("GetiriMaxDDTarih", GetiriMaxDDTarih);
             Add("GetiriMaxKayip", GetiriMaxKayip, "F2");
+            Add("GetiriMaxDDNet", GetiriMaxDDNet, "F2");
+            Add("GetiriMaxDDNetTarih", GetiriMaxDDNetTarih);
+            Add("GetiriMaxKayipNet", GetiriMaxKayipNet, "F2");
+            Add("ProfitFactorPuan", ProfitFactorPuan, "F2");
             Add("ProfitFactor", ProfitFactor, "F2");
             Add("ProfitFactorNet", ProfitFactorNet, "F2");
             Add("ProfitFactorSistem", ProfitFactorSistem, "F2");
@@ -853,25 +992,84 @@ namespace AlgoTrade.Core.Trading.Statistics
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
             // --- Periodic Returns ---
-            Add("GetiriFiyatBuAy", GetiriFiyatBuAy, "F2");
-            Add("GetiriFiyatAy1", GetiriFiyatAy1, "F2");
-            Add("GetiriFiyatBuHafta", GetiriFiyatBuHafta, "F2");
-            Add("GetiriFiyatHafta1", GetiriFiyatHafta1, "F2");
-            Add("GetiriFiyatBuGun", GetiriFiyatBuGun, "F2");
-            Add("GetiriFiyatGun1", GetiriFiyatGun1, "F2");
-            Add("GetiriFiyatBuSaat", GetiriFiyatBuSaat, "F2");
-            Add("GetiriFiyatSaat1", GetiriFiyatSaat1, "F2");
+            Add("GetiriPuanBuAy", GetiriPuanBuAy, "F4");
+            Add("GetiriPuanAy1", GetiriPuanAy1, "F4");
+            Add("GetiriPuanAy2", GetiriPuanAy2, "F4");
+            Add("GetiriPuanAy3", GetiriPuanAy3, "F4");
+            Add("GetiriPuanAy4", GetiriPuanAy4, "F4");
+            Add("GetiriPuanAy5", GetiriPuanAy5, "F4");
+            Add("GetiriPuanBuHafta", GetiriPuanBuHafta, "F4");
+            Add("GetiriPuanHafta1", GetiriPuanHafta1, "F4");
+            Add("GetiriPuanHafta2", GetiriPuanHafta2, "F4");
+            Add("GetiriPuanHafta3", GetiriPuanHafta3, "F4");
+            Add("GetiriPuanHafta4", GetiriPuanHafta4, "F4");
+            Add("GetiriPuanHafta5", GetiriPuanHafta5, "F4");
+            Add("GetiriPuanBuGun", GetiriPuanBuGun, "F4");
+            Add("GetiriPuanGun1", GetiriPuanGun1, "F4");
+            Add("GetiriPuanGun2", GetiriPuanGun2, "F4");
+            Add("GetiriPuanGun3", GetiriPuanGun3, "F4");
+            Add("GetiriPuanGun4", GetiriPuanGun4, "F4");
+            Add("GetiriPuanGun5", GetiriPuanGun5, "F4");
+            Add("GetiriPuanBuSaat", GetiriPuanBuSaat, "F4");
+            Add("GetiriPuanSaat1", GetiriPuanSaat1, "F4");
+            Add("GetiriPuanSaat2", GetiriPuanSaat2, "F4");
+            Add("GetiriPuanSaat3", GetiriPuanSaat3, "F4");
+            Add("GetiriPuanSaat4", GetiriPuanSaat4, "F4");
+            Add("GetiriPuanSaat5", GetiriPuanSaat5, "F4");
 
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
-            Add("GetiriPuanBuAy", GetiriPuanBuAy, "F4");
-            Add("GetiriPuanAy1", GetiriPuanAy1, "F4");
-            Add("GetiriPuanBuHafta", GetiriPuanBuHafta, "F4");
-            Add("GetiriPuanHafta1", GetiriPuanHafta1, "F4");
-            Add("GetiriPuanBuGun", GetiriPuanBuGun, "F4");
-            Add("GetiriPuanGun1", GetiriPuanGun1, "F4");
-            Add("GetiriPuanBuSaat", GetiriPuanBuSaat, "F4");
-            Add("GetiriPuanSaat1", GetiriPuanSaat1, "F4");
+            Add("GetiriFiyatBuAy", GetiriFiyatBuAy, "F2");
+            Add("GetiriFiyatAy1", GetiriFiyatAy1, "F2");
+            Add("GetiriFiyatAy2", GetiriFiyatAy2, "F2");
+            Add("GetiriFiyatAy3", GetiriFiyatAy3, "F2");
+            Add("GetiriFiyatAy4", GetiriFiyatAy4, "F2");
+            Add("GetiriFiyatAy5", GetiriFiyatAy5, "F2");
+            Add("GetiriFiyatBuHafta", GetiriFiyatBuHafta, "F2");
+            Add("GetiriFiyatHafta1", GetiriFiyatHafta1, "F2");
+            Add("GetiriFiyatHafta2", GetiriFiyatHafta2, "F2");
+            Add("GetiriFiyatHafta3", GetiriFiyatHafta3, "F2");
+            Add("GetiriFiyatHafta4", GetiriFiyatHafta4, "F2");
+            Add("GetiriFiyatHafta5", GetiriFiyatHafta5, "F2");
+            Add("GetiriFiyatBuGun", GetiriFiyatBuGun, "F2");
+            Add("GetiriFiyatGun1", GetiriFiyatGun1, "F2");
+            Add("GetiriFiyatGun2", GetiriFiyatGun2, "F2");
+            Add("GetiriFiyatGun3", GetiriFiyatGun3, "F2");
+            Add("GetiriFiyatGun4", GetiriFiyatGun4, "F2");
+            Add("GetiriFiyatGun5", GetiriFiyatGun5, "F2");
+            Add("GetiriFiyatBuSaat", GetiriFiyatBuSaat, "F2");
+            Add("GetiriFiyatSaat1", GetiriFiyatSaat1, "F2");
+            Add("GetiriFiyatSaat2", GetiriFiyatSaat2, "F2");
+            Add("GetiriFiyatSaat3", GetiriFiyatSaat3, "F2");
+            Add("GetiriFiyatSaat4", GetiriFiyatSaat4, "F2");
+            Add("GetiriFiyatSaat5", GetiriFiyatSaat5, "F2");
+
+            StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
+
+            Add("GetiriFiyatNetBuAy", GetiriFiyatNetBuAy, "F2");
+            Add("GetiriFiyatNetAy1", GetiriFiyatNetAy1, "F2");
+            Add("GetiriFiyatNetAy2", GetiriFiyatNetAy2, "F2");
+            Add("GetiriFiyatNetAy3", GetiriFiyatNetAy3, "F2");
+            Add("GetiriFiyatNetAy4", GetiriFiyatNetAy4, "F2");
+            Add("GetiriFiyatNetAy5", GetiriFiyatNetAy5, "F2");
+            Add("GetiriFiyatNetBuHafta", GetiriFiyatNetBuHafta, "F2");
+            Add("GetiriFiyatNetHafta1", GetiriFiyatNetHafta1, "F2");
+            Add("GetiriFiyatNetHafta2", GetiriFiyatNetHafta2, "F2");
+            Add("GetiriFiyatNetHafta3", GetiriFiyatNetHafta3, "F2");
+            Add("GetiriFiyatNetHafta4", GetiriFiyatNetHafta4, "F2");
+            Add("GetiriFiyatNetHafta5", GetiriFiyatNetHafta5, "F2");
+            Add("GetiriFiyatNetBuGun", GetiriFiyatNetBuGun, "F2");
+            Add("GetiriFiyatNetGun1", GetiriFiyatNetGun1, "F2");
+            Add("GetiriFiyatNetGun2", GetiriFiyatNetGun2, "F2");
+            Add("GetiriFiyatNetGun3", GetiriFiyatNetGun3, "F2");
+            Add("GetiriFiyatNetGun4", GetiriFiyatNetGun4, "F2");
+            Add("GetiriFiyatNetGun5", GetiriFiyatNetGun5, "F2");
+            Add("GetiriFiyatNetBuSaat", GetiriFiyatNetBuSaat, "F2");
+            Add("GetiriFiyatNetSaat1", GetiriFiyatNetSaat1, "F2");
+            Add("GetiriFiyatNetSaat2", GetiriFiyatNetSaat2, "F2");
+            Add("GetiriFiyatNetSaat3", GetiriFiyatNetSaat3, "F2");
+            Add("GetiriFiyatNetSaat4", GetiriFiyatNetSaat4, "F2");
+            Add("GetiriFiyatNetSaat5", GetiriFiyatNetSaat5, "F2");
         }
 
         public void SaveToTxt(string filePath)
@@ -1255,6 +1453,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Max Balance (Points)     : {GetValue("MaxBakiyePuan"),-50} │");
             sb.AppendLine($"│ Min Balance %            : {GetValue("MinBakiyeFiyatYuzde"),-50} │");
             sb.AppendLine($"│ Max Balance %            : {GetValue("MaxBakiyeFiyatYuzde"),-50} │");
+            sb.AppendLine($"│ Min Balance % (Points)   : {GetValue("MinBakiyePuanYuzde"),-50} │");
+            sb.AppendLine($"│ Max Balance % (Points)   : {GetValue("MaxBakiyePuanYuzde"),-50} │");
             sb.AppendLine($"│ Min Balance Index        : {GetValue("MinBakiyeFiyatIndex"),-50} │");
             sb.AppendLine($"│ Max Balance Index        : {GetValue("MaxBakiyeFiyatIndex"),-50} │");
             sb.AppendLine($"│ Min Balance Net          : {GetValue("MinBakiyeFiyatNet"),-50} │");
@@ -1323,6 +1523,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Net Profit (Points)      : {GetValue("NetKarPuan"),-50} │");
             sb.AppendLine($"│ Max Profit (Price)       : {GetValue("MaxKarFiyat"),-50} │");
             sb.AppendLine($"│ Max Loss (Price)         : {GetValue("MaxZararFiyat"),-50} │");
+            sb.AppendLine($"│ Max Profit (Price Net)   : {GetValue("MaxKarFiyatNet"),-50} │");
+            sb.AppendLine($"│ Max Loss (Price Net)     : {GetValue("MaxZararFiyatNet"),-50} │");
             sb.AppendLine($"│ Max Profit (Points)      : {GetValue("MaxKarPuan"),-50} │");
             sb.AppendLine($"│ Max Loss (Points)        : {GetValue("MaxZararPuan"),-50} │");
             sb.AppendLine($"│ Bars in Profit           : {GetValue("KardaBarSayisi"),-50} │");
@@ -1337,6 +1539,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Max Drawdown Date        : {GetValue("GetiriMaxDDTarih"),-50} │");
             sb.AppendLine($"│ Max Loss                 : {GetValue("GetiriMaxKayip"),-50} │");
             sb.AppendLine($"│ Profit Factor            : {GetValue("ProfitFactor"),-50} │");
+            sb.AppendLine($"│ Profit Factor (Points)   : {GetValue("ProfitFactorPuan"),-50} │");
             sb.AppendLine($"│ Profit Factor (Net)      : {GetValue("ProfitFactorNet"),-50} │");
             sb.AppendLine($"│ Profit Factor (System)   : {GetValue("ProfitFactorSistem"),-50} │");
             sb.AppendLine("└────────────────────────────────────────────────────────────────────────────┘");
@@ -1500,6 +1703,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("MaxBakiyeFiyat", MaxBakiyeFiyat, "F2");
             Add("MinBakiyeFiyatYuzde", MinBakiyeFiyatYuzde, "F2");
             Add("MaxBakiyeFiyatYuzde", MaxBakiyeFiyatYuzde, "F2");
+            Add("MinBakiyePuanYuzde", MinBakiyePuanYuzde, "F2");
+            Add("MaxBakiyePuanYuzde", MaxBakiyePuanYuzde, "F2");
             Add("MinBakiyeFiyatIndex", MinBakiyeFiyatIndex);
             Add("MaxBakiyeFiyatIndex", MaxBakiyeFiyatIndex);
             Add("MinBakiyeFiyatNet", MinBakiyeFiyatNet, "F2");
@@ -1508,6 +1713,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("MaxBakiyeFiyatNetIndex", MaxBakiyeFiyatNetIndex);
             Add("MinBakiyeFiyatNetYuzde", MinBakiyeFiyatNetYuzde, "F2");
             Add("MaxBakiyeFiyatNetYuzde", MaxBakiyeFiyatNetYuzde, "F2");
+            Add("MaxKarFiyat", MaxKarFiyat, "F2");
+            Add("MaxZararFiyat", MaxZararFiyat, "F2");
+            Add("MaxKarFiyatNet", MaxKarFiyatNet, "F2");
+            Add("MaxZararFiyatNet", MaxZararFiyatNet, "F2");
 
             StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
 
@@ -1542,6 +1751,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("GetiriMaxDDTarih", GetiriMaxDDTarih);
             Add("GetiriMaxKayip", GetiriMaxKayip, "F2");
             Add("ProfitFactor", ProfitFactor, "F2");
+            Add("ProfitFactorPuan", ProfitFactorPuan, "F2");
             Add("ProfitFactorNet", ProfitFactorNet, "F2");
 
             StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
@@ -1817,6 +2027,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Max Balance              : {GetValue("MaxBakiyeFiyat"),-50} │");
             sb.AppendLine($"│ Min Balance %            : {GetValue("MinBakiyeFiyatYuzde"),-50} │");
             sb.AppendLine($"│ Max Balance %            : {GetValue("MaxBakiyeFiyatYuzde"),-50} │");
+            sb.AppendLine($"│ Min Balance % (Points)   : {GetValue("MinBakiyePuanYuzde"),-50} │");
+            sb.AppendLine($"│ Max Balance % (Points)   : {GetValue("MaxBakiyePuanYuzde"),-50} │");
             sb.AppendLine($"│ Min Balance Index        : {GetValue("MinBakiyeFiyatIndex"),-50} │");
             sb.AppendLine($"│ Max Balance Index        : {GetValue("MaxBakiyeFiyatIndex"),-50} │");
             sb.AppendLine($"│ Min Balance Net          : {GetValue("MinBakiyeFiyatNet"),-50} │");
@@ -1850,6 +2062,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Net Profit               : {GetValue("NetKarFiyat"),-50} │");
             sb.AppendLine($"│ Max Profit               : {GetValue("MaxKarFiyat"),-50} │");
             sb.AppendLine($"│ Max Loss                 : {GetValue("MaxZararFiyat"),-50} │");
+            sb.AppendLine($"│ Max Profit Net           : {GetValue("MaxKarFiyatNet"),-50} │");
+            sb.AppendLine($"│ Max Loss Net             : {GetValue("MaxZararFiyatNet"),-50} │");
             sb.AppendLine($"│ Win Rate                 : {GetValue("KarliIslemOrani"),-50} │");
             sb.AppendLine("└────────────────────────────────────────────────────────────────────────────┘");
             sb.AppendLine();
@@ -1860,6 +2074,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.AppendLine($"│ Max Drawdown Date        : {GetValue("GetiriMaxDDTarih"),-50} │");
             sb.AppendLine($"│ Max Loss                 : {GetValue("GetiriMaxKayip"),-50} │");
             sb.AppendLine($"│ Profit Factor            : {GetValue("ProfitFactor"),-50} │");
+            sb.AppendLine($"│ Profit Factor (Points)   : {GetValue("ProfitFactorPuan"),-50} │");
             sb.AppendLine($"│ Profit Factor (Net)      : {GetValue("ProfitFactorNet"),-50} │");
             sb.AppendLine("└────────────────────────────────────────────────────────────────────────────┘");
             sb.AppendLine();
@@ -1961,6 +2176,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double MaxBakiyePuan;
             public double MinBakiyeFiyatYuzde;
             public double MaxBakiyeFiyatYuzde;
+            public double MinBakiyePuanYuzde;
+            public double MaxBakiyePuanYuzde;
             public int MinBakiyeFiyatIndex;
             public int MaxBakiyeFiyatIndex;
             public double MinBakiyeFiyatNet;
@@ -2017,6 +2234,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double NetKarPuan;
             public double MaxKarFiyat;
             public double MaxZararFiyat;
+            public double MaxKarFiyatNet;
+            public double MaxZararFiyatNet;
             public double MaxKarPuan;
             public double MaxZararPuan;
             public int KardaBarSayisi;
@@ -2028,6 +2247,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             public string GetiriMaxDDTarih;
             public double GetiriMaxKayip;
             public double ProfitFactor;
+            public double ProfitFactorPuan;
             public double ProfitFactorNet;
             public double ProfitFactorSistem;
 
@@ -2065,6 +2285,15 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double MaxPositionSizeMicro;
 
             // --- Periodic Returns ---
+            public double GetiriPuanBuAy;
+            public double GetiriPuanAy1;
+            public double GetiriPuanBuHafta;
+            public double GetiriPuanHafta1;
+            public double GetiriPuanBuGun;
+            public double GetiriPuanGun1;
+            public double GetiriPuanBuSaat;
+            public double GetiriPuanSaat1;
+
             public double GetiriFiyatBuAy;
             public double GetiriFiyatAy1;
             public double GetiriFiyatBuHafta;
@@ -2074,14 +2303,14 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double GetiriFiyatBuSaat;
             public double GetiriFiyatSaat1;
 
-            public double GetiriPuanBuAy;
-            public double GetiriPuanAy1;
-            public double GetiriPuanBuHafta;
-            public double GetiriPuanHafta1;
-            public double GetiriPuanBuGun;
-            public double GetiriPuanGun1;
-            public double GetiriPuanBuSaat;
-            public double GetiriPuanSaat1;
+            public double GetiriFiyatNetBuAy;
+            public double GetiriFiyatNetAy1;
+            public double GetiriFiyatNetBuHafta;
+            public double GetiriFiyatNetHafta1;
+            public double GetiriFiyatNetBuGun;
+            public double GetiriFiyatNetGun1;
+            public double GetiriFiyatNetBuSaat;
+            public double GetiriFiyatNetSaat1;
 
             /// <summary>
             /// Get CSV header (semicolon separated) - comprehensive version
@@ -2100,7 +2329,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "BakiyeFiyatNet;BakiyePuanNet;GetiriFiyatNet;GetiriPuanNet;GetiriFiyatYuzdeNet;GetiriPuanYuzdeNet;" +
                        "BakiyeFiyatNet;GetiriFiyatNet;GetiriFiyatYuzdeNet;" +
                        //"GetiriKz;GetiriKzNet;GetiriKzSistem;GetiriKzSistemYuzde;GetiriKzNetSistem;GetiriKzNetSistemYuzde;" +  // Silinecek
-                       "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyePuan;MaxBakiyePuan;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;" +
+                       "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyePuan;MaxBakiyePuan;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;MinBakiyePuanYuzde;MaxBakiyePuanYuzde;" +
                        "MinBakiyeFiyatIndex;MaxBakiyeFiyatIndex;MinBakiyeFiyatNet;MaxBakiyeFiyatNet;MinBakiyeFiyatNetIndex;MaxBakiyeFiyatNetIndex;MinBakiyeFiyatNetYuzde;MaxBakiyeFiyatNetYuzde;" +
                        "IslemSayisi;AlisSayisi;SatisSayisi;FlatSayisi;PassSayisi;KarAlSayisi;ZararKesSayisi;" +
                        "KazandiranIslemSayisi;KaybettirenIslemSayisi;NotrIslemSayisi;" +
@@ -2109,9 +2338,9 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "KomisyonIslemSayisi;KomisyonVarlikAdedSayisi;KomisyonVarlikAdedSayisiMicro;KomisyonCarpan;KomisyonFiyat;KomisyonFiyatYuzde;KomisyonuDahilEt;" +
                        "KarZararFiyat;KarZararFiyatYuzde;KarZararPuan;ToplamKarFiyat;ToplamZararFiyat;NetKarFiyat;" +
                        "KarZararFiyat;KarZararFiyatYuzde;ToplamKarFiyat;ToplamZararFiyat;NetKarFiyat;" +
-                       "ToplamKarPuan;ToplamZararPuan;NetKarPuan;MaxKarFiyat;MaxZararFiyat;MaxKarPuan;MaxZararPuan;" +
+                       "ToplamKarPuan;ToplamZararPuan;NetKarPuan;MaxKarFiyat;MaxZararFiyat;MaxKarFiyatNet;MaxZararFiyatNet;MaxKarPuan;MaxZararPuan;" +
                        "KardaBarSayisi;ZarardaBarSayisi;KarliIslemOrani;" +
-                       "GetiriMaxDD;GetiriMaxDDTarih;GetiriMaxKayip;ProfitFactor;ProfitFactorNet;ProfitFactorSistem;" +
+                       "GetiriMaxDD;GetiriMaxDDTarih;GetiriMaxKayip;ProfitFactor;ProfitFactorPuan;ProfitFactorNet;ProfitFactorSistem;" +
                        "Sinyal;SonYon;PrevYon;SonFiyat;SonAFiyat;SonSFiyat;SonFFiyat;SonPFiyat;PrevFiyat;" +
                        "SonBarNo;SonABarNo;SonSBarNo;EmirKomut;EmirStatus;" +
                        "HisseSayisi;KontratSayisi;VarlikAdedCarpani;VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KaymaMiktari;KaymayiDahilEt;" +
@@ -2137,7 +2366,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{BakiyeFiyatNet:F2};{BakiyePuanNet:F2};{GetiriFiyatNet:F2};{GetiriPuanNet:F4};{GetiriFiyatYuzdeNet:F2};{GetiriPuanYuzdeNet:F2};" +
                        $"{BakiyeFiyatNet:F2};{GetiriFiyatNet:F2};{GetiriFiyatYuzdeNet:F2};" +
                        //$"{GetiriKz:F4};{GetiriKzNet:F4};{GetiriKzSistem:F4};{GetiriKzSistemYuzde:F2};{GetiriKzNetSistem:F4};{GetiriKzNetSistemYuzde:F2};" +  // Silinecek
-                       $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyePuan:F2};{MaxBakiyePuan:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};" +
+                       $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyePuan:F2};{MaxBakiyePuan:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};{MinBakiyePuanYuzde:F2};{MaxBakiyePuanYuzde:F2};" +
                        $"{MinBakiyeFiyatIndex};{MaxBakiyeFiyatIndex};{MinBakiyeFiyatNet:F2};{MaxBakiyeFiyatNet:F2};{MinBakiyeFiyatNetIndex};{MaxBakiyeFiyatNetIndex};{MinBakiyeFiyatNetYuzde:F2};{MaxBakiyeFiyatNetYuzde:F2};" +
                        $"{IslemSayisi};{AlisSayisi};{SatisSayisi};{FlatSayisi};{PassSayisi};{KarAlSayisi};{ZararKesSayisi};" +
                        $"{KazandiranIslemSayisi};{KaybettirenIslemSayisi};{NotrIslemSayisi};" +
@@ -2146,9 +2375,9 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{KomisyonIslemSayisi};{KomisyonVarlikAdedSayisi:F2};{KomisyonVarlikAdedSayisiMicro:F4};{KomisyonCarpan:F4};{KomisyonFiyat:F2};{KomisyonFiyatYuzde:F4};{KomisyonuDahilEt};" +
                        $"{KarZararFiyat:F2};{KarZararFiyatYuzde:F2};{KarZararPuan:F4};{ToplamKarFiyat:F2};{ToplamZararFiyat:F2};{NetKarFiyat:F2};" +
                        $"{KarZararFiyat:F2};{KarZararFiyatYuzde:F2};{ToplamKarFiyat:F2};{ToplamZararFiyat:F2};{NetKarFiyat:F2};" +
-                       $"{ToplamKarPuan:F4};{ToplamZararPuan:F4};{NetKarPuan:F4};{MaxKarFiyat:F2};{MaxZararFiyat:F2};{MaxKarPuan:F4};{MaxZararPuan:F4};" +
+                       $"{ToplamKarPuan:F4};{ToplamZararPuan:F4};{NetKarPuan:F4};{MaxKarFiyat:F2};{MaxZararFiyat:F2};{MaxKarFiyatNet:F2};{MaxZararFiyatNet:F2};{MaxKarPuan:F4};{MaxZararPuan:F4};" +
                        $"{KardaBarSayisi};{ZarardaBarSayisi};{KarliIslemOrani:F2};" +
-                       $"{GetiriMaxDD:F2};{GetiriMaxDDTarih};{GetiriMaxKayip:F2};{ProfitFactor:F2};{ProfitFactorNet:F2};{ProfitFactorSistem:F2};" +
+                       $"{GetiriMaxDD:F2};{GetiriMaxDDTarih};{GetiriMaxKayip:F2};{ProfitFactor:F2};{ProfitFactorPuan:F2};{ProfitFactorNet:F2};{ProfitFactorSistem:F2};" +
                        $"{Sinyal};{SonYon};{PrevYon};{SonFiyat:F4};{SonAFiyat:F4};{SonSFiyat:F4};{SonFFiyat:F4};{SonPFiyat:F4};{PrevFiyat:F4};" +
                        $"{SonBarNo};{SonABarNo};{SonSBarNo};{EmirKomut};{EmirStatus};" +
                        $"{HisseSayisi:F2};{KontratSayisi:F2};{VarlikAdedCarpani:F2};{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{SonVarlikAdedSayisi:F2};{SonVarlikAdedSayisiMicro:F4};{KaymaMiktari:F4};{KaymayiDahilEt};" +
@@ -2310,6 +2539,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                 MaxBakiyePuan = MaxBakiyePuan,
                 MinBakiyeFiyatYuzde = MinBakiyeFiyatYuzde,
                 MaxBakiyeFiyatYuzde = MaxBakiyeFiyatYuzde,
+                MinBakiyePuanYuzde = MinBakiyePuanYuzde,
+                MaxBakiyePuanYuzde = MaxBakiyePuanYuzde,
                 MinBakiyeFiyatIndex = MinBakiyeFiyatIndex,
                 MaxBakiyeFiyatIndex = MaxBakiyeFiyatIndex,
                 MinBakiyeFiyatNet = MinBakiyeFiyatNet,
@@ -2366,6 +2597,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                 NetKarPuan = NetKarPuan,
                 MaxKarFiyat = MaxKarFiyat,
                 MaxZararFiyat = MaxZararFiyat,
+                MaxKarFiyatNet = MaxKarFiyatNet,
+                MaxZararFiyatNet = MaxZararFiyatNet,
                 MaxKarPuan = MaxKarPuan,
                 MaxZararPuan = MaxZararPuan,
                 KardaBarSayisi = KardaBarSayisi,
@@ -2377,6 +2610,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                 GetiriMaxDDTarih = GetiriMaxDDTarih ?? "...",
                 GetiriMaxKayip = GetiriMaxKayip,
                 ProfitFactor = ProfitFactor,
+                ProfitFactorPuan = ProfitFactorPuan,
                 ProfitFactorNet = ProfitFactorNet,
                 ProfitFactorSistem = ProfitFactorSistem,
 
@@ -2414,6 +2648,15 @@ namespace AlgoTrade.Core.Trading.Statistics
                 MaxPositionSizeMicro = MaxPositionSizeMicro,
 
                 // --- Periodic Returns ---
+                GetiriPuanBuAy = GetiriPuanBuAy,
+                GetiriPuanAy1 = GetiriPuanAy1,
+                GetiriPuanBuHafta = GetiriPuanBuHafta,
+                GetiriPuanHafta1 = GetiriPuanHafta1,
+                GetiriPuanBuGun = GetiriPuanBuGun,
+                GetiriPuanGun1 = GetiriPuanGun1,
+                GetiriPuanBuSaat = GetiriPuanBuSaat,
+                GetiriPuanSaat1 = GetiriPuanSaat1,
+
                 GetiriFiyatBuAy = GetiriFiyatBuAy,
                 GetiriFiyatAy1 = GetiriFiyatAy1,
                 GetiriFiyatBuHafta = GetiriFiyatBuHafta,
@@ -2423,14 +2666,14 @@ namespace AlgoTrade.Core.Trading.Statistics
                 GetiriFiyatBuSaat = GetiriFiyatBuSaat,
                 GetiriFiyatSaat1 = GetiriFiyatSaat1,
 
-                GetiriPuanBuAy = GetiriPuanBuAy,
-                GetiriPuanAy1 = GetiriPuanAy1,
-                GetiriPuanBuHafta = GetiriPuanBuHafta,
-                GetiriPuanHafta1 = GetiriPuanHafta1,
-                GetiriPuanBuGun = GetiriPuanBuGun,
-                GetiriPuanGun1 = GetiriPuanGun1,
-                GetiriPuanBuSaat = GetiriPuanBuSaat,
-                GetiriPuanSaat1 = GetiriPuanSaat1
+                GetiriFiyatNetBuAy = GetiriFiyatNetBuAy,
+                GetiriFiyatNetAy1 = GetiriFiyatNetAy1,
+                GetiriFiyatNetBuHafta = GetiriFiyatNetBuHafta,
+                GetiriFiyatNetHafta1 = GetiriFiyatNetHafta1,
+                GetiriFiyatNetBuGun = GetiriFiyatNetBuGun,
+                GetiriFiyatNetGun1 = GetiriFiyatNetGun1,
+                GetiriFiyatNetBuSaat = GetiriFiyatNetBuSaat,
+                GetiriFiyatNetSaat1 = GetiriFiyatNetSaat1
             };
         }
 
@@ -2488,6 +2731,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double MaxBakiyeFiyat;
             public double MinBakiyeFiyatYuzde;
             public double MaxBakiyeFiyatYuzde;
+            public double MinBakiyePuanYuzde;
+            public double MaxBakiyePuanYuzde;
             public double MinBakiyeFiyatNet;
             public double MaxBakiyeFiyatNet;
             public double MinBakiyeFiyatNetYuzde;
@@ -2495,6 +2740,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
             // Performance Metrics
             public double ProfitFactor;
+            public double ProfitFactorPuan;
             public double ProfitFactorNet;
             public double KarliIslemOrani;
             public double GetiriMaxDD;
@@ -2524,9 +2770,9 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "IlkBakiyeFiyat;BakiyeFiyat;GetiriFiyat;GetiriFiyatYuzde;" +
                        "KomisyonFiyat;KomisyonFiyatYuzde;" +
                        "BakiyeFiyatNet;GetiriFiyatNet;GetiriFiyatYuzdeNet;" +
-                       "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;" +
+                       "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;MinBakiyePuanYuzde;MaxBakiyePuanYuzde;" +
                        "MinBakiyeFiyatNet;MaxBakiyeFiyatNet;MinBakiyeFiyatNetYuzde;MaxBakiyeFiyatNetYuzde;" +
-                       "ProfitFactor;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;" +
+                       "ProfitFactor;ProfitFactorPuan;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;" +
                        "VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KomisyonCarpan;" +
                        "MicroLotSizeEnabled;PyramidingEnabled;MaxPositionSizeEnabled";
             }
@@ -2544,9 +2790,9 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{IlkBakiyeFiyat:F2};{BakiyeFiyat:F2};{GetiriFiyat:F2};{GetiriFiyatYuzde:F2};" +
                        $"{KomisyonFiyat:F2};{KomisyonFiyatYuzde:F4};" +
                        $"{BakiyeFiyatNet:F2};{GetiriFiyatNet:F2};{GetiriFiyatYuzdeNet:F2};" +
-                       $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};" +
+                       $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};{MinBakiyePuanYuzde:F2};{MaxBakiyePuanYuzde:F2};" +
                        $"{MinBakiyeFiyatNet:F2};{MaxBakiyeFiyatNet:F2};{MinBakiyeFiyatNetYuzde:F2};{MaxBakiyeFiyatNetYuzde:F2};" +
-                       $"{ProfitFactor:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};" +
+                       $"{ProfitFactor:F2};{ProfitFactorPuan:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};" +
                        $"{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{SonVarlikAdedSayisi:F2};{SonVarlikAdedSayisiMicro:F4};{KomisyonCarpan:F4};" +
                        $"{MicroLotSizeEnabled};{PyramidingEnabled};{MaxPositionSizeEnabled}";
             }
@@ -2670,6 +2916,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                 MaxBakiyeFiyat = MaxBakiyeFiyat,
                 MinBakiyeFiyatYuzde = MinBakiyeFiyatYuzde,
                 MaxBakiyeFiyatYuzde = MaxBakiyeFiyatYuzde,
+                MinBakiyePuanYuzde = MinBakiyePuanYuzde,
+                MaxBakiyePuanYuzde = MaxBakiyePuanYuzde,
                 MinBakiyeFiyatNet = MinBakiyeFiyatNet,
                 MaxBakiyeFiyatNet = MaxBakiyeFiyatNet,
                 MinBakiyeFiyatNetYuzde = MinBakiyeFiyatNetYuzde,
@@ -2677,6 +2925,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
                 // Performance Metrics
                 ProfitFactor = ProfitFactor,
+                ProfitFactorPuan = ProfitFactorPuan,
                 ProfitFactorNet = ProfitFactorNet,
                 KarliIslemOrani = KarliIslemOrani,
                 GetiriMaxDD = GetiriMaxDD,
