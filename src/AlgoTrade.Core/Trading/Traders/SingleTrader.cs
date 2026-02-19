@@ -2474,8 +2474,10 @@ public class SingleTrader : MarketDataProvider, IDisposable
         statistics.Hesapla(lastBarIndex);
     }
 
-    public void WriteStatisticsToFile(string outputDir)
+    public void WriteStatisticsToFile(string outputDir, string inputsDir)
     {
+        string configPath = Path.Combine(inputsDir, "StatisticsExporterConfig.json");
+
         if (this.SaveFullStatsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsCsvFileName}...");
@@ -2491,7 +2493,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (this.SaveFullListsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
-            statistics.SaveListsToCsv(Path.Combine(outputDir, FullListsCsvFileName));
+            //statistics.SaveListsToCsv(Path.Combine(outputDir, FullListsCsvFileName));
+            statistics.SaveListsToCsvFromConfig(Path.Combine(outputDir, FullListsCsvFileName), configPath);
         }
 
         if (this.SaveMinimalListsCsvEnabled)
@@ -2515,7 +2518,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (this.SaveFullListsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
-            statistics.SaveListsToTxt(Path.Combine(outputDir, FullListsTxtFileName));
+            //statistics.SaveListsToTxt(Path.Combine(outputDir, FullListsTxtFileName))
+            statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
         }
 
         if (this.SaveMinimalListsTxtEnabled)
