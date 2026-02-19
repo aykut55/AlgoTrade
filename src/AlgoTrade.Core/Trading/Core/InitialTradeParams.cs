@@ -112,7 +112,7 @@ namespace AlgoTrade.Core.Trading.Core
         /// <summary>
         /// İlk bakiye (puan cinsinden)
         /// </summary>
-        //public double IlkBakiyePuan { get; set; }  // Silinecek
+        public double IlkBakiyePuan { get; set; }
 
         /// <summary>
         /// Son bakiye (fiyat cinsinden)
@@ -192,7 +192,7 @@ namespace AlgoTrade.Core.Trading.Core
             KaymaMiktari = 0.0;
             KaymayiDahilEt = false;
             IlkBakiyeFiyat = 0.0;
-            //IlkBakiyePuan = 0.0;  // Silinecek
+            IlkBakiyePuan = 0.0;
             SonBakiyeFiyat = 0.0;
             NetBakiyeFiyat = 0.0;
             GetiriFiyatTipi = "TL";
@@ -386,10 +386,10 @@ namespace AlgoTrade.Core.Trading.Core
         /// <summary>
         /// Set bakiye parametreleri
         /// </summary>
-        public InitialTradeParams SetBakiyeParams(double ilkBakiye = 100000.0/*, double ilkBakiyePuan = 0.0*/) // Silinecek: ilkBakiyePuan parametresi
+        public InitialTradeParams SetBakiyeParams(double ilkBakiye = 100000.0, double ilkBakiyePuan = 100000.0)
         {
             IlkBakiyeFiyat = ilkBakiye;
-            //IlkBakiyePuan = ilkBakiyePuan;  // Silinecek
+            IlkBakiyePuan = ilkBakiyePuan;
             return this;
         }
 

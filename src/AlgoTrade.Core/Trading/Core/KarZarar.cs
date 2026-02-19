@@ -206,8 +206,8 @@ namespace AlgoTrade.Core.Trading.Core
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
-                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
+                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
+                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
             }
             else if (sonYon == "S")  // Short position (Sat - Sell)
             {
@@ -223,8 +223,8 @@ namespace AlgoTrade.Core.Trading.Core
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
-                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
+                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
+                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
             }
 
             // Update bar count statistics
@@ -300,8 +300,8 @@ namespace AlgoTrade.Core.Trading.Core
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
-                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
+                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
+                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
             }
             else if (sonYon == "S")  // Short position (Sat - Sell)
             {
@@ -317,8 +317,8 @@ namespace AlgoTrade.Core.Trading.Core
 
                 Lists.KarZararFiyatYuzdeList[i] = Status.KarZararFiyatYuzde;
 
-                //Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;  // Silinecek
-                //Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;  // Silinecek
+                Status.KarZararPuanYuzde = Status.KarZararFiyatYuzde;
+                Lists.KarZararPuanYuzdeList[i] = Status.KarZararPuanYuzde;
             }
 
             // Update bar count statistics
