@@ -2604,6 +2604,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     private void GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani)
     {
+        // TODO : Burası daha detaylı yapılacak...
+
         bakiyePuan = initialTradeParams?.IlkBakiyePuan ?? 100000.0;
         varlikAdedCarpani = initialTradeParams?.VarlikAdedCarpani ?? 1.0;
 
