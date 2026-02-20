@@ -175,6 +175,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     public int ExecutionStepNumber { get; set; }
     public bool BakiyeInitialized { get; set; }
+    public bool OptimizationEnabled { get; set; }
 
     #region StateFlags
     // State flags
@@ -405,6 +406,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         ExecutionStepNumber = 0;
         BakiyeInitialized = false;
+        OptimizationEnabled = false;
 
         // Reset equity curve filter properties
         thresholdTypeIsPercent = false;
@@ -1565,6 +1567,9 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.BakiyeFiyat;
             this.lists.BakiyePuanList[i] = this.status.BakiyePuan;
             this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;
+        }
+        if (OptimizationEnabled)
+        { 
         }
     }
 

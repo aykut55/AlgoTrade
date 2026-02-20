@@ -802,6 +802,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Configure equity curve filter
             SetSingleTraderConfigureEquityCurveFilter(singleTrader);
 
+            // Configure optimization flag
+            singleTrader.OptimizationEnabled = false;
+
             // Enable savingStatistics
             singleTrader.SaveStatisticsToFile = true;
 
@@ -898,11 +901,19 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             singleTrader.Finalize();
 
-            // Dosyaya yazma: stop edilmediyse ve kullanıcı istiyorsa yaz
+            // Dosyaya yazma: stop edilmediyse,kullanıcı istiyorsa yaz
             if (!singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
             {
-                Log($"\nSaving statistics to files...");
-                singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+                if (!singleTrader.OptimizationEnabled)
+                {
+                    Log($"\nSaving statistics to files...");
+                    singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+                }
+                else
+                {
+                    Log($"\nSkipping full statistics write in optimization mode...");
+                    // Buraya gerçekten minimal write gelecekse çağrı ekle
+                }
             }
 
             _timer!.StopTimer("3");
