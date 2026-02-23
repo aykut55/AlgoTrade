@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using AlgoTrade.Core.Trading;
@@ -875,7 +876,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                     StatisticsMap[key] = "...";
                     return;
                 }
-                StatisticsMap[key] = string.IsNullOrEmpty(format) ? value.ToString() : string.Format("{0:" + format + "}", value);
+                StatisticsMap[key] = string.IsNullOrEmpty(format) ? value.ToString() : string.Format(CultureInfo.InvariantCulture, "{0:" + format + "}", value);
             }
 
             // --- Identification ---
@@ -1873,21 +1874,21 @@ namespace AlgoTrade.Core.Trading.Statistics
                 OptimizationResultsMap[kvp.Key] = kvp.Value;
 
             // Temel Performans Metrikleri
-            OptimizationResultsMap["NetProfit"]                = GetiriFiyatNet.ToString("F2");
-            OptimizationResultsMap["WinRate"]                  = KarliIslemOrani.ToString("F2");
-            OptimizationResultsMap["ProfitFactor"]             = ProfitFactor.ToString("F2");
-            OptimizationResultsMap["ProfitFactorNet"]          = ProfitFactorNet.ToString("F2");
-            OptimizationResultsMap["MaxDrawdown"]              = GetiriMaxDD.ToString("F2");
+            OptimizationResultsMap["NetProfit"]                = GetiriFiyatNet.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["WinRate"]                  = KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["ProfitFactor"]             = ProfitFactor.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["ProfitFactorNet"]          = ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["MaxDrawdown"]              = GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture);
 
             // Bakiye
-            OptimizationResultsMap["IlkBakiyeFiyat"]           = IlkBakiyeFiyat.ToString("F2");
-            OptimizationResultsMap["BakiyeFiyat"]              = BakiyeFiyat.ToString("F2");
-            OptimizationResultsMap["BakiyeFiyatNet"]           = BakiyeFiyatNet.ToString("F2");
-            OptimizationResultsMap["GetiriFiyat"]              = GetiriFiyat.ToString("F2");
-            OptimizationResultsMap["GetiriFiyatNet"]           = GetiriFiyatNet.ToString("F2");
-            OptimizationResultsMap["GetiriFiyatYuzde"]         = GetiriFiyatYuzde.ToString("F2");
-            OptimizationResultsMap["GetiriFiyatYuzdeNet"]      = GetiriFiyatYuzdeNet.ToString("F2");
-            OptimizationResultsMap["KomisyonFiyat"]            = KomisyonFiyat.ToString("F2");
+            OptimizationResultsMap["IlkBakiyeFiyat"]           = IlkBakiyeFiyat.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["BakiyeFiyat"]              = BakiyeFiyat.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["BakiyeFiyatNet"]           = BakiyeFiyatNet.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["GetiriFiyat"]              = GetiriFiyat.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["GetiriFiyatNet"]           = GetiriFiyatNet.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["GetiriFiyatYuzde"]         = GetiriFiyatYuzde.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["GetiriFiyatYuzdeNet"]      = GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["KomisyonFiyat"]            = KomisyonFiyat.ToString("F2", CultureInfo.InvariantCulture);
 
             // Islem Sayilari
             OptimizationResultsMap["IslemSayisi"]              = IslemSayisi.ToString();
@@ -1895,9 +1896,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             OptimizationResultsMap["KaybettirenIslemSayisi"]   = KaybettirenIslemSayisi.ToString();
 
             // Kar/Zarar
-            OptimizationResultsMap["ToplamKarFiyat"]           = ToplamKarFiyat.ToString("F2");
-            OptimizationResultsMap["ToplamZararFiyat"]         = ToplamZararFiyat.ToString("F2");
-            OptimizationResultsMap["NetKarFiyat"]              = NetKarFiyat.ToString("F2");
+            OptimizationResultsMap["ToplamKarFiyat"]           = ToplamKarFiyat.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["ToplamZararFiyat"]         = ToplamZararFiyat.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["NetKarFiyat"]              = NetKarFiyat.ToString("F2", CultureInfo.InvariantCulture);
 
             // Bilgi
             OptimizationResultsMap["StrategyName"]             = StrategyName ?? "";

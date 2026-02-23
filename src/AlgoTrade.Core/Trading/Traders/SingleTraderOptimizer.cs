@@ -120,6 +120,9 @@ public class SingleTraderOptimizer : IDisposable
     public bool AppendEnabled { get; set; }
     public string ConfigFilePath { get; set; } = "";
 
+    // Tracks which output files have been created/cleared in the current run (used when AppendEnabled=false)
+    private readonly HashSet<string> _initializedFiles = new HashSet<string>();
+
     #endregion
 
     #region Constructor
@@ -160,6 +163,7 @@ public class SingleTraderOptimizer : IDisposable
         IsRunning = false;
         IsStopped = false;
         IsStopRequested = false;
+        _initializedFiles.Clear();
     }
 
     public void Init()
@@ -296,8 +300,8 @@ public class SingleTraderOptimizer : IDisposable
             if (currentCombination > effectiveTo)
                 break;
 
-            if (currentCombination > 5)
-                break;
+            //if (currentCombination > 5)
+                //break;
 
             LogManager.LogRaw($"");
 
@@ -416,12 +420,34 @@ public class SingleTraderOptimizer : IDisposable
             ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
             : new System.Collections.Generic.List<(string Field, string Header, int Width)>();
 
-        bool fileExists = System.IO.File.Exists(filePath);
-        bool writeHeader = !fileExists;
+        // AppendEnabled=false → bu run'ın ilk yazımında dosyayı sıfırla; sonrakilerde ekle
+        // AppendEnabled=true  → her zaman sona ekle, dosya yoksa yeni oluştur
+        System.IO.FileMode fileMode;
+        bool writeHeader;
+
+        if (!AppendEnabled)
+        {
+            if (!_initializedFiles.Contains(filePath))
+            {
+                fileMode = System.IO.FileMode.Create;   // dosyayı sıfırla
+                writeHeader = true;
+                _initializedFiles.Add(filePath);
+            }
+            else
+            {
+                fileMode = System.IO.FileMode.Append;   // aynı run, sonraki kombinasyon
+                writeHeader = false;
+            }
+        }
+        else
+        {
+            fileMode = System.IO.FileMode.Append;
+            writeHeader = !System.IO.File.Exists(filePath);
+        }
 
         using var fs = new System.IO.FileStream(
             filePath,
-            System.IO.FileMode.Append,
+            fileMode,
             System.IO.FileAccess.Write,
             System.IO.FileShare.ReadWrite);
         using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
@@ -454,12 +480,34 @@ public class SingleTraderOptimizer : IDisposable
             ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
             : new System.Collections.Generic.List<(string Field, string Header, int Width)>();
 
-        bool fileExists = System.IO.File.Exists(filePath);
-        bool writeHeader = !fileExists;
+        // AppendEnabled=false → bu run'ın ilk yazımında dosyayı sıfırla; sonrakilerde ekle
+        // AppendEnabled=true  → her zaman sona ekle, dosya yoksa yeni oluştur
+        System.IO.FileMode fileMode;
+        bool writeHeader;
+
+        if (!AppendEnabled)
+        {
+            if (!_initializedFiles.Contains(filePath))
+            {
+                fileMode = System.IO.FileMode.Create;   // dosyayı sıfırla
+                writeHeader = true;
+                _initializedFiles.Add(filePath);
+            }
+            else
+            {
+                fileMode = System.IO.FileMode.Append;   // aynı run, sonraki kombinasyon
+                writeHeader = false;
+            }
+        }
+        else
+        {
+            fileMode = System.IO.FileMode.Append;
+            writeHeader = !System.IO.File.Exists(filePath);
+        }
 
         using var fs = new System.IO.FileStream(
             filePath,
-            System.IO.FileMode.Append,
+            fileMode,
             System.IO.FileAccess.Write,
             System.IO.FileShare.ReadWrite);
         using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
@@ -471,7 +519,7 @@ public class SingleTraderOptimizer : IDisposable
         if (writeHeader)
         {
             sw.WriteLine($"OPTIMIZATION RESULTS - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
-            sw.WriteLine("".PadRight(200, '='));
+            sw.WriteLine("".PadRight(1360, '='));
 
             var headerParts = new List<string>();
             headerParts.Add("CombNo".PadLeft(8));
@@ -480,7 +528,7 @@ public class SingleTraderOptimizer : IDisposable
             foreach (var col in configColumns)
                 headerParts.Add(col.Header.PadLeft(col.Width));
             sw.WriteLine(string.Join(" | ", headerParts));
-            sw.WriteLine("".PadRight(200, '-'));
+            sw.WriteLine("".PadRight(1360, '-'));
         }
 
         var dataParts = new List<string>();

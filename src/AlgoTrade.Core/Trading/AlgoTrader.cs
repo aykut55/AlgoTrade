@@ -1450,9 +1450,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Optimization log file settings
             singleTraderOptimizer.CsvFileLoggingEnabled = true;
-            singleTraderOptimizer.CsvFilePath           = Path.Combine(AppSettings.LogsDir, "singleTraderOptLog.csv");
+            singleTraderOptimizer.CsvFilePath           = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog.csv");
             singleTraderOptimizer.TxtFileLoggingEnabled = true;
-            singleTraderOptimizer.TxtFilePath           = Path.Combine(AppSettings.LogsDir, "singleTraderOptLog.txt");
+            singleTraderOptimizer.TxtFilePath           = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog.txt");
             singleTraderOptimizer.AppendEnabled         = true;
             singleTraderOptimizer.ConfigFilePath        = Path.Combine(AppSettings.ConfigsDir, "StatisticsExporterConfig.json");
 

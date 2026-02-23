@@ -194,20 +194,28 @@
             
             {"field": "KarliIslemOrani",                "header": "KarliIslemOrani",                "width": 15, "enabled": true},
             
-            {"field": "IlkBakiyeFiyat",                 "header": "IlkBakiyeFiyat",                 "width": 15, "enabled": true},
-            {"field": "IlkBakiyePuan",                  "header": "IlkBakiyePuan",                  "width": 14, "enabled": true},
-            {"field": "BakiyeFiyat",                    "header": "BakiyeFiyat",                    "width": 15, "enabled": true},
-            {"field": "BakiyePuan",                     "header": "BakiyePuan",                     "width": 12, "enabled": true},
-            {"field": "GetiriFiyat",                    "header": "GetiriFiyat",                    "width": 15, "enabled": true},
-            {"field": "GetiriPuan",                     "header": "GetiriPuan",                     "width": 12, "enabled": true},
-            {"field": "GetiriFiyatYuzde",               "header": "GetiriFiyatYuzde",               "width": 16, "enabled": true},
+            {"field": "IlkBakiyePuan",                  "header": "IlkBakiyePuan",                  "width": 14, "enabled": false},
+            
             {"field": "GetiriPuanYuzde",                "header": "GetiriPuanYuzde",                "width": 15, "enabled": true},
-            {"field": "BakiyeFiyatNet",                 "header": "BakiyeFiyatNet",                 "width": 15, "enabled": true},
-            {"field": "BakiyePuanNet",                  "header": "BakiyePuanNet",                  "width": 14, "enabled": true},
-            {"field": "GetiriFiyatNet",                 "header": "GetiriFiyatNet",                 "width": 15, "enabled": true},
-            {"field": "GetiriPuanNet",                  "header": "GetiriPuanNet",                  "width": 14, "enabled": true},
+            {"field": "GetiriPuan",                     "header": "GetiriPuan",                     "width": 12, "enabled": true},
+            {"field": "BakiyePuan",                     "header": "BakiyePuan",                     "width": 12, "enabled": true},
+            
+            {"field": "IlkBakiyeFiyat",                 "header": "IlkBakiyeFiyat",                 "width": 15, "enabled": false},
+            
+            {"field": "GetiriFiyatYuzde",               "header": "GetiriFiyatYuzde",               "width": 16, "enabled": true},
+            {"field": "GetiriFiyat",                    "header": "GetiriFiyat",                    "width": 15, "enabled": true},
+            {"field": "BakiyeFiyat",                    "header": "BakiyeFiyat",                    "width": 15, "enabled": true},
+
+            {"field": "KomisyonFiyatYuzde",             "header": "KomisyonFiyatYuzde",             "width": 18, "enabled": true},
+            {"field": "KomisyonFiyat",                  "header": "KomisyonFiyat",                  "width": 13, "enabled": true},
+            
             {"field": "GetiriFiyatYuzdeNet",            "header": "GetiriFiyatYuzdeNet",            "width": 19, "enabled": true},
-            {"field": "GetiriPuanYuzdeNet",             "header": "GetiriPuanYuzdeNet",             "width": 18, "enabled": true},
+            {"field": "GetiriFiyatNet",                 "header": "GetiriFiyatNet",                 "width": 15, "enabled": true},
+            {"field": "BakiyeFiyatNet",                 "header": "BakiyeFiyatNet",                 "width": 15, "enabled": true},
+
+            {"field": "BakiyePuanNet",                  "header": "BakiyePuanNet",                  "width": 14, "enabled": false},
+            {"field": "GetiriPuanNet",                  "header": "GetiriPuanNet",                  "width": 14, "enabled": false},
+            {"field": "GetiriPuanYuzdeNet",             "header": "GetiriPuanYuzdeNet",             "width": 18, "enabled": false},
           
             {"field": "MinBakiyeFiyat",                 "header": "MinBakiyeFiyat",                 "width": 14, "enabled": true},
             {"field": "MaxBakiyeFiyat",                 "header": "MaxBakiyeFiyat",                 "width": 14, "enabled": true},
@@ -222,6 +230,8 @@
             {"field": "MinBakiyeFiyatNetYuzde",         "header": "MinBakiyeFiyatNetYuzde",         "width": 22, "enabled": true},
             {"field": "MaxBakiyeFiyatNetYuzde",         "header": "MaxBakiyeFiyatNetYuzde",         "width": 22, "enabled": true},
             
+            {"field": "KomisyonIslemSayisi",            "header": "KomisyonIslemSayisi",            "width": 20, "enabled": true},
+            
             {"field": "IslemSayisi",                    "header": "IslemSayisi",                    "width": 11, "enabled": true},
             {"field": "AlisSayisi",                     "header": "AlisSayisi",                     "width": 10, "enabled": true},
             {"field": "SatisSayisi",                    "header": "SatisSayisi",                    "width": 11, "enabled": true},
@@ -235,12 +245,6 @@
             {"field": "OrtHaftalikIslemSayisi",         "header": "OrtHaftalikIslemSayisi",         "width": 22, "enabled": true},
             {"field": "OrtGunlukIslemSayisi",           "header": "OrtGunlukIslemSayisi",           "width": 20, "enabled": true},
             {"field": "OrtSaatlikIslemSayisi",          "header": "OrtSaatlikIslemSayisi",          "width": 21, "enabled": true},
-          
-          
-            {"field": "KomisyonIslemSayisi",            "header": "KomisyonIslemSayisi",            "width": 20, "enabled": true},
-            {"field": "KomisyonFiyat",                  "header": "KomisyonFiyat",                  "width": 13, "enabled": true},
-            {"field": "KomisyonFiyatYuzde",             "header": "KomisyonFiyatYuzde",             "width": 18, "enabled": true},
-          
 
             {"field": "KarZararFiyat",                  "header": "KarZararFiyat",                  "width": 13, "enabled": true},
             {"field": "KarZararFiyatYuzde",             "header": "KarZararFiyatYuzde",             "width": 18, "enabled": true},
