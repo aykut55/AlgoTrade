@@ -232,7 +232,7 @@ void ConfigureStrategy(bool bShowConfigSelectionMenu = true)
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "StrategyConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "StrategyConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -277,7 +277,7 @@ void ConfigureQuery(bool bShowConfigSelectionMenu = true)
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "QueryConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "QueryConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -322,7 +322,7 @@ void ConfigureEquityCurveFilter(bool bShowConfigSelectionMenu = true)
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "EquityCurveFilterConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "EquityCurveFilterConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -407,7 +407,7 @@ void ConfigureStrategies()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "StrategyConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "StrategyConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -454,7 +454,7 @@ void ConfigureQueries()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "QueryConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "QueryConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -501,7 +501,7 @@ void ConfigureOptimization()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "OptimizationConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "OptimizationConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -553,7 +553,7 @@ void ConfigureEquityCurveFilters()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "EquityCurveFilterConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "EquityCurveFilterConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -1034,7 +1034,7 @@ CancellationTokenSource? scriptCts = null;
 
 (string code, string filePath) readScriptFromFile()
 {
-    string defaultDir = Path.Combine(AppSettings.InputsDir, "scripts");
+    string defaultDir = AppSettings.ScriptsDir;
     if (!Directory.Exists(defaultDir))
         Directory.CreateDirectory(defaultDir);
 

@@ -91,7 +91,7 @@ void ConfigureStrategy()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "StrategyConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "StrategyConfig.txt");
 
     if (File.Exists(configPath))
     {
@@ -116,7 +116,7 @@ void ConfigureQuery()
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.InputsDir, "QueryConfig.txt");
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "QueryConfig.txt");
 
     if (File.Exists(configPath))
     {

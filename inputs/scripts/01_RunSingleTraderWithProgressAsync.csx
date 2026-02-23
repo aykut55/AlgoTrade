@@ -364,7 +364,7 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.Sa
     if (!singleTrader.OptimizationEnabled)
     {
         Log("\nSaving statistics to files...");
-        singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+        singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
     }
     else
     {

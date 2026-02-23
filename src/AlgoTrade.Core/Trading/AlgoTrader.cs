@@ -928,7 +928,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 if (!singleTrader.OptimizationEnabled)
                 {
                     Log($"\nSaving statistics to files...");
-                    singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+                    singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
                 }
                 else
                 {
@@ -1303,13 +1303,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 if (mainTrader.SaveStatisticsToFile)
                 {
                     Log($"\nSaving mainTrader statistics to files...");
-                    mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+                    mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
                 }
 
                 foreach (var childTrader in multipleTrader.Traders)
                 {
                     if (childTrader.SaveStatisticsToFile)
-                        childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+                        childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
                 }
             }
 
