@@ -527,25 +527,33 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         if (this.RunMode == TraderRunMode.TradeOnly)
         {
-            Log($"\nCalculating statistics...");
+            if (!this.OptimizationEnabled)
+                Log($"\nCalculating statistics...");
 
             CalculateStatistics();
 
-            Log($"\nCalculating performances...");
+            if (!this.OptimizationEnabled)
+            {
+                Log($"\nCalculating performances...");
 
-            GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
-            CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
+                GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
+                CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
+            }
         }
         else if (this.RunMode == TraderRunMode.TradeAndQuery)
         {
-            Log($"\nCalculating statistics...");
+            if (!this.OptimizationEnabled)
+                Log($"\nCalculating statistics...");
 
             CalculateStatistics();
 
-            Log($"\nCalculating performances...");
+            if (!this.OptimizationEnabled)
+            {
+                Log($"\nCalculating performances...");
 
-            GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
-            CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
+                GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
+                CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
+            }
 
             if (this.QueryColumnNames.Count > 0 && this.LastQueryResult.Count == this.QueryColumnNames.Count)
             {
