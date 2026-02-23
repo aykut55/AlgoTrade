@@ -408,6 +408,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
         public Dictionary<string, string> StatisticsMap { get; set; }
         public Dictionary<string, string> StatisticsMapMinimal { get; set; }
+        public Dictionary<string, string> OptimizationResultsMap { get; set; }
 
         #endregion
 
@@ -417,6 +418,7 @@ namespace AlgoTrade.Core.Trading.Statistics
         {
             StatisticsMap = new Dictionary<string, string>();
             StatisticsMapMinimal = new Dictionary<string, string>();
+            OptimizationResultsMap = new Dictionary<string, string>();
             IlkBarIndex = 0;
         }
 
@@ -565,6 +567,7 @@ namespace AlgoTrade.Core.Trading.Statistics
         {
             StatisticsMap.Clear();
             StatisticsMapMinimal.Clear();
+            OptimizationResultsMap.Clear();
             return this;
         }
 
@@ -1853,12 +1856,59 @@ namespace AlgoTrade.Core.Trading.Statistics
         }
 
         /// <summary>
-        /// Get complete optimization summary structure with all statistics
-        /// Call this after Hesapla() to get comprehensive optimization metrics
+        /// Get optimization results map with key performance metrics.
+        /// Returns OptimizationResultsMap (Dictionary&lt;string, string&gt;) populated with the latest statistics.
+        /// Call this after Hesapla() to get optimization metrics.
         /// </summary>
-        public OptimizationSummary GetOptimizationSummary()
+        public Dictionary<string, string> GetOptimizationSummary()
         {
             // Ensure maps are populated (in case Hesapla wasn't called yet)
+            if (StatisticsMap.Count == 0)
+                AssignToMap();
+
+            OptimizationResultsMap.Clear();
+
+            // StatisticsMap'teki her şeyi OptimizationResultsMap'e kopyala
+            foreach (var kvp in StatisticsMap)
+                OptimizationResultsMap[kvp.Key] = kvp.Value;
+
+            // Temel Performans Metrikleri
+            OptimizationResultsMap["NetProfit"]                = GetiriFiyatNet.ToString("F2");
+            OptimizationResultsMap["WinRate"]                  = KarliIslemOrani.ToString("F2");
+            OptimizationResultsMap["ProfitFactor"]             = ProfitFactor.ToString("F2");
+            OptimizationResultsMap["ProfitFactorNet"]          = ProfitFactorNet.ToString("F2");
+            OptimizationResultsMap["MaxDrawdown"]              = GetiriMaxDD.ToString("F2");
+
+            // Bakiye
+            OptimizationResultsMap["IlkBakiyeFiyat"]           = IlkBakiyeFiyat.ToString("F2");
+            OptimizationResultsMap["BakiyeFiyat"]              = BakiyeFiyat.ToString("F2");
+            OptimizationResultsMap["BakiyeFiyatNet"]           = BakiyeFiyatNet.ToString("F2");
+            OptimizationResultsMap["GetiriFiyat"]              = GetiriFiyat.ToString("F2");
+            OptimizationResultsMap["GetiriFiyatNet"]           = GetiriFiyatNet.ToString("F2");
+            OptimizationResultsMap["GetiriFiyatYuzde"]         = GetiriFiyatYuzde.ToString("F2");
+            OptimizationResultsMap["GetiriFiyatYuzdeNet"]      = GetiriFiyatYuzdeNet.ToString("F2");
+            OptimizationResultsMap["KomisyonFiyat"]            = KomisyonFiyat.ToString("F2");
+
+            // Islem Sayilari
+            OptimizationResultsMap["IslemSayisi"]              = IslemSayisi.ToString();
+            OptimizationResultsMap["KazandiranIslemSayisi"]    = KazandiranIslemSayisi.ToString();
+            OptimizationResultsMap["KaybettirenIslemSayisi"]   = KaybettirenIslemSayisi.ToString();
+
+            // Kar/Zarar
+            OptimizationResultsMap["ToplamKarFiyat"]           = ToplamKarFiyat.ToString("F2");
+            OptimizationResultsMap["ToplamZararFiyat"]         = ToplamZararFiyat.ToString("F2");
+            OptimizationResultsMap["NetKarFiyat"]              = NetKarFiyat.ToString("F2");
+
+            // Bilgi
+            OptimizationResultsMap["StrategyName"]             = StrategyName ?? "";
+
+            return OptimizationResultsMap;
+        }
+
+        // Legacy struct-based full summary - kept for backward compatibility with old methods.
+        // Use GetOptimizationSummary() for the new map-based approach.
+        internal OptimizationSummary GetOptimizationSummaryLegacy()
+        {
             if (StatisticsMap.Count == 0)
                 AssignToMap();
 

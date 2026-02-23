@@ -347,22 +347,31 @@ public class SingleTraderOptimizer : IDisposable
             singleTrader.IsRunning = false;
             singleTrader.IsStopped = true;
 
-            // Get optimization summary
-            var optSummary = singleTrader.statistics.GetOptimizationSummary();
+            // Get optimization results map
+            var optResultsMap = singleTrader.statistics.GetOptimizationSummary();
 
-            // Create result from optimization summary
-            var optResult = CreateOptimizationResultFromSummary(optSummary, paramCombo);
+            // Build OptimizationResult from map (paramCombo + key metrics for Results list / GetBestResult)
+            var optResult = new OptimizationResult
+            {
+                NetProfit       = ParseD(optResultsMap, "NetProfit"),
+                WinRate         = ParseD(optResultsMap, "WinRate"),
+                ProfitFactor    = ParseD(optResultsMap, "ProfitFactor"),
+                ProfitFactorNet = ParseD(optResultsMap, "ProfitFactorNet"),
+                MaxDrawdown     = ParseD(optResultsMap, "MaxDrawdown"),
+                StrategyName    = optResultsMap.GetValueOrDefault("StrategyName", "")
+            };
+            foreach (var kvp in paramCombo)
+                optResult.Parameters[kvp.Key] = kvp.Value;
 
             Results.Add(optResult);
 
-            LogManager.LogRaw($"  → NetProfit: {optResult.NetProfit:F2}, WinRate: {optResult.WinRate:F2}%, PF: {optResult.ProfitFactor:F2}, PFNet: {optResult.ProfitFactorNet:F2}");
+            LogManager.LogRaw($"  → NetProfit: {optResultsMap.GetValueOrDefault("NetProfit")}, WinRate: {optResultsMap.GetValueOrDefault("WinRate")}%, PF: {optResultsMap.GetValueOrDefault("ProfitFactor")}, PFNet: {optResultsMap.GetValueOrDefault("ProfitFactorNet")}");
 
             // Append to CSV and TXT files (if enabled)
             //AppendSingleResultToFiles(optResult, currentCombination);
 
             // Append to CSV and TXT files (if enabled)
-            //AppendSingleOptSummaryToFiles(optResult, optSummary, currentCombination);
-            AppendSingleOptSummaryToFiles_2(optResult, optSummary, currentCombination);
+            AppendSingleOptSummaryToFiles_2(optResultsMap, currentCombination);
 
             // Report optimization progress
             OnReadOptimizationResultsFile?.Invoke(this, singleTrader, currentCombination);
@@ -370,8 +379,8 @@ public class SingleTraderOptimizer : IDisposable
             // Intermediate save check
             if (SaveEveryN > 0 && currentCombination % SaveEveryN == 0)
             {
-                LogManager.LogRaw($"Saving intermediate results at combination {currentCombination}...");
-                OnSaveResults?.Invoke(Results, currentCombination);
+                //LogManager.LogRaw($"Saving intermediate results at combination {currentCombination}...");
+                //OnSaveResults?.Invoke(Results, currentCombination);
             }
 
             // Temizlik
@@ -996,13 +1005,13 @@ public class SingleTraderOptimizer : IDisposable
 
 
 
-    private void AppendSingleOptSummaryToFiles_2(OptimizationResult optResult, OptimizationSummary optSummary, int currentCombination)
+    private void AppendSingleOptSummaryToFiles_2(Dictionary<string, string> optResultsMap, int currentCombination)
     {
         if (CsvFileLoggingEnabled && !string.IsNullOrEmpty(CsvFilePath))
         {
             try
             {
-                AppendSingleOptSummaryCsvFromConfig(optResult, optSummary, currentCombination, CsvFilePath);
+                AppendSingleOptSummaryCsvFromConfig(optResultsMap, currentCombination, CsvFilePath);
             }
             catch (Exception ex)
             {
@@ -1014,7 +1023,7 @@ public class SingleTraderOptimizer : IDisposable
         {
             try
             {
-                AppendSingleOptSummaryTxtFromConfig(optResult, optSummary, currentCombination, TxtFilePath);
+                AppendSingleOptSummaryTxtFromConfig(optResultsMap, currentCombination, TxtFilePath);
             }
             catch (Exception ex)
             {
@@ -1024,8 +1033,7 @@ public class SingleTraderOptimizer : IDisposable
     }
 
     private void AppendSingleOptSummaryCsvFromConfig(
-        OptimizationResult optResult,
-        OptimizationSummary optSummary,
+        Dictionary<string, string> optResultsMap,
         int currentCombination,
         string filePath)
     {
@@ -1034,11 +1042,11 @@ public class SingleTraderOptimizer : IDisposable
             : new System.Collections.Generic.List<(string Field, string Header, int Width)>();
 
         bool fileExists = System.IO.File.Exists(filePath);
-        bool writeHeader = !fileExists || (!AppendEnabled && currentCombination == 1);
+        bool writeHeader = !fileExists;
 
         using var fs = new System.IO.FileStream(
             filePath,
-            (AppendEnabled && fileExists) ? System.IO.FileMode.Append : System.IO.FileMode.Create,
+            System.IO.FileMode.Append,
             System.IO.FileAccess.Write,
             System.IO.FileShare.ReadWrite);
         using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
@@ -1046,25 +1054,20 @@ public class SingleTraderOptimizer : IDisposable
         if (writeHeader)
         {
             var headerParts = new List<string> { "CombNo" };
-            if (optResult.Parameters != null)
-                headerParts.AddRange(optResult.Parameters.Keys);
             foreach (var col in configColumns)
                 headerParts.Add(col.Header);
             sw.WriteLine(string.Join(";", headerParts));
         }
 
         var dataParts = new List<string> { currentCombination.ToString() };
-        if (optResult.Parameters != null)
-            dataParts.AddRange(optResult.Parameters.Values.Select(v => v?.ToString() ?? ""));
         foreach (var col in configColumns)
-            dataParts.Add(GetOptColumnValue(col.Field, optResult, optSummary));
+            dataParts.Add(GetOptColumnValue(col.Field, optResultsMap));
         sw.WriteLine(string.Join(";", dataParts));
         sw.Flush();
     }
 
     private void AppendSingleOptSummaryTxtFromConfig(
-        OptimizationResult optResult,
-        OptimizationSummary optSummary,
+        Dictionary<string, string> optResultsMap,
         int currentCombination,
         string filePath)
     {
@@ -1073,11 +1076,11 @@ public class SingleTraderOptimizer : IDisposable
             : new System.Collections.Generic.List<(string Field, string Header, int Width)>();
 
         bool fileExists = System.IO.File.Exists(filePath);
-        bool writeHeader = !fileExists || (!AppendEnabled && currentCombination == 1);
+        bool writeHeader = !fileExists;
 
         using var fs = new System.IO.FileStream(
             filePath,
-            (AppendEnabled && fileExists) ? System.IO.FileMode.Append : System.IO.FileMode.Create,
+            System.IO.FileMode.Append,
             System.IO.FileAccess.Write,
             System.IO.FileShare.ReadWrite);
         using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
@@ -1089,68 +1092,36 @@ public class SingleTraderOptimizer : IDisposable
 
             var headerParts = new List<string>();
             headerParts.Add("CombNo".PadLeft(8));
-            if (optResult.Parameters != null)
-                foreach (var key in optResult.Parameters.Keys)
-                    headerParts.Add(key.PadLeft(15));
             foreach (var col in configColumns)
-                headerParts.Add((col.Header).PadLeft(col.Width));
+                headerParts.Add(col.Header.PadLeft(col.Width));
             sw.WriteLine(string.Join(" | ", headerParts));
             sw.WriteLine("".PadRight(200, '-'));
         }
 
         var dataParts = new List<string>();
         dataParts.Add(currentCombination.ToString().PadLeft(8));
-        if (optResult.Parameters != null)
-            foreach (var val in optResult.Parameters.Values)
-                dataParts.Add((val?.ToString() ?? "").PadLeft(15));
         foreach (var col in configColumns)
-            dataParts.Add(GetOptColumnValue(col.Field, optResult, optSummary).PadLeft(col.Width));
+            dataParts.Add(GetOptColumnValue(col.Field, optResultsMap).PadLeft(col.Width));
         sw.WriteLine(string.Join(" | ", dataParts));
         sw.Flush();
     }
 
-    // Aliases: JSON field name → actual C# property name (only where they differ)
-    private static readonly Dictionary<string, string> _fieldAliases = new(StringComparer.Ordinal)
-    {
-        { "KarAlList",    "KarAlSayisi"    },
-        { "ZararKesList", "ZararKesSayisi" },
-    };
+    private static double ParseD(Dictionary<string, string> map, string key)
+        => map.TryGetValue(key, out var v) && double.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : 0.0;
 
-    private static readonly System.Reflection.PropertyInfo[] _osProps =
-        typeof(OptimizationSummary).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-
-    private string GetOptColumnValue(
-        string field,
-        OptimizationResult optResult,
-        OptimizationSummary optSummary)
+    private string GetOptColumnValue(string field, Dictionary<string, string> optResultsMap)
     {
         if (string.IsNullOrEmpty(field)) return "";
 
-        // Apply alias mapping (e.g. KarAlList → KarAlSayisi)
-        if (_fieldAliases.TryGetValue(field, out var alias))
-            field = alias;
-
-        // Strip "List" suffix (e.g. BakiyeFiyatList → BakiyeFiyat)
+        // Strip "List" suffix (e.g. BakiyeFiyatList → BakiyeFiyat) for backward compat
         var lookupField = field.EndsWith("List", StringComparison.Ordinal) ? field[..^4] : field;
 
-        // Check OptimizationSummary
-        foreach (var p in _osProps)
-            if (string.Equals(p.Name, lookupField, StringComparison.Ordinal))
-                return FormatOptValue(p.GetValue(optSummary));
+        // Lookup in OptimizationResultsMap
+        if (optResultsMap.TryGetValue(lookupField, out var val))
+            return val ?? "";
 
         return "";
     }
-
-    private static string FormatOptValue(object? val) => val switch
-    {
-        null   => "",
-        double d => d.ToString("F2"),
-        float  f => f.ToString("F2"),
-        int    i => i.ToString(),
-        long   l => l.ToString(),
-        bool   b => b.ToString(),
-        _      => val.ToString() ?? ""
-    };
 
     #endregion
 

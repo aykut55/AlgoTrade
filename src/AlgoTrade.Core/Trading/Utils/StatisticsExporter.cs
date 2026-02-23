@@ -621,13 +621,10 @@ public class StatisticsExporter
             return;
         }
 
-        var fullSummary = _statistics.GetOptimizationSummary();
+        var fullMap = _statistics.GetOptimizationSummary();
         if (writeHeader)
-        {
-            WriteAllTextShared(filePath, StatisticsModel.OptimizationSummary.GetCsvHeader() + Environment.NewLine);
-        }
-
-        AppendAllTextShared(filePath, fullSummary.ToCsvRow() + Environment.NewLine);
+            AppendAllTextShared(filePath, string.Join(";", fullMap.Keys) + Environment.NewLine);
+        AppendAllTextShared(filePath, string.Join(";", fullMap.Values) + Environment.NewLine);
     }
 
     public void AppendToOptimizationTxt(string filePath, bool writeHeader = false, bool useMinimal = false)
@@ -649,18 +646,18 @@ public class StatisticsExporter
             return;
         }
 
-        var fullSummary = _statistics.GetOptimizationSummary();
+        var fullMap = _statistics.GetOptimizationSummary();
         if (writeHeader)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"OPTIMIZATION RESULTS - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
-            sb.AppendLine(StatisticsModel.OptimizationSummary.GetTxtSeparator());
-            sb.AppendLine(StatisticsModel.OptimizationSummary.GetTxtHeader());
-            sb.AppendLine(StatisticsModel.OptimizationSummary.GetTxtSeparator());
+            sb.AppendLine("".PadRight(200, '='));
+            sb.AppendLine(string.Join(" | ", fullMap.Keys.Select(k => k.PadLeft(15))));
+            sb.AppendLine("".PadRight(200, '-'));
             WriteAllTextShared(filePath, sb.ToString());
         }
 
-        AppendAllTextShared(filePath, fullSummary.ToTxtRow() + Environment.NewLine);
+        AppendAllTextShared(filePath, string.Join(" | ", fullMap.Values.Select(v => v.PadLeft(15))) + Environment.NewLine);
     }
 
     public static List<(string Field, string Header, int Width)> LoadOptimizationColumns(
@@ -1214,8 +1211,10 @@ public class StatisticsExporter
             var fullOutput = chosen?.listOutputs?.full;
             if (fullOutput == null) return new List<ColumnConfig>();
 
-            // optimizationSummary önce, arkasından columns
+            // optimizationResult önce, sonra optimizationSummary, arkasından columns
             var merged = new List<ColumnConfig>();
+            if (fullOutput.optimizationResult != null)
+                merged.AddRange(fullOutput.optimizationResult);
             if (fullOutput.optimizationSummary != null)
                 merged.AddRange(fullOutput.optimizationSummary);
             merged.AddRange(fullOutput.columns);
@@ -1391,6 +1390,7 @@ public class StatisticsExporter
     {
         public List<ColumnConfig> columns { get; set; } = new();
         public List<ColumnConfig>? optimizationSummary { get; set; }
+        public List<ColumnConfig>? optimizationResult { get; set; }
     }
 
     private sealed class ColumnConfig
