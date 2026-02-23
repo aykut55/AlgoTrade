@@ -7,6 +7,8 @@ using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
+using AlgoTrade.Core.Trading.Utils;
+using OptimizationSummary = AlgoTrade.Core.Trading.Statistics.Statistics.OptimizationSummary;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -131,6 +133,7 @@ public class SingleTraderOptimizer : IDisposable
     public bool TxtFileLoggingEnabled { get; set; }
     public string TxtFilePath { get; set; } = "";
     public bool AppendEnabled { get; set; }
+    public string ConfigFilePath { get; set; } = "";
 
     #endregion
 
@@ -355,7 +358,8 @@ public class SingleTraderOptimizer : IDisposable
             //AppendSingleResultToFiles(optResult, currentCombination);
 
             // Append to CSV and TXT files (if enabled)
-            AppendSingleOptSummaryToFiles(optResult, optSummary, currentCombination);
+            //AppendSingleOptSummaryToFiles(optResult, optSummary, currentCombination);
+            AppendSingleOptSummaryToFiles_2(optResult, optSummary, currentCombination);
 
             // Report optimization progress
             OnReadOptimizationResultsFile?.Invoke(this, singleTrader, currentCombination);
@@ -390,7 +394,7 @@ public class SingleTraderOptimizer : IDisposable
     }
 
     private OptimizationResult CreateOptimizationResultFromSummary(
-        Statistics.Statistics.OptimizationSummary optSummary,
+        OptimizationSummary optSummary,
         Dictionary<string, object> paramCombo)
     {
         var result = new OptimizationResult
@@ -550,7 +554,7 @@ public class SingleTraderOptimizer : IDisposable
 
     private void AppendSingleOptSummaryToFiles(
         OptimizationResult optResult,
-        Statistics.Statistics.OptimizationSummary optSummary,
+        OptimizationSummary optSummary,
         int currentCombination)
     {
         if (!CsvFileLoggingEnabled && !TxtFileLoggingEnabled)
@@ -585,7 +589,7 @@ public class SingleTraderOptimizer : IDisposable
 
     private void AppendSingleOptSummaryToCsv(
         OptimizationResult optResult,
-        Statistics.Statistics.OptimizationSummary optSummary,
+        OptimizationSummary optSummary,
         string filePath,
         int currentCombination)
     {
@@ -777,7 +781,7 @@ public class SingleTraderOptimizer : IDisposable
 
     private void AppendSingleOptSummaryToTxt(
         OptimizationResult optResult,
-        Statistics.Statistics.OptimizationSummary optSummary,
+        OptimizationSummary optSummary,
         string filePath,
         int currentCombination)
     {
@@ -985,6 +989,189 @@ public class SingleTraderOptimizer : IDisposable
             sw.WriteLine(dataBuilder.ToString());
             sw.Flush();
         }
+    }
+
+
+
+    private void AppendSingleOptSummaryToFiles_2(OptimizationResult optResult, OptimizationSummary optSummary, int currentCombination)
+    {
+        if (CsvFileLoggingEnabled && !string.IsNullOrEmpty(CsvFilePath))
+        {
+            try
+            {
+                AppendSingleOptSummaryCsvFromConfig(optResult, optSummary, currentCombination, CsvFilePath);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogRaw($"Error appending OptSummary (config) to CSV: {ex.Message}");
+            }
+        }
+
+        if (TxtFileLoggingEnabled && !string.IsNullOrEmpty(TxtFilePath))
+        {
+            try
+            {
+                AppendSingleOptSummaryTxtFromConfig(optResult, optSummary, currentCombination, TxtFilePath);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogRaw($"Error appending OptSummary (config) to TXT: {ex.Message}");
+            }
+        }
+    }
+
+    private void AppendSingleOptSummaryCsvFromConfig(
+        OptimizationResult optResult,
+        OptimizationSummary optSummary,
+        int currentCombination,
+        string filePath)
+    {
+        var configColumns = !string.IsNullOrEmpty(ConfigFilePath)
+            ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
+            : new System.Collections.Generic.List<(string Field, string Header, int Width)>();
+
+        bool fileExists = System.IO.File.Exists(filePath);
+        bool writeHeader = !fileExists || (!AppendEnabled && currentCombination == 1);
+
+        using var fs = new System.IO.FileStream(
+            filePath,
+            (AppendEnabled && fileExists) ? System.IO.FileMode.Append : System.IO.FileMode.Create,
+            System.IO.FileAccess.Write,
+            System.IO.FileShare.ReadWrite);
+        using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
+
+        if (writeHeader)
+        {
+            var headerParts = new List<string> { "CombNo" };
+            if (optResult.Parameters != null)
+                headerParts.AddRange(optResult.Parameters.Keys);
+            foreach (var col in configColumns)
+                headerParts.Add(col.Header);
+            sw.WriteLine(string.Join(";", headerParts));
+        }
+
+        var dataParts = new List<string> { currentCombination.ToString() };
+        if (optResult.Parameters != null)
+            dataParts.AddRange(optResult.Parameters.Values.Select(v => v?.ToString() ?? ""));
+        foreach (var col in configColumns)
+            dataParts.Add(GetOptColumnValue(col.Field, optResult, optSummary));
+        sw.WriteLine(string.Join(";", dataParts));
+        sw.Flush();
+    }
+
+    private void AppendSingleOptSummaryTxtFromConfig(
+        OptimizationResult optResult,
+        OptimizationSummary optSummary,
+        int currentCombination,
+        string filePath)
+    {
+        var configColumns = !string.IsNullOrEmpty(ConfigFilePath)
+            ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
+            : new System.Collections.Generic.List<(string Field, string Header, int Width)>();
+
+        bool fileExists = System.IO.File.Exists(filePath);
+        bool writeHeader = !fileExists || (!AppendEnabled && currentCombination == 1);
+
+        using var fs = new System.IO.FileStream(
+            filePath,
+            (AppendEnabled && fileExists) ? System.IO.FileMode.Append : System.IO.FileMode.Create,
+            System.IO.FileAccess.Write,
+            System.IO.FileShare.ReadWrite);
+        using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
+
+        if (writeHeader)
+        {
+            sw.WriteLine($"OPTIMIZATION RESULTS - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            sw.WriteLine("".PadRight(200, '='));
+
+            var headerParts = new List<string>();
+            headerParts.Add("CombNo".PadLeft(8));
+            if (optResult.Parameters != null)
+                foreach (var key in optResult.Parameters.Keys)
+                    headerParts.Add(key.PadLeft(15));
+            foreach (var col in configColumns)
+                headerParts.Add((col.Header).PadLeft(col.Width));
+            sw.WriteLine(string.Join(" | ", headerParts));
+            sw.WriteLine("".PadRight(200, '-'));
+        }
+
+        var dataParts = new List<string>();
+        dataParts.Add(currentCombination.ToString().PadLeft(8));
+        if (optResult.Parameters != null)
+            foreach (var val in optResult.Parameters.Values)
+                dataParts.Add((val?.ToString() ?? "").PadLeft(15));
+        foreach (var col in configColumns)
+            dataParts.Add(GetOptColumnValue(col.Field, optResult, optSummary).PadLeft(col.Width));
+        sw.WriteLine(string.Join(" | ", dataParts));
+        sw.Flush();
+    }
+
+    private string GetOptColumnValue(
+        string field,
+        OptimizationResult optResult,
+        OptimizationSummary optSummary)
+    {
+        return field switch
+        {
+            // Bakiye
+            "IlkBakiyeFiyat"          => optSummary.IlkBakiyeFiyat.ToString("F2"),
+            "BakiyeFiyat"             => optSummary.BakiyeFiyat.ToString("F2"),
+            "GetiriFiyat"             => optSummary.GetiriFiyat.ToString("F2"),
+            "GetiriFiyatYuzde"        => optSummary.GetiriFiyatYuzde.ToString("F2"),
+            "BakiyeFiyatNet"          => optSummary.BakiyeFiyatNet.ToString("F2"),
+            "GetiriFiyatNet"          => optSummary.GetiriFiyatNet.ToString("F2"),
+            "GetiriFiyatYuzdeNet"     => optSummary.GetiriFiyatYuzdeNet.ToString("F2"),
+            "KomisyonFiyat"           => optSummary.KomisyonFiyat.ToString("F2"),
+            "KomisyonFiyatYuzde"      => optSummary.KomisyonFiyatYuzde.ToString("F4"),
+            "MinBakiyeFiyat"          => optSummary.MinBakiyeFiyat.ToString("F2"),
+            "MaxBakiyeFiyat"          => optSummary.MaxBakiyeFiyat.ToString("F2"),
+            "MinBakiyeFiyatNet"       => optSummary.MinBakiyeFiyatNet.ToString("F2"),
+            "MaxBakiyeFiyatNet"       => optSummary.MaxBakiyeFiyatNet.ToString("F2"),
+            // İşlem sayıları
+            "IslemSayisi"             => optSummary.IslemSayisi.ToString(),
+            "AlisSayisi"              => optSummary.AlisSayisi.ToString(),
+            "SatisSayisi"             => optSummary.SatisSayisi.ToString(),
+            "FlatSayisi"              => optSummary.FlatSayisi.ToString(),
+            "PassSayisi"              => optSummary.PassSayisi.ToString(),
+            "KarAlSayisi"             => optSummary.KarAlSayisi.ToString(),
+            "ZararKesSayisi"          => optSummary.ZararKesSayisi.ToString(),
+            "KazandiranIslemSayisi"   => optSummary.KazandiranIslemSayisi.ToString(),
+            "KaybettirenIslemSayisi"  => optSummary.KaybettirenIslemSayisi.ToString(),
+            "NotrIslemSayisi"         => optSummary.NotrIslemSayisi.ToString(),
+            // Kar/Zarar
+            "ToplamKarFiyat"          => optSummary.ToplamKarFiyat.ToString("F2"),
+            "ToplamZararFiyat"        => optSummary.ToplamZararFiyat.ToString("F2"),
+            "NetKarFiyat"             => optSummary.NetKarFiyat.ToString("F2"),
+            "MaxKarFiyat"             => optSummary.MaxKarFiyat.ToString("F2"),
+            "MaxZararFiyat"           => optSummary.MaxZararFiyat.ToString("F2"),
+            "MaxKarFiyatNet"          => optSummary.MaxKarFiyatNet.ToString("F2"),
+            "MaxZararFiyatNet"        => optSummary.MaxZararFiyatNet.ToString("F2"),
+            "KarliIslemOrani"         => optSummary.KarliIslemOrani.ToString("F2"),
+            // Risk/Drawdown
+            "GetiriMaxDD"             => optSummary.GetiriMaxDD.ToString("F2"),
+            "GetiriMaxDDTarih"        => optSummary.GetiriMaxDDTarih ?? "",
+            "GetiriMaxKayip"          => optSummary.GetiriMaxKayip.ToString("F2"),
+            "GetiriMaxDDNet"          => optSummary.GetiriMaxDDNet.ToString("F2"),
+            "GetiriMaxKayipNet"       => optSummary.GetiriMaxKayipNet.ToString("F2"),
+            // Performans
+            "ProfitFactor"            => optSummary.ProfitFactor.ToString("F2"),
+            "ProfitFactorNet"         => optSummary.ProfitFactorNet.ToString("F2"),
+            "ProfitFactorSistem"      => optSummary.ProfitFactorSistem.ToString("F2"),
+            // Kimlik / Meta
+            "TraderId"                => optSummary.TraderId.ToString(),
+            "TraderName"              => optSummary.TraderName ?? "",
+            "SymbolName"              => optSummary.SymbolName ?? "",
+            "SymbolPeriod"            => optSummary.SymbolPeriod ?? "",
+            "SystemId"                => optSummary.SystemId ?? "",
+            "SystemName"              => optSummary.SystemName ?? "",
+            "StrategyId"              => optSummary.StrategyId ?? "",
+            "StrategyName"            => optSummary.StrategyName ?? "",
+            "ToplamBarSayisi"         => optSummary.ToplamBarSayisi.ToString(),
+            "IlkBarTarihSaati"        => optSummary.IlkBarTarihSaati ?? "",
+            "SonBarTarihSaati"        => optSummary.SonBarTarihSaati ?? "",
+            "LastExecutionTimeInMSec" => optSummary.LastExecutionTimeInMSec ?? "",
+            _                         => ""
+        };
     }
 
     #endregion

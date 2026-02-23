@@ -663,6 +663,17 @@ public class StatisticsExporter
         AppendAllTextShared(filePath, fullSummary.ToTxtRow() + Environment.NewLine);
     }
 
+    public static List<(string Field, string Header, int Width)> LoadOptimizationColumns(
+        string configPath, string profile = "Full")
+    {
+        if (!File.Exists(configPath)) return new();
+        var json = File.ReadAllText(configPath);
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json, opts);
+        var cols = cfg?.GetEnabledOptimizationColumns(profile) ?? new();
+        return cols.Select(c => (c.field ?? "", c.header ?? c.field ?? "", c.width)).ToList();
+    }
+
     private static void WriteAllTextShared(string filePath, string content)
     {
         using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
@@ -1111,6 +1122,8 @@ public class StatisticsExporter
         public SingleTraderNode? SngleTrader { get; set; } // alias tolerance
         public SingleTraderNode? ngleTrader { get; set; }  // alias tolerance
 
+        public SingleTraderOptimizationNode? SingleTraderOptimization { get; set; }
+
         public List<ColumnConfig>? TryGetColumns()
         {
             // Prefer new structure if present
@@ -1187,6 +1200,18 @@ public class StatisticsExporter
         {
             var cols = TryGetColumnsFromPerformans(profile) ?? new List<ColumnConfig>();
             NormalizePerformansColumns(cols);
+            return cols.FindAll(c => c.enabled);
+        }
+
+        public List<ColumnConfig> GetEnabledOptimizationColumns(string profile = "Full")
+        {
+            var node = SingleTraderOptimization;
+            if (node == null) return new List<ColumnConfig>();
+            var chosen = string.Equals(profile, "Minimal", StringComparison.OrdinalIgnoreCase)
+                ? node.Minimal : node.Full;
+            chosen ??= node.Full ?? node.Minimal;
+            var cols = chosen?.listOutputs?.full?.columns ?? new List<ColumnConfig>();
+            foreach (var c in cols) { if (c.width <= 0) c.width = 10; }
             return cols.FindAll(c => c.enabled);
         }
 
@@ -1337,6 +1362,14 @@ public class StatisticsExporter
         public string? description { get; set; }
         public string? descrpton { get; set; } // alias tolerance
         public TraderListProfile? Full { get; set; }
+        public TraderListProfile? Minimal { get; set; }
+    }
+
+    private sealed class SingleTraderOptimizationNode
+    {
+        public int version { get; set; }
+        public string? description { get; set; }
+        public TraderListProfile? Full    { get; set; }
         public TraderListProfile? Minimal { get; set; }
     }
 

@@ -1445,14 +1445,16 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTraderOptimizer.OnOptimizationProgress += OnOptimizationProgress;                                     // singleTraderOptimizer.OnOptimizationProgress = (currentCombination, totalCombinations)
             singleTraderOptimizer.OnSingleTraderProgressCallback += OnSingleTraderProgressCallback;                    // (currentBar, totalBarsInner)
 
-            /*
-            bool csvFileLoggingEnabled = true;   // CSV enabled - for fast processing later
-            bool txtFileLoggingEnabled = true;   // TXT enabled - for human readable logs
-            bool appendEnabled = true;
-            singleTraderOptimizer.SetOptimizationLogFileParams(csvFileLoggingEnabled, "logs\\singleTraderOptLog.csv",
-                                                                txtFileLoggingEnabled, "logs\\singleTraderOptLog.txt",
-                                                                appendEnabled);
-            */
+            // Reset
+            singleTraderOptimizer.Reset();
+
+            // Optimization log file settings
+            singleTraderOptimizer.CsvFileLoggingEnabled = true;
+            singleTraderOptimizer.CsvFilePath           = Path.Combine(AppSettings.LogsDir, "singleTraderOptLog.csv");
+            singleTraderOptimizer.TxtFileLoggingEnabled = true;
+            singleTraderOptimizer.TxtFilePath           = Path.Combine(AppSettings.LogsDir, "singleTraderOptLog.txt");
+            singleTraderOptimizer.AppendEnabled         = true;
+            singleTraderOptimizer.ConfigFilePath        = Path.Combine(AppSettings.ConfigsDir, "StatisticsExporterConfig.json");
 
             // Parametre range'leri (stored config'den)
             if (_optimizationParameterRanges.Count == 0)
@@ -1482,9 +1484,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 });
             }
 
-            // Run optimization
-            _timer!.RestartTimer("1");
-
             // Set optimization range (PartialOpt)
             singleTraderOptimizer.OptimizationFrom = OptimizationFrom;
             singleTraderOptimizer.OptimizationTo = OptimizationTo;
@@ -1493,16 +1492,20 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             var ecfConfig = _equityCurveFilterConfigs.FirstOrDefault(c => c.Id == 0);
             singleTraderOptimizer.EquityCurveFilterConfig = ecfConfig;
 
-            // Set state flags
-            singleTraderOptimizer.IsStarted = true;
-            singleTraderOptimizer.IsRunning = true;
-            singleTraderOptimizer.IsStopped = false;
-            singleTraderOptimizer.IsStopRequested = false;
+            // Init
+            singleTraderOptimizer.Init();
+
+            // Run optimization
+            _timer!.RestartTimer("1");
 
             await Task.Run(() =>
             {
-                singleTraderOptimizer.Reset();
-                singleTraderOptimizer.Init();
+                // Set state flags
+                singleTraderOptimizer.IsStarted = true;
+                singleTraderOptimizer.IsRunning = true;
+                singleTraderOptimizer.IsStopped = false;
+                singleTraderOptimizer.IsStopRequested = false;
+
                 singleTraderOptimizer.Run(cancellationToken);
             }, cancellationToken);
 
