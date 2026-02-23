@@ -1210,9 +1210,18 @@ public class StatisticsExporter
             var chosen = string.Equals(profile, "Minimal", StringComparison.OrdinalIgnoreCase)
                 ? node.Minimal : node.Full;
             chosen ??= node.Full ?? node.Minimal;
-            var cols = chosen?.listOutputs?.full?.columns ?? new List<ColumnConfig>();
-            foreach (var c in cols) { if (c.width <= 0) c.width = 10; }
-            return cols.FindAll(c => c.enabled);
+
+            var fullOutput = chosen?.listOutputs?.full;
+            if (fullOutput == null) return new List<ColumnConfig>();
+
+            // optimizationSummary önce, arkasından columns
+            var merged = new List<ColumnConfig>();
+            if (fullOutput.optimizationSummary != null)
+                merged.AddRange(fullOutput.optimizationSummary);
+            merged.AddRange(fullOutput.columns);
+
+            foreach (var c in merged) { if (c.width <= 0) c.width = 10; }
+            return merged.FindAll(c => c.enabled);
         }
 
         private static void NormalizeColumns(List<ColumnConfig> cols)
@@ -1381,6 +1390,7 @@ public class StatisticsExporter
     private sealed class FullOutput
     {
         public List<ColumnConfig> columns { get; set; } = new();
+        public List<ColumnConfig>? optimizationSummary { get; set; }
     }
 
     private sealed class ColumnConfig

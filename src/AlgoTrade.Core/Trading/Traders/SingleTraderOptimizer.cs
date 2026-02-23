@@ -311,6 +311,9 @@ public class SingleTraderOptimizer : IDisposable
             if (currentCombination > effectiveTo)
                 break;
 
+            if (currentCombination > 5)
+                break;
+
             LogManager.LogRaw($"");
 
             // Progress raporla
@@ -1106,73 +1109,48 @@ public class SingleTraderOptimizer : IDisposable
         sw.Flush();
     }
 
+    // Aliases: JSON field name → actual C# property name (only where they differ)
+    private static readonly Dictionary<string, string> _fieldAliases = new(StringComparer.Ordinal)
+    {
+        { "KarAlList",    "KarAlSayisi"    },
+        { "ZararKesList", "ZararKesSayisi" },
+    };
+
+    private static readonly System.Reflection.PropertyInfo[] _osProps =
+        typeof(OptimizationSummary).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
     private string GetOptColumnValue(
         string field,
         OptimizationResult optResult,
         OptimizationSummary optSummary)
     {
-        return field switch
-        {
-            // Bakiye
-            "IlkBakiyeFiyat"          => optSummary.IlkBakiyeFiyat.ToString("F2"),
-            "BakiyeFiyat"             => optSummary.BakiyeFiyat.ToString("F2"),
-            "GetiriFiyat"             => optSummary.GetiriFiyat.ToString("F2"),
-            "GetiriFiyatYuzde"        => optSummary.GetiriFiyatYuzde.ToString("F2"),
-            "BakiyeFiyatNet"          => optSummary.BakiyeFiyatNet.ToString("F2"),
-            "GetiriFiyatNet"          => optSummary.GetiriFiyatNet.ToString("F2"),
-            "GetiriFiyatYuzdeNet"     => optSummary.GetiriFiyatYuzdeNet.ToString("F2"),
-            "KomisyonFiyat"           => optSummary.KomisyonFiyat.ToString("F2"),
-            "KomisyonFiyatYuzde"      => optSummary.KomisyonFiyatYuzde.ToString("F4"),
-            "MinBakiyeFiyat"          => optSummary.MinBakiyeFiyat.ToString("F2"),
-            "MaxBakiyeFiyat"          => optSummary.MaxBakiyeFiyat.ToString("F2"),
-            "MinBakiyeFiyatNet"       => optSummary.MinBakiyeFiyatNet.ToString("F2"),
-            "MaxBakiyeFiyatNet"       => optSummary.MaxBakiyeFiyatNet.ToString("F2"),
-            // İşlem sayıları
-            "IslemSayisi"             => optSummary.IslemSayisi.ToString(),
-            "AlisSayisi"              => optSummary.AlisSayisi.ToString(),
-            "SatisSayisi"             => optSummary.SatisSayisi.ToString(),
-            "FlatSayisi"              => optSummary.FlatSayisi.ToString(),
-            "PassSayisi"              => optSummary.PassSayisi.ToString(),
-            "KarAlSayisi"             => optSummary.KarAlSayisi.ToString(),
-            "ZararKesSayisi"          => optSummary.ZararKesSayisi.ToString(),
-            "KazandiranIslemSayisi"   => optSummary.KazandiranIslemSayisi.ToString(),
-            "KaybettirenIslemSayisi"  => optSummary.KaybettirenIslemSayisi.ToString(),
-            "NotrIslemSayisi"         => optSummary.NotrIslemSayisi.ToString(),
-            // Kar/Zarar
-            "ToplamKarFiyat"          => optSummary.ToplamKarFiyat.ToString("F2"),
-            "ToplamZararFiyat"        => optSummary.ToplamZararFiyat.ToString("F2"),
-            "NetKarFiyat"             => optSummary.NetKarFiyat.ToString("F2"),
-            "MaxKarFiyat"             => optSummary.MaxKarFiyat.ToString("F2"),
-            "MaxZararFiyat"           => optSummary.MaxZararFiyat.ToString("F2"),
-            "MaxKarFiyatNet"          => optSummary.MaxKarFiyatNet.ToString("F2"),
-            "MaxZararFiyatNet"        => optSummary.MaxZararFiyatNet.ToString("F2"),
-            "KarliIslemOrani"         => optSummary.KarliIslemOrani.ToString("F2"),
-            // Risk/Drawdown
-            "GetiriMaxDD"             => optSummary.GetiriMaxDD.ToString("F2"),
-            "GetiriMaxDDTarih"        => optSummary.GetiriMaxDDTarih ?? "",
-            "GetiriMaxKayip"          => optSummary.GetiriMaxKayip.ToString("F2"),
-            "GetiriMaxDDNet"          => optSummary.GetiriMaxDDNet.ToString("F2"),
-            "GetiriMaxKayipNet"       => optSummary.GetiriMaxKayipNet.ToString("F2"),
-            // Performans
-            "ProfitFactor"            => optSummary.ProfitFactor.ToString("F2"),
-            "ProfitFactorNet"         => optSummary.ProfitFactorNet.ToString("F2"),
-            "ProfitFactorSistem"      => optSummary.ProfitFactorSistem.ToString("F2"),
-            // Kimlik / Meta
-            "TraderId"                => optSummary.TraderId.ToString(),
-            "TraderName"              => optSummary.TraderName ?? "",
-            "SymbolName"              => optSummary.SymbolName ?? "",
-            "SymbolPeriod"            => optSummary.SymbolPeriod ?? "",
-            "SystemId"                => optSummary.SystemId ?? "",
-            "SystemName"              => optSummary.SystemName ?? "",
-            "StrategyId"              => optSummary.StrategyId ?? "",
-            "StrategyName"            => optSummary.StrategyName ?? "",
-            "ToplamBarSayisi"         => optSummary.ToplamBarSayisi.ToString(),
-            "IlkBarTarihSaati"        => optSummary.IlkBarTarihSaati ?? "",
-            "SonBarTarihSaati"        => optSummary.SonBarTarihSaati ?? "",
-            "LastExecutionTimeInMSec" => optSummary.LastExecutionTimeInMSec ?? "",
-            _                         => ""
-        };
+        if (string.IsNullOrEmpty(field)) return "";
+
+        // Apply alias mapping (e.g. KarAlList → KarAlSayisi)
+        if (_fieldAliases.TryGetValue(field, out var alias))
+            field = alias;
+
+        // Strip "List" suffix (e.g. BakiyeFiyatList → BakiyeFiyat)
+        var lookupField = field.EndsWith("List", StringComparison.Ordinal) ? field[..^4] : field;
+
+        // Check OptimizationSummary
+        foreach (var p in _osProps)
+            if (string.Equals(p.Name, lookupField, StringComparison.Ordinal))
+                return FormatOptValue(p.GetValue(optSummary));
+
+        return "";
     }
+
+    private static string FormatOptValue(object? val) => val switch
+    {
+        null   => "",
+        double d => d.ToString("F2"),
+        float  f => f.ToString("F2"),
+        int    i => i.ToString(),
+        long   l => l.ToString(),
+        bool   b => b.ToString(),
+        _      => val.ToString() ?? ""
+    };
 
     #endregion
 
