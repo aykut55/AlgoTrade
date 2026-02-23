@@ -235,8 +235,60 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
             trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
         }
+        else
+        {
+        }
     }
 
+    private void OnApplyUserFlags2(SingleTrader trader)
+    {
+        int traderId = trader.GetId();
+        if (traderId == -1)
+        {
+        }
+        else if (traderId == 0)
+        {
+            // Configure optimization flag
+            singleTrader.OptimizationEnabled = false;
+
+            // Enable savingStatistics
+            singleTrader.SaveStatisticsToFile = true;
+
+            // Enable all per-output statistics flags explicitly
+            singleTrader.SaveFullStatsTxtEnabled             = true;
+            singleTrader.SaveFullStatsCsvEnabled             = true;
+            singleTrader.SaveMinimalStatsTxtEnabled          = true;
+            singleTrader.SaveMinimalStatsCsvEnabled          = true;
+            singleTrader.SaveFullListsTxtEnabled             = true;
+            singleTrader.SaveFullListsCsvEnabled             = true;
+            singleTrader.SaveMinimalListsTxtEnabled          = true;
+            singleTrader.SaveMinimalListsCsvEnabled          = true;
+            singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
+            singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
+            singleTrader.SavePerformansTxtEnabled            = true;
+            singleTrader.SavePerformansCsvEnabled            = true;
+
+            // Manually assign custom output file names (as requested)
+            singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
+            singleTrader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
+            singleTrader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
+            singleTrader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
+            singleTrader.FullListsTxtFileName                = "SingleTraderLists.txt";
+            singleTrader.FullListsCsvFileName                = "SingleTraderLists.csv";
+            singleTrader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
+            singleTrader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
+            singleTrader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
+            singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+            singleTrader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
+            singleTrader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+        }
+        else if (traderId == 1)
+        {
+        }
+        else
+        {
+        }
+    }
     public void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader, int id = 0)
     {
         var config = _equityCurveFilterConfigs.FirstOrDefault(c => c.Id == id);
@@ -798,43 +850,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Sıralama Onemli
             // Apply user flags
             OnApplyUserFlags(singleTrader);
-            
+
+            // Apply user flags (2)
+            OnApplyUserFlags2(singleTrader);
+
             // Configure equity curve filter
             SetSingleTraderConfigureEquityCurveFilter(singleTrader);
-
-            // Configure optimization flag
-            singleTrader.OptimizationEnabled = false;
-
-            // Enable savingStatistics
-            singleTrader.SaveStatisticsToFile = true;
-
-            // Enable all per-output statistics flags explicitly
-            singleTrader.SaveFullStatsTxtEnabled             = true;
-            singleTrader.SaveFullStatsCsvEnabled             = true;
-            singleTrader.SaveMinimalStatsTxtEnabled          = true;
-            singleTrader.SaveMinimalStatsCsvEnabled          = true;
-            singleTrader.SaveFullListsTxtEnabled             = true;
-            singleTrader.SaveFullListsCsvEnabled             = true;
-            singleTrader.SaveMinimalListsTxtEnabled          = true;
-            singleTrader.SaveMinimalListsCsvEnabled          = true;
-            singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
-            singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
-            singleTrader.SavePerformansTxtEnabled            = true;
-            singleTrader.SavePerformansCsvEnabled            = true;
-
-            // Manually assign custom output file names (as requested)
-            singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
-            singleTrader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
-            singleTrader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
-            singleTrader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
-            singleTrader.FullListsTxtFileName                = "SingleTraderLists.txt";
-            singleTrader.FullListsCsvFileName                = "SingleTraderLists.csv";
-            singleTrader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
-            singleTrader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
-            singleTrader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-            singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
-            singleTrader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
-            singleTrader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
 
             // Init
             singleTrader.Init();
