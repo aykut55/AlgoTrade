@@ -1456,6 +1456,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTraderOptimizer.AppendEnabled         = true;
             singleTraderOptimizer.ConfigFilePath        = Path.Combine(AppSettings.ConfigsDir, "StatisticsExporterConfig.json");
 
+            // Sorted output settings
+            singleTraderOptimizer.SortField         = "ProfitFactor";
+            singleTraderOptimizer.SortedCsvFilePath = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog_sorted.csv");
+            singleTraderOptimizer.SortedTxtFilePath = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog_sorted.txt");
+
             // Parametre range'leri (stored config'den)
             if (_optimizationParameterRanges.Count == 0)
                 throw new InvalidOperationException("No optimization parameter ranges configured. Call AddOptimizationParameterRange() first.");

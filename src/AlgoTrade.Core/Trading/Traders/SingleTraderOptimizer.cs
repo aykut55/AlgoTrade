@@ -120,8 +120,16 @@ public class SingleTraderOptimizer : IDisposable
     public bool AppendEnabled { get; set; }
     public string ConfigFilePath { get; set; } = "";
 
+    // Sorted output
+    public string SortField { get; set; } = "ProfitFactor";
+    public string SortedCsvFilePath { get; set; } = "";
+    public string SortedTxtFilePath { get; set; } = "";
+
     // Tracks which output files have been created/cleared in the current run (used when AppendEnabled=false)
     private readonly HashSet<string> _initializedFiles = new HashSet<string>();
+
+    // Cached opt results for sorted output (loaded from file on first WriteSortedFiles() call)
+    private List<(int CombNo, OptimizationResult Result)>? _cachedOptResults = null;
 
     #endregion
 
@@ -164,6 +172,7 @@ public class SingleTraderOptimizer : IDisposable
         IsStopped = false;
         IsStopRequested = false;
         _initializedFiles.Clear();
+        _cachedOptResults = null;
     }
 
     public void Init()
@@ -409,6 +418,20 @@ public class SingleTraderOptimizer : IDisposable
                 LogManager.LogRaw($"Error appending OptSummary (config) to TXT: {ex.Message}");
             }
         }
+
+        // Her kombinasyondan sonra sorted dosyaları da güncelle
+        if ((CsvFileLoggingEnabled && !string.IsNullOrEmpty(SortedCsvFilePath)) ||
+            (TxtFileLoggingEnabled && !string.IsNullOrEmpty(SortedTxtFilePath)))
+        {
+            try
+            {
+                WriteSortedFiles();
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogRaw($"Error writing sorted opt files: {ex.Message}");
+            }
+        }
     }
 
     private void AppendSingleOptSummaryCsvFromConfig(
@@ -469,6 +492,9 @@ public class SingleTraderOptimizer : IDisposable
             dataParts.Add(GetOptColumnValue(col.Field, optResult.Values));
         sw.WriteLine(string.Join(";", dataParts));
         sw.Flush();
+
+        // Cache'e de ekle (WriteSortedFiles() için — eğer daha önce yüklendiyse)
+        _cachedOptResults?.Add((currentCombination, optResult));
     }
 
     private void AppendSingleOptSummaryTxtFromConfig(
@@ -556,6 +582,162 @@ public class SingleTraderOptimizer : IDisposable
             return val ?? "";
 
         return "";
+    }
+
+    /// <summary>
+    /// CSV dosyasını okuyup _cachedOptResults'a yükler. Sadece ilk WriteSortedFiles() çağrısında tetiklenir.
+    /// </summary>
+    private void LoadOptCsvToCache()
+    {
+        _cachedOptResults = new List<(int, OptimizationResult)>();
+
+        if (string.IsNullOrEmpty(CsvFilePath) || !System.IO.File.Exists(CsvFilePath))
+            return;
+
+        var lines = System.IO.File.ReadAllLines(CsvFilePath, System.Text.Encoding.UTF8);
+        if (lines.Length < 2) return;  // sadece header var ya da boş
+
+        var headers = lines[0].Split(';');
+
+        // Config kolon başlıklarını bul → bu başlıkların soldaki kalan sütunlar param
+        var configColumns = !string.IsNullOrEmpty(ConfigFilePath)
+            ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
+            : new List<(string Field, string Header, int Width)>();
+        var configHeaderSet = new HashSet<string>(configColumns.Select(c => c.Header));
+
+        // headers[0] = "CombNo", headers[1..k-1] = params, headers[k..] = config fields
+        int firstConfigIdx = headers.Length;
+        for (int i = 1; i < headers.Length; i++)
+        {
+            if (configHeaderSet.Contains(headers[i]))
+            {
+                firstConfigIdx = i;
+                break;
+            }
+        }
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i])) continue;
+
+            var cols = lines[i].Split(';');
+            int combNo = cols.Length > 0 && int.TryParse(cols[0], out var n) ? n : i;
+
+            var result = new OptimizationResult();
+
+            // Params
+            for (int j = 1; j < firstConfigIdx && j < cols.Length; j++)
+                result.Parameters[headers[j]] = cols[j];
+
+            // Values — field adına göre sakla (header adı değil)
+            for (int j = firstConfigIdx; j < headers.Length && j < cols.Length; j++)
+            {
+                var col = configColumns.FirstOrDefault(c => c.Header == headers[j]);
+                if (col.Field != null)
+                    result.Values[col.Field] = cols[j];
+            }
+
+            _cachedOptResults.Add((combNo, result));
+        }
+
+        LogManager.LogRaw($"  [Sorted] {_cachedOptResults.Count} sonuç dosyadan yüklendi ({CsvFilePath})");
+    }
+
+    /// <summary>
+    /// Tüm opt sonuçlarını SortField'e göre sıralayıp sorted dosyalara yazar.
+    /// İlk çağrıda CSV dosyasından yükler; sonraki çağrılarda cache'i kullanır.
+    /// </summary>
+    public void WriteSortedFiles()
+    {
+        // İlk kez → dosyadan yükle
+        if (_cachedOptResults == null)
+            LoadOptCsvToCache();
+
+        if (_cachedOptResults == null || _cachedOptResults.Count == 0)
+            return;
+
+        // SortField'e göre sırala (desc)
+        var sorted = _cachedOptResults
+            .OrderByDescending(r =>
+            {
+                var v = r.Result.Values.GetValueOrDefault(SortField, "");
+                return double.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : double.MinValue;
+            })
+            .ToList();
+
+        if (CsvFileLoggingEnabled && !string.IsNullOrEmpty(SortedCsvFilePath))
+        {
+            try { WriteSortedCsv(sorted, SortedCsvFilePath); }
+            catch (Exception ex) { LogManager.LogRaw($"  [Sorted] CSV yazma hatası: {ex.Message}"); }
+        }
+
+        if (TxtFileLoggingEnabled && !string.IsNullOrEmpty(SortedTxtFilePath))
+        {
+            try { WriteSortedTxt(sorted, SortedTxtFilePath); }
+            catch (Exception ex) { LogManager.LogRaw($"  [Sorted] TXT yazma hatası: {ex.Message}"); }
+        }
+    }
+
+    private void WriteSortedCsv(List<(int CombNo, OptimizationResult Result)> sorted, string filePath)
+    {
+        var configColumns = !string.IsNullOrEmpty(ConfigFilePath)
+            ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
+            : new List<(string Field, string Header, int Width)>();
+
+        using var fs = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
+
+        // Header
+        var first = sorted[0].Result;
+        var headerParts = new List<string> { "CombNo" };
+        foreach (var key in first.Parameters.Keys) headerParts.Add(key);
+        foreach (var col in configColumns) headerParts.Add(col.Header);
+        sw.WriteLine(string.Join(";", headerParts));
+
+        // Data
+        foreach (var (combNo, result) in sorted)
+        {
+            var dataParts = new List<string> { combNo.ToString() };
+            foreach (var val in result.Parameters.Values) dataParts.Add(val ?? "");
+            foreach (var col in configColumns) dataParts.Add(GetOptColumnValue(col.Field, result.Values));
+            sw.WriteLine(string.Join(";", dataParts));
+        }
+
+        sw.Flush();
+    }
+
+    private void WriteSortedTxt(List<(int CombNo, OptimizationResult Result)> sorted, string filePath)
+    {
+        var configColumns = !string.IsNullOrEmpty(ConfigFilePath)
+            ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
+            : new List<(string Field, string Header, int Width)>();
+
+        using var fs = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
+
+        var first = sorted[0].Result;
+        var paramWidths = first.Parameters.Keys.ToDictionary(k => k, k => Math.Max(k.Length, 10) + 1);
+
+        sw.WriteLine($"OPTIMIZATION RESULTS (sorted by {SortField}) - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        sw.WriteLine("".PadRight(1360, '='));
+
+        var headerParts = new List<string> { "CombNo".PadLeft(8) };
+        foreach (var key in first.Parameters.Keys) headerParts.Add(key.PadLeft(paramWidths[key]));
+        foreach (var col in configColumns) headerParts.Add(col.Header.PadLeft(col.Width));
+        sw.WriteLine(string.Join(" | ", headerParts));
+        sw.WriteLine("".PadRight(1360, '-'));
+
+        foreach (var (combNo, result) in sorted)
+        {
+            var dataParts = new List<string> { combNo.ToString().PadLeft(8) };
+            foreach (var kvp in result.Parameters)
+                dataParts.Add((kvp.Value ?? "").PadLeft(paramWidths.GetValueOrDefault(kvp.Key, 11)));
+            foreach (var col in configColumns)
+                dataParts.Add(GetOptColumnValue(col.Field, result.Values).PadLeft(col.Width));
+            sw.WriteLine(string.Join(" | ", dataParts));
+        }
+
+        sw.Flush();
     }
 
     #endregion
