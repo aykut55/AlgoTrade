@@ -27,6 +27,76 @@ ConcurrentDictionary<string, string>? stockMetaData = null;
 var sw = new Stopwatch();
 
 // =============================================================================
+// Local Methods
+// =============================================================================
+void OnApplyUserFlags(SingleTrader trader)
+{
+    trader.ConfigureUserFlagsOnce();
+    trader.signals.AlEnabled                   = true;
+    trader.signals.SatEnabled                  = true;
+    trader.signals.FlatOlEnabled               = true;
+    trader.signals.PasGecEnabled               = true;
+    trader.signals.KarAlEnabled                = true;
+    trader.signals.ZararKesEnabled             = true;
+    trader.signals.GunSonuPozKapatEnabled      = false;
+    trader.signals.TimeFilteringEnabled        = false;
+    trader.signals.EquityCurveFilteringEnabled = false;
+
+    var dateTimes       = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+    trader.StartDateTimeStr = dateTimes[0];
+    trader.StopDateTimeStr  = dateTimes[1];
+
+    var startDt         = DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
+    trader.StartDateStr     = startDt.ToString("yyyy.MM.dd");
+    trader.StartTimeStr     = startDt.ToString("HH:mm:ss");
+
+    var stopDt          = DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
+    trader.StopDateStr      = stopDt.ToString("yyyy.MM.dd");
+    trader.StopTimeStr      = stopDt.ToString("HH:mm:ss");
+}
+
+void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
+{
+    trader.signals.EquityCurveFilteringEnabled = ecfEnabled;
+    trader.ConfigureEquityCurveFilter(
+        isPercent: ecfThresholdTypeIsPercent,
+        profitThreshold: ecfProfitThreshold,
+        lossThreshold: ecfLossThreshold,
+        trigger: ecfTrigger
+    );
+}
+
+void OnApplyUserFlags2(SingleTrader trader)
+{
+    trader.OptimizationEnabled                 = false;
+    trader.SaveStatisticsToFile                = saveStatisticsToFile;
+    trader.SaveFullStatsTxtEnabled             = true;
+    trader.SaveFullStatsCsvEnabled             = true;
+    trader.SaveMinimalStatsTxtEnabled          = true;
+    trader.SaveMinimalStatsCsvEnabled          = true;
+    trader.SaveFullListsTxtEnabled             = true;
+    trader.SaveFullListsCsvEnabled             = true;
+    trader.SaveMinimalListsTxtEnabled          = true;
+    trader.SaveMinimalListsCsvEnabled          = true;
+    trader.SaveFullStatsTxtFormattedEnabled    = true;
+    trader.SaveMinimalStatsTxtFormattedEnabled = true;
+    trader.SavePerformansTxtEnabled            = true;
+    trader.SavePerformansCsvEnabled            = true;
+    trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
+    trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
+    trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
+    trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
+    trader.FullListsTxtFileName                = "SingleTraderLists.txt";
+    trader.FullListsCsvFileName                = "SingleTraderLists.csv";
+    trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
+    trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
+    trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
+    trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+    trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
+    trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+}
+
+// =============================================================================
 // 1. Veri Oku
 // =============================================================================
 Log("=== RunSingleTraderWithProgressAsync.csx ===");
@@ -142,8 +212,10 @@ if (singleTrader.RunMode == TraderRunMode.TradeAndQuery || singleTrader.RunMode 
 singleTrader.Reset();
 
 // Set attributes
-singleTrader.SymbolName = symbolName;
+singleTrader.SymbolName   = symbolName;
 singleTrader.SymbolPeriod = symbolPeriod;
+singleTrader.StrategyName = strategyName;
+singleTrader.QueryName    = queryEnabled ? queryName : "...";
 singleTrader.LastExecutionTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 singleTrader.LastExecutionTimeStart = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 
@@ -155,19 +227,13 @@ singleTrader.initialTradeParams!.Reset()
     .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 
 // Apply user flags
-singleTrader.ConfigureUserFlagsOnce();
+OnApplyUserFlags(singleTrader);
+
+// Apply user flags 2
+OnApplyUserFlags2(singleTrader);
 
 // Configure equity curve filter
-singleTrader.signals.EquityCurveFilteringEnabled = ecfEnabled;
-singleTrader.ConfigureEquityCurveFilter(
-    isPercent: ecfThresholdTypeIsPercent,
-    profitThreshold: ecfProfitThreshold,
-    lossThreshold: ecfLossThreshold,
-    trigger: ecfTrigger
-);
-
-// Enable saving statistics
-singleTrader.SaveStatisticsToFile = saveStatisticsToFile;
+SetSingleTraderConfigureEquityCurveFilter(singleTrader);
 
 // =============================================================================
 // 6b. Callbacks
@@ -295,8 +361,15 @@ singleTrader.Finalize();
 
 if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
 {
-    Log("\nSaving statistics to files...");
-    singleTrader.WriteStatisticsToFile(AppSettings.LogsDir);
+    if (!singleTrader.OptimizationEnabled)
+    {
+        Log("\nSaving statistics to files...");
+        singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.InputsDir);
+    }
+    else
+    {
+        Log("\nSkipping full statistics write in optimization mode...");
+    }
 }
 
 sw.Stop();
