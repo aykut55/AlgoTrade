@@ -190,51 +190,6 @@ Log("\nCreating singleTrader...");
 
 var singleTrader = new SingleTrader(0, "singleTrader", data, indicators, null);
 
-// Assign runMode
-singleTrader.RunMode = selectedRunMode;
-
-if (singleTrader.RunMode == TraderRunMode.TradeOnly || singleTrader.RunMode == TraderRunMode.TradeAndQuery)
-{
-    singleTrader.SetStrategy(strategy);
-    Log($"Strategy configured: {strategyName}");
-}
-
-if (singleTrader.RunMode == TraderRunMode.TradeAndQuery || singleTrader.RunMode == TraderRunMode.QueryOnly)
-{
-    if (query is not null)
-    {
-        singleTrader.SetQuery(query);
-        Log($"Query configured: {queryName}");
-    }
-}
-
-// Reset
-singleTrader.Reset();
-
-// Set attributes
-singleTrader.SymbolName   = symbolName;
-singleTrader.SymbolPeriod = symbolPeriod;
-singleTrader.StrategyName = strategyName;
-singleTrader.QueryName    = queryEnabled ? queryName : "...";
-singleTrader.LastExecutionTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-singleTrader.LastExecutionTimeStart = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-
-// Configure position sizing
-singleTrader.initialTradeParams!.Reset()
-    .SetBakiyeParams(ilkBakiye: ilkBakiye)
-    .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
-    .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
-    .SetKaymaParams(kaymaMiktari: kaymaMiktari);
-
-// Apply user flags
-OnApplyUserFlags(singleTrader);
-
-// Apply user flags 2
-OnApplyUserFlags2(singleTrader);
-
-// Configure equity curve filter
-SetSingleTraderConfigureEquityCurveFilter(singleTrader);
-
 // =============================================================================
 // 6b. Callbacks
 // =============================================================================
@@ -289,6 +244,51 @@ singleTrader.ClearCallbacks()
         onAfterOrders: onAfterOrders,
         onProgress: onProgress
     );
+
+// Reset
+singleTrader.Reset();
+
+// Set attributes
+singleTrader.SymbolName   = symbolName;
+singleTrader.SymbolPeriod = symbolPeriod;
+singleTrader.StrategyName = strategyName;
+singleTrader.QueryName    = queryEnabled ? queryName : "...";
+singleTrader.LastExecutionTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+singleTrader.LastExecutionTimeStart = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+// Configure position sizing
+singleTrader.initialTradeParams!.Reset()
+    .SetBakiyeParams(ilkBakiye: ilkBakiye)
+    .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
+    .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
+    .SetKaymaParams(kaymaMiktari: kaymaMiktari);
+
+// Apply user flags
+OnApplyUserFlags(singleTrader);
+
+// Apply user flags 2
+OnApplyUserFlags2(singleTrader);
+
+// Configure equity curve filter
+SetSingleTraderConfigureEquityCurveFilter(singleTrader);
+
+// Assign runMode
+singleTrader.RunMode = selectedRunMode;
+
+if (singleTrader.RunMode == TraderRunMode.TradeOnly || singleTrader.RunMode == TraderRunMode.TradeAndQuery)
+{
+    singleTrader.SetStrategy(strategy);
+    Log($"Strategy configured: {strategyName}");
+}
+
+if (singleTrader.RunMode == TraderRunMode.TradeAndQuery || singleTrader.RunMode == TraderRunMode.QueryOnly)
+{
+    if (query is not null)
+    {
+        singleTrader.SetQuery(query);
+        Log($"Query configured: {queryName}");
+    }
+}
 
 // Init
 singleTrader.Init();

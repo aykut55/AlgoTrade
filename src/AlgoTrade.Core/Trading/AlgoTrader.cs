@@ -161,15 +161,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         {
             // mainTrader icin (MultiTrader için anlamlı)
 
-            trader.signals.AlEnabled = true;
-            trader.signals.SatEnabled = true;
-            trader.signals.FlatOlEnabled = true;
-            trader.signals.PasGecEnabled = false;
-            trader.signals.KarAlEnabled = false;
-            trader.signals.ZararKesEnabled = false;
-            trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled = false;               // DEFAULT = False, Ek maliyet getirir : 
-            trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+            trader.signals.AlEnabled                   = true;
+            trader.signals.SatEnabled                  = true;
+            trader.signals.FlatOlEnabled               = true;
+            trader.signals.PasGecEnabled               = true;
+            trader.signals.KarAlEnabled                = true;
+            trader.signals.ZararKesEnabled             = true;
+            trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
             trader.StartDateTimeStr = dateTimes[0];
@@ -187,15 +187,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         {
             // 0 id'li trader icin (SingleTrader için bu default'dur)
 
-            trader.signals.AlEnabled = true;
-            trader.signals.SatEnabled = true;
-            trader.signals.FlatOlEnabled = true;
-            trader.signals.PasGecEnabled = true;
-            trader.signals.KarAlEnabled = true;
-            trader.signals.ZararKesEnabled = true;
-            trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled = false;               // DEFAULT = False, Ek maliyet getirir : 
-            trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+            trader.signals.AlEnabled                   = true;
+            trader.signals.SatEnabled                  = true;
+            trader.signals.FlatOlEnabled               = true;
+            trader.signals.PasGecEnabled               = true;
+            trader.signals.KarAlEnabled                = true;
+            trader.signals.ZararKesEnabled             = true;
+            trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
             trader.StartDateTimeStr = dateTimes[0];
@@ -213,15 +213,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         {
             // 1 id'li trader icin
 
-            trader.signals.AlEnabled = true;
-            trader.signals.SatEnabled = true;
-            trader.signals.FlatOlEnabled = true;
-            trader.signals.PasGecEnabled = false;
-            trader.signals.KarAlEnabled = false;
-            trader.signals.ZararKesEnabled = false;
-            trader.signals.GunSonuPozKapatEnabled = false;            // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled = false;               // DEFAULT = False, Ek maliyet getirir : 
-            trader.signals.EquityCurveFilteringEnabled = false;       // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+            trader.signals.AlEnabled                   = true;
+            trader.signals.SatEnabled                  = true;
+            trader.signals.FlatOlEnabled               = true;
+            trader.signals.PasGecEnabled               = true;
+            trader.signals.KarAlEnabled                = true;
+            trader.signals.ZararKesEnabled             = true;
+            trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
             trader.StartDateTimeStr = dateTimes[0];
@@ -797,6 +797,35 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.ClearCallbacks()
                         .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
 
+            // Reset
+            singleTrader.Reset();
+
+            // Set attributes
+            singleTrader.SymbolName             = this.SymbolName;
+            singleTrader.SymbolPeriod           = this.SymbolPeriod;
+            singleTrader.SystemId               = this.SystemId;
+            singleTrader.SystemName             = this.SystemName;
+            singleTrader.StrategyId             = this.StrategyId;
+            singleTrader.StrategyName           = this.StrategyName;
+            singleTrader.QueryId                = this.QueryId;
+            singleTrader.QueryName              = this.QueryName;
+            singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            
+            // Configure position sizing
+            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            // Sıralama Onemli
+            // Apply user flags
+            OnApplyUserFlags(singleTrader);
+
+            // Apply user flags (2)
+            OnApplyUserFlags2(singleTrader);
+
+            // Configure equity curve filter
+            SetSingleTraderConfigureEquityCurveFilter(singleTrader);
+
             // Assign runMode
             singleTrader.RunMode = SingleTraderRunMode;
             if (singleTrader.RunMode == TraderRunMode.TradeOnly)
@@ -827,35 +856,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                     Log($"\nQuery configured: {_currentQueryName}");
                 }
             }
-
-            // Reset
-            singleTrader.Reset();
-
-            // Set attributes
-            singleTrader.SymbolName             = this.SymbolName;
-            singleTrader.SymbolPeriod           = this.SymbolPeriod;
-            singleTrader.SystemId               = this.SystemId;
-            singleTrader.SystemName             = this.SystemName;
-            singleTrader.StrategyId             = this.StrategyId;
-            singleTrader.StrategyName           = this.StrategyName;
-            singleTrader.QueryId                = this.QueryId;
-            singleTrader.QueryName              = this.QueryName;
-            singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-            singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-            
-            // Configure position sizing
-            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-            // Sıralama Onemli
-            // Apply user flags
-            OnApplyUserFlags(singleTrader);
-
-            // Apply user flags (2)
-            OnApplyUserFlags2(singleTrader);
-
-            // Configure equity curve filter
-            SetSingleTraderConfigureEquityCurveFilter(singleTrader);
 
             // Init
             singleTrader.Init();
