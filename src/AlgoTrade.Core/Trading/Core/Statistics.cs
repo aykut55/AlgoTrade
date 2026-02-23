@@ -1465,6 +1465,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double SonBarYuksekFiyati;
             public double SonBarDusukFiyati;
             public double SonBarKapanisFiyati;
+            public double SecilenBarAcilisFiyati;
+            public double SecilenBarYuksekFiyati;
+            public double SecilenBarDusukFiyati;
+            public double SecilenBarKapanisFiyati;
 
             // --- Time Statistics ---
             public double ToplamGecenSureAy;
@@ -1492,6 +1496,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double GetiriPuanNet;
             public double GetiriFiyatYuzdeNet;
             public double GetiriPuanYuzdeNet;
+            public int GetiriFiyatTipi;
             //public double GetiriKz;  // Silinecek
             //public double GetiriKzNet;  // Silinecek
             //public double GetiriKzSistem;  // Silinecek
@@ -1510,6 +1515,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double MaxBakiyePuanYuzde;
             public int MinBakiyeFiyatIndex;
             public int MaxBakiyeFiyatIndex;
+            public int MinBakiyePuanIndex;
+            public int MaxBakiyePuanIndex;
             public double MinBakiyeFiyatNet;
             public double MaxBakiyeFiyatNet;
             public int MinBakiyeFiyatNetIndex;
@@ -1568,6 +1575,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double MaxZararFiyatNet;
             public double MaxKarPuan;
             public double MaxZararPuan;
+            public int MaxZararFiyatIndex;
+            public int MaxKarFiyatIndex;
+            public int MaxZararPuanIndex;
+            public int MaxKarPuanIndex;
             public int KardaBarSayisi;
             public int ZarardaBarSayisi;
             public double KarliIslemOrani;
@@ -1576,6 +1587,12 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double GetiriMaxDD;
             public string GetiriMaxDDTarih;
             public double GetiriMaxKayip;
+            public double GetiriMaxDDPuan;
+            public string GetiriMaxDDPuanTarih;
+            public double GetiriMaxKayipPuan;
+            public double GetiriMaxDDNet;
+            public string GetiriMaxDDNetTarih;
+            public double GetiriMaxKayipNet;
             public double ProfitFactor;
             public double ProfitFactorPuan;
             public double ProfitFactorNet;
@@ -1594,6 +1611,17 @@ namespace AlgoTrade.Core.Trading.Statistics
             public int SonBarNo;
             public int SonABarNo;
             public int SonSBarNo;
+            public int SonFBarNo;
+            public int SonPBarNo;
+            public int PrevBarNo;
+            public int PrevABarNo;
+            public int PrevSBarNo;
+            public int PrevFBarNo;
+            public int PrevPBarNo;
+            public double PrevAFiyat;
+            public double PrevSFiyat;
+            public double PrevFFiyat;
+            public double PrevPFiyat;
             public string EmirKomut;
             public string EmirStatus;
 
@@ -1605,6 +1633,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double VarlikAdedSayisiMicro;
             public double SonVarlikAdedSayisi;
             public double SonVarlikAdedSayisiMicro;
+            public double PrevVarlikAdedSayisiMicro;
             public double KaymaMiktari;
             public bool KaymayiDahilEt;
 
@@ -1617,30 +1646,78 @@ namespace AlgoTrade.Core.Trading.Statistics
             // --- Periodic Returns ---
             public double GetiriPuanBuAy;
             public double GetiriPuanAy1;
+            public double GetiriPuanAy2;
+            public double GetiriPuanAy3;
+            public double GetiriPuanAy4;
+            public double GetiriPuanAy5;
             public double GetiriPuanBuHafta;
             public double GetiriPuanHafta1;
+            public double GetiriPuanHafta2;
+            public double GetiriPuanHafta3;
+            public double GetiriPuanHafta4;
+            public double GetiriPuanHafta5;
             public double GetiriPuanBuGun;
             public double GetiriPuanGun1;
+            public double GetiriPuanGun2;
+            public double GetiriPuanGun3;
+            public double GetiriPuanGun4;
+            public double GetiriPuanGun5;
             public double GetiriPuanBuSaat;
             public double GetiriPuanSaat1;
+            public double GetiriPuanSaat2;
+            public double GetiriPuanSaat3;
+            public double GetiriPuanSaat4;
+            public double GetiriPuanSaat5;
 
             public double GetiriFiyatBuAy;
             public double GetiriFiyatAy1;
+            public double GetiriFiyatAy2;
+            public double GetiriFiyatAy3;
+            public double GetiriFiyatAy4;
+            public double GetiriFiyatAy5;
             public double GetiriFiyatBuHafta;
             public double GetiriFiyatHafta1;
+            public double GetiriFiyatHafta2;
+            public double GetiriFiyatHafta3;
+            public double GetiriFiyatHafta4;
+            public double GetiriFiyatHafta5;
             public double GetiriFiyatBuGun;
             public double GetiriFiyatGun1;
+            public double GetiriFiyatGun2;
+            public double GetiriFiyatGun3;
+            public double GetiriFiyatGun4;
+            public double GetiriFiyatGun5;
             public double GetiriFiyatBuSaat;
             public double GetiriFiyatSaat1;
+            public double GetiriFiyatSaat2;
+            public double GetiriFiyatSaat3;
+            public double GetiriFiyatSaat4;
+            public double GetiriFiyatSaat5;
 
             public double GetiriFiyatNetBuAy;
             public double GetiriFiyatNetAy1;
+            public double GetiriFiyatNetAy2;
+            public double GetiriFiyatNetAy3;
+            public double GetiriFiyatNetAy4;
+            public double GetiriFiyatNetAy5;
             public double GetiriFiyatNetBuHafta;
             public double GetiriFiyatNetHafta1;
+            public double GetiriFiyatNetHafta2;
+            public double GetiriFiyatNetHafta3;
+            public double GetiriFiyatNetHafta4;
+            public double GetiriFiyatNetHafta5;
             public double GetiriFiyatNetBuGun;
             public double GetiriFiyatNetGun1;
+            public double GetiriFiyatNetGun2;
+            public double GetiriFiyatNetGun3;
+            public double GetiriFiyatNetGun4;
+            public double GetiriFiyatNetGun5;
             public double GetiriFiyatNetBuSaat;
             public double GetiriFiyatNetSaat1;
+            public double GetiriFiyatNetSaat2;
+            public double GetiriFiyatNetSaat3;
+            public double GetiriFiyatNetSaat4;
+            public double GetiriFiyatNetSaat5;
 
             /// <summary>
             /// Get CSV header (semicolon separated) - comprehensive version
@@ -1828,6 +1905,10 @@ namespace AlgoTrade.Core.Trading.Statistics
                 SonBarYuksekFiyati = SonBarYuksekFiyati,
                 SonBarDusukFiyati = SonBarDusukFiyati,
                 SonBarKapanisFiyati = SonBarKapanisFiyati,
+                SecilenBarAcilisFiyati = SecilenBarAcilisFiyati,
+                SecilenBarYuksekFiyati = SecilenBarYuksekFiyati,
+                SecilenBarDusukFiyati = SecilenBarDusukFiyati,
+                SecilenBarKapanisFiyati = SecilenBarKapanisFiyati,
 
                 // --- Time Statistics ---
                 ToplamGecenSureAy = ToplamGecenSureAy,
@@ -1855,6 +1936,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                 GetiriPuanNet = GetiriPuanNet,
                 GetiriFiyatYuzdeNet = GetiriFiyatYuzdeNet,
                 GetiriPuanYuzdeNet = GetiriPuanYuzdeNet,
+                GetiriFiyatTipi = GetiriFiyatTipi,
                 //GetiriKz = GetiriKz,  // Silinecek
                 //GetiriKzNet = GetiriKzNet,  // Silinecek
                 //GetiriKzSistem = GetiriKzSistem,  // Silinecek
@@ -1873,6 +1955,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                 MaxBakiyePuanYuzde = MaxBakiyePuanYuzde,
                 MinBakiyeFiyatIndex = MinBakiyeFiyatIndex,
                 MaxBakiyeFiyatIndex = MaxBakiyeFiyatIndex,
+                MinBakiyePuanIndex = MinBakiyePuanIndex,
+                MaxBakiyePuanIndex = MaxBakiyePuanIndex,
                 MinBakiyeFiyatNet = MinBakiyeFiyatNet,
                 MaxBakiyeFiyatNet = MaxBakiyeFiyatNet,
                 MinBakiyeFiyatNetIndex = MinBakiyeFiyatNetIndex,
@@ -1931,6 +2015,10 @@ namespace AlgoTrade.Core.Trading.Statistics
                 MaxZararFiyatNet = MaxZararFiyatNet,
                 MaxKarPuan = MaxKarPuan,
                 MaxZararPuan = MaxZararPuan,
+                MaxZararFiyatIndex = MaxZararFiyatIndex,
+                MaxKarFiyatIndex = MaxKarFiyatIndex,
+                MaxZararPuanIndex = MaxZararPuanIndex,
+                MaxKarPuanIndex = MaxKarPuanIndex,
                 KardaBarSayisi = KardaBarSayisi,
                 ZarardaBarSayisi = ZarardaBarSayisi,
                 KarliIslemOrani = KarliIslemOrani,
@@ -1939,6 +2027,12 @@ namespace AlgoTrade.Core.Trading.Statistics
                 GetiriMaxDD = GetiriMaxDD,
                 GetiriMaxDDTarih = GetiriMaxDDTarih ?? "...",
                 GetiriMaxKayip = GetiriMaxKayip,
+                GetiriMaxDDPuan = GetiriMaxDDPuan,
+                GetiriMaxDDPuanTarih = GetiriMaxDDPuanTarih ?? "...",
+                GetiriMaxKayipPuan = GetiriMaxKayipPuan,
+                GetiriMaxDDNet = GetiriMaxDDNet,
+                GetiriMaxDDNetTarih = GetiriMaxDDNetTarih ?? "...",
+                GetiriMaxKayipNet = GetiriMaxKayipNet,
                 ProfitFactor = ProfitFactor,
                 ProfitFactorPuan = ProfitFactorPuan,
                 ProfitFactorNet = ProfitFactorNet,
@@ -1957,6 +2051,17 @@ namespace AlgoTrade.Core.Trading.Statistics
                 SonBarNo = SonBarNo,
                 SonABarNo = SonABarNo,
                 SonSBarNo = SonSBarNo,
+                SonFBarNo = SonFBarNo,
+                SonPBarNo = SonPBarNo,
+                PrevBarNo = PrevBarNo,
+                PrevABarNo = PrevABarNo,
+                PrevSBarNo = PrevSBarNo,
+                PrevFBarNo = PrevFBarNo,
+                PrevPBarNo = PrevPBarNo,
+                PrevAFiyat = PrevAFiyat,
+                PrevSFiyat = PrevSFiyat,
+                PrevFFiyat = PrevFFiyat,
+                PrevPFiyat = PrevPFiyat,
                 EmirKomut = EmirKomut.ToString(),
                 EmirStatus = EmirStatus.ToString(),
 
@@ -1968,6 +2073,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                 VarlikAdedSayisiMicro = VarlikAdedSayisiMicro,
                 SonVarlikAdedSayisi = SonVarlikAdedSayisi,
                 SonVarlikAdedSayisiMicro = SonVarlikAdedSayisiMicro,
+                PrevVarlikAdedSayisiMicro = PrevVarlikAdedSayisiMicro,
                 KaymaMiktari = KaymaMiktari,
                 KaymayiDahilEt = KaymayiDahilEt,
 
@@ -1980,30 +2086,78 @@ namespace AlgoTrade.Core.Trading.Statistics
                 // --- Periodic Returns ---
                 GetiriPuanBuAy = GetiriPuanBuAy,
                 GetiriPuanAy1 = GetiriPuanAy1,
+                GetiriPuanAy2 = GetiriPuanAy2,
+                GetiriPuanAy3 = GetiriPuanAy3,
+                GetiriPuanAy4 = GetiriPuanAy4,
+                GetiriPuanAy5 = GetiriPuanAy5,
                 GetiriPuanBuHafta = GetiriPuanBuHafta,
                 GetiriPuanHafta1 = GetiriPuanHafta1,
+                GetiriPuanHafta2 = GetiriPuanHafta2,
+                GetiriPuanHafta3 = GetiriPuanHafta3,
+                GetiriPuanHafta4 = GetiriPuanHafta4,
+                GetiriPuanHafta5 = GetiriPuanHafta5,
                 GetiriPuanBuGun = GetiriPuanBuGun,
                 GetiriPuanGun1 = GetiriPuanGun1,
+                GetiriPuanGun2 = GetiriPuanGun2,
+                GetiriPuanGun3 = GetiriPuanGun3,
+                GetiriPuanGun4 = GetiriPuanGun4,
+                GetiriPuanGun5 = GetiriPuanGun5,
                 GetiriPuanBuSaat = GetiriPuanBuSaat,
                 GetiriPuanSaat1 = GetiriPuanSaat1,
+                GetiriPuanSaat2 = GetiriPuanSaat2,
+                GetiriPuanSaat3 = GetiriPuanSaat3,
+                GetiriPuanSaat4 = GetiriPuanSaat4,
+                GetiriPuanSaat5 = GetiriPuanSaat5,
 
                 GetiriFiyatBuAy = GetiriFiyatBuAy,
                 GetiriFiyatAy1 = GetiriFiyatAy1,
+                GetiriFiyatAy2 = GetiriFiyatAy2,
+                GetiriFiyatAy3 = GetiriFiyatAy3,
+                GetiriFiyatAy4 = GetiriFiyatAy4,
+                GetiriFiyatAy5 = GetiriFiyatAy5,
                 GetiriFiyatBuHafta = GetiriFiyatBuHafta,
                 GetiriFiyatHafta1 = GetiriFiyatHafta1,
+                GetiriFiyatHafta2 = GetiriFiyatHafta2,
+                GetiriFiyatHafta3 = GetiriFiyatHafta3,
+                GetiriFiyatHafta4 = GetiriFiyatHafta4,
+                GetiriFiyatHafta5 = GetiriFiyatHafta5,
                 GetiriFiyatBuGun = GetiriFiyatBuGun,
                 GetiriFiyatGun1 = GetiriFiyatGun1,
+                GetiriFiyatGun2 = GetiriFiyatGun2,
+                GetiriFiyatGun3 = GetiriFiyatGun3,
+                GetiriFiyatGun4 = GetiriFiyatGun4,
+                GetiriFiyatGun5 = GetiriFiyatGun5,
                 GetiriFiyatBuSaat = GetiriFiyatBuSaat,
                 GetiriFiyatSaat1 = GetiriFiyatSaat1,
+                GetiriFiyatSaat2 = GetiriFiyatSaat2,
+                GetiriFiyatSaat3 = GetiriFiyatSaat3,
+                GetiriFiyatSaat4 = GetiriFiyatSaat4,
+                GetiriFiyatSaat5 = GetiriFiyatSaat5,
 
                 GetiriFiyatNetBuAy = GetiriFiyatNetBuAy,
                 GetiriFiyatNetAy1 = GetiriFiyatNetAy1,
+                GetiriFiyatNetAy2 = GetiriFiyatNetAy2,
+                GetiriFiyatNetAy3 = GetiriFiyatNetAy3,
+                GetiriFiyatNetAy4 = GetiriFiyatNetAy4,
+                GetiriFiyatNetAy5 = GetiriFiyatNetAy5,
                 GetiriFiyatNetBuHafta = GetiriFiyatNetBuHafta,
                 GetiriFiyatNetHafta1 = GetiriFiyatNetHafta1,
+                GetiriFiyatNetHafta2 = GetiriFiyatNetHafta2,
+                GetiriFiyatNetHafta3 = GetiriFiyatNetHafta3,
+                GetiriFiyatNetHafta4 = GetiriFiyatNetHafta4,
+                GetiriFiyatNetHafta5 = GetiriFiyatNetHafta5,
                 GetiriFiyatNetBuGun = GetiriFiyatNetBuGun,
                 GetiriFiyatNetGun1 = GetiriFiyatNetGun1,
+                GetiriFiyatNetGun2 = GetiriFiyatNetGun2,
+                GetiriFiyatNetGun3 = GetiriFiyatNetGun3,
+                GetiriFiyatNetGun4 = GetiriFiyatNetGun4,
+                GetiriFiyatNetGun5 = GetiriFiyatNetGun5,
                 GetiriFiyatNetBuSaat = GetiriFiyatNetBuSaat,
-                GetiriFiyatNetSaat1 = GetiriFiyatNetSaat1
+                GetiriFiyatNetSaat1 = GetiriFiyatNetSaat1,
+                GetiriFiyatNetSaat2 = GetiriFiyatNetSaat2,
+                GetiriFiyatNetSaat3 = GetiriFiyatNetSaat3,
+                GetiriFiyatNetSaat4 = GetiriFiyatNetSaat4,
+                GetiriFiyatNetSaat5 = GetiriFiyatNetSaat5
             };
         }
 
