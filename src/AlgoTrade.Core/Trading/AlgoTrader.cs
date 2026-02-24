@@ -1603,9 +1603,57 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     /// <summary>
     /// Python ortamını yapılandırır. PlotXxx metodlarından önce çağrılmalı.
     /// </summary>
-    public void SetupPython()
+    public bool SetupPython(bool runHello = true)
     {
-        PythonDll = @"C:\Python313\python313.dll";
+        try
+        {
+            var envDll = Environment.GetEnvironmentVariable("PYTHONNET_PYDLL");
+            if (!string.IsNullOrWhiteSpace(envDll) && File.Exists(envDll))
+            {
+                PythonDll = envDll;
+                Log($"PYTHONNET_PYDLL bulundu: {PythonDll}");
+            }
+            else
+            {
+                string[] preferredDlls =
+                {
+                    // Python 3.12 (tercih edilen)
+                    @"C:\Program Files\Python312\python312.dll",
+                    @"C:\Python312\python312.dll",
+                    $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python312\python312.dll"
+                };
+
+                var found = preferredDlls.FirstOrDefault(File.Exists);
+                PythonDll = found ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(PythonDll))
+            {
+                Log("Python DLL bulunamadı. PYTHONNET_PYDLL ayarlayın veya Python 3.12 kurun.");
+                return false;
+            }
+
+            _pythonPlotter ??= new PythonPlotter();
+
+            if (!string.IsNullOrEmpty(PythonDll))
+                _pythonPlotter.PythonDll = PythonDll;
+
+            if (!_pythonPlotter.IsInitialized)
+                _pythonPlotter.Initialize();
+
+            Log($"Python DLL seçildi: {PythonDll}");
+
+            // Basit doğrulama: main.py -> hello()
+            if (runHello)
+                _pythonPlotter.RunHello();
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log($"SetupPython error: {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>
@@ -1629,18 +1677,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             _pythonPlotter.Initialize();
 
         await Task.Run(() => _pythonPlotter.PlotSingleTraderData(singleTrader));
-    }
-
-    /// <summary>
-    /// AlgoTrader'ın kendi SingleTrader'ını görselleştirir.
-    /// RunSingleTraderWithProgressAsync() sonrası çağrılmalı.
-    /// </summary>
-    public async Task PlotSingleTraderData()
-    {
-        if (singleTrader == null)
-            throw new InvalidOperationException(
-                "SingleTrader henüz oluşturulmadı. RunSingleTraderWithProgressAsync() sonrası çağrın.");
-        await PlotSingleTraderData(singleTrader);
     }
 
     public void Dispose()

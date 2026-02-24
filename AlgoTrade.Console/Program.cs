@@ -755,6 +755,9 @@ void readStockData()
 
                 stockDataReader.ReStartTimer();
 
+                mode = StockDataReader.FilterMode.LastN;    // Silinecek- sadece test amacli
+                n1 = 100000;                                // Silinecek- sadece test amacli
+
                 if (mode == StockDataReader.FilterMode.All)
                 {
                     stockDataReader.ReadDataFast(filePath);
@@ -927,9 +930,14 @@ async Task runSingleTraderAlgoTrade()
 
         await algoTrader.RunSingleTraderWithProgressAsync();
 
-        algoTrader.SetupPython();
-
-        await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
+        if (algoTrader.SetupPython())
+        {
+            await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
+        }
+        else
+        {
+            LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+        }
     }
     catch (Exception ex)
     {
