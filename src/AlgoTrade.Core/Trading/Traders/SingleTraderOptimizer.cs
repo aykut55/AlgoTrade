@@ -94,8 +94,8 @@ public class SingleTraderOptimizer : IDisposable
     private LogManager? Logger { get; set; }
 
     // Progress callbacks
-    public event Action<int, int>? OnOptimizationProgress;         // (currentCombination, totalCombinations)
-    public Action<int, int>? OnSingleTraderProgressCallback { get; set; } // (currentBar, totalBars)
+    public event Action<SingleTraderOptimizer, int, int, double>? OnOptimizationProgress;  // (this, currentCombination, totalCombinations, percentage)
+    public Action<SingleTrader, int, int, double>? OnSingleTraderProgressCallback { get; set; } // (trader, currentBar, totalBars, percentage)
     public event Action<SingleTraderOptimizer, SingleTrader, int>? OnReadOptimizationResultsFile;  // (this, singleTrader, currentCombination)
 
     // State flags
@@ -247,7 +247,10 @@ public class SingleTraderOptimizer : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
 
             if (i % 1000 == 0)
-                OnSingleTraderProgressCallback?.Invoke(i, totalBars);
+            {
+                double barPct = totalBars > 0 ? (double)i / totalBars * 100.0 : 0.0;
+                OnSingleTraderProgressCallback?.Invoke(singleTrader, i, totalBars, barPct);
+            }
 
             if (IsStopRequested)
                 break;
@@ -284,11 +287,13 @@ public class SingleTraderOptimizer : IDisposable
         int effectiveFrom = OptimizationFrom == -1 ? 1 : OptimizationFrom;
         int effectiveTo = OptimizationTo == -1 ? totalCombinations : OptimizationTo;
 
+        LogManager.LogRaw("");
         LogManager.LogRaw($"Starting optimization: {totalCombinations} combinations total, running [{effectiveFrom}-{effectiveTo}]");
         foreach (var range in ParameterRanges)
         {
             LogManager.LogRaw($"  - {range.Name}: {range.Min} to {range.Max} (step: {range.Step})");
         }
+        LogManager.LogRaw("");
 
         // Her kombinasyon icin
         foreach (var paramCombo in AllCombinations)
@@ -315,10 +320,11 @@ public class SingleTraderOptimizer : IDisposable
             LogManager.LogRaw($"");
 
             // Progress raporla
-            OnOptimizationProgress?.Invoke(currentCombination, totalCombinations);
+            double combPct = totalCombinations > 0 ? (double)currentCombination / totalCombinations * 100.0 : 0.0;
+            OnOptimizationProgress?.Invoke(this, currentCombination, totalCombinations, combPct);
 
             string paramsStr = string.Join(", ", paramCombo.Select(kvp => $"{kvp.Key}={kvp.Value}"));
-            LogManager.LogRaw($"  [{currentCombination}/{totalCombinations}] {paramsStr}");
+            //LogManager.LogRaw($"  [{currentCombination}/{totalCombinations}] {paramsStr}");
 
             // Create strategy
             var strategy = StrategyFactoryMethod!(this.Data, Indicators, paramCombo);
@@ -356,7 +362,7 @@ public class SingleTraderOptimizer : IDisposable
 
             Results.Add(optResult);
 
-            LogManager.LogRaw($"  → NetProfit: {optResult.NetProfit}, WinRate: {optResult.WinRate}%, PF: {optResult.ProfitFactor}, PFNet: {optResult.ProfitFactorNet}");
+            //LogManager.LogRaw($"  → NetProfit: {optResult.NetProfit}, WinRate: {optResult.WinRate}%, PF: {optResult.ProfitFactor}, PFNet: {optResult.ProfitFactorNet}");
 
             // Append to files
             AppendSingleOptSummaryToFiles(optResult, currentCombination);
@@ -640,7 +646,7 @@ public class SingleTraderOptimizer : IDisposable
             _cachedOptResults.Add((combNo, result));
         }
 
-        LogManager.LogRaw($"  [Sorted] {_cachedOptResults.Count} sonuç dosyadan yüklendi ({CsvFilePath})");
+        //LogManager.LogRaw($"  [Sorted] {_cachedOptResults.Count} sonuç dosyadan yüklendi ({CsvFilePath})");
     }
 
     /// <summary>
@@ -786,7 +792,7 @@ public class SingleTraderOptimizer : IDisposable
     private void OnSingleTraderAfterOrder(SingleTrader trader, int barIndex) { }
     private void OnSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars, double percentage)
     {
-        OnSingleTraderProgressCallback?.Invoke(currentBar, totalBars);
+        OnSingleTraderProgressCallback?.Invoke(trader, currentBar, totalBars, percentage);
     }
 
     private void OnApplyUserFlags(SingleTrader trader)

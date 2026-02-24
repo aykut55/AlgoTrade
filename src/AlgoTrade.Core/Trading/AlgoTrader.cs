@@ -1351,48 +1351,48 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
 
     public event Action<int, int, double>? OnTraderProgress;
-    private void OnOptimizationProgress(int current, int total)
+    private void OnOptimizationProgress(SingleTraderOptimizer singleTraderOptimizer, int current, int total, double percentage)
     {
-        double pct = (double)current / total * 100.0;
-        OnTraderProgress?.Invoke(current, total, pct);
+        /*if (_logger == null) return;
 
-        /*
-                             var elapsed = System.DateTime.Now - startTime;
-                            var percentComplete = (double)currentCombination / totalCombinations * 100.0;
+        var consoleLogger = LogManager.GetConsoleLogger();
 
-                            // Estimated time remaining
-                            var estimatedTotal = elapsed.TotalSeconds / percentComplete * 100.0;
-                            var estimatedRemaining = TimeSpan.FromSeconds(estimatedTotal - elapsed.TotalSeconds);
-
-                            var progressInfo = new BacktestProgressInfo
-                            {
-                                CurrentBar = currentCombination,
-                                TotalBars = totalCombinations,
-                                PercentComplete = percentComplete,
-                                StatusMessage = $"Testing combination {currentCombination}/{totalCombinations}",
-                                ElapsedTime = elapsed,
-                                EstimatedTimeRemaining = estimatedRemaining
-                            };
-         */
+        if (current >= total)
+        {
+            consoleLogger.Write($"\r\tProgress         : {current}/{total} ({percentage:F1}%)");
+            consoleLogger.WriteLine("");
+        }
+        else
+        {
+            consoleLogger.Write($"\r\tProgress         : {current}/{total} ({percentage:F1}%)");
+        }*/
     }
 
-    private void OnSingleTraderProgressCallback(int current, int total)
+    private void OnOptimizationSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars, double percentage)
     {
-        double pct = (double)current / total * 100.0;
-        OnTraderProgress?.Invoke(current, total, pct);
-        /*
-                var percentComplete = (double)currentBar / totalBarsInner * 100.0;
+        //double pct = (double)current / total * 100.0;
+        //OnTraderProgress?.Invoke(current, total, pct);
 
-                var progressInfo = new BacktestProgressInfo
-                {
-                    CurrentBar = currentBar,
-                    TotalBars = totalBarsInner,
-                    PercentComplete = percentComplete,
-                    StatusMessage = $"Processing bar {currentBar}/{totalBarsInner}",
-                    ElapsedTime = TimeSpan.Zero,
-                    EstimatedTimeRemaining = TimeSpan.Zero
-                };
-        */
+        if (_logger == null) return;
+
+        /*
+         * Cok yavasladigi icin kapatildi
+
+
+         * 
+         */
+
+        var consoleLogger = LogManager.GetConsoleLogger();
+
+        if (currentBar >= totalBars)
+        {
+            consoleLogger.Write($"\r\tProgress         : {currentBar}/{totalBars} ({percentage:F1}%)");
+            consoleLogger.WriteLine("");
+        }
+        else
+        {
+            consoleLogger.Write($"\r\tProgress         : {currentBar}/{totalBars} ({percentage:F1}%)");
+        }
     }
     public async Task RunSingleTraderOptWithProgressAsync(CancellationToken cancellationToken = default)
     {
@@ -1443,7 +1443,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Progress callback
             singleTraderOptimizer.OnOptimizationProgress += OnOptimizationProgress;                                     // singleTraderOptimizer.OnOptimizationProgress = (currentCombination, totalCombinations)
-            singleTraderOptimizer.OnSingleTraderProgressCallback += OnSingleTraderProgressCallback;                    // (currentBar, totalBarsInner)
+            singleTraderOptimizer.OnSingleTraderProgressCallback += OnOptimizationSingleTraderProgress;                 // (currentBar, totalBarsInner)
 
             // Reset
             singleTraderOptimizer.Reset();
@@ -1472,6 +1472,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Kombinasyonlari uret
             singleTraderOptimizer.GenerateParameterCombinations();
+            Log("");
             Log($"Total combinations: {singleTraderOptimizer.AllCombinations.Count}");
 
             // Strategy factory - stored config'den veya fallback
