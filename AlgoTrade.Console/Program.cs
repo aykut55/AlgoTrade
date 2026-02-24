@@ -926,6 +926,8 @@ async Task runSingleTraderAlgoTrade()
         LogManager.LogRaw(sb.ToString());
 
         await algoTrader.RunSingleTraderWithProgressAsync();
+
+        await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
     }
     catch (Exception ex)
     {

@@ -1,5 +1,6 @@
 using AlgoTrade.Core.DataProvider;
 using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.Python;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
 using AlgoTrade.Core.Trading.Indicators;
@@ -85,6 +86,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     // EquityCurveFilter list for MultipleTrader
     private readonly List<EquityCurveFilterConfigEntry> _equityCurveFilterConfigs = new();
     public IReadOnlyList<EquityCurveFilterConfigEntry> EquityCurveFilterConfigs => _equityCurveFilterConfigs;
+
+    // Python görselleştirme
+    private PythonPlotter? _pythonPlotter;
 
     #endregion
 
@@ -1585,6 +1589,43 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         MessageReceived?.Invoke(message);
     }
 
+    // ==========================================================================
+    // Python Görselleştirme
+    // ==========================================================================
+
+    /// <summary>
+    /// Verilen SingleTrader'ın koşum sonuçlarını Python/imgui_bundle ile görselleştirir.
+    /// Plot penceresi ayrı thread'de çalışır; pencere kapanana dek bekler.
+    /// </summary>
+    /// <param name="singleTrader">
+    /// Finalize() tamamlanmış SingleTrader instance'ı.
+    /// algoTrader.SingleTrader (nullable) doğrudan geçilebilir; null ise exception fırlatılır.
+    /// </param>
+    public async Task PlotSingleTraderData(SingleTrader? singleTrader)
+    {
+        if (singleTrader == null)
+            throw new ArgumentNullException(nameof(singleTrader),
+                "SingleTrader null. RunSingleTraderWithProgressAsync() başarıyla tamamlandı mı?");
+
+        _pythonPlotter ??= new PythonPlotter();
+        if (!_pythonPlotter.IsInitialized)
+            _pythonPlotter.Initialize();
+
+        await Task.Run(() => _pythonPlotter.PlotSingleTraderData(singleTrader));
+    }
+
+    /// <summary>
+    /// AlgoTrader'ın kendi SingleTrader'ını görselleştirir.
+    /// RunSingleTraderWithProgressAsync() sonrası çağrılmalı.
+    /// </summary>
+    public async Task PlotSingleTraderData()
+    {
+        if (singleTrader == null)
+            throw new InvalidOperationException(
+                "SingleTrader henüz oluşturulmadı. RunSingleTraderWithProgressAsync() sonrası çağrın.");
+        await PlotSingleTraderData(singleTrader);
+    }
+
     public void Dispose()
     {
         strategy?.Dispose();
@@ -1604,6 +1645,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
         indicators?.Dispose();
         indicators = null;
+
+        _pythonPlotter?.Dispose();
+        _pythonPlotter = null;
     }
 
 }
