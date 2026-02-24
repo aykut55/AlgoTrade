@@ -838,27 +838,40 @@ namespace AlgoTrade.Core.Trading.Statistics
 
         private (double profitFactorFiyat, double profitFactorPuan, double profitFactorNet) CalculateProfitFactors()
         {
-            double profitFactorFiyat = CalculateProfitFactor(ToplamKarFiyat, ToplamZararFiyat);
-            double profitFactorPuan = CalculateProfitFactor(ToplamKarPuan, ToplamZararPuan);
-
-            double toplamKarFiyatNet = 0.0;
+            double toplamKarFiyat      = 0.0;
+            double toplamZararFiyat    = 0.0;
+            double toplamKarPuan       = 0.0;
+            double toplamZararPuan     = 0.0;
+            double toplamKarFiyatNet   = 0.0;
             double toplamZararFiyatNet = 0.0;
-            int count = Math.Min(Trader.Data.Count, Math.Min(Trader.lists.KarZararFiyatList.Count, Trader.lists.KomisyonFiyatList.Count));
+
+            int count = Math.Min(
+                Math.Min(Trader.lists.BakiyeFiyatList.Count, Trader.lists.BakiyePuanList.Count),
+                Trader.lists.BakiyeFiyatNetList.Count
+            );
+
             for (int i = 1; i < count; i++)
             {
-                double komisyonDelta = Trader.lists.KomisyonFiyatList[i] - Trader.lists.KomisyonFiyatList[i - 1];
-                double karZararFiyatNet = Trader.lists.KarZararFiyatList[i] - komisyonDelta;
-                if (karZararFiyatNet >= 0)
-                {
-                    toplamKarFiyatNet += karZararFiyatNet;
-                }
-                else
-                {
-                    toplamZararFiyatNet += karZararFiyatNet;
-                }
+                // Brüt equity delta (komisyon yok): BakiyeFiyat = realized + unrealized
+                double deltaFiyat = Trader.lists.BakiyeFiyatList[i] - Trader.lists.BakiyeFiyatList[i - 1];
+                if (deltaFiyat >= 0) toplamKarFiyat   += deltaFiyat;
+                else                 toplamZararFiyat += deltaFiyat;
+
+                // Brüt puan delta
+                double deltaPuan = Trader.lists.BakiyePuanList[i] - Trader.lists.BakiyePuanList[i - 1];
+                if (deltaPuan >= 0) toplamKarPuan   += deltaPuan;
+                else                toplamZararPuan += deltaPuan;
+
+                // Net equity delta (komisyon dahil): BakiyeFiyatNet = BakiyeFiyat - kümülatif komisyon
+                double deltaFiyatNet = Trader.lists.BakiyeFiyatNetList[i] - Trader.lists.BakiyeFiyatNetList[i - 1];
+                if (deltaFiyatNet >= 0) toplamKarFiyatNet   += deltaFiyatNet;
+                else                    toplamZararFiyatNet += deltaFiyatNet;
             }
 
-            double profitFactorNet = CalculateProfitFactor(toplamKarFiyatNet, toplamZararFiyatNet);
+            double profitFactorFiyat = CalculateProfitFactor(toplamKarFiyat,    toplamZararFiyat);
+            double profitFactorPuan  = CalculateProfitFactor(toplamKarPuan,     toplamZararPuan);
+            double profitFactorNet   = CalculateProfitFactor(toplamKarFiyatNet, toplamZararFiyatNet);
+
             return (profitFactorFiyat, profitFactorPuan, profitFactorNet);
         }
 
