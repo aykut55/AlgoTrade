@@ -1,10 +1,11 @@
-﻿using System.Diagnostics;
-using System.Linq;
+﻿using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Trading.Core;
 using Newtonsoft.Json;
 using Python.Runtime;
-using AlgoTrade.Core.Trading;
-using AlgoTrade.Core.Trading.Core;
+using ScottPlot;
 using Serilog.Sinks.File;
+using System.Diagnostics;
+using System.Linq;
 
 namespace AlgoTrade.Core.Python;
 
@@ -371,33 +372,33 @@ public class PythonPlotter : IDisposable
             // inputs/python/main.py → print_data_info
             dynamic mainModule = Py.Import("main");
             mainModule.print_data_info(
-                pyDateTimes, pyDates, pyTimes, 
+                pyDateTimes, pyDates, pyTimes,
                 pyOpens, pyHighs, pyLows, pyCloses,
                 pyVolumes, pyLots,
                 pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyKomisyon, pyBakiyeNet, pyGetiriNet,
                 strategy_indicators: pyIndicators,
-                title:               title,
-                periyot:             periyot
+                title: title,
+                periyot: periyot
             );
 
-/*
-             // (AlgoTradeWithPaythonWithGemini/src sys.path'e Initialize() içinde eklendi)
-            dynamic plotModule = Py.Import("plotDataImgBundleNew");
- 
-            plotModule.plot_data_img_bundle_new(
-                pyDates, pyOpens, pyHighs, pyLows, pyCloses,
-                pyVolumes, pyLots,
-                pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyGetiriNet,
-                bakiye_fiyat_net_list:          null,
-                kar_zarar_fiyat_yuzde_list:     null,
-                getiri_fiyat_yuzde_list:        null,
-                komisyon_fiyat_list:            null,
-                getiri_fiyat_yuzde_net_list:    null,
-                strategy_indicators:            pyIndicators,
-                title:                          title,
-                periyot:                        periyot
-            );
-*/
+            /*
+                         // (AlgoTradeWithPaythonWithGemini/src sys.path'e Initialize() içinde eklendi)
+                        dynamic plotModule = Py.Import("plotDataImgBundleNew");
+
+                        plotModule.plot_data_img_bundle_new(
+                            pyDates, pyOpens, pyHighs, pyLows, pyCloses,
+                            pyVolumes, pyLots,
+                            pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyGetiriNet,
+                            bakiye_fiyat_net_list:          null,
+                            kar_zarar_fiyat_yuzde_list:     null,
+                            getiri_fiyat_yuzde_list:        null,
+                            komisyon_fiyat_list:            null,
+                            getiri_fiyat_yuzde_net_list:    null,
+                            strategy_indicators:            pyIndicators,
+                            title:                          title,
+                            periyot:                        periyot
+                        );
+            */
         }
     }
 
