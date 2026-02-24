@@ -263,6 +263,7 @@ public class MultipleTrader
 
     #region Finalize
 
+    #pragma warning disable CS0465
     public void Finalize()
     {
         CurrentIndex = 0;
@@ -276,6 +277,7 @@ public class MultipleTrader
 
         _mainTrader.CalculateStatistics();
     }
+    #pragma warning restore CS0465
 
     #endregion
 

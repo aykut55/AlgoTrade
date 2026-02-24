@@ -7,6 +7,7 @@ using AlgoTrade.Core.Trading.Queries;
 using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Strategy;
+using System.Text;
 using static Nessos.LinqOptimizer.Core.QueryExpr;
 
 namespace AlgoTrade.Core.Trading;
@@ -922,6 +923,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             singleTrader.Finalize();
 
+            // Pipe ile (default)
+            var header = singleTrader.GetStatisticsHeaderRow();
+            var data   = singleTrader.GetStatisticsDataRow();
+
+            // Noktalı virgülle (CSV için)
+            var csvHeader = singleTrader.GetStatisticsHeaderRow(";");
+            var csvData   = singleTrader.GetStatisticsDataRow(";");
+
             // Dosyaya yazma: stop edilmediyse,kullanıcı istiyorsa yaz
             if (!singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
             {
@@ -1142,8 +1151,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     public async Task RunMultipleTraderWithProgressAsync(CancellationToken cancellationToken = default)
     {
-        int childId = -1;
-
         int totalBars = 0;
 
         if (!IsInitialized) {

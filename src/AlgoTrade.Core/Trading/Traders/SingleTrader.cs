@@ -7,6 +7,8 @@ using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategy;
 // using AlgoTrade.Core.Trading.Core; // already included above
 using MathNet.Numerics.Statistics;
+using System.Globalization;
+using System.Text;
 using static AlgoTrade.Core.StockDataReader.StockDataReader;
 
 namespace AlgoTrade.Core.Trading;
@@ -518,6 +520,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         }
     }
 
+    #pragma warning disable CS0465
     public void Finalize()
     {
         if (!IsInitialized)
@@ -570,7 +573,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
         OnFinal?.Invoke(this, 1);
     }
-    
+    #pragma warning restore CS0465
+
     public SingleTrader CreateModules()
     {
         /*signals = new Signals();
@@ -2628,7 +2632,19 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (lotSayisi <= 0.0)
             lotSayisi = initialTradeParams?.HisseSayisi ?? 1.0;
     }
-    
+
+    public StringBuilder GetStatisticsHeaderRow(string separator = "|")
+    {
+        return new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+            .GetStatisticsHeaderRow(separator);
+    }
+
+    public StringBuilder GetStatisticsDataRow(string separator = "|")
+    {
+        return new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+            .GetStatisticsDataRow(separator);
+    }
+
     private void Log(string message)
     {
         if (_logger == null) return;

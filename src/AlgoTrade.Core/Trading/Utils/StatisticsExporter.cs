@@ -660,6 +660,46 @@ public class StatisticsExporter
         AppendAllTextShared(filePath, string.Join(" | ", fullMap.Values.Select(v => v.PadLeft(15))) + Environment.NewLine);
     }
 
+    public StringBuilder GetStatisticsHeaderRow(string separator = "|")
+    {
+        var sb = new StringBuilder();
+        var configPath = ResolveStatisticsConfigPath();
+        if (configPath == null) return sb;
+
+        var json = File.ReadAllText(configPath);
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json, opts);
+        var columns = cfg?.GetEnabledStatisticsColumns();
+        if (columns == null || columns.Count == 0) return sb;
+
+        sb.Append(string.Join(separator, columns.Select(c => c.header ?? c.field ?? "")));
+        return sb;
+    }
+
+    public StringBuilder GetStatisticsDataRow(string separator = "|")
+    {
+        var sb = new StringBuilder();
+        var configPath = ResolveStatisticsConfigPath();
+        if (configPath == null) return sb;
+
+        var json = File.ReadAllText(configPath);
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var cfg = JsonSerializer.Deserialize<StatisticsExporterConfig>(json, opts);
+        var columns = cfg?.GetEnabledStatisticsColumns();
+        if (columns == null || columns.Count == 0) return sb;
+
+        _statistics.AssignToMapForExport();
+
+        var values = columns.Select(c =>
+        {
+            string field = c.field ?? "";
+            return _statistics.StatisticsMap.TryGetValue(field, out var val) ? (val ?? "") : "";
+        });
+
+        sb.Append(string.Join(separator, values));
+        return sb;
+    }
+
     public static List<(string Field, string Header, int Width)> LoadOptimizationColumns(
         string configPath, string profile = "Full")
     {
@@ -956,6 +996,31 @@ public class StatisticsExporter
         return sb.ToString();
     }
 
+    private static string? ResolveStatisticsConfigPath()
+    {
+        const string fileName = "StatisticsExporterConfig.json";
+
+        // AppSettings.ConfigsDir = inputs/configs  (most reliable)
+        var appSettingsPath = Path.Combine(AlgoTrade.Core.AppSettings.ConfigsDir, fileName);
+        if (File.Exists(appSettingsPath))
+            return appSettingsPath;
+
+        // Walk up from cwd and base dir, checking both inputs/configs/ and inputs/
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            var dir = new DirectoryInfo(start);
+            for (int i = 0; i < 8 && dir != null; i++, dir = dir.Parent)
+            {
+                var probe = Path.Combine(dir.FullName, "inputs", "configs", fileName);
+                if (File.Exists(probe)) return probe;
+                probe = Path.Combine(dir.FullName, "inputs", fileName);
+                if (File.Exists(probe)) return probe;
+            }
+        }
+
+        return null;
+    }
+
     private static string? ResolveConfigPath(string configPath)
     {
         if (Path.IsPathRooted(configPath) && File.Exists(configPath))
@@ -1200,6 +1265,17 @@ public class StatisticsExporter
             return cols.FindAll(c => c.enabled);
         }
 
+        public List<ColumnConfig> GetEnabledStatisticsColumns()
+        {
+            var st = SingleTrader ?? SngleTrader ?? ngleTrader;
+            var node = st?.SingleTraderStatistics;
+            if (node == null) return new List<ColumnConfig>();
+
+            var cols = node.columns ?? new List<ColumnConfig>();
+            foreach (var c in cols) { if (c.width <= 0) c.width = 10; }
+            return cols.FindAll(c => c.enabled);
+        }
+
         public List<ColumnConfig> GetEnabledOptimizationColumns(string profile = "Full")
         {
             var node = SingleTraderOptimization;
@@ -1337,6 +1413,12 @@ public class StatisticsExporter
         public SingleTraderPerformansNode? SingleTraderPerformans { get; set; }
         public SingleTraderPerformansNode? SngleTraderPerformans { get; set; } // alias tolerance
         public SingleTraderPerformansNode? ngleTraderPerformans { get; set; } // alias tolerance
+        public SingleTraderStatisticsNode? SingleTraderStatistics { get; set; }
+    }
+
+    private sealed class SingleTraderStatisticsNode
+    {
+        public List<ColumnConfig> columns { get; set; } = new();
     }
 
     private sealed class SingleTraderListsNode
