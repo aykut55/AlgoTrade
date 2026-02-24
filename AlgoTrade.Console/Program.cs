@@ -496,7 +496,7 @@ void ConfigureQueries()
     }
 }
 
-void ConfigureOptimization()
+void ConfigureOptimization(bool bShowConfigSelectionMenu = true)
 {
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
@@ -509,15 +509,24 @@ void ConfigureOptimization()
         loader.LoadFromFile();
         var allConfigs = loader.GetAllConfigurations();
 
-        var menuItems = allConfigs
-            .Select(c => (c.StrategyName, c.Version, c.GetDisplayString()))
-            .ToList();
+        if (bShowConfigSelectionMenu)
+        {
+            var menuItems = allConfigs
+                .Select(c => (c.StrategyName, c.Version, c.GetDisplayString()))
+                .ToList();
 
-        var selected = ShowConfigSelectionMenu("Optimization", menuItems);
-        if (selected is null) return;
+            var selected = ShowConfigSelectionMenu("Optimization", menuItems);
+            if (selected is null) return;
 
-        algoTrader.ConfigureOptimizationFromConfig(configPath, selected.Value.name, selected.Value.version);
-        LogManager.LogRaw($"\nOptimization loaded from config: {selected.Value.name} | {selected.Value.version}");
+            algoTrader.ConfigureOptimizationFromConfig(configPath, selected.Value.name, selected.Value.version);
+            LogManager.LogRaw($"\nOptimization loaded from config: {selected.Value.name} | {selected.Value.version}");
+        }
+        else
+        {
+            var first = allConfigs.First();
+            algoTrader.ConfigureOptimizationFromConfig(configPath, first.StrategyName, first.Version);
+            LogManager.LogRaw($"\nOptimization loaded from config (default): {first.StrategyName} | {first.Version}");
+        }
     }
     else
     {
@@ -1007,7 +1016,7 @@ async Task runSingleTraderOptimization()
 
         ConfigureEquityCurveFilter(bShowConfigSelectionMenuSingleTraderOpt);
 
-        ConfigureOptimization();
+        ConfigureOptimization(bShowConfigSelectionMenuSingleTraderOpt);
 
         algoTrader.Initialize();
 
