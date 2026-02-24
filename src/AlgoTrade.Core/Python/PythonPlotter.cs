@@ -236,7 +236,7 @@ public class PythonPlotter : IDisposable
         var (dateTimes, dates, times,
              opens, highs, lows, closes, volumes, lots,
              sinyalList, karZararFiyatList, bakiyeFiyatList,
-             getiriFiyatList, getiriFiyatNetList) = ExtractTraderData(trader, lists);
+             getiriFiyatList, komisyonFiyatList, bakiyeFiyatNetList, getiriFiyatNetList) = ExtractTraderData(trader, lists);
 
         var strategyIndicators = GetStrategyIndicators(trader);
 
@@ -244,9 +244,9 @@ public class PythonPlotter : IDisposable
         string periyot = trader.SymbolPeriod ?? "1H";
 
         CallPlotDataImgBundleNew(
-            dateTimes, opens, highs, lows, closes, volumes, lots,
+            dateTimes, dates, times, opens, highs, lows, closes, volumes, lots,
             sinyalList, karZararFiyatList, bakiyeFiyatList,
-            getiriFiyatList, getiriFiyatNetList,
+            getiriFiyatList, komisyonFiyatList, bakiyeFiyatNetList, getiriFiyatNetList,
             strategyIndicators, title, periyot);
     }
 
@@ -264,29 +264,32 @@ public class PythonPlotter : IDisposable
         List<double>   karZararFiyatList,
         List<double>   bakiyeFiyatList,
         List<double>   getiriFiyatList,
+        List<double>   komisyonFiyatList,
+        List<double>   bakiyeFiyatNetList,
         List<double>   getiriFiyatNetList
     ) ExtractTraderData(SingleTrader trader, Lists lists)
     {
-        List<DateTime> dateTimes = trader.Data.Select(d => d.DateTime).ToList();
-        List<DateTime> dates     = trader.Data.Select(d => d.Date).ToList();
-        List<TimeSpan> times     = trader.Data.Select(d => d.Time).ToList();
-        List<double> opens   = trader.Data.Select(d => d.Open).ToList();
-        List<double> highs   = trader.Data.Select(d => d.High).ToList();
-        List<double> lows    = trader.Data.Select(d => d.Low).ToList();
-        List<double> closes  = trader.Data.Select(d => d.Close).ToList();
-        List<long> volumes = trader.Data.Select(d => d.Volume).ToList();
-        List<long> lots    = trader.Data.Select(d => d.Size).ToList();
-
+        List<DateTime> dateTimes        = trader.Data.Select(d => d.DateTime).ToList();
+        List<DateTime> dates            = trader.Data.Select(d => d.Date).ToList();
+        List<TimeSpan> times            = trader.Data.Select(d => d.Time).ToList();
+        List<double> opens              = trader.Data.Select(d => d.Open).ToList();
+        List<double> highs              = trader.Data.Select(d => d.High).ToList();
+        List<double> lows               = trader.Data.Select(d => d.Low).ToList();
+        List<double> closes             = trader.Data.Select(d => d.Close).ToList();
+        List<long> volumes              = trader.Data.Select(d => d.Volume).ToList();
+        List<long> lots                 = trader.Data.Select(d => d.Size).ToList();
         List<double> sinyalList         = lists.SinyalList;
         List<double> karZararFiyatList  = lists.KarZararFiyatList;
         List<double> bakiyeFiyatList    = lists.BakiyeFiyatList;
         List<double> getiriFiyatList    = lists.GetiriFiyatList;
+        List<double> komisyonFiyatList  = lists.KomisyonFiyatList;
+        List<double> bakiyeFiyatNetList = lists.BakiyeFiyatNetList;
         List<double> getiriFiyatNetList = lists.GetiriFiyatNetList;
 
         return (dateTimes, dates, times,
                 opens, highs, lows, closes, volumes, lots,
                 sinyalList, karZararFiyatList, bakiyeFiyatList,
-                getiriFiyatList, getiriFiyatNetList);
+                getiriFiyatList, komisyonFiyatList, bakiyeFiyatNetList, getiriFiyatNetList);
     }
 
     private static Dictionary<string, double[]>? GetStrategyIndicators(SingleTrader trader)
@@ -296,6 +299,8 @@ public class PythonPlotter : IDisposable
 
     private static void CallPlotDataImgBundleNew(
         List<DateTime> dateTimes,
+        List<DateTime> dates,
+        List<TimeSpan> times,
         List<double>   opens,
         List<double>   highs,
         List<double>   lows,
@@ -306,6 +311,8 @@ public class PythonPlotter : IDisposable
         List<double>   karZararFiyatList,
         List<double>   bakiyeFiyatList,
         List<double>   getiriFiyatList,
+        List<double>   komisyonFiyatList,
+        List<double>   bakiyeFiyatNetList,
         List<double>   getiriFiyatNetList,
         Dictionary<string, double[]>? strategyIndicators,
         string         title,
@@ -313,10 +320,9 @@ public class PythonPlotter : IDisposable
     {
         using (Py.GIL())
         {
-            // (AlgoTradeWithPaythonWithGemini/src sys.path'e Initialize() içinde eklendi)
-            dynamic plotModule = Py.Import("plotDataImgBundleNew");
-
-            using var pyDates     = new PyList();
+            using var pyDateTimes     = new PyList();
+            using var pyDates = new PyList();
+            using var pyTimes = new PyList();
             using var pyOpens     = new PyList();
             using var pyHighs     = new PyList();
             using var pyLows      = new PyList();
@@ -327,9 +333,13 @@ public class PythonPlotter : IDisposable
             using var pyKarZarar  = new PyList();
             using var pyBakiye    = new PyList();
             using var pyGetiri    = new PyList();
+            using var pyKomisyon  = new PyList();
+            using var pyBakiyeNet = new PyList();
             using var pyGetiriNet = new PyList();
 
-            foreach (var d in dateTimes)            pyDates.Append(new PyString(d.ToString("yyyy.MM.dd HH:mm:ss")));
+            foreach (var d in dateTimes)            pyDateTimes.Append(new PyString(d.ToString("yyyy.MM.dd HH:mm:ss")));
+            foreach (var d in dates)                pyDates.Append(new PyString(d.ToString("yyyy.MM.dd")));
+            foreach (var t in times)                pyTimes.Append(new PyString(t.ToString(@"hh\:mm\:ss")));
             foreach (var v in opens)                pyOpens.Append(new PyFloat(v));
             foreach (var v in highs)                pyHighs.Append(new PyFloat(v));
             foreach (var v in lows)                 pyLows.Append(new PyFloat(v));
@@ -340,6 +350,8 @@ public class PythonPlotter : IDisposable
             foreach (var v in karZararFiyatList)    pyKarZarar.Append(new PyFloat(v));
             foreach (var v in bakiyeFiyatList)      pyBakiye.Append(new PyFloat(v));
             foreach (var v in getiriFiyatList)      pyGetiri.Append(new PyFloat(v));
+            foreach (var v in komisyonFiyatList)    pyKomisyon.Append(new PyFloat(v));
+            foreach (var v in bakiyeFiyatNetList)   pyBakiyeNet.Append(new PyFloat(v));
             foreach (var v in getiriFiyatNetList)   pyGetiriNet.Append(new PyFloat(v));
 
             dynamic pyIndicators = new PyDict();
@@ -356,6 +368,21 @@ public class PythonPlotter : IDisposable
                 }
             }
 
+            // inputs/python/main.py → print_data_info
+            dynamic mainModule = Py.Import("main");
+            mainModule.print_data_info(
+                pyDates, pyOpens, pyHighs, pyLows, pyCloses,
+                pyVolumes, pyLots,
+                pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyKomisyon, pyBakiyeNet, pyGetiriNet,
+                strategy_indicators: pyIndicators,
+                title:               title,
+                periyot:             periyot
+            );
+
+/*
+             // (AlgoTradeWithPaythonWithGemini/src sys.path'e Initialize() içinde eklendi)
+            dynamic plotModule = Py.Import("plotDataImgBundleNew");
+ 
             plotModule.plot_data_img_bundle_new(
                 pyDates, pyOpens, pyHighs, pyLows, pyCloses,
                 pyVolumes, pyLots,
@@ -369,6 +396,7 @@ public class PythonPlotter : IDisposable
                 title:                          title,
                 periyot:                        periyot
             );
+*/
         }
     }
 
