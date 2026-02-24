@@ -1370,17 +1370,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
     private void OnOptimizationSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars, double percentage)
     {
-        //double pct = (double)current / total * 100.0;
-        //OnTraderProgress?.Invoke(current, total, pct);
-
-        if (_logger == null) return;
-
-        /*
-         * Cok yavasladigi icin kapatildi
-
-
-         * 
-         */
+        /*if (_logger == null) return;
 
         var consoleLogger = LogManager.GetConsoleLogger();
 
@@ -1392,7 +1382,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         else
         {
             consoleLogger.Write($"\r\tProgress         : {currentBar}/{totalBars} ({percentage:F1}%)");
-        }
+        }*/
     }
     public async Task RunSingleTraderOptWithProgressAsync(CancellationToken cancellationToken = default)
     {

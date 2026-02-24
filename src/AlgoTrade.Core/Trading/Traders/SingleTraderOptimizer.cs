@@ -294,6 +294,8 @@ public class SingleTraderOptimizer : IDisposable
             LogManager.LogRaw($"  - {range.Name}: {range.Min} to {range.Max} (step: {range.Step})");
         }
         LogManager.LogRaw("");
+        var headerLine = AlgoTrade.Core.Trading.Statistics.Statistics.GetOptimizationProgressHeader(AllCombinations[0].Keys);
+        LogManager.LogRaw($"{headerLine}");
 
         // Her kombinasyon icin
         foreach (var paramCombo in AllCombinations)
@@ -317,7 +319,7 @@ public class SingleTraderOptimizer : IDisposable
             //if (currentCombination > 5)
                 //break;
 
-            LogManager.LogRaw($"");
+            //LogManager.LogRaw($"");
 
             // Progress raporla
             double combPct = totalCombinations > 0 ? (double)currentCombination / totalCombinations * 100.0 : 0.0;
@@ -362,7 +364,8 @@ public class SingleTraderOptimizer : IDisposable
 
             Results.Add(optResult);
 
-            //LogManager.LogRaw($"  → NetProfit: {optResult.NetProfit}, WinRate: {optResult.WinRate}%, PF: {optResult.ProfitFactor}, PFNet: {optResult.ProfitFactorNet}");
+            var progressLine = singleTrader.statistics.GetOptimizationProgressLine(currentCombination, totalCombinations, paramCombo);
+            LogManager.LogRaw($"{progressLine}");
 
             // Append to files
             AppendSingleOptSummaryToFiles(optResult, currentCombination);

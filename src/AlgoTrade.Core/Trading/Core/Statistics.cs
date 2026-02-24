@@ -1906,6 +1906,57 @@ namespace AlgoTrade.Core.Trading.Statistics
             return OptimizationResultsMap;
         }
 
+        /// <summary>
+        /// Optimizasyon döngüsü başında bir kez basılacak sütun başlıkları satırı.
+        /// Format: [cur/tot] | param1 | param2 | ... | Getiri% | Trades | Win% | PFNet | MaxDD | ms
+        ///sb.Append($" | Getiri%={GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture)}");
+        ///sb.Append($" | Trades={IslemSayisi}");
+        ///sb.Append($" | Win%={KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture)}");
+        ///sb.Append($" | PFNet={ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture)}");
+        ///sb.Append($" | MaxDD={GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture)}");
+        ///sb.Append($" | {LastExecutionTimeInMSec}ms"); 
+        /// </summary>
+        public static StringBuilder GetOptimizationProgressHeader(IEnumerable<string> parameterNames)
+        {
+            var sb = new StringBuilder();
+            var names = parameterNames.ToList();
+            sb.Append("#".PadLeft(4));
+            foreach (var name in names)
+                sb.Append($" | {name.PadLeft(8)}");
+            sb.Append($" | {"[cur/tot]".PadLeft(9)}");
+            sb.Append($" | {"Getiri%".PadLeft(9)}");
+            sb.Append($" | {"Trades".PadLeft(6)}");
+            sb.Append($" | {"Win%".PadLeft(7)}");
+            sb.Append($" | {"PFNet".PadLeft(7)}");
+            sb.Append($" | {"MaxDD".PadLeft(9)}");
+            sb.Append('\n');
+            sb.Append(new string('-', sb.Length - 1));
+            return sb;
+        }
+
+        /// <summary>
+        /// Optimizasyon döngüsünde her kombinasyon sonrası ekrana basılacak özet satırı.
+        /// Format: [current/total] | param1=val | param2=val | ... | Getiri%=X | Trades=X | Win%=X | PFNet=X | MaxDD=X | Xms
+        /// </summary>
+        public StringBuilder GetOptimizationProgressLine(int current, int total, Dictionary<string, object> parameters)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append(current.ToString().PadLeft(4));
+
+            foreach (var kvp in parameters)
+                sb.Append($" | {(kvp.Value?.ToString() ?? "").PadLeft(8)}");
+
+            sb.Append($" | {$"[{current}/{total}]".PadLeft(9)}");
+            sb.Append($" | {GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
+            sb.Append($" | {IslemSayisi.ToString().PadLeft(6)}");
+            sb.Append($" | {KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
+            sb.Append($" | {ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
+            sb.Append($" | {GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
+
+            return sb;
+        }
+
         // Legacy struct-based full summary - kept for backward compatibility with old methods.
         // Use GetOptimizationSummary() for the new map-based approach.
         internal OptimizationSummary GetOptimizationSummaryLegacy()
