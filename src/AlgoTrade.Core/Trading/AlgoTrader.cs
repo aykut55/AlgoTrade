@@ -76,6 +76,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public int OptimizationFrom { get; set; } = -1;   // -1 = en bastan
     public int OptimizationTo { get; set; } = -1;     // -1 = en sona kadar
 
+    // Trade params for SingleTraderOptimizer
+    private double _optIlkBakiye = 100000.0;
+    private int _optKontratSayisi = 1;
+    private double _optKomisyonCarpan = 20.0;
+    private double _optKaymaMiktari = 0.5;
+
     // EquityCurveFilter list for MultipleTrader
     private readonly List<EquityCurveFilterConfigEntry> _equityCurveFilterConfigs = new();
     public IReadOnlyList<EquityCurveFilterConfigEntry> EquityCurveFilterConfigs => _equityCurveFilterConfigs;
@@ -628,6 +634,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     {
         OptimizationFrom = from;
         OptimizationTo = to;
+    }
+
+    public void SetOptimizationTradeParams(double ilkBakiye, int kontratSayisi, double komisyonCarpan, double kaymaMiktari)
+    {
+        _optIlkBakiye      = ilkBakiye;
+        _optKontratSayisi  = kontratSayisi;
+        _optKomisyonCarpan = komisyonCarpan;
+        _optKaymaMiktari   = kaymaMiktari;
     }
 
     public IStrategy CreateStrategyFromRegistry(List<StockData> data, IndicatorManager ind, string strategyName, Dictionary<string, object> parameters)
@@ -1490,6 +1504,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Set optimization range (PartialOpt)
             singleTraderOptimizer.OptimizationFrom = OptimizationFrom;
             singleTraderOptimizer.OptimizationTo = OptimizationTo;
+
+            // Set trade params
+            singleTraderOptimizer.IlkBakiye      = _optIlkBakiye;
+            singleTraderOptimizer.KontratSayisi  = _optKontratSayisi;
+            singleTraderOptimizer.KomisyonCarpan = _optKomisyonCarpan;
+            singleTraderOptimizer.KaymaMiktari   = _optKaymaMiktari;
 
             // Set equity curve filter config (id=0 varsa optimizer'a aktar)
             var ecfConfig = _equityCurveFilterConfigs.FirstOrDefault(c => c.Id == 0);

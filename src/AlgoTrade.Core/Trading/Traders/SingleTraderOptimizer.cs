@@ -218,8 +218,7 @@ public class SingleTraderOptimizer : IDisposable
         singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 
         // Configure position sizing
-        singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-        singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+        singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: IlkBakiye).SetKontratParamsViopEndex(kontratSayisi: KontratSayisi).SetKomisyonParams(komisyonCarpan: KomisyonCarpan).SetKaymaParams(kaymaMiktari: KaymaMiktari);
 
         // Siralama Onemli
         // Apply user flags
@@ -891,6 +890,12 @@ public class SingleTraderOptimizer : IDisposable
     public string StrategyName { get; set; } = "";
     public string QueryId { get; set; } = "";
     public string QueryName { get; set; } = "";
+
+    // Trade params (AlgoTrader.SetOptimizationTradeParams() tarafindan set edilir)
+    public double IlkBakiye      { get; set; } = 100000.0;
+    public int    KontratSayisi  { get; set; } = 1;
+    public double KomisyonCarpan { get; set; } = 20.0;
+    public double KaymaMiktari   { get; set; } = 0.5;
 
     #endregion
 

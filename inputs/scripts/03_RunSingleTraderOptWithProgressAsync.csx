@@ -97,6 +97,14 @@ algoTrader.SetOptimizationStrategyFactory((factoryData, ind, parameters) =>
     return algoTrader.CreateStrategyFromRegistry(factoryData, ind, optimizationStrategyName, merged);
 });
 
+// Trade params
+algoTrader.SetOptimizationTradeParams(
+    ilkBakiye:      ilkBakiye,
+    kontratSayisi:  kontratSayisi,
+    komisyonCarpan: komisyonCarpan,
+    kaymaMiktari:   kaymaMiktari
+);
+
 // Optimization range (PartialOpt)
 algoTrader.SetOptimizationRange(optimizationFrom, optimizationTo);
 if (optimizationFrom != -1 || optimizationTo != -1)
@@ -143,7 +151,7 @@ if (optimizer != null && optimizer.Results.Count > 0)
         Log($"  ProfitFactor   : {bestResult.ProfitFactor:F2}");
         Log($"  ProfitFactorNet: {bestResult.ProfitFactorNet:F2}");
         Log($"  MaxDrawdown    : {bestResult.MaxDrawdown:F2}");
-        Log($"  IslemSayisi    : {bestResult.IslemSayisi}");
+        Log($"  IslemSayisi    : {bestResult.Values.GetValueOrDefault("IslemSayisi", "N/A")}");
     }
 }
 
