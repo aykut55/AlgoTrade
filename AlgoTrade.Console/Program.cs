@@ -927,6 +927,8 @@ async Task runSingleTraderAlgoTrade()
 
         await algoTrader.RunSingleTraderWithProgressAsync();
 
+        algoTrader.SetupPython();
+
         await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
     }
     catch (Exception ex)

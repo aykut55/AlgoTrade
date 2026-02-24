@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Linq;
 using Newtonsoft.Json;
 using Python.Runtime;
 using AlgoTrade.Core.Trading;
@@ -66,8 +68,16 @@ public class PythonPlotter : IDisposable
                 return;
             }
 
-            if (!string.IsNullOrEmpty(PythonDll))
-                Runtime.PythonDLL = PythonDll;
+            // DLL yolunu belirle: önce property, sonra otomatik tespit
+            string dll = !string.IsNullOrEmpty(PythonDll)
+                ? PythonDll
+                : FindPythonDll()
+                  ?? throw new InvalidOperationException(
+                      "Python DLL bulunamadı. PythonPlotter.PythonDll'i açıkça set edin " +
+                      "veya PYTHONNET_PYDLL ortam değişkenini tanımlayın.\n" +
+                      "Örn: plotter.PythonDll = @\"C:\\Python312\\python312.dll\"");
+
+            Runtime.PythonDLL = dll;
 
             PythonEngine.Initialize();
             // Initialize() sonrası GIL bu thread'de — sys.path'i şimdi ekle (bir kez yeterli)
@@ -189,6 +199,52 @@ public class PythonPlotter : IDisposable
         if (!IsInitialized)
             throw new InvalidOperationException(
                 "PythonPlotter başlatılmadı. Önce Initialize() çağrın.");
+    }
+
+    /// <summary>
+    /// Python DLL yolunu otomatik tespit eder.
+    /// Önce PYTHONNET_PYDLL ortam değişkenine, sonra PATH'deki 'python' komutuna bakar.
+    /// </summary>
+    private static string? FindPythonDll()
+    {
+        // 1. Ortam değişkeni
+        var envDll = Environment.GetEnvironmentVariable("PYTHONNET_PYDLL");
+        if (!string.IsNullOrEmpty(envDll) && File.Exists(envDll))
+            return envDll;
+
+        // 2. PATH'deki python executable'ından DLL klasörünü bul
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName               = "python",
+                Arguments              = "-c \"import sys; print(sys.executable)\"",
+                RedirectStandardOutput = true,
+                UseShellExecute        = false,
+                CreateNoWindow         = true,
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc != null)
+            {
+                string pythonExe = proc.StandardOutput.ReadToEnd().Trim();
+                proc.WaitForExit();
+
+                if (!string.IsNullOrEmpty(pythonExe) && File.Exists(pythonExe))
+                {
+                    string dir = Path.GetDirectoryName(pythonExe)!;
+                    // python312.dll, python311.dll … en yüksek sürüm önce
+                    var dlls = Directory.GetFiles(dir, "python3*.dll")
+                                        .OrderByDescending(f => f)
+                                        .ToArray();
+                    if (dlls.Length > 0)
+                        return dlls[0];
+                }
+            }
+        }
+        catch { /* PATH'de python yok — null dön */ }
+
+        return null;
     }
 
     #endregion

@@ -90,6 +90,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     // Python görselleştirme
     private PythonPlotter? _pythonPlotter;
 
+    /// <summary>
+    /// Python DLL yolu. Boş bırakılırsa PATH'deki python otomatik tespit edilir.
+    /// Python 3.12/3.13 kullanmak için açıkça set edin.
+    /// Örn: algoTrader.PythonDll = @"C:\Python312\python312.dll"
+    /// </summary>
+    public string PythonDll { get; set; } = "";
+
     #endregion
 
     public AlgoTrader(string name)
@@ -1594,6 +1601,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     // ==========================================================================
 
     /// <summary>
+    /// Python ortamını yapılandırır. PlotXxx metodlarından önce çağrılmalı.
+    /// </summary>
+    public void SetupPython()
+    {
+        PythonDll = @"C:\Python313\python313.dll";
+    }
+
+    /// <summary>
     /// Verilen SingleTrader'ın koşum sonuçlarını Python/imgui_bundle ile görselleştirir.
     /// Plot penceresi ayrı thread'de çalışır; pencere kapanana dek bekler.
     /// </summary>
@@ -1608,6 +1623,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 "SingleTrader null. RunSingleTraderWithProgressAsync() başarıyla tamamlandı mı?");
 
         _pythonPlotter ??= new PythonPlotter();
+        if (!string.IsNullOrEmpty(PythonDll))
+            _pythonPlotter.PythonDll = PythonDll;
         if (!_pythonPlotter.IsInitialized)
             _pythonPlotter.Initialize();
 
