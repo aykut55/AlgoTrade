@@ -371,7 +371,8 @@ public class PythonPlotter : IDisposable
             // inputs/python/main.py → print_data_info
             dynamic mainModule = Py.Import("main");
             mainModule.print_data_info(
-                pyDates, pyOpens, pyHighs, pyLows, pyCloses,
+                pyDateTimes, pyDates, pyTimes, 
+                pyOpens, pyHighs, pyLows, pyCloses,
                 pyVolumes, pyLots,
                 pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyKomisyon, pyBakiyeNet, pyGetiriNet,
                 strategy_indicators: pyIndicators,

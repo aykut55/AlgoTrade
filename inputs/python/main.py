@@ -2,7 +2,8 @@ def hello():
     print("Hello Python")
 
 
-def print_data_info(dates, opens, highs, lows, closes, volumes, lots,
+def print_data_info(date_times, dates, times,
+                    opens, highs, lows, closes, volumes, lots,
                     sinyal_list, kar_zarar_list, bakiye_list,
                     getiri_list, komisyon_list, bakiye_net_list, getiri_net_list,
                     strategy_indicators=None,
