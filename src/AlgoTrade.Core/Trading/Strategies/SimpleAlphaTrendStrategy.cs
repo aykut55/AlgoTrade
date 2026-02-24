@@ -76,7 +76,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _alphaTrendResult = Indicators.Trend.AlphaTrend(_atrPeriod, _coefficient, _momentumPeriod);
 
-            Log($"SimpleAlphaTrendStrategy initialized: ATRPeriod={_atrPeriod}, Coefficient={_coefficient}, MomentumPeriod={_momentumPeriod}");
+            //Log($"SimpleAlphaTrendStrategy initialized: ATRPeriod={_atrPeriod}, Coefficient={_coefficient}, MomentumPeriod={_momentumPeriod}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

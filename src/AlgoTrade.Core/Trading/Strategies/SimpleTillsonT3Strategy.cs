@@ -64,7 +64,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             var closes = Indicators.GetClosePrices();
             _t3 = Indicators.MA.T3(closes, _period);
 
-            Log($"SimpleTillsonT3Strategy initialized: Period={_period}");
+            //Log($"SimpleTillsonT3Strategy initialized: Period={_period}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

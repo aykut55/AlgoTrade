@@ -71,8 +71,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             // SuperTrend indicator'ı hesapla
             _superTrendResult = Indicators.Trend.SuperTrend(_period, _multiplier);
 
-            Log($"SimpleSuperTrendStrategy initialized: Period={_period}, Multiplier={_multiplier}, Choice={_choice}");
-            Log($"SuperTrend calculated for {_superTrendResult.Length} bars");
+            //Log($"SimpleSuperTrendStrategy initialized: Period={_period}, Multiplier={_multiplier}, Choice={_choice}");
+            //Log($"SuperTrend calculated for {_superTrendResult.Length} bars");
         }
 
         public override TradeSignals OnStep(int currentIndex)

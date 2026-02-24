@@ -69,7 +69,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _ottResult = Indicators.Trend.OTT(_period, _percent);
 
-            Log($"SimpleOTTStrategy initialized: Period={_period}, Percent={_percent}");
+            //Log($"SimpleOTTStrategy initialized: Period={_period}, Percent={_percent}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

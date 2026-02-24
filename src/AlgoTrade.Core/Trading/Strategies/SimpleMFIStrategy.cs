@@ -74,7 +74,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _mfi = Indicators.VolumeInd.MFI(_period);
 
-            Log($"SimpleMFIStrategy initialized: Period={_period}, Oversold={_oversold}, Overbought={_overbought}");
+            //Log($"SimpleMFIStrategy initialized: Period={_period}, Oversold={_oversold}, Overbought={_overbought}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

@@ -69,7 +69,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _mavilimWResult = Indicators.Trend.MavilimW(_param1, _param2);
 
-            Log($"SimpleMavilimWStrategy initialized: Param1={_param1}, Param2={_param2}");
+            //Log($"SimpleMavilimWStrategy initialized: Param1={_param1}, Param2={_param2}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

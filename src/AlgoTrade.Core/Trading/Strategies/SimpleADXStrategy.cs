@@ -70,7 +70,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _adxResult = Indicators.Trend.ADXWithDI(_period);
 
-            Log($"SimpleADXStrategy initialized: Period={_period}, ADXThreshold={_adxThreshold}");
+            //Log($"SimpleADXStrategy initialized: Period={_period}, ADXThreshold={_adxThreshold}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

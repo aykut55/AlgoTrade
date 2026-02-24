@@ -75,7 +75,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _cmf = Indicators.VolumeInd.CMF(_period);
 
-            Log($"SimpleCMFStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
+            //Log($"SimpleCMFStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

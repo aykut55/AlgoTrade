@@ -69,7 +69,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 // Implement edildikten sonra bu satır çalışacak
                 (_most, _exmov) = Indicators.Trend.MOST(_period, _percent);
 
-                Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
+                //Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
             }
             catch (NotImplementedException)
             {

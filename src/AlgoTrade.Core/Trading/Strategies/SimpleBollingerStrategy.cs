@@ -71,7 +71,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             var closes = Indicators.GetClosePrices();
             _bbResult = Indicators.Volatility.BollingerBands(closes, _period, _multiplier);
 
-            Log($"SimpleBollingerStrategy initialized: Period={_period}, Multiplier={_multiplier}");
+            //Log($"SimpleBollingerStrategy initialized: Period={_period}, Multiplier={_multiplier}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

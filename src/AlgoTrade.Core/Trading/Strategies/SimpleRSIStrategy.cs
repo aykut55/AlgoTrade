@@ -76,7 +76,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             var closes = Indicators.GetClosePrices();
             _rsiResult = Indicators.Momentum.RSI(closes, _period);
 
-            Log($"SimpleRSIStrategy initialized: Period={_period}, Oversold={_oversold}, Overbought={_overbought}");
+            //Log($"SimpleRSIStrategy initialized: Period={_period}, Oversold={_oversold}, Overbought={_overbought}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

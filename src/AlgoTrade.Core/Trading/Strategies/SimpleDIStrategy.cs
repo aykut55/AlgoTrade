@@ -64,7 +64,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _adxResult = Indicators.Trend.ADXWithDI(_period);
 
-            Log($"SimpleDIStrategy initialized: Period={_period}");
+            //Log($"SimpleDIStrategy initialized: Period={_period}");
         }
 
         public override TradeSignals OnStep(int currentIndex)

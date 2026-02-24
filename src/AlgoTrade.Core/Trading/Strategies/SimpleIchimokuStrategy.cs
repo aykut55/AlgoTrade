@@ -76,7 +76,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             _ichimokuResult = Indicators.Trend.Ichimoku(_tenkanPeriod, _kijunPeriod, _senkouPeriod);
 
-            Log($"SimpleIchimokuStrategy initialized: Tenkan={_tenkanPeriod}, Kijun={_kijunPeriod}, Senkou={_senkouPeriod}");
+            //Log($"SimpleIchimokuStrategy initialized: Tenkan={_tenkanPeriod}, Kijun={_kijunPeriod}, Senkou={_senkouPeriod}");
         }
 
         public override TradeSignals OnStep(int currentIndex)
