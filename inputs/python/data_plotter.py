@@ -266,4 +266,27 @@ class DataPlotter:
 
     def _plot_imgui(self) -> None:
         """imgui_bundle ile interaktif grafik penceresi açar."""
-        pass
+        from plot_data_img_bundle import plot_data_img_bundle
+        td = self.td
+        plot_data_img_bundle(
+            dates                      = td.date_times,
+            opens                      = td.opens,
+            highs                      = td.highs,
+            lows                       = td.lows,
+            closes                     = td.closes,
+            volumes                    = td.volumes,
+            lots                       = td.lots,
+            sinyal_list                = td.sinyal_list,
+            kar_zarar_fiyat_list       = td.kar_zarar_fiyat_list,
+            bakiye_fiyat_list          = td.bakiye_fiyat_list,
+            getiri_fiyat_list          = td.getiri_fiyat_list,
+            getiri_fiyat_net_list      = td.getiri_fiyat_net_list,
+            bakiye_fiyat_net_list      = td.bakiye_fiyat_net_list,
+            kar_zarar_fiyat_yuzde_list = td.kar_zarar_fiyat_yuzde_list,
+            getiri_fiyat_yuzde_list    = td.getiri_fiyat_yuzde_list,
+            komisyon_fiyat_list        = td.komisyon_fiyat_list,
+            getiri_fiyat_yuzde_net_list= td.getiri_fiyat_net_yuzde_list,
+            strategy_indicators        = td.strategy_indicators,
+            title                      = td.title,
+            periyot                    = td.periyot,
+        )
