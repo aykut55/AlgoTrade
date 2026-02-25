@@ -21,6 +21,7 @@ class TradeData:
         self.kar_zarar_fiyat_yuzde_list = []
         self.getiri_fiyat_yuzde_list    = []
         self.getiri_fiyat_net_yuzde_list = []
-        self.strategy_indicators        = {}
+        self.indicators                 = {}   # genel indikatörler (strateji bağımsız)
+        self.strategy_indicators        = {}   # strateji tarafından üretilen indikatörler
         self.title                  = "AlgoTrade"
         self.periyot                = "1H"

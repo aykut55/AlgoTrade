@@ -1636,6 +1636,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             _pythonPlotter ??= new PythonPlotter();
             _pythonPlotter.SetLogger(_logger);
+            _pythonPlotter.SetIndicators(indicators);
 
             if (!string.IsNullOrEmpty(PythonDll))
                 _pythonPlotter.PythonDll = PythonDll;

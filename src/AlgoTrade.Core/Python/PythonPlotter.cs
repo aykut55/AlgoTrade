@@ -1,11 +1,13 @@
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
 using Newtonsoft.Json;
 using Python.Runtime;
 using ScottPlot;
 using Serilog.Sinks.File;
 using System.Linq;
+using Tulip;
 
 namespace AlgoTrade.Core.Python;
 
@@ -38,8 +40,9 @@ public class PythonPlotter : IDisposable
     private static bool          _engineStarted = false;
     private static readonly object _engineLock  = new();
 
-    private bool         _disposed;
-    private LogManager?  _logger;
+    private bool              _disposed;
+    private LogManager?       _logger;
+    private IndicatorManager? _indicators;
 
     #endregion
 
@@ -80,7 +83,8 @@ public class PythonPlotter : IDisposable
         PythonDll = pythonDll;
     }
 
-    public void SetLogger(LogManager? logger) => _logger = logger;
+    public void SetLogger(LogManager? logger)         => _logger     = logger;
+    public void SetIndicators(IndicatorManager? ind)  => _indicators = ind;
 
     #endregion
 
@@ -266,7 +270,25 @@ public class PythonPlotter : IDisposable
         using (Py.GIL())
         {
             ExtractTraderData(trader, lists);
+
             dynamic tradeData = BuildPyTradeData();
+
+            var closes = trader.GetClosePrices();
+
+            var indicatorsToPlot = new Dictionary<string, double[]?>
+            {
+                ["ma5"] = _indicators?.MA.SMA(closes, 5),
+                ["ma8"] = _indicators?.MA.SMA(closes, 8),
+                ["ma13"] = _indicators?.MA.SMA(closes, 13),
+                ["ma21"] = _indicators?.MA.SMA(closes, 21),
+                ["ma34"] = _indicators?.MA.SMA(closes, 34),
+                ["ma50"] = _indicators?.MA.SMA(closes, 50),
+                ["ma100"] = _indicators?.MA.SMA(closes, 100),
+                ["ma200"] = _indicators?.MA.SMA(closes, 200),
+            };
+
+            SetPyIndicators(tradeData, indicatorsToPlot);
+
             CallPlotDataImgBundleNew(tradeData);
         }
     }
@@ -344,10 +366,28 @@ public class PythonPlotter : IDisposable
         foreach (var v in _getiriFiyatYuzdeList)    pyGetiriYuzde.Append(new PyFloat(v));
         foreach (var v in _getiriFiyatNetYuzdeList) pyGetiriNetYuzde.Append(new PyFloat(v));
 
-        var pyIndicators = new PyDict();
+        // strategy_indicators
+        var pyStrategyIndicators = new PyDict();
         if (_strategyIndicators != null)
         {
             foreach (var kvp in _strategyIndicators)
+            {
+                if (kvp.Value != null && kvp.Value.Length > 0)
+                {
+                    var pyList = new PyList();
+                    foreach (var v in kvp.Value) pyList.Append(new PyFloat(v));
+                    pyStrategyIndicators[new PyString(kvp.Key)] = pyList;
+                }
+            }
+        }
+/*
+ *      Performans sorunu yasatır gibi duruyor, o yuzden commentledim
+ *      
+        // indicators (strateji bağımsız — IndicatorManager cache'i)
+        var pyIndicators = new PyDict();
+        if (_indicators != null)
+        {
+            foreach (var kvp in _indicators.GetCachedIndicators())
             {
                 if (kvp.Value != null && kvp.Value.Length > 0)
                 {
@@ -357,7 +397,7 @@ public class PythonPlotter : IDisposable
                 }
             }
         }
-
+*/
         dynamic tradeDataModule = Py.Import("trade_data");
         dynamic td = tradeDataModule.TradeData();
 
@@ -380,7 +420,8 @@ public class PythonPlotter : IDisposable
         td.kar_zarar_fiyat_yuzde_list  = pyKarZararYuzde;
         td.getiri_fiyat_yuzde_list     = pyGetiriYuzde;
         td.getiri_fiyat_net_yuzde_list = pyGetiriNetYuzde;
-        td.strategy_indicators         = pyIndicators;
+        td.indicators                  = new PyDict();          // td.indicators = pyIndicators
+        td.strategy_indicators         = pyStrategyIndicators;
         td.title                       = _title;
         td.periyot                     = _periyot;
 
@@ -460,6 +501,22 @@ public class PythonPlotter : IDisposable
     #endregion
 
     #region Private
+
+    /// <summary>
+    /// Verilen indikatör sözlüğünü tradeData.indicators'a PyList olarak ekler.
+    /// Null veya boş olan değerler atlanır. GIL çağrı öncesinde edinilmiş olmalıdır.
+    /// </summary>
+    private static void SetPyIndicators(dynamic tradeData, Dictionary<string, double[]?> indicators)
+    {
+        foreach (var kvp in indicators)
+        {
+            if (kvp.Value == null || kvp.Value.Length == 0) continue;
+
+            var pyList = new PyList();
+            foreach (var v in kvp.Value) pyList.Append(new PyFloat(v));
+            tradeData.indicators[kvp.Key] = pyList;
+        }
+    }
 
     private void EnsureInitialized()
     {

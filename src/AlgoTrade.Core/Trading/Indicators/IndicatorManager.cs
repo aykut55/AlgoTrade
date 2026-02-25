@@ -165,6 +165,12 @@ namespace AlgoTrade.Core.Trading.Indicators
         #region Cache Management
 
         /// <summary>
+        /// Hesaplanmış (cache'lenmiş) tüm indikatörleri döndürür.
+        /// PythonPlotter tarafından td.indicators'a aktarmak için kullanılır.
+        /// </summary>
+        public IReadOnlyDictionary<string, double[]> GetCachedIndicators() => _cache;
+
+        /// <summary>
         /// Get cached result or calculate new (internal helper for sub-managers)
         /// </summary>
         internal double[] GetOrCalculate(string cacheKey, Func<double[]> calculator)

@@ -11,24 +11,29 @@ class DataPlotter:
     """
     TradeData nesnesini alıp panel bazlı görselleştirme yapan sınıf.
 
-    Otomatik oluşturulan paneller (TradeData dolu ise):
-        Panel 0 : OHLC          (her zaman)
-        Panel 1 : Sinyal
-        Panel 2 : Kar/Zarar
-        Panel 3 : Getiri / Getiri Net
-        Panel 4 : Bakiye / Bakiye Net
+    Tek sabit varsayılan: Panel 0 (OHLC).
+    Diğer tüm paneller ve data serileri kullanıcı tarafından, istenilen sırada,
+    istenilen isim/tip/id ile eklenir.
 
     Kullanım (C# → pythonnet):
         dp     = DataPlotter(trade_data)
         result = dp.plot()                  # → bool
 
-    Kullanım (Python — indikatör ekleme):
+    Kullanım (Python):
         dp = DataPlotter(trade_data)
-        dp.AddIndicatorToPanel(0, "ma5")            # OHLC üzerine çiz
+
+        # OHLC üzerine indikatör
+        dp.AddIndicatorToPanel(0, "ma5")
         dp.AddIndicatorToPanel(0, "ma8")
-        dp.AddPanel(5, "MOST")                      # yeni panel
-        dp.AddIndicatorToPanel(5, "Most")
-        dp.AddIndicatorToPanel(5, "mostEma")
+
+        # İstediğin sırada, istediğin id ile yeni panel
+        dp.AddPanel(1, "Sinyal")
+        dp.GetPanelById(1).AddData(0, "Sinyal", "bar").values = td.sinyal_list
+
+        dp.AddPanel(2, "MOST")
+        dp.AddIndicatorToPanel(2, "Most")
+        dp.AddIndicatorToPanel(2, "mostEma")
+
         dp.plot()
     """
 
@@ -140,21 +145,28 @@ class DataPlotter:
     def AddIndicatorToPanel(self, panel_id: int, indicator_name: str,
                             data_type: str = "line") -> None:
         """
-        td.strategy_indicators içindeki bir indikatörü belirtilen panele ekler.
+        td.indicators veya td.strategy_indicators içindeki bir indikatörü
+        belirtilen panele ekler. Önce td.indicators'a, bulunamazsa
+        td.strategy_indicators'a bakar.
 
         Örnek:
             dp.AddIndicatorToPanel(0, "ma5")          # OHLC üzerine
             dp.AddIndicatorToPanel(0, "ma8")
-            dp.AddIndicatorToPanel(5, "Most")         # ayrı panel (önceden AddPanel ile oluşturulmuş olmalı)
+            dp.AddIndicatorToPanel(5, "Most")         # ayrı panel
             dp.AddIndicatorToPanel(5, "mostEma")
         """
         panel = self.GetPanelById(panel_id)
         if panel is None:
             raise ValueError(f"Panel id={panel_id} bulunamadı.")
-        values = self.td.strategy_indicators.get(indicator_name)
+        td = self.td
+        values = td.indicators.get(indicator_name) \
+              or td.strategy_indicators.get(indicator_name)
         if values is None:
-            raise KeyError(f"strategy_indicators içinde '{indicator_name}' yok.")
-        data_id = panel.data_count          # bir sonraki serbest id
+            raise KeyError(
+                f"'{indicator_name}' ne td.indicators ne de "
+                f"td.strategy_indicators içinde bulunamadı."
+            )
+        data_id = panel.data_count
         pd = panel.AddData(data_id, indicator_name, data_type)
         pd.values = list(values)
 
@@ -163,65 +175,64 @@ class DataPlotter:
     # ------------------------------------------------------------------
 
     def _setup_default_panels(self) -> None:
-        """
-        Pre-defined TradeData alanlarından panelleri otomatik oluşturur.
-
-        Panel 0 : OHLC          — her zaman
-        Panel 1 : Sinyal        — sinyal_list doluysa
-        Panel 2 : Kar/Zarar     — kar_zarar_fiyat_list doluysa
-        Panel 3 : Getiri        — getiri_fiyat_list veya getiri_fiyat_net_list doluysa
-        Panel 4 : Bakiye        — bakiye_fiyat_list veya bakiye_fiyat_net_list doluysa
-
-        strategy_indicators otomatik eklenmez; kullanıcı AddIndicatorToPanel ile
-        istediği panele istediği indikatörü ekler.
-        """
+        """Panel 0: OHLC — tek sabit varsayılan. Geri kalan her şey kullanıcıya ait."""
+        ohlc = Panel(0, "OHLC")
+        self._panels[0]      = ohlc
+        self._by_name["OHLC"] = ohlc
         td = self.td
-
-        # --- Panel 0: OHLC ------------------------------------------------
-        self.AddPanel(0, "OHLC")
-        ohlc = self.GetPanelById(0)
         ohlc_data = ohlc.AddData(0, "OHLC", "candlestick")
         ohlc_data.values = list(zip(td.opens, td.highs, td.lows, td.closes))
 
-        # --- Panel 1: Sinyal ----------------------------------------------
-        if td.sinyal_list:
-            self.AddPanel(1, "Sinyal")
-            p = self.GetPanelById(1)
-            p.height = 0.35
-            d = p.AddData(0, "Sinyal", "bar")
-            d.values = list(td.sinyal_list)
+    def _setup_panels_example(self) -> None:
+        """
+        Örnek panel kurulumu — referans / şablon olarak kullanılır, çağrılmaz.
 
-        # --- Panel 2: Kar/Zarar ------------------------------------------
-        if td.kar_zarar_fiyat_list:
-            self.AddPanel(2, "Kar/Zarar")
-            p = self.GetPanelById(2)
-            p.height = 0.5
-            d = p.AddData(0, "Kar/Zarar", "bar")
-            d.values = list(td.kar_zarar_fiyat_list)
+        Buradan kopyalanarak özelleştirilebilir:
+          - Panel id, isim, sıra tamamen isteğe bağlı
+          - data_type: "candlestick" | "line" | "bar" | "scatter" | "histogram"
+          - height: göreceli yükseklik (varsayılan 1.0)
+        """
+        td = self.td
 
-        # --- Panel 3: Getiri ---------------------------------------------
-        if td.getiri_fiyat_list or td.getiri_fiyat_net_list:
-            self.AddPanel(3, "Getiri")
-            p = self.GetPanelById(3)
-            p.height = 0.5
-            if td.getiri_fiyat_list:
-                d = p.AddData(0, "Getiri", "line")
-                d.values = list(td.getiri_fiyat_list)
-            if td.getiri_fiyat_net_list:
-                d = p.AddData(1, "Getiri Net", "line")
-                d.values = list(td.getiri_fiyat_net_list)
+        # --- Panel 0: OHLC (zaten _setup_default_panels'de oluşturulur) ----
+        # ohlc = self.GetPanelById(0)
+        # ohlc.AddData(0, "OHLC", "candlestick").values = list(zip(
+        #     td.opens, td.highs, td.lows, td.closes))
 
-        # --- Panel 4: Bakiye ---------------------------------------------
-        if td.bakiye_fiyat_list or td.bakiye_fiyat_net_list:
-            self.AddPanel(4, "Bakiye")
-            p = self.GetPanelById(4)
-            p.height = 0.5
-            if td.bakiye_fiyat_list:
-                d = p.AddData(0, "Bakiye", "line")
-                d.values = list(td.bakiye_fiyat_list)
-            if td.bakiye_fiyat_net_list:
-                d = p.AddData(1, "Bakiye Net", "line")
-                d.values = list(td.bakiye_fiyat_net_list)
+        # --- OHLC üzerine indikatör overlay ---------------------------------
+        # self.AddIndicatorToPanel(0, "ma5")
+        # self.AddIndicatorToPanel(0, "ma8")
+
+        # --- Panel 1: Sinyal -------------------------------------------------
+        self.AddPanel(1, "Sinyal")
+        p = self.GetPanelById(1)
+        p.height = 0.35
+        p.AddData(0, "Sinyal", "bar").values = list(td.sinyal_list)
+
+        # --- Panel 2: Kar/Zarar ----------------------------------------------
+        self.AddPanel(2, "Kar/Zarar")
+        p = self.GetPanelById(2)
+        p.height = 0.5
+        p.AddData(0, "Kar/Zarar", "bar").values = list(td.kar_zarar_fiyat_list)
+
+        # --- Panel 3: Getiri -------------------------------------------------
+        self.AddPanel(3, "Getiri")
+        p = self.GetPanelById(3)
+        p.height = 0.5
+        p.AddData(0, "Getiri",     "line").values = list(td.getiri_fiyat_list)
+        p.AddData(1, "Getiri Net", "line").values = list(td.getiri_fiyat_net_list)
+
+        # --- Panel 4: Bakiye -------------------------------------------------
+        self.AddPanel(4, "Bakiye")
+        p = self.GetPanelById(4)
+        p.height = 0.5
+        p.AddData(0, "Bakiye",     "line").values = list(td.bakiye_fiyat_list)
+        p.AddData(1, "Bakiye Net", "line").values = list(td.bakiye_fiyat_net_list)
+
+        # --- Panel 5: MOST indikatörü (strategy_indicators'dan) -------------
+        # self.AddPanel(5, "MOST")
+        # self.AddIndicatorToPanel(5, "Most")
+        # self.AddIndicatorToPanel(5, "mostEma")
 
     def _plot_imgui(self) -> None:
         """imgui_bundle ile interaktif grafik penceresi açar."""
