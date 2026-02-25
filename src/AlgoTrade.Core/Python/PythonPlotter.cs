@@ -1,44 +1,72 @@
-﻿using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using Newtonsoft.Json;
 using Python.Runtime;
 using ScottPlot;
 using Serilog.Sinks.File;
-using System.Diagnostics;
 using System.Linq;
 
 namespace AlgoTrade.Core.Python;
 
 /// <summary>
-/// pythonnet Ã¼zerinden Python tabanlÄ± gÃ¶rselleÅŸtirme iÅŸlemlerini yÃ¶netir.
-/// inputs/python/ klasÃ¶rÃ¼ndeki Python script'lerini Ã§aÄŸÄ±rÄ±r.
+/// pythonnet üzerinden Python tabanlı görselleştirme işlemlerini yönetir.
+/// inputs/python/ klasöründeki Python script'lerini çağırır.
 /// </summary>
 public class PythonPlotter : IDisposable
 {
     #region Properties
 
-    /// <summary>Python runtime baÅŸlatÄ±ldÄ± mÄ±?</summary>
+    /// <summary>Python runtime baÅŸlatıldı mı?</summary>
     public bool IsInitialized { get; private set; }
 
     /// <summary>
     /// Python DLL yolu.
-    /// BoÅŸ bÄ±rakÄ±lÄ±rsa sistem PATH'inden Ã§Ã¶zÃ¼mlenir (Ã¶rn. "python" komutuyla bulunan Python).
+    /// BoÅŸ bırakılırsa sistem PATH'inden çözümlenir (örn. "python" komutuyla bulunan Python).
     /// Explicit olarak verilmek istenirse: "python312.dll" veya tam yol.
     /// </summary>
     public string PythonDll { get; set; } = "";
 
     /// <summary>
-    /// Python script'lerinin bulunduÄŸu klasÃ¶r.
-    /// sys.path'e eklenir; buraya konan .py dosyalarÄ± import edilebilir.
-    /// VarsayÄ±lan: AppSettings.PythonScriptsDir (inputs/python/).
+    /// Python script'lerinin bulunduÄŸu klasör.
+    /// sys.path'e eklenir; buraya konan .py dosyaları import edilebilir.
+    /// Varsayılan: AppSettings.PythonScriptsDir (inputs/python/).
     /// </summary>
     public string PythonScriptsDir { get; set; } = AppSettings.PythonScriptsDir;
 
-    // PythonEngine process baÅŸÄ±na tek seferlik baÅŸlatÄ±lÄ±r/kapatÄ±lÄ±r.
+    // PythonEngine process baÅŸına tek seferlik baÅŸlatılır/kapatılır.
     private static bool          _engineStarted = false;
     private static readonly object _engineLock  = new();
 
-    private bool _disposed;
+    private bool         _disposed;
+    private LogManager?  _logger;
+
+    #endregion
+
+    #region Data Fields
+
+    private List<DateTime>                _dateTimes               = new();
+    private List<DateTime>                _dates                   = new();
+    private List<TimeSpan>                _times                   = new();
+    private List<double>                  _opens                   = new();
+    private List<double>                  _highs                   = new();
+    private List<double>                  _lows                    = new();
+    private List<double>                  _closes                  = new();
+    private List<long>                    _volumes                 = new();
+    private List<long>                    _lots                    = new();
+    private List<double>                  _sinyalList              = new();
+    private List<double>                  _karZararFiyatList       = new();
+    private List<double>                  _bakiyeFiyatList         = new();
+    private List<double>                  _getiriFiyatList         = new();
+    private List<double>                  _komisyonFiyatList       = new();
+    private List<double>                  _bakiyeFiyatNetList      = new();
+    private List<double>                  _getiriFiyatNetList      = new();
+    private List<double>                  _karZararFiyatYuzdeList  = new();
+    private List<double>                  _getiriFiyatYuzdeList    = new();
+    private List<double>                  _getiriFiyatNetYuzdeList = new();
+    private Dictionary<string, double[]>? _strategyIndicators;
+    private string                        _title                   = "AlgoTrade";
+    private string                        _periyot                 = "1H";
 
     #endregion
 
@@ -46,19 +74,21 @@ public class PythonPlotter : IDisposable
 
     public PythonPlotter() { }
 
-    /// <param name="pythonDll">Python DLL yolu (Ã¶rn. "python312.dll" veya tam path).</param>
+    /// <param name="pythonDll">Python DLL yolu (örn. "python312.dll" veya tam path).</param>
     public PythonPlotter(string pythonDll)
     {
         PythonDll = pythonDll;
     }
+
+    public void SetLogger(LogManager? logger) => _logger = logger;
 
     #endregion
 
     #region Initialization
 
     /// <summary>
-    /// Python engine'i baÅŸlatÄ±r.
-    /// AynÄ± process iÃ§inde birden fazla Ã§aÄŸrÄ±lsa da yalnÄ±zca ilk Ã§aÄŸrÄ± etkilidir.
+    /// Python engine'i başlatır.
+    /// Aynı process içinde birden fazla çağrılsa da yalnızca ilk çağrı etkilidir.
     /// </summary>
     public void Initialize()
     {
@@ -75,28 +105,27 @@ public class PythonPlotter : IDisposable
 
             try
             {
-                // DLL yolunu belirle: Ã¶nce property, sonra otomatik tespit
+                // DLL yolunu belirle: önce property, sonra otomatik tespit
                 string dll = !string.IsNullOrEmpty(PythonDll)
                     ? PythonDll
                     : FindPythonDll()
                       ?? throw new InvalidOperationException(
-                          "Python DLL bulunamadÄ±. PythonPlotter.PythonDll'i aÃ§Ä±kÃ§a set edin " +
-                          "veya PYTHONNET_PYDLL ortam deÄŸiÅŸkenini tanÄ±mlayÄ±n.\n" +
-                          "Ã–rn: plotter.PythonDll = @\"C:\\Python312\\python312.dll\"");
+                          "Python DLL bulunamadı. PythonPlotter.PythonDll'i açıkça set edin " +
+                          "veya PYTHONNET_PYDLL ortam değişkenini tanımlayın.\n" +
+                          "Örnek: plotter.PythonDll = @\"C:\\Python312\\python312.dll\"");
 
                 if (!File.Exists(dll))
-                    throw new FileNotFoundException($"Python DLL bulunamadÄ±: {dll}");
+                    throw new FileNotFoundException($"Python DLL bulunamadı: {dll}");
 
                 if (!Directory.Exists(PythonScriptsDir))
                 {
                     Directory.CreateDirectory(PythonScriptsDir);
-                    System.Diagnostics.Debug.WriteLine(
-                        $"Python script dizini oluÅŸturuldu: {PythonScriptsDir}");
+                    _logger?.WriteLog($"Python script dizini oluşturuldu: {PythonScriptsDir}");
                 }
 
                 Runtime.PythonDLL = dll;
                 PythonEngine.Initialize();
-                PythonEngine.BeginAllowThreads(); // Multi-threading desteÄŸi
+                PythonEngine.BeginAllowThreads(); // Multi-threading desteği
 
                 using (Py.GIL())
                 {
@@ -104,7 +133,7 @@ public class PythonPlotter : IDisposable
                     dynamic sys = Py.Import("sys");
                     sys.path.insert(0, new PyString(PythonScriptsDir));
 
-                    // AlgoTradeWithPaythonWithGemini venv/site-packages ve src (geÃ§ici)
+                    // AlgoTradeWithPaythonWithGemini venv/site-packages ve src (geçici)
                     string[] venvPaths =
                     {
                         @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",
@@ -119,7 +148,7 @@ public class PythonPlotter : IDisposable
                         if (Directory.Exists(venvPath))
                         {
                             sys.path.insert(0, new PyString(venvPath));
-                            System.Diagnostics.Debug.WriteLine($"âœ“ Venv site-packages eklendi: {venvPath}");
+                            _logger?.WriteRaw($"✓ Venv site-packages eklendi: {venvPath}");
                             break;
                         }
                     }
@@ -135,7 +164,7 @@ public class PythonPlotter : IDisposable
                         if (Directory.Exists(srcPath))
                         {
                             sys.path.insert(0, new PyString(srcPath));
-                            System.Diagnostics.Debug.WriteLine($"âœ“ AlgoTradeWithPaythonWithGemini/src eklendi: {srcPath}");
+                            _logger?.WriteRaw($"✓ AlgoTradeWithPythonWithGemini/src eklendi: {srcPath}");
                             break;
                         }
                     }
@@ -143,7 +172,7 @@ public class PythonPlotter : IDisposable
 
                 _engineStarted = true;
                 IsInitialized = true;
-                System.Diagnostics.Debug.WriteLine("âœ“ Python Engine initialized successfully (global singleton)");
+                _logger?.WriteRaw("✓ Python Engine initialized successfully (global singleton)");
             }
             catch (Exception ex)
             {
@@ -153,8 +182,8 @@ public class PythonPlotter : IDisposable
     }
 
     /// <summary>
-    /// Python engine'i kapatÄ±r. Process sonunda bir kez Ã§aÄŸrÄ±lmalÄ±.
-    /// PythonPlotter.Shutdown() ÅŸeklinde explicit Ã§aÄŸrÄ±lÄ±r; Dispose() iÃ§inde Ã§aÄŸrÄ±lmaz.
+    /// Python engine'i kapatır. Process sonunda bir kez çağrılmalı.
+    /// PythonPlotter.Shutdown() şeklinde explicit çağrılır; Dispose() içinde çağrılmaz.
     /// </summary>
     public static void Shutdown()
     {
@@ -171,8 +200,8 @@ public class PythonPlotter : IDisposable
     #region Plot Methods
 
     /// <summary>
-    /// inputs/python/main.py içindeki hello() fonksiyonunu Ã§aÄŸÄ±rÄ±r.
-    /// Konsola "Hello Python" yazdÄ±rmak iÃ§in basit bir test.
+    /// inputs/python/main.py içindeki hello() fonksiyonunu çağırır.
+    /// Konsola "Hello Python" yazdırmak için basit bir test.
     /// </summary>
     public void RunHello()
     {
@@ -184,15 +213,15 @@ public class PythonPlotter : IDisposable
     }
 
     /// <summary>
-    /// Optimizasyon sonuÃ§larÄ±nÄ± Python'a aktarÄ±p gÃ¶rselleÅŸtirir.
-    /// inputs/python/plotter.py içindeki show_optimization_results(data) fonksiyonunu Ã§aÄŸÄ±rÄ±r.
+    /// Optimizasyon sonuçlarını Python'a aktarıp görselleştirir.
+    /// inputs/python/plotter.py içindeki show_optimization_results(data) fonksiyonunu çağırır.
     /// </summary>
     /// <param name="results">SingleTraderOptimizer.Results listesi.</param>
     public void PlotOptimizationResults(List<OptimizationResult> results)
     {
         EnsureInitialized();
 
-        // C# -> JSON -> Python (pythonnet type dÃ¶nÃ¼ÅŸÃ¼mÃ¼nden baÄŸÄ±msÄ±z, gÃ¼venli yol)
+        // C# -> JSON -> Python (pythonnet type dönüşümünden bağımsız, güvenli yol)
         var payload = results.Select(r => new
         {
             parameters        = r.Parameters,
@@ -217,11 +246,11 @@ public class PythonPlotter : IDisposable
     }
 
     /// <summary>
-    /// SingleTrader koşum sonuçlarını Python'a aktarÄ±p gÃ¶rselleÅŸtirir.
-    /// inputs/python/plotter.py içindeki show_single_trader_data(data) fonksiyonunu Ã§aÄŸÄ±rÄ±r.
+    /// SingleTrader koşum sonuçlarını Python'a aktarıp görselleştirir.
+    /// inputs/python/plotter.py içindeki show_single_trader_data(data) fonksiyonunu çağırır.
     /// Pencere kapanana dek bloklar.
     /// </summary>
-    /// <param name="trader">Finalize() çağrılmış SingleTrader instance'Ä±.</param>
+    /// <param name="trader">Finalize() çağrılmış SingleTrader instance'ı.</param>
     public void PlotSingleTraderData(SingleTrader trader)
     {
         EnsureInitialized();
@@ -234,172 +263,198 @@ public class PythonPlotter : IDisposable
 
         Lists lists = trader.lists ?? throw new ArgumentException("trader.lists is null", nameof(trader));
 
-        var (dateTimes, dates, times,
-             opens, highs, lows, closes, volumes, lots,
-             sinyalList, karZararFiyatList, bakiyeFiyatList,
-             getiriFiyatList, komisyonFiyatList, bakiyeFiyatNetList, getiriFiyatNetList) = ExtractTraderData(trader, lists);
-
-        var strategyIndicators = GetStrategyIndicators(trader);
-
-        string title   = trader.SymbolName   ?? "AlgoTrade";
-        string periyot = trader.SymbolPeriod ?? "1H";
-
-        CallPlotDataImgBundleNew(
-            dateTimes, dates, times, opens, highs, lows, closes, volumes, lots,
-            sinyalList, karZararFiyatList, bakiyeFiyatList,
-            getiriFiyatList, komisyonFiyatList, bakiyeFiyatNetList, getiriFiyatNetList,
-            strategyIndicators, title, periyot);
-    }
-
-    private static (
-        List<DateTime> dateTimes,
-        List<DateTime> dates,
-        List<TimeSpan> times,
-        List<double>   opens,
-        List<double>   highs,
-        List<double>   lows,
-        List<double>   closes,
-        List<long>     volumes,
-        List<long>     lots,
-        List<double>   sinyalList,
-        List<double>   karZararFiyatList,
-        List<double>   bakiyeFiyatList,
-        List<double>   getiriFiyatList,
-        List<double>   komisyonFiyatList,
-        List<double>   bakiyeFiyatNetList,
-        List<double>   getiriFiyatNetList
-    ) ExtractTraderData(SingleTrader trader, Lists lists)
-    {
-        List<DateTime> dateTimes        = trader.Data.Select(d => d.DateTime).ToList();
-        List<DateTime> dates            = trader.Data.Select(d => d.Date).ToList();
-        List<TimeSpan> times            = trader.Data.Select(d => d.Time).ToList();
-        List<double> opens              = trader.Data.Select(d => d.Open).ToList();
-        List<double> highs              = trader.Data.Select(d => d.High).ToList();
-        List<double> lows               = trader.Data.Select(d => d.Low).ToList();
-        List<double> closes             = trader.Data.Select(d => d.Close).ToList();
-        List<long> volumes              = trader.Data.Select(d => d.Volume).ToList();
-        List<long> lots                 = trader.Data.Select(d => d.Size).ToList();
-        List<double> sinyalList         = lists.SinyalList;
-        List<double> karZararFiyatList  = lists.KarZararFiyatList;
-        List<double> bakiyeFiyatList    = lists.BakiyeFiyatList;
-        List<double> getiriFiyatList    = lists.GetiriFiyatList;
-        List<double> komisyonFiyatList  = lists.KomisyonFiyatList;
-        List<double> bakiyeFiyatNetList = lists.BakiyeFiyatNetList;
-        List<double> getiriFiyatNetList = lists.GetiriFiyatNetList;
-
-        return (dateTimes, dates, times,
-                opens, highs, lows, closes, volumes, lots,
-                sinyalList, karZararFiyatList, bakiyeFiyatList,
-                getiriFiyatList, komisyonFiyatList, bakiyeFiyatNetList, getiriFiyatNetList);
-    }
-
-    private static Dictionary<string, double[]>? GetStrategyIndicators(SingleTrader trader)
-    {
-        return trader.Strategy?.GetPlotIndicators();
-    }
-
-    private static void CallPlotDataImgBundleNew(
-        List<DateTime> dateTimes,
-        List<DateTime> dates,
-        List<TimeSpan> times,
-        List<double>   opens,
-        List<double>   highs,
-        List<double>   lows,
-        List<double>   closes,
-        List<long>     volumes,
-        List<long>     lots,
-        List<double>   sinyalList,
-        List<double>   karZararFiyatList,
-        List<double>   bakiyeFiyatList,
-        List<double>   getiriFiyatList,
-        List<double>   komisyonFiyatList,
-        List<double>   bakiyeFiyatNetList,
-        List<double>   getiriFiyatNetList,
-        Dictionary<string, double[]>? strategyIndicators,
-        string         title,
-        string         periyot)
-    {
         using (Py.GIL())
         {
-            using var pyDateTimes     = new PyList();
-            using var pyDates = new PyList();
-            using var pyTimes = new PyList();
-            using var pyOpens     = new PyList();
-            using var pyHighs     = new PyList();
-            using var pyLows      = new PyList();
-            using var pyCloses    = new PyList();
-            using var pyVolumes   = new PyList();
-            using var pyLots      = new PyList();
-            using var pySinyal    = new PyList();
-            using var pyKarZarar  = new PyList();
-            using var pyBakiye    = new PyList();
-            using var pyGetiri    = new PyList();
-            using var pyKomisyon  = new PyList();
-            using var pyBakiyeNet = new PyList();
-            using var pyGetiriNet = new PyList();
+            ExtractTraderData(trader, lists);
+            dynamic tradeData = BuildPyTradeData();
+            CallPlotDataImgBundleNew(tradeData);
+        }
+    }
 
-            foreach (var d in dateTimes)            pyDateTimes.Append(new PyString(d.ToString("yyyy.MM.dd HH:mm:ss")));
-            foreach (var d in dates)                pyDates.Append(new PyString(d.ToString("yyyy.MM.dd")));
-            foreach (var t in times)                pyTimes.Append(new PyString(t.ToString(@"hh\:mm\:ss")));
-            foreach (var v in opens)                pyOpens.Append(new PyFloat(v));
-            foreach (var v in highs)                pyHighs.Append(new PyFloat(v));
-            foreach (var v in lows)                 pyLows.Append(new PyFloat(v));
-            foreach (var v in closes)               pyCloses.Append(new PyFloat(v));
-            foreach (var v in volumes)              pyVolumes.Append(new PyFloat(v));
-            foreach (var v in lots)                 pyLots.Append(new PyFloat(v));
-            foreach (var v in sinyalList)           pySinyal.Append(new PyFloat(v));
-            foreach (var v in karZararFiyatList)    pyKarZarar.Append(new PyFloat(v));
-            foreach (var v in bakiyeFiyatList)      pyBakiye.Append(new PyFloat(v));
-            foreach (var v in getiriFiyatList)      pyGetiri.Append(new PyFloat(v));
-            foreach (var v in komisyonFiyatList)    pyKomisyon.Append(new PyFloat(v));
-            foreach (var v in bakiyeFiyatNetList)   pyBakiyeNet.Append(new PyFloat(v));
-            foreach (var v in getiriFiyatNetList)   pyGetiriNet.Append(new PyFloat(v));
+    private void ExtractTraderData(SingleTrader trader, Lists lists)
+    {
+        _dateTimes               = trader.Data.Select(d => d.DateTime).ToList();
+        _dates                   = trader.Data.Select(d => d.Date).ToList();
+        _times                   = trader.Data.Select(d => d.Time).ToList();
+        _opens                   = trader.Data.Select(d => d.Open).ToList();
+        _highs                   = trader.Data.Select(d => d.High).ToList();
+        _lows                    = trader.Data.Select(d => d.Low).ToList();
+        _closes                  = trader.Data.Select(d => d.Close).ToList();
+        _volumes                 = trader.Data.Select(d => d.Volume).ToList();
+        _lots                    = trader.Data.Select(d => d.Size).ToList();
+        _sinyalList              = lists.SinyalList;
+        _karZararFiyatList       = lists.KarZararFiyatList;
+        _bakiyeFiyatList         = lists.BakiyeFiyatList;
+        _getiriFiyatList         = lists.GetiriFiyatList;
+        _komisyonFiyatList       = lists.KomisyonFiyatList;
+        _bakiyeFiyatNetList      = lists.BakiyeFiyatNetList;
+        _getiriFiyatNetList      = lists.GetiriFiyatNetList;
+        _karZararFiyatYuzdeList  = lists.KarZararFiyatYuzdeList;
+        _getiriFiyatYuzdeList    = lists.GetiriFiyatYuzdeList;
+        _getiriFiyatNetYuzdeList = lists.GetiriFiyatYuzdeNetList;
+        _strategyIndicators      = trader.Strategy?.GetPlotIndicators();
+        _title                   = trader.SymbolName   ?? "AlgoTrade";
+        _periyot                 = trader.SymbolPeriod ?? "1H";
+    }
 
-            dynamic pyIndicators = new PyDict();
-            if (strategyIndicators != null)
+    /// <summary>
+    /// C# listelerini Python PyList/PyDict'e dönüştürür, trade_data.TradeData() instance'ını
+    /// setter'lar üzerinden doldurur ve Python nesnesini döndürür.
+    /// GIL çağrı öncesinde edinilmiş olmalıdır.
+    /// </summary>
+    private dynamic BuildPyTradeData()
+    {
+        var pyDateTimes      = new PyList();
+        var pyDates          = new PyList();
+        var pyTimes          = new PyList();
+        var pyOpens          = new PyList();
+        var pyHighs          = new PyList();
+        var pyLows           = new PyList();
+        var pyCloses         = new PyList();
+        var pyVolumes        = new PyList();
+        var pyLots           = new PyList();
+        var pySinyal         = new PyList();
+        var pyKarZarar       = new PyList();
+        var pyBakiye         = new PyList();
+        var pyGetiri         = new PyList();
+        var pyKomisyon       = new PyList();
+        var pyBakiyeNet      = new PyList();
+        var pyGetiriNet      = new PyList();
+        var pyKarZararYuzde  = new PyList();
+        var pyGetiriYuzde    = new PyList();
+        var pyGetiriNetYuzde = new PyList();
+
+        foreach (var d in _dateTimes)               pyDateTimes.Append(new PyString(d.ToString("yyyy.MM.dd HH:mm:ss")));
+        foreach (var d in _dates)                   pyDates.Append(new PyString(d.ToString("yyyy.MM.dd")));
+        foreach (var t in _times)                   pyTimes.Append(new PyString(t.ToString(@"hh\:mm\:ss")));
+        foreach (var v in _opens)                   pyOpens.Append(new PyFloat(v));
+        foreach (var v in _highs)                   pyHighs.Append(new PyFloat(v));
+        foreach (var v in _lows)                    pyLows.Append(new PyFloat(v));
+        foreach (var v in _closes)                  pyCloses.Append(new PyFloat(v));
+        foreach (var v in _volumes)                 pyVolumes.Append(new PyFloat(v));
+        foreach (var v in _lots)                    pyLots.Append(new PyFloat(v));
+        foreach (var v in _sinyalList)              pySinyal.Append(new PyFloat(v));
+        foreach (var v in _karZararFiyatList)       pyKarZarar.Append(new PyFloat(v));
+        foreach (var v in _bakiyeFiyatList)         pyBakiye.Append(new PyFloat(v));
+        foreach (var v in _getiriFiyatList)         pyGetiri.Append(new PyFloat(v));
+        foreach (var v in _komisyonFiyatList)       pyKomisyon.Append(new PyFloat(v));
+        foreach (var v in _bakiyeFiyatNetList)      pyBakiyeNet.Append(new PyFloat(v));
+        foreach (var v in _getiriFiyatNetList)      pyGetiriNet.Append(new PyFloat(v));
+        foreach (var v in _karZararFiyatYuzdeList)  pyKarZararYuzde.Append(new PyFloat(v));
+        foreach (var v in _getiriFiyatYuzdeList)    pyGetiriYuzde.Append(new PyFloat(v));
+        foreach (var v in _getiriFiyatNetYuzdeList) pyGetiriNetYuzde.Append(new PyFloat(v));
+
+        var pyIndicators = new PyDict();
+        if (_strategyIndicators != null)
+        {
+            foreach (var kvp in _strategyIndicators)
             {
-                foreach (var kvp in strategyIndicators)
+                if (kvp.Value != null && kvp.Value.Length > 0)
                 {
-                    if (kvp.Value != null && kvp.Value.Length > 0)
-                    {
-                        dynamic pyList = new PyList();
-                        foreach (var v in kvp.Value) pyList.Append(new PyFloat(v));
-                        pyIndicators[kvp.Key] = pyList;
-                    }
+                    var pyList = new PyList();
+                    foreach (var v in kvp.Value) pyList.Append(new PyFloat(v));
+                    pyIndicators[new PyString(kvp.Key)] = pyList;
                 }
             }
-
-            // inputs/python/main.py → print_data_info
-            dynamic mainModule = Py.Import("main");
-            mainModule.print_data_info(
-                pyDateTimes, pyDates, pyTimes,
-                pyOpens, pyHighs, pyLows, pyCloses,
-                pyVolumes, pyLots,
-                pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyKomisyon, pyBakiyeNet, pyGetiriNet,
-                strategy_indicators: pyIndicators,
-                title: title,
-                periyot: periyot
-            );
-
-            /*
-                         // (AlgoTradeWithPaythonWithGemini/src sys.path'e Initialize() içinde eklendi)
-                        dynamic plotModule = Py.Import("plotDataImgBundleNew");
-
-                        plotModule.plot_data_img_bundle_new(
-                            pyDates, pyOpens, pyHighs, pyLows, pyCloses,
-                            pyVolumes, pyLots,
-                            pySinyal, pyKarZarar, pyBakiye, pyGetiri, pyGetiriNet,
-                            bakiye_fiyat_net_list:          null,
-                            kar_zarar_fiyat_yuzde_list:     null,
-                            getiri_fiyat_yuzde_list:        null,
-                            komisyon_fiyat_list:            null,
-                            getiri_fiyat_yuzde_net_list:    null,
-                            strategy_indicators:            pyIndicators,
-                            title:                          title,
-                            periyot:                        periyot
-                        );
-            */
         }
+
+        dynamic tradeDataModule = Py.Import("trade_data");
+        dynamic td = tradeDataModule.TradeData();
+
+        td.date_times                  = pyDateTimes;
+        td.dates                       = pyDates;
+        td.times                       = pyTimes;
+        td.opens                       = pyOpens;
+        td.highs                       = pyHighs;
+        td.lows                        = pyLows;
+        td.closes                      = pyCloses;
+        td.volumes                     = pyVolumes;
+        td.lots                        = pyLots;
+        td.sinyal_list                 = pySinyal;
+        td.kar_zarar_fiyat_list        = pyKarZarar;
+        td.bakiye_fiyat_list           = pyBakiye;
+        td.getiri_fiyat_list           = pyGetiri;
+        td.komisyon_fiyat_list         = pyKomisyon;
+        td.bakiye_fiyat_net_list       = pyBakiyeNet;
+        td.getiri_fiyat_net_list       = pyGetiriNet;
+        td.kar_zarar_fiyat_yuzde_list  = pyKarZararYuzde;
+        td.getiri_fiyat_yuzde_list     = pyGetiriYuzde;
+        td.getiri_fiyat_net_yuzde_list = pyGetiriNetYuzde;
+        td.strategy_indicators         = pyIndicators;
+        td.title                       = _title;
+        td.periyot                     = _periyot;
+
+        return td;
+    }
+
+    private bool CallPlotDataImgBundleNew(dynamic tradeData)
+    {
+        bool success = false;
+
+        try
+        {
+            // -----------------------------------------
+            dynamic sys_module = Py.Import("sys");
+            dynamic old_stdout = sys_module.stdout;
+
+            try
+            {
+                // Python stdout'u yakala
+                dynamic io = Py.Import("io");
+                dynamic stdout = io.StringIO();
+                sys_module.stdout = stdout;
+
+                // imgui_bundle kontrolü
+                try
+                {
+                    //Py.Import("imgui_bundle");
+                }
+                catch (PythonException)
+                {
+                    throw new Exception(
+                        "imgui_bundle yüklü değil!\n\n" +
+                        "Lütfen şu komutu çalıştırın:\n" +
+                        "pip install imgui-bundle"
+                    );
+                }
+
+                dynamic mainModule = Py.Import("main");
+                var result = mainModule.print_data_info(tradeData);
+
+                // plotDataImgBundleNew modülünü import et
+                // dynamic plotModule = Py.Import("plotDataImgBundleNew");
+                // (AlgoTradeWithPaythonWithGemini/src sys.path'e Initialize() içinde eklendi)
+                // plotModule.plot_data_img_bundle_new(tradeData);
+
+                // Python stdout'u al
+                string pythonOutput = stdout.getvalue().ToString();
+                if (!string.IsNullOrEmpty(pythonOutput))
+                {
+                    _logger?.WriteRaw("=== PYTHON OUTPUT ===");
+                    _logger?.WriteRaw(pythonOutput);
+                    _logger?.WriteRaw("=== END PYTHON OUTPUT ===");
+                }
+
+                success = (bool)result;
+                if (!success)
+                {
+                    _logger?.WriteLog("❌ Python plot_data_img_bundle_new returned False!");
+                }
+
+            }
+            finally
+            {
+                // stdout'u geri yükle
+                sys_module.stdout = old_stdout;
+            }
+            // -----------------------------------------
+        }
+        catch (PythonException pyEx)
+        {
+            throw new Exception($"Python plotting error: {pyEx.Message}\n{pyEx.StackTrace}", pyEx);
+        }
+
+        return success;
     }
 
     #endregion
@@ -410,14 +465,14 @@ public class PythonPlotter : IDisposable
     {
         if (!IsInitialized)
             throw new InvalidOperationException(
-                "PythonPlotter baÅŸlatÄ±lmadÄ±. Ã–nce Initialize() Ã§aÄŸrÄ±n.");
+                "PythonPlotter başlatılmadı. Önce Initialize() çağırın.");
     }
 
     /// <summary>
     /// Python DLL yolunu otomatik tespit eder.
-    /// Ã–nce PYTHONNET_PYDLL ortam deÄŸiÅŸkenine, sonra PATH'deki 'python' komutuna bakar.
+    /// Önce PYTHONNET_PYDLL ortam değişkenine, sonra PATH'deki 'python' komutuna bakar.
     /// </summary>
-    private static string? FindPythonDll()
+    private string? FindPythonDll()
     {
         string[] possiblePaths = new[]
         {
@@ -439,14 +494,14 @@ public class PythonPlotter : IDisposable
         {
             if (File.Exists(path))
             {
-                System.Diagnostics.Debug.WriteLine($"Python DLL found: {path}");
+                _logger?.WriteLog($"Python DLL found: {path}");
                 return path;
             }
         }
 
         throw new FileNotFoundException(
-            "Python DLL bulunamadÄ±! LÃ¼tfen Python 3.11+ kurun.\n" +
-            "Ä°ndirme: https://www.python.org/downloads/"
+            "Python DLL bulunamadı! Lütfen Python 3.11+ kurun.\n" +
+            "İndirme: https://www.python.org/downloads/"
         );
     }
 
@@ -458,8 +513,8 @@ public class PythonPlotter : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        // PythonEngine.Shutdown() global/static state olduÄŸu iÃ§in Dispose iÃ§inde Ã§aÄŸrÄ±lmaz.
-        // Uygulama sonunda explicit olarak PythonPlotter.Shutdown() Ã§aÄŸrÄ±lmalÄ±.
+        // PythonEngine.Shutdown() global/static state olduÄŸu için Dispose içinde çaÄŸrılmaz.
+        // Uygulama sonunda explicit olarak PythonPlotter.Shutdown() çaÄŸrılmalı.
     }
 
     public void Dispose()

@@ -2,12 +2,17 @@ def hello():
     print("Hello Python")
 
 
-def print_data_info(date_times, dates, times,
-                    opens, highs, lows, closes, volumes, lots,
-                    sinyal_list, kar_zarar_list, bakiye_list,
-                    getiri_list, komisyon_list, bakiye_net_list, getiri_net_list,
-                    strategy_indicators=None,
-                    title="AlgoTrade", periyot="1H"):
+def print_data_info(trade_data):
+    dates               = trade_data.dates
+    closes              = trade_data.closes
+    sinyal_list         = trade_data.sinyal_list
+    bakiye_list         = trade_data.bakiye_fiyat_list
+    bakiye_net_list     = trade_data.bakiye_fiyat_net_list
+    komisyon_list       = trade_data.komisyon_fiyat_list
+    getiri_net_list     = trade_data.getiri_fiyat_net_list
+    strategy_indicators = trade_data.strategy_indicators
+    title               = trade_data.title
+    periyot             = trade_data.periyot
 
     n = len(closes)
     sep = "-" * 52
@@ -54,7 +59,8 @@ def print_data_info(date_times, dates, times,
         print(f"  Indikatörler   : (yok)")
 
     print(sep)
-    print()
+
+    return True
 
 
 if __name__ == "__main__":

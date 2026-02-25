@@ -8,6 +8,7 @@ using AlgoTrade.Core.Trading.Queries;
 using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Strategy;
+using SkiaSharp;
 using System.Text;
 using static Nessos.LinqOptimizer.Core.QueryExpr;
 
@@ -1634,6 +1635,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             }
 
             _pythonPlotter ??= new PythonPlotter();
+            _pythonPlotter.SetLogger(_logger);
 
             if (!string.IsNullOrEmpty(PythonDll))
                 _pythonPlotter.PythonDll = PythonDll;
@@ -1641,7 +1643,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (!_pythonPlotter.IsInitialized)
                 _pythonPlotter.Initialize();
 
-            Log($"Python DLL seçildi: {PythonDll}");
+            _logger?.WriteRaw($"✓ Python DLL seçildi: {PythonDll}");
 
             // Basit doğrulama: main.py -> hello()
             if (runHello)
@@ -1670,11 +1672,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             throw new ArgumentNullException(nameof(singleTrader),
                 "SingleTrader null. RunSingleTraderWithProgressAsync() başarıyla tamamlandı mı?");
 
-        _pythonPlotter ??= new PythonPlotter();
-        if (!string.IsNullOrEmpty(PythonDll))
-            _pythonPlotter.PythonDll = PythonDll;
-        if (!_pythonPlotter.IsInitialized)
-            _pythonPlotter.Initialize();
+        if (_pythonPlotter == null || !_pythonPlotter.IsInitialized)
+            throw new InvalidOperationException("Python ortamı hazır değil. Önce SetupPython() çağırın.");
 
         await Task.Run(() => _pythonPlotter.PlotSingleTraderData(singleTrader));
     }

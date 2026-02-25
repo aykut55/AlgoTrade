@@ -930,8 +930,10 @@ async Task runSingleTraderAlgoTrade()
 
         await algoTrader.RunSingleTraderWithProgressAsync();
 
+        LogManager.LogRaw("");
         if (algoTrader.SetupPython())
         {
+            LogManager.LogRaw("");
             await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
         }
         else

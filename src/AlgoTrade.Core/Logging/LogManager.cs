@@ -436,6 +436,26 @@ namespace AlgoTrade.Core.Logging
         public void WriteError(params object[] args) => LogInternal(LogLevel.Error, null, LogSinks.All, null, args);
         public void WriteFatal(params object[] args) => LogInternal(LogLevel.Fatal, null, LogSinks.All, null, args);
 
+        /// <summary>
+        /// Formatsız log - timestamp/level prefix olmadan düz metin yazar.
+        /// Tablo, banner, harici çıktı (Python stdout vb.) için kullanılır.
+        /// </summary>
+        public void WriteRaw(string message, LogSinks sinks = LogSinks.All)
+        {
+            if (!IsEnabled || message == null) return;
+            var entry = new LogEntry(LogLevel.Info, message, targetSinks: sinks, isRaw: true);
+            AddToBuffer(entry);
+            SendToSinks(entry);
+        }
+
+        public void WriteRaw(string message, ConsoleColor? color, LogSinks sinks = LogSinks.All)
+        {
+            if (!IsEnabled || message == null) return;
+            var entry = new LogEntry(LogLevel.Info, message, targetSinks: sinks, isRaw: true, color: color);
+            AddToBuffer(entry);
+            SendToSinks(entry);
+        }
+
         // ====================================================================
         // İÇ METOD - LOG İŞLEME
         // ====================================================================
