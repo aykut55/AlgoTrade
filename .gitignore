@@ -77,3 +77,6 @@ launchSettings.json
 # Windows
 Thumbs.db
 desktop.ini
+
+# Python venv
+inputs/python/.venv/

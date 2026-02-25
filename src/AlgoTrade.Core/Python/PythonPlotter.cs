@@ -5,8 +5,10 @@ using AlgoTrade.Core.Trading.Indicators;
 using Newtonsoft.Json;
 using Python.Runtime;
 using ScottPlot;
+using ScottPlot.Plottables;
 using Serilog.Sinks.File;
 using System.Linq;
+using System.Reflection.Metadata;
 using Tulip;
 
 namespace AlgoTrade.Core.Python;
@@ -137,15 +139,18 @@ public class PythonPlotter : IDisposable
                     dynamic sys = Py.Import("sys");
                     sys.path.insert(0, new PyString(PythonScriptsDir));
 
-                    // AlgoTradeWithPaythonWithGemini venv/site-packages ve src (geçici)
+                    // Venv site-packages — Python 3.12 uyumlu proje içi venv
                     string[] venvPaths =
                     {
-                        @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",
-                        @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\venv\Lib\site-packages",
-                        @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\venv\Lib\site-packages",
-                        @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",
-                        @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\Aykut\venv\Lib\site-packages",
+                        @"D:\sage1\AlgoTrade\AlgoTrade\inputs\python\.venv\Lib\site-packages",
+                        // @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",  // Python 3.13 — uyumsuz
+                        // @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\venv\Lib\site-packages",
+                        // @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\venv\Lib\site-packages",
+                        // @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",
+                        // @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\Aykut\venv\Lib\site-packages",
                     };
+
+                    dynamic os = Py.Import("os");
 
                     foreach (var venvPath in venvPaths)
                     {
@@ -153,25 +158,33 @@ public class PythonPlotter : IDisposable
                         {
                             sys.path.insert(0, new PyString(venvPath));
                             _logger?.WriteRaw($"✓ Venv site-packages eklendi: {venvPath}");
+
+                            // imgui_bundle native DLL'leri için kendi dizinini arama yoluna ekle
+                            string imguiBundleDir = Path.Combine(venvPath, "imgui_bundle");
+                            if (Directory.Exists(imguiBundleDir))
+                            {
+                                os.add_dll_directory(imguiBundleDir);
+                                _logger?.WriteRaw($"✓ imgui_bundle DLL dizini eklendi: {imguiBundleDir}");
+                            }
+
                             break;
                         }
                     }
 
-                    string[] srcPaths =
-                    {
-                        @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\src",
-                        @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\src",
-                    };
-
-                    foreach (var srcPath in srcPaths)
-                    {
-                        if (Directory.Exists(srcPath))
-                        {
-                            sys.path.insert(0, new PyString(srcPath));
-                            _logger?.WriteRaw($"✓ AlgoTradeWithPythonWithGemini/src eklendi: {srcPath}");
-                            break;
-                        }
-                    }
+                    // string[] srcPaths =
+                    // {
+                    //     @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\src",
+                    //     @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\src",
+                    // };
+                    // foreach (var srcPath in srcPaths)
+                    // {
+                    //     if (Directory.Exists(srcPath))
+                    //     {
+                    //         sys.path.insert(0, new PyString(srcPath));
+                    //         _logger?.WriteRaw($"✓ AlgoTradeWithPythonWithGemini/src eklendi: {srcPath}");
+                    //         break;
+                    //     }
+                    // }
                 }
 
                 _engineStarted = true;
@@ -448,14 +461,16 @@ public class PythonPlotter : IDisposable
                 // imgui_bundle kontrolü
                 try
                 {
-                    //Py.Import("imgui_bundle");
+                    Py.Import("imgui_bundle");
+                    _logger?.WriteRaw("✓ imgui_bundle başarıyla import edildi.\n");
                 }
                 catch (PythonException)
                 {
                     throw new Exception(
                         "imgui_bundle yüklü değil!\n\n" +
-                        "Lütfen şu komutu çalıştırın:\n" +
-                        "pip install imgui-bundle"
+                        "Lütfen şu komutları çalıştırın:\n" +
+                        "  py -3.12 -m venv inputs\\python\\.venv\n" +
+                        "  inputs\\python\\.venv\\Scripts\\pip install \"imgui-bundle[full]\""
                     );
                 }
 
