@@ -84,8 +84,38 @@ class DataPlotter:
     def plot(self) -> bool:
         """Ana görselleştirme metodu."""
         self.print_info()
+        self.print_indicators()
         self._plot_imgui()
         return True
+
+    def print_indicators(self) -> None:
+        """td.indicators ve td.strategy_indicators içeriğini listeler."""
+        td  = self.td
+        sep = "-" * 52
+
+        print()
+        print(sep)
+        print("  INDICATORS")
+        print(sep)
+
+        if td.indicators:
+            print("  td.indicators:")
+            for name, values in td.indicators.items():
+                n = len(values) if values else 0
+                print(f"    {name:<20} n={n}")
+        else:
+            print("  td.indicators        : (boş)")
+
+        if td.strategy_indicators:
+            print("  td.strategy_indicators:")
+            for name, values in td.strategy_indicators.items():
+                n = len(values) if values else 0
+                print(f"    {name:<20} n={n}")
+        else:
+            print("  td.strategy_indicators : (boş)")
+
+        print(sep)
+        print()
 
     def print_info(self) -> None:
         """Ticaret verisi özetini stdout'a yazar (C# stdout capture ile yakalanır)."""
