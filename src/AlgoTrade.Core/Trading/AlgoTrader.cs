@@ -271,7 +271,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.OptimizationEnabled = false;
 
             // Enable savingStatistics
-            singleTrader.SaveStatisticsToFile = true;
+            singleTrader.SaveStatisticsToFile = false;
 
             // Enable all per-output statistics flags explicitly
             singleTrader.SaveFullStatsTxtEnabled             = true;

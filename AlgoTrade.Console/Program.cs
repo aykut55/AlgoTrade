@@ -755,9 +755,6 @@ void readStockData()
 
                 stockDataReader.ReStartTimer();
 
-                mode = StockDataReader.FilterMode.LastN;    // Silinecek- sadece test amacli
-                n1 = 100000;                                // Silinecek- sadece test amacli
-
                 if (mode == StockDataReader.FilterMode.All)
                 {
                     stockDataReader.ReadDataFast(filePath);

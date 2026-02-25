@@ -142,12 +142,7 @@ public class PythonPlotter : IDisposable
                     // Venv site-packages — Python 3.12 uyumlu proje içi venv
                     string[] venvPaths =
                     {
-                        @"D:\sage1\AlgoTrade\AlgoTrade\inputs\python\.venv\Lib\site-packages",
-                        // @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",  // Python 3.13 — uyumsuz
-                        // @"D:\sage1\AlgoTrade\AlgoTradeWithPaythonWithGemini\venv\Lib\site-packages",
-                        // @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\venv\Lib\site-packages",
-                        // @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\.venv\Lib\site-packages",
-                        // @"D:\Aykut\Projects\AlgoTradeWithPaythonWithGemini\Aykut\venv\Lib\site-packages",
+                        Path.Combine(PythonScriptsDir, ".venv", "Lib", "site-packages")
                     };
 
                     dynamic os = Py.Import("os");
