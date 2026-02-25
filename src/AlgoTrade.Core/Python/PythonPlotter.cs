@@ -267,25 +267,25 @@ public class PythonPlotter : IDisposable
 
         Lists lists = trader.lists ?? throw new ArgumentException("trader.lists is null", nameof(trader));
 
+        var closes = trader.GetClosePrices();
+
+        var indicatorsToPlot = new Dictionary<string, double[]?>
+        {
+            ["ma5"] = _indicators?.MA.SMA(closes, 5),
+            ["ma8"] = _indicators?.MA.SMA(closes, 8),
+            ["ma13"] = _indicators?.MA.SMA(closes, 13),
+            ["ma21"] = _indicators?.MA.SMA(closes, 21),
+            ["ma34"] = _indicators?.MA.SMA(closes, 34),
+            ["ma50"] = _indicators?.MA.SMA(closes, 50),
+            ["ma100"] = _indicators?.MA.SMA(closes, 100),
+            ["ma200"] = _indicators?.MA.SMA(closes, 200),
+        };
+
         using (Py.GIL())
         {
             ExtractTraderData(trader, lists);
 
             dynamic tradeData = BuildPyTradeData();
-
-            var closes = trader.GetClosePrices();
-
-            var indicatorsToPlot = new Dictionary<string, double[]?>
-            {
-                ["ma5"] = _indicators?.MA.SMA(closes, 5),
-                ["ma8"] = _indicators?.MA.SMA(closes, 8),
-                ["ma13"] = _indicators?.MA.SMA(closes, 13),
-                ["ma21"] = _indicators?.MA.SMA(closes, 21),
-                ["ma34"] = _indicators?.MA.SMA(closes, 34),
-                ["ma50"] = _indicators?.MA.SMA(closes, 50),
-                ["ma100"] = _indicators?.MA.SMA(closes, 100),
-                ["ma200"] = _indicators?.MA.SMA(closes, 200),
-            };
 
             SetPyIndicators(tradeData, indicatorsToPlot);
 
