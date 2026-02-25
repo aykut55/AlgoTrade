@@ -1634,6 +1634,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 return false;
             }
 
+            if (_pythonPlotter != null)
+            {
+                _logger?.WriteRaw("Disposing previous pythonPlotter instance...");
+                _pythonPlotter.Dispose();
+                _pythonPlotter = null;
+            }
+
             _pythonPlotter ??= new PythonPlotter();
             _pythonPlotter.SetLogger(_logger);
             _pythonPlotter.SetIndicators(indicators);
