@@ -8,7 +8,10 @@ using AlgoTrade.Core.Trading.Queries;
 using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Strategy;
+using Nessos.LinqOptimizer.Core;
+using ScottPlot.Plottables;
 using SkiaSharp;
+using System;
 using System.Text;
 using static Nessos.LinqOptimizer.Core.QueryExpr;
 
@@ -1451,6 +1454,18 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // *****************************************************************************
             // TODO : createChildTraders leri Program.cs seviyesinde yapılmasını sağlamak...
             createChildTraders();
+
+            // TODO : Aşağıdakini oku
+            /*
+                AlgoTrader.cs — createChildTraders()
+
+              Sorun 1 — Hardcoded(3 fixed block), dinamik değil:
+
+              _strategyConfigs listesi kaç eleman içeriyorsa o kadar child trader oluşturulmalı. Şu an hep 3 blok hardcoded. ConfigureStrategies() ile 2 strateji seçilirse 3.child trader GetStrategy(2) çağıracak ve
+              exception fırlatacak.
+
+              Çözüm: 3 ayrı block → _strategyConfigs üzerinden for döngüsü.
+            */
 
             multipleTrader.Init();
 
