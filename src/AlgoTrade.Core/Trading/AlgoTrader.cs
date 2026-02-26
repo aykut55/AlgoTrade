@@ -1517,8 +1517,16 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTraderOptimizer.AppendEnabled         = true;
             singleTraderOptimizer.ConfigFilePath        = Path.Combine(AppSettings.ConfigsDir, "StatisticsExporterConfig.json");
 
-            // Sorted output settings
-            singleTraderOptimizer.SortField         = "ProfitFactor";
+            // Sorted output settings            
+            // singleTraderOptimizer.SortField      = "ProfitFactorPuan";
+            // singleTraderOptimizer.SortField      = "ProfitFactor";
+            // singleTraderOptimizer.SortField      = "ProfitFactorNet";            
+            // singleTraderOptimizer.SortField      = "GetiriPuan";
+            // singleTraderOptimizer.SortField      = "GetiriFiyat";
+            singleTraderOptimizer.SortField         = "GetiriFiyatNet";
+            // singleTraderOptimizer.SortField      = "GetiriPuanYuzde";
+            // singleTraderOptimizer.SortField      = "GetiriFiyatYuzde";
+            // singleTraderOptimizer.SortField      = "GetiriFiyatYuzdeNet";
             singleTraderOptimizer.SortedCsvFilePath = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog_sorted.csv");
             singleTraderOptimizer.SortedTxtFilePath = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog_sorted.txt");
 

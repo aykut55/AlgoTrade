@@ -1937,12 +1937,15 @@ namespace AlgoTrade.Core.Trading.Statistics
             foreach (var name in names)
                 sb.Append($" | {name.PadLeft(8)}");
             sb.Append($" | {"[cur/tot]".PadLeft(9)}");
-            sb.Append($" | {"Getiri%".PadLeft(9)}");
+            sb.Append($" | {"Net Return %".PadLeft(12)}");
+            sb.Append($" | {"Gross Return %".PadLeft(14)}");
+            sb.Append($" | {"Score Return %".PadLeft(14)}");
             sb.Append($" | {"Trades".PadLeft(6)}");
             sb.Append($" | {"Win%".PadLeft(7)}");
             sb.Append($" | {"PFNet".PadLeft(7)}");
             sb.Append($" | {"MaxDD".PadLeft(9)}");
-            sb.Append('\n');
+            sb.Append("  | (GetiriFiyatNet%, GetiriFiyat%, GetiriPuan%)");
+            sb.Append('\n'); 
             sb.Append(new string('-', sb.Length - 1));
             return sb;
         }
@@ -1961,7 +1964,9 @@ namespace AlgoTrade.Core.Trading.Statistics
                 sb.Append($" | {(kvp.Value?.ToString() ?? "").PadLeft(8)}");
 
             sb.Append($" | {$"[{current}/{total}]".PadLeft(9)}");
-            sb.Append($" | {GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
+            sb.Append($" | {GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(12)}");    // "Net Return %"   = 12
+            sb.Append($" | {GetiriFiyatYuzde.ToString("F2", CultureInfo.InvariantCulture).PadLeft(14)}");       // "Gross Return %" = 14
+            sb.Append($" | {GetiriPuanYuzde.ToString("F2", CultureInfo.InvariantCulture).PadLeft(14)}");        // "Score Return %" = 14
             sb.Append($" | {IslemSayisi.ToString().PadLeft(6)}");
             sb.Append($" | {KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
             sb.Append($" | {ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
