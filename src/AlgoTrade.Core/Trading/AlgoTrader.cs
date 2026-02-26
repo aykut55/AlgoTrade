@@ -264,45 +264,110 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         int traderId = trader.GetId();
         if (traderId == -1)
         {
+            // mainTrader icin (MultiTrader için anlamlı)
+
+            // Enable savingStatistics
+            trader.SaveStatisticsToFile = true;
+
+            // Enable all per-output statistics flags explicitly
+            trader.SaveFullStatsTxtEnabled             = true;
+            trader.SaveFullStatsCsvEnabled             = true;
+            trader.SaveMinimalStatsTxtEnabled          = true;
+            trader.SaveMinimalStatsCsvEnabled          = true;
+            trader.SaveFullListsTxtEnabled             = true;
+            trader.SaveFullListsCsvEnabled             = true;
+            trader.SaveMinimalListsTxtEnabled          = true;
+            trader.SaveMinimalListsCsvEnabled          = true;
+            trader.SaveFullStatsTxtFormattedEnabled    = true;
+            trader.SaveMinimalStatsTxtFormattedEnabled = true;
+            trader.SavePerformansTxtEnabled            = true;
+            trader.SavePerformansCsvEnabled            = true;
+
+            // Manually assign custom output file names (as requested)
+            trader.FullStatsTxtFileName                = "MainTraderStatistics.txt";
+            trader.FullStatsCsvFileName                = "MainTraderStatistics.csv";
+            trader.MinimalStatsTxtFileName             = "MainTraderStatisticsMinimal.txt";
+            trader.MinimalStatsCsvFileName             = "MainTraderStatisticsMinimal.csv";
+            trader.FullListsTxtFileName                = "MainTraderLists.txt";
+            trader.FullListsCsvFileName                = "MainTraderLists.csv";
+            trader.MinimalListsTxtFileName             = "MainTraderListsMinimal.txt";
+            trader.MinimalListsCsvFileName             = "MainTraderListsMinimal.csv";
+            trader.FullStatsTxtFormattedFileName       = "MainTraderStatisticsFormatted.txt";
+            trader.MinimalStatsTxtFormattedFileName    = "MainTraderStatisticsMinimalFormatted.txt";
+            trader.PerformansTxtFileName               = "MainTraderPerformans.txt";
+            trader.PerformansCsvFileName               = "MainTraderPerformans.csv";
         }
         else if (traderId == 0)
         {
             // Configure optimization flag
-            singleTrader.OptimizationEnabled = false;
+            trader.OptimizationEnabled = false;
 
             // Enable savingStatistics
-            singleTrader.SaveStatisticsToFile = true;
+            trader.SaveStatisticsToFile = true;
 
             // Enable all per-output statistics flags explicitly
-            singleTrader.SaveFullStatsTxtEnabled             = true;
-            singleTrader.SaveFullStatsCsvEnabled             = true;
-            singleTrader.SaveMinimalStatsTxtEnabled          = true;
-            singleTrader.SaveMinimalStatsCsvEnabled          = true;
-            singleTrader.SaveFullListsTxtEnabled             = true;
-            singleTrader.SaveFullListsCsvEnabled             = true;
-            singleTrader.SaveMinimalListsTxtEnabled          = true;
-            singleTrader.SaveMinimalListsCsvEnabled          = true;
-            singleTrader.SaveFullStatsTxtFormattedEnabled    = true;
-            singleTrader.SaveMinimalStatsTxtFormattedEnabled = true;
-            singleTrader.SavePerformansTxtEnabled            = true;
-            singleTrader.SavePerformansCsvEnabled            = true;
+            trader.SaveFullStatsTxtEnabled             = true;
+            trader.SaveFullStatsCsvEnabled             = true;
+            trader.SaveMinimalStatsTxtEnabled          = true;
+            trader.SaveMinimalStatsCsvEnabled          = true;
+            trader.SaveFullListsTxtEnabled             = true;
+            trader.SaveFullListsCsvEnabled             = true;
+            trader.SaveMinimalListsTxtEnabled          = true;
+            trader.SaveMinimalListsCsvEnabled          = true;
+            trader.SaveFullStatsTxtFormattedEnabled    = true;
+            trader.SaveMinimalStatsTxtFormattedEnabled = true;
+            trader.SavePerformansTxtEnabled            = true;
+            trader.SavePerformansCsvEnabled            = true;
 
             // Manually assign custom output file names (as requested)
-            singleTrader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
-            singleTrader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
-            singleTrader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
-            singleTrader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
-            singleTrader.FullListsTxtFileName                = "SingleTraderLists.txt";
-            singleTrader.FullListsCsvFileName                = "SingleTraderLists.csv";
-            singleTrader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
-            singleTrader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
-            singleTrader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-            singleTrader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
-            singleTrader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
-            singleTrader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+            trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
+            trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
+            trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
+            trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
+            trader.FullListsTxtFileName                = "SingleTraderLists.txt";
+            trader.FullListsCsvFileName                = "SingleTraderLists.csv";
+            trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
+            trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
+            trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
+            trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+            trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
+            trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
         }
         else if (traderId == 1)
         {
+            // Configure optimization flag
+            trader.OptimizationEnabled = false;
+
+            // Enable savingStatistics
+            trader.SaveStatisticsToFile = true;
+
+            // Enable all per-output statistics flags explicitly
+            trader.SaveFullStatsTxtEnabled             = true;
+            trader.SaveFullStatsCsvEnabled             = true;
+            trader.SaveMinimalStatsTxtEnabled          = true;
+            trader.SaveMinimalStatsCsvEnabled          = true;
+            trader.SaveFullListsTxtEnabled             = true;
+            trader.SaveFullListsCsvEnabled             = true;
+            trader.SaveMinimalListsTxtEnabled          = true;
+            trader.SaveMinimalListsCsvEnabled          = true;
+            trader.SaveFullStatsTxtFormattedEnabled    = true;
+            trader.SaveMinimalStatsTxtFormattedEnabled = true;
+            trader.SavePerformansTxtEnabled            = true;
+            trader.SavePerformansCsvEnabled            = true;
+
+            // Manually assign custom output file names (as requested)
+            trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
+            trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
+            trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
+            trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
+            trader.FullListsTxtFileName                = "SingleTraderLists.txt";
+            trader.FullListsCsvFileName                = "SingleTraderLists.csv";
+            trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
+            trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
+            trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
+            trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+            trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
+            trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
         }
         else
         {
@@ -1069,9 +1134,37 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             childId = 0;
 
             var childTrader = new SingleTrader(childId, "childTrader_0", this.Data, indicators, _logger);
+            if (childTrader == null)
+                throw new InvalidOperationException("childTrader can not be created...");
 
             childTrader.ClearCallbacks()
                        .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.Reset();
+
+            // Set attributes
+            childTrader.SymbolName             = this.SymbolName;
+            childTrader.SymbolPeriod           = this.SymbolPeriod;
+            /*childTrader.SystemId               = this.SystemId;
+            childTrader.SystemName             = this.SystemName;
+            childTrader.StrategyId             = this.StrategyId;
+            childTrader.StrategyName           = this.StrategyName;
+            childTrader.QueryId                = this.QueryId;
+            childTrader.QueryName              = this.QueryName;*/
+            childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            // Sıralama Onemli
+            // Apply user flags
+            OnApplyUserFlags(childTrader);
+
+            // Apply user flags (2)
+            OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             childTrader.RunMode = SingleTraderRunMode;
 
@@ -1087,27 +1180,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 childTrader.SetQuery(query);
             }
 
-            childTrader.Reset();
-
-            // Set attributes
-            childTrader.SymbolName = this.SymbolName;
-            childTrader.SymbolPeriod = this.SymbolPeriod;
-            /*childTrader.SystemId               = this.SystemId;
-            childTrader.SystemName             = this.SystemName;
-            childTrader.StrategyId             = this.StrategyId;
-            childTrader.StrategyName           = this.StrategyName;
-            childTrader.QueryId                = this.QueryId;
-            childTrader.QueryName              = this.QueryName;*/
-            childTrader.LastExecutionTime = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-            OnApplyUserFlags(childTrader);
-
-            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
-
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
 
@@ -1119,9 +1191,37 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             childId = 1;
 
             var childTrader = new SingleTrader(childId, "childTrader_1", this.Data, indicators, _logger);
+            if (childTrader == null)
+                throw new InvalidOperationException("childTrader can not be created...");
 
             childTrader.ClearCallbacks()
                        .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.Reset();
+
+            // Set attributes
+            childTrader.SymbolName             = this.SymbolName;
+            childTrader.SymbolPeriod           = this.SymbolPeriod;
+            /*childTrader.SystemId               = this.SystemId;
+            childTrader.SystemName             = this.SystemName;
+            childTrader.StrategyId             = this.StrategyId;
+            childTrader.StrategyName           = this.StrategyName;
+            childTrader.QueryId                = this.QueryId;
+            childTrader.QueryName              = this.QueryName;*/
+            childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            // Sıralama Onemli
+            // Apply user flags
+            OnApplyUserFlags(childTrader);
+
+            // Apply user flags (2)
+            OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             childTrader.RunMode = SingleTraderRunMode;
 
@@ -1136,27 +1236,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 query = GetQuery(1);
                 childTrader.SetQuery(query);
             }
-
-            childTrader.Reset();
-
-            // Set attributes
-            childTrader.SymbolName = this.SymbolName;
-            childTrader.SymbolPeriod = this.SymbolPeriod;
-            /*childTrader.SystemId               = this.SystemId;
-            childTrader.SystemName             = this.SystemName;
-            childTrader.StrategyId             = this.StrategyId;
-            childTrader.StrategyName           = this.StrategyName;
-            childTrader.QueryId                = this.QueryId;
-            childTrader.QueryName              = this.QueryName;*/
-            childTrader.LastExecutionTime = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-            OnApplyUserFlags(childTrader);
-
-            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -1169,9 +1248,37 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             childId = 2;
 
             var childTrader = new SingleTrader(childId, "childTrader_2", this.Data, indicators, _logger);
+            if (childTrader == null)
+                throw new InvalidOperationException("childTrader can not be created...");
 
             childTrader.ClearCallbacks()
                        .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.Reset();
+
+            // Set attributes
+            childTrader.SymbolName             = this.SymbolName;
+            childTrader.SymbolPeriod           = this.SymbolPeriod;
+            /*childTrader.SystemId               = this.SystemId;
+            childTrader.SystemName             = this.SystemName;
+            childTrader.StrategyId             = this.StrategyId;
+            childTrader.StrategyName           = this.StrategyName;
+            childTrader.QueryId                = this.QueryId;
+            childTrader.QueryName              = this.QueryName;*/
+            childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
+            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
+
+            // Sıralama Onemli
+            // Apply user flags
+            OnApplyUserFlags(childTrader);
+
+            // Apply user flags (2)
+            OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             childTrader.RunMode = SingleTraderRunMode;
 
@@ -1186,27 +1293,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 query = GetQuery(1);
                 childTrader.SetQuery(query);
             }
-
-            childTrader.Reset();
-
-            // Set attributes
-            childTrader.SymbolName = this.SymbolName;
-            childTrader.SymbolPeriod = this.SymbolPeriod;
-            /*childTrader.SystemId               = this.SystemId;
-            childTrader.SystemName             = this.SystemName;
-            childTrader.StrategyId             = this.StrategyId;
-            childTrader.StrategyName           = this.StrategyName;
-            childTrader.QueryId                = this.QueryId;
-            childTrader.QueryName              = this.QueryName;*/
-            childTrader.LastExecutionTime = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-            OnApplyUserFlags(childTrader);
-
-            SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             // Enable savingStatistics
             childTrader.SaveStatisticsToFile = true;
@@ -1262,10 +1348,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             Log("\nCreating multipleTrader...");
 
             multipleTrader = new MultipleTrader(0, this.Data, indicators, _logger);
+            if (multipleTrader == null)
+                throw new InvalidOperationException("multipleTrader can not be created...");
 
             multipleTrader.Reset();
 
             var mainTrader = multipleTrader.GetMainTrader();
+            if (mainTrader == null)
+                throw new InvalidOperationException("mainTrader can not be created...");
 
             // Assign callbacks to mainTrader
             mainTrader.ClearCallbacks()
@@ -1273,21 +1363,34 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             mainTrader.Reset();
 
+            // Set attributes
+            mainTrader.SymbolName             = this.SymbolName;
+            mainTrader.SymbolPeriod           = this.SymbolPeriod;
+            mainTrader.SystemId               = this.SystemId;
+            mainTrader.SystemName             = this.SystemName;
+            mainTrader.StrategyId             = this.StrategyId;
+            mainTrader.StrategyName           = this.StrategyName;
+            mainTrader.QueryId                = this.QueryId;
+            mainTrader.QueryName              = this.QueryName;
+            mainTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            mainTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            
             // Configure position sizing for mainTrader
             mainTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
             mainTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
 
-            // Assign runMode
-            mainTrader.RunMode = SingleTraderRunMode;
-
+            // Sıralama Onemli
             // Apply user flags
             OnApplyUserFlags(mainTrader);
+
+            // Apply user flags (2)
+            OnApplyUserFlags2(mainTrader);
 
             // Configure equity curve filter
             SetSingleTraderConfigureEquityCurveFilter(mainTrader);
 
-            // Enable savingStatistics
-            mainTrader.SaveStatisticsToFile = true;
+            // Assign runMode
+            mainTrader.RunMode = SingleTraderRunMode;
 
             mainTrader.Init();
 
@@ -1367,6 +1470,20 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             multipleTrader.Finalize();
 
+            // TODO : Asagisı singleTrader e benzer olarak yapılacak
+            /*
+            // Pipe ile (default)
+            var header = multipleTrader.GetStatisticsHeaderRow();
+            var data   = multipleTrader.GetStatisticsDataRow();
+
+            // Noktalı virgülle (CSV için)
+            var csvHeader = multipleTrader.GetStatisticsHeaderRow(";");
+            var csvData   = multipleTrader.GetStatisticsDataRow(";");
+            */
+
+            // Dosyaya yazma: WriteTraderDataToFilesAsync metoduna taşındı.
+            // TODO : Asağıdaki kodu uygun sekilde WriteTraderDataToFilesAsync(multipleTrader)'e taşı. 
+            /*
             // Dosyaya yazma: stop edilmediyse yaz
             if (!multipleTrader.IsStopRequested)
             {
@@ -1388,7 +1505,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                         childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
                 }
             }
-
+            */
             _timer!.StopTimer("3");
 
             _timer!.StopTimer("1");
