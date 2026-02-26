@@ -1936,7 +1936,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append("#".PadLeft(4));
             foreach (var name in names)
                 sb.Append($" | {name.PadLeft(8)}");
-            sb.Append($" | {"[cur/tot]".PadLeft(9)}");
+            sb.Append($" | {"[cur/tot]".PadLeft(11)}");
             sb.Append($" | {"Net Return %".PadLeft(12)}");
             sb.Append($" | {"Gross Return %".PadLeft(14)}");
             sb.Append($" | {"Score Return %".PadLeft(14)}");
@@ -1944,7 +1944,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {"Win%".PadLeft(7)}");
             sb.Append($" | {"PFNet".PadLeft(7)}");
             sb.Append($" | {"MaxDD".PadLeft(9)}");
-            sb.Append($" | {"Commission Count".PadLeft(16)}");
+            sb.Append($" | {"Comm Count".PadLeft(10)}");
             sb.Append($" | {"Commission".PadLeft(10)}");
             sb.Append($" | {"ExecTime(ms)".PadLeft(12)}"); 
             sb.Append($" | {"(Getiri FiyatNet%,Fiyat%,Puan%)".PadLeft(16)}");
@@ -1966,7 +1966,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             foreach (var kvp in parameters)
                 sb.Append($" | {(kvp.Value?.ToString() ?? "").PadLeft(8)}");
 
-            sb.Append($" | {$"[{current}/{total}]".PadLeft(9)}");
+            sb.Append($" | {$"[{current}/{total}]".PadLeft(11)}");
             sb.Append($" | {GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(12)}");    // "Net Return %"   = 12
             sb.Append($" | {GetiriFiyatYuzde.ToString("F2", CultureInfo.InvariantCulture).PadLeft(14)}");       // "Gross Return %" = 14
             sb.Append($" | {GetiriPuanYuzde.ToString("F2", CultureInfo.InvariantCulture).PadLeft(14)}");        // "Score Return %" = 14
@@ -1974,7 +1974,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
             sb.Append($" | {ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
             sb.Append($" | {GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
-            sb.Append($" | {KomisyonIslemSayisi.ToString().PadLeft(16)}");
+            sb.Append($" | {KomisyonIslemSayisi.ToString().PadLeft(10)}");
             sb.Append($" | {KomisyonFiyat.ToString("F2", CultureInfo.InvariantCulture).PadLeft(10)}");
             sb.Append($" | {LastExecutionTimeInMSec.ToString().PadLeft(12)}");
             sb.Append($" | {"-".ToString().PadLeft(16)}");
