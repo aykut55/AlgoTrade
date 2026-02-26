@@ -322,7 +322,7 @@ class DataPlotter:
             plotter.setEnableSharedXAxis(True)
             plotter.setShowInfoOnAllPanels(True)
             plotter.setShowTradeSignals(True)
-            plotter.setEnableRangeSlider(True)
+            plotter.setEnableRangeSlider(False)
 
             # Panel:              0     1     2     3     4     5     6
             HeightRatioList = [1.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5]

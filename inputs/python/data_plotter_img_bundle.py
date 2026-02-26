@@ -2319,6 +2319,11 @@ class DataPlotterImgBundle:
         imgui.same_line()
         adjust_y_clicked = imgui.button("Adjust Y Axis")
 
+        imgui.same_line()
+        imgui.text("|")
+        imgui.same_line()
+        _, self.enable_range_slider = imgui.checkbox("Show Range Slider", self.enable_range_slider)
+
         # Adjust Y Axis Logic (Manual Fit to Visible Range)
         if adjust_y_clicked:
             # Calculate visible X range
