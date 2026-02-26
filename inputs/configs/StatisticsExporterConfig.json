@@ -454,8 +454,10 @@
             {"field": "GetiriFiyatNetSaat2",            "header": "GetiriFiyatNetSaat2",            "width": 19, "enabled": false},
             {"field": "GetiriFiyatNetSaat3",            "header": "GetiriFiyatNetSaat3",            "width": 19, "enabled": false},
             {"field": "GetiriFiyatNetSaat4",            "header": "GetiriFiyatNetSaat4",            "width": 19, "enabled": false},
-            {"field": "GetiriFiyatNetSaat5",            "header": "GetiriFiyatNetSaat5",            "width": 19, "enabled": false}
-            ]
+            {"field": "GetiriFiyatNetSaat5",            "header": "GetiriFiyatNetSaat5",            "width": 19, "enabled": false},
+                       
+            {"field": "LastExecutionTimeInMSec",    	"header": "ExecTime(ms)",                   "width": 12, "enabled": true}
+      ]
     }
   },
   "SingleTraderOptimization": {
@@ -748,7 +750,9 @@
 
             {"field": "NetProfit",                      "header": "NetProfit",                      "width": 12, "enabled": false},
             {"field": "WinRate",                        "header": "WinRate",                        "width": 10, "enabled": false},
-            {"field": "MaxDrawdown",                    "header": "MaxDrawdown",                    "width": 12, "enabled": false}
+            {"field": "MaxDrawdown",                    "header": "MaxDrawdown",                    "width": 12, "enabled": false}, 
+                       
+            {"field": "LastExecutionTimeInMSec",    	"header": "ExecTime(ms)",                   "width": 12, "enabled": true}
           ]
         }
       }
