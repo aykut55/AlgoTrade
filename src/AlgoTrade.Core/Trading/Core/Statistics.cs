@@ -1946,7 +1946,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {"MaxDD".PadLeft(9)}");
             sb.Append($" | {"Commission Count".PadLeft(16)}");
             sb.Append($" | {"Commission".PadLeft(10)}");
-            sb.Append($" | {"(GetiriFiyatNet%, GetiriFiyat%, GetiriPuan%)".PadLeft(16)}");
+            sb.Append($" | {"ExecTime(ms)".PadLeft(12)}"); 
+            sb.Append($" | {"(Getiri FiyatNet%,Fiyat%,Puan%)".PadLeft(16)}");
             sb.Append('\n');
             sb.Append(new string('-', sb.Length - 1));
             return sb;
@@ -1975,6 +1976,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
             sb.Append($" | {KomisyonIslemSayisi.ToString().PadLeft(16)}");
             sb.Append($" | {KomisyonFiyat.ToString("F2", CultureInfo.InvariantCulture).PadLeft(10)}");
+            sb.Append($" | {LastExecutionTimeInMSec.ToString().PadLeft(12)}");
             sb.Append($" | {"-".ToString().PadLeft(16)}");
             return sb;
         }

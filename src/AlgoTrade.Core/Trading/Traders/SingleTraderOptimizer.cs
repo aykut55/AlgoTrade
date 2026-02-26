@@ -343,7 +343,10 @@ public class SingleTraderOptimizer : IDisposable
             singleTrader.IsStopRequested = false;
 
             // Run singleTrader
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             runSingleTrader(singleTrader, totalBars, cancellationToken);
+            sw.Stop();
+            singleTrader.LastExecutionTimeInMSec = sw.ElapsedMilliseconds.ToString();
 
             // Collect singleTrader statistics
             singleTrader.Finalize();
