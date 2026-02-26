@@ -1137,7 +1137,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
         await Task.Run(() =>
         {
-            if (!trader.IsStopRequested)
+            if (!trader.IsStopRequested && trader.SaveStatisticsToFile)
             {
                 // multipleTrader
                 Log($"\n[WriteTraderDataToFilesAsync] Saving multipleTrader lists to files...");
@@ -1409,6 +1409,18 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 throw new InvalidOperationException("multipleTrader can not be created...");
 
             multipleTrader.Reset();
+
+            // Enable savingStatistics
+            multipleTrader.SaveStatisticsToFile = true;
+
+            // Enable all per-output statistics flags explicitly
+            multipleTrader.SaveMultipleTraderListsTxtEnabled = true;
+            multipleTrader.SaveMultipleTraderListsCsvEnabled = true;
+
+            // Manually assign custom output file names (as requested)
+            multipleTrader.MultipleTraderListsTxtFileName = "MultipleTraderLists.txt";
+            multipleTrader.MultipleTraderListsCsvFileName = "MultipleTraderLists.csv";
+
 
             var mainTrader = multipleTrader.GetMainTrader();
             if (mainTrader == null)

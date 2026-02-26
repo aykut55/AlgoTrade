@@ -43,6 +43,14 @@ public class MultipleTrader
 
     public Action<MultipleTrader, int, int>? OnProgress { get; set; }
 
+    public bool SaveStatisticsToFile { get; set; } = true;
+
+    // Output file settings
+    public string MultipleTraderListsTxtFileName { get; set; } = "MultipleTraderLists.txt";
+    public string MultipleTraderListsCsvFileName { get; set; } = "MultipleTraderLists.csv";
+    public bool SaveMultipleTraderListsTxtEnabled { get; set; } = true;
+    public bool SaveMultipleTraderListsCsvEnabled { get; set; } = true;
+
     #endregion
 
     #region Constructor
@@ -339,12 +347,18 @@ public class MultipleTrader
     /// <summary>
     /// Write MultipleTrader lists to both TXT and CSV files
     /// </summary>
-    public void WriteMultipleTraderListsToFiles(string logDir, bool saveListsToFileTxt = true, bool saveListsToFileCsv = true)
+    public void WriteMultipleTraderListsToFiles(string logDir)
     {
-        if (saveListsToFileTxt)
+        if (this.SaveMultipleTraderListsTxtEnabled)
+        {
+            LogManager.LogRaw($"\n\tSaving MultipleTrader lists to {MultipleTraderListsTxtFileName}...");
             WriteMultipleTraderListsToTxt(logDir);
-        if (saveListsToFileCsv)
+        }
+        if (this.SaveMultipleTraderListsCsvEnabled)
+        {
+            LogManager.LogRaw($"\n\tSaving MultipleTrader lists to {MultipleTraderListsCsvFileName}...");
             WriteMultipleTraderListsToCsv(logDir);
+        }
     }
 
     /// <summary>
@@ -358,9 +372,10 @@ public class MultipleTrader
         if (!System.IO.Directory.Exists(logDir))
             System.IO.Directory.CreateDirectory(logDir);
 
-        var filePath = System.IO.Path.Combine(logDir, "MultipleTraderLists.txt");
+        var filePath = System.IO.Path.Combine(logDir, MultipleTraderListsTxtFileName);
 
-        using (var writer = new System.IO.StreamWriter(filePath, append: false, System.Text.Encoding.UTF8))
+        var fs1 = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using (var writer = new System.IO.StreamWriter(fs1, System.Text.Encoding.UTF8))
         {
             // Title
             writer.WriteLine($"MULTIPLE TRADER BAR-BY-BAR DATA");
@@ -370,16 +385,18 @@ public class MultipleTrader
             // Header
             WriteHeaderTxt(writer);
 
+            writer.WriteLine("".PadRight(300, '-'));
+
             // Data rows
             for (int i = 0; i < Data.Count; i++)
             {
                 WriteBarDataTxt(writer, i);
             }
 
-            writer.WriteLine("".PadRight(300, '='));
+            //writer.WriteLine("".PadRight(300, '='));
         }
 
-        LogManager.LogRaw($"MultipleTraderLists.txt written to: {filePath}");
+        LogManager.LogRaw($"{MultipleTraderListsTxtFileName} written to: {filePath}");
     }
 
     private void WriteHeaderTxt(System.IO.StreamWriter writer)
@@ -391,7 +408,10 @@ public class MultipleTrader
                     $"{"High",10} | " +
                     $"{"Low",10} | " +
                     $"{"Close",10} | " +
-                    $"{"Volume",10}";
+                    $"{"Volume",10} | " +
+                    $"{"Size",10} | " +
+                    $"{"Change",10} | " +
+                    $"{"Change%",10}";
 
         // MainTrader columns
         header += $" | {"MainYon",7} | {"MainSvy",10} | {"MainSny",7}";
@@ -416,7 +436,10 @@ public class MultipleTrader
                   $"{bar.High,10:F2} | " +
                   $"{bar.Low,10:F2} | " +
                   $"{bar.Close,10:F2} | " +
-                  $"{bar.Volume,10:F0}";
+                  $"{bar.Volume,10:F0} | " +
+                  $"{bar.Size,10:F0} | " +
+                  $"{bar.Diff,10:F4} | " +
+                  $"{bar.ChangePct,10:F2}";
 
         // MainTrader data
         line += $" | {GetYon(_mainTrader, barIndex),7} | " +
@@ -445,9 +468,10 @@ public class MultipleTrader
         if (!System.IO.Directory.Exists(logDir))
             System.IO.Directory.CreateDirectory(logDir);
 
-        var filePath = System.IO.Path.Combine(logDir, "MultipleTraderLists.csv");
+        var filePath = System.IO.Path.Combine(logDir, MultipleTraderListsCsvFileName);
 
-        using (var writer = new System.IO.StreamWriter(filePath, append: false, System.Text.Encoding.UTF8))
+        var fs2 = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using (var writer = new System.IO.StreamWriter(fs2, System.Text.Encoding.UTF8))
         {
             // Header
             WriteHeaderCsv(writer);
@@ -459,12 +483,12 @@ public class MultipleTrader
             }
         }
 
-        LogManager.LogRaw($"MultipleTraderLists.csv written to: {filePath}");
+        LogManager.LogRaw($"{MultipleTraderListsCsvFileName} written to: {filePath}");
     }
 
     private void WriteHeaderCsv(System.IO.StreamWriter writer)
     {
-        var header = "BarNo;Date;Time;Open;High;Low;Close;Volume";
+        var header = "BarNo;Date;Time;Open;High;Low;Close;Volume;Size;Change;Change%";
 
         // MainTrader columns
         header += ";MainTrader_Yon;MainTrader_Seviye;MainTrader_Sinyal";
@@ -489,7 +513,10 @@ public class MultipleTrader
                   $"{bar.High:F2};" +
                   $"{bar.Low:F2};" +
                   $"{bar.Close:F2};" +
-                  $"{bar.Volume:F0}";
+                  $"{bar.Volume:F0};" +
+                  $"{bar.Size:F0};" +
+                  $"{bar.Diff:F4};" +
+                  $"{bar.ChangePct:F2}";
 
         // MainTrader data
         line += $";{GetYon(_mainTrader, barIndex)};" +
