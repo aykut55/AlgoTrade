@@ -1944,8 +1944,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {"Win%".PadLeft(7)}");
             sb.Append($" | {"PFNet".PadLeft(7)}");
             sb.Append($" | {"MaxDD".PadLeft(9)}");
-            sb.Append("  | (GetiriFiyatNet%, GetiriFiyat%, GetiriPuan%)");
-            sb.Append('\n'); 
+            sb.Append($" | {"Commission Count".PadLeft(16)}");
+            sb.Append($" | {"Commission".PadLeft(10)}");
+            sb.Append($" | {"(GetiriFiyatNet%, GetiriFiyat%, GetiriPuan%)".PadLeft(16)}");
+            sb.Append('\n');
             sb.Append(new string('-', sb.Length - 1));
             return sb;
         }
@@ -1971,7 +1973,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
             sb.Append($" | {ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
             sb.Append($" | {GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
-
+            sb.Append($" | {KomisyonIslemSayisi.ToString().PadLeft(16)}");
+            sb.Append($" | {KomisyonFiyat.ToString("F2", CultureInfo.InvariantCulture).PadLeft(10)}");
+            sb.Append($" | {"-".ToString().PadLeft(16)}");
             return sb;
         }
 
