@@ -266,6 +266,12 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         {
             // mainTrader icin (MultiTrader için anlamlı)
 
+            // Configure optimization flag
+            trader.OptimizationEnabled = false;
+
+            // Configure multiple trader mode flag
+            trader.MultipleTraderModeEnabled = true;
+
             // Enable savingStatistics
             trader.SaveStatisticsToFile = true;
 
@@ -1201,6 +1207,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Apply user flags (2)
             OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
 
+            // Configure multiple trader mode flag
+            childTrader.MultipleTraderModeEnabled = true;
+
             SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
             childTrader.RunMode = SingleTraderRunMode;
@@ -1314,6 +1323,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Apply user flags (2)
             OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+
+            // Configure multiple trader mode flag
+            childTrader.MultipleTraderModeEnabled = true;
 
             SetSingleTraderConfigureEquityCurveFilter(childTrader, childId);
 
