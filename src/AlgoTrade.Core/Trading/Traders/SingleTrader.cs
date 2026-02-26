@@ -2616,7 +2616,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         statistics.CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
     }
 
-    private void GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani)
+    internal void GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani)
     {
         // TODO : Burası daha detaylı yapılacak...
 

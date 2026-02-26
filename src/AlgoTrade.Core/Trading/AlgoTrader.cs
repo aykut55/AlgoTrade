@@ -1139,6 +1139,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         {
             if (!trader.IsStopRequested)
             {
+                // multipleTrader
+                Log($"\n[WriteTraderDataToFilesAsync] Saving multipleTrader lists to files...");
+                multipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
+                Log($"\n[WriteTraderDataToFilesAsync] ✓ multipleTrader file writing completed.");
+
                 // mainTrader
                 var mainTrader = trader.GetMainTrader();
                 if (mainTrader is not null && mainTrader.SaveStatisticsToFile)

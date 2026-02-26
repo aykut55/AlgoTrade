@@ -275,7 +275,14 @@ public class MultipleTrader
         if (!IsInitialized)
             throw new InvalidOperationException("Trader not initialized");
 
+        LogManager.LogRaw($"\nCalculating statistics...");
+
         _mainTrader.CalculateStatistics();
+
+        LogManager.LogRaw($"\nCalculating performances...");
+
+        _mainTrader.GetPerformansParams(out double bakiyePuan, out double lotSayisi, out double varlikAdedCarpani); // TODO : ici yeniden duzenlenecek
+        _mainTrader.CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
     }
     #pragma warning restore CS0465
 
