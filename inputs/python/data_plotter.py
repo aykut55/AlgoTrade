@@ -266,27 +266,184 @@ class DataPlotter:
 
     def _plot_imgui(self) -> None:
         """imgui_bundle ile interaktif grafik penceresi açar."""
-        from plot_data_img_bundle import plot_data_img_bundle
-        td = self.td
-        plot_data_img_bundle(
-            dates                      = td.date_times,
-            opens                      = td.opens,
-            highs                      = td.highs,
-            lows                       = td.lows,
-            closes                     = td.closes,
-            volumes                    = td.volumes,
-            lots                       = td.lots,
-            sinyal_list                = td.sinyal_list,
-            kar_zarar_fiyat_list       = td.kar_zarar_fiyat_list,
-            bakiye_fiyat_list          = td.bakiye_fiyat_list,
-            getiri_fiyat_list          = td.getiri_fiyat_list,
-            getiri_fiyat_net_list      = td.getiri_fiyat_net_list,
-            bakiye_fiyat_net_list      = td.bakiye_fiyat_net_list,
-            kar_zarar_fiyat_yuzde_list = td.kar_zarar_fiyat_yuzde_list,
-            getiri_fiyat_yuzde_list    = td.getiri_fiyat_yuzde_list,
-            komisyon_fiyat_list        = td.komisyon_fiyat_list,
-            getiri_fiyat_yuzde_net_list= td.getiri_fiyat_net_yuzde_list,
-            strategy_indicators        = td.strategy_indicators,
-            title                      = td.title,
-            periyot                    = td.periyot,
-        )
+        import numpy as np
+        try:
+            from data_plotter_img_bundle import DataPlotterImgBundle, DataType
+            from imgui_bundle import immapp
+        except ImportError as e:
+            import sys
+            print(f"❌ Import error: {e}")
+            print("sys.path:", sys.path)
+            return
+
+        td      = self.td
+        title   = td.title
+        periyot = td.periyot
+        dates   = td.date_times
+
+        print("=== DataPlotter._plot_imgui BAŞLADI ===")
+        print(f"Grafik: {title} {periyot}")
+        print(f"Bar sayısı: {len(dates)}")
+
+        try:
+            # Numpy array'e çevir
+            opens                       = np.array(td.opens,                       dtype=np.float64)
+            highs                       = np.array(td.highs,                       dtype=np.float64)
+            lows                        = np.array(td.lows,                        dtype=np.float64)
+            closes                      = np.array(td.closes,                      dtype=np.float64)
+            volumes                     = np.array(td.volumes,                     dtype=np.float64)
+            sinyal_list                 = np.array(td.sinyal_list,                 dtype=np.float64)
+            kar_zarar_fiyat_list        = np.array(td.kar_zarar_fiyat_list,        dtype=np.float64)
+            kar_zarar_fiyat_yuzde_list  = np.array(td.kar_zarar_fiyat_yuzde_list,  dtype=np.float64)
+            bakiye_fiyat_list           = np.array(td.bakiye_fiyat_list,           dtype=np.float64)
+            getiri_fiyat_list           = np.array(td.getiri_fiyat_list,           dtype=np.float64)
+            getiri_fiyat_net_list       = np.array(td.getiri_fiyat_net_list,       dtype=np.float64)
+            getiri_fiyat_yuzde_list     = np.array(td.getiri_fiyat_yuzde_list,     dtype=np.float64)
+            getiri_fiyat_net_yuzde_list = np.array(td.getiri_fiyat_net_yuzde_list, dtype=np.float64)
+
+            ohlc      = np.column_stack([opens, highs, lows, closes])
+            n_bars    = len(dates)
+            time_data = np.arange(n_bars, dtype=np.float64)
+
+            # DataPlotterImgBundle oluştur ve temel verileri ayarla
+            plotter = DataPlotterImgBundle()
+            print("✓ DataPlotterImgBundle created successfully")
+
+            plotter.setTimeData(time_data)
+            plotter.setOHLCData(ohlc)
+            plotter.setVolumeData(volumes)
+            plotter.setLotData(np.array(td.lots, dtype=np.float64))
+            plotter.setDateTimeLabels(dates)
+            plotter.setTradeSignals(sinyal_list)
+            plotter.setWindowTitle(f"{title} {periyot} - Multi Panel Chart")
+
+            plotter.setEnableVerticalScrollBar(False)
+            plotter.setEnableSharedCrossHair(True)
+            plotter.setEnableSharedXAxis(True)
+            plotter.setShowInfoOnAllPanels(True)
+            plotter.setShowTradeSignals(True)
+            plotter.setEnableRangeSlider(True)
+
+            # Panel:              0     1     2     3     4     5     6
+            HeightRatioList = [2.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0]
+
+            # ------------------------------------------------------------------
+            # Panel 0: Price Chart (OHLC)
+            # ------------------------------------------------------------------
+            panel0 = plotter.AddPanel(0)
+            panel0.setTitle("Price Chart")
+            panel0.setYAxisLabel("Price")
+            panel0.setHeightRatio(HeightRatioList[0])
+            panel0.setOHLCData(plotter.getOHLCData())
+            panel0.setInfoPanelPosition(100, 2)
+            panel0.setInfoPanelOffsets(label_dx=5, value_dx=80)
+
+            # ------------------------------------------------------------------
+            # Panel 1: Trade Signals
+            # ------------------------------------------------------------------
+            panel1 = plotter.AddPanel(1)
+            panel1.setTitle("Trade Signals")
+            panel1.setYAxisLabel("Signals")
+            panel1.setHeightRatio(HeightRatioList[1])
+            panel1.setInfoPanelPosition(120, 2)
+            panel1.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel1.setData(0, DataType.Stairs, sinyal_list, "Signals", (0.2, 0.8, 1.0, 1.0))
+            padding_min = np.full(n_bars, -2.0, dtype=np.float64)
+            padding_max = np.full(n_bars, +2.0, dtype=np.float64)
+            panel1.setData(998, DataType.Line, padding_min, "##pad_min", (1, 1, 1, 0))
+            panel1.setData(999, DataType.Line, padding_max, "##pad_max", (1, 1, 1, 0))
+
+            # ------------------------------------------------------------------
+            # Panel 2: PnL (Kar/Zarar)
+            # ------------------------------------------------------------------
+            panel2 = plotter.AddPanel(2)
+            panel2.setTitle("PnL")
+            panel2.setYAxisLabel("PnL Price")
+            panel2.setHeightRatio(HeightRatioList[2])
+            panel2.setInfoPanelPosition(100, 2)
+            panel2.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel2.setData(0, DataType.Line, kar_zarar_fiyat_list, "PnL", (1.0, 1.0, 0.0, 1.0))
+
+            # ------------------------------------------------------------------
+            # Panel 3: PnL (Kar/Zarar) %
+            # ------------------------------------------------------------------
+            panel3 = plotter.AddPanel(3)
+            panel3.setTitle("PnL %")
+            panel3.setYAxisLabel("PnL Price %")
+            panel3.setHeightRatio(HeightRatioList[3])
+            panel3.setInfoPanelPosition(100, 2)
+            panel3.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel3.setData(0, DataType.Line, kar_zarar_fiyat_yuzde_list, "PnL %", (0.0, 0.5, 1.0, 1.0))
+
+            # ------------------------------------------------------------------
+            # Panel 4: Balance (Getiri)
+            # ------------------------------------------------------------------
+            panel4 = plotter.AddPanel(4)
+            panel4.setTitle("Return")
+            panel4.setYAxisLabel("Return")
+            panel4.setHeightRatio(HeightRatioList[4])
+            panel4.setInfoPanelPosition(100, 2)
+            panel4.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel4.setData(0, DataType.Line, getiri_fiyat_list,     "Return",     (0.0, 0.5, 1.0, 1.0))
+            panel4.setData(1, DataType.Line, getiri_fiyat_net_list, "Net Return", (1.0, 1.0, 0.0, 1.0))
+
+            # ------------------------------------------------------------------
+            # Panel 5: Balance (Getiri) %
+            # ------------------------------------------------------------------
+            panel5 = plotter.AddPanel(5)
+            panel5.setTitle("Return % ")
+            panel5.setYAxisLabel("Return %")
+            panel5.setHeightRatio(HeightRatioList[5])
+            panel5.setInfoPanelPosition(100, 2)
+            panel5.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel5.setData(0, DataType.Line, getiri_fiyat_yuzde_list,     "Return %",     (0.0, 0.5, 1.0, 1.0))
+            panel5.setData(1, DataType.Line, getiri_fiyat_net_yuzde_list, "Net Return %", (1.0, 1.0, 0.0, 1.0))
+
+            # ------------------------------------------------------------------
+            # Panel 6: Strategy Indicators (dinamik)
+            # ------------------------------------------------------------------
+            strategy_indicators = td.strategy_indicators
+            if strategy_indicators and len(strategy_indicators) > 0:
+                panel6 = plotter.AddPanel(6)
+                panel6.setTitle("Strategy Indicators")
+                panel6.setYAxisLabel("Value")
+                panel6.setHeightRatio(HeightRatioList[6])
+                panel6.setInfoPanelPosition(100, 2)
+                panel6.setInfoPanelOffsets(label_dx=5, value_dx=80)
+
+                colors = [
+                    (1.0, 1.0, 0.0, 1.0),  # Sarı
+                    (0.2, 0.8, 1.0, 1.0),  # Cyan
+                    (1.0, 0.5, 0.0, 1.0),  # Turuncu
+                    (0.5, 1.0, 0.5, 1.0),  # Açık yeşil
+                    (1.0, 0.2, 0.8, 1.0),  # Pembe
+                    (0.5, 0.5, 1.0, 1.0),  # Açık mavi
+                ]
+                for data_idx, (name, values) in enumerate(strategy_indicators.items()):
+                    if values is not None:
+                        arr   = np.array(values, dtype=np.float64)
+                        color = colors[data_idx % len(colors)]
+                        panel6.setData(data_idx, DataType.Line, arr, name, color)
+                        print(f"✓ Indicator '{name}' plot edildi ({len(arr)} değer)")
+
+            # Y-axis sync
+            plotter.RegisterYSyncGroup(0, panel0)
+
+            print(f"\n✓ {len(plotter.panels)} panel oluşturuldu")
+            for idx in sorted(plotter.panels.keys()):
+                p = plotter.panels[idx]
+                print(f"  Panel {idx}: {p.title} ({len(p.data_items)} data series)")
+
+            print(f"\n🚀 ImGui window açılıyor...")
+            try:
+                immapp.run(plotter.Plot, with_implot=True, window_size=(1600, 2000))
+                print("✓ immapp.run() completed successfully")
+            except Exception as e:
+                print(f"❌ immapp.run() error: {e}")
+                import traceback
+                traceback.print_exc()
+
+        except Exception as e:
+            print(f"❌ ImGui plotting error: {e}")
+            import traceback
+            traceback.print_exc()

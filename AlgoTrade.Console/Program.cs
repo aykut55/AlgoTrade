@@ -38,6 +38,8 @@ bool bShowConfigSelectionMenuMultiTrader = false;
 // If true show Run Mode menu; if false pick default 1 (TradeOnly)
 bool bShowRunModeMenu = false;
 
+bool bReadStockDataFastMode = true; // Silinecek
+
 string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
 
 void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
@@ -754,6 +756,12 @@ void readStockData()
                 }
 
                 stockDataReader.ReStartTimer();
+
+                if (bReadStockDataFastMode)
+                {
+                    mode = StockDataReader.FilterMode.LastN;
+                    n1 = 200000;
+                }
 
                 if (mode == StockDataReader.FilterMode.All)
                 {
