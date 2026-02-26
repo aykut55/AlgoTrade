@@ -179,10 +179,6 @@
     },    
     "SingleTraderStatistics": {
       "columns": [
-            {"field": "ProfitFactorPuan",               "header": "ProfitFactorPuan",               "width": 16, "enabled": true},
-            {"field": "ProfitFactor",                   "header": "ProfitFactor",                   "width": 12, "enabled": true},
-            {"field": "ProfitFactorNet",                "header": "ProfitFactorNet",                "width": 15, "enabled": true},       
-            
             {"field": "KarliIslemOrani",                "header": "KarliIslemOrani",                "width": 15, "enabled": true},
             
             {"field": "IlkBakiyePuan",                  "header": "IlkBakiyePuan",                  "width": 14, "enabled": false},
@@ -207,7 +203,11 @@
             {"field": "BakiyePuanNet",                  "header": "BakiyePuanNet",                  "width": 14, "enabled": false},
             {"field": "GetiriPuanNet",                  "header": "GetiriPuanNet",                  "width": 14, "enabled": false},
             {"field": "GetiriPuanYuzdeNet",             "header": "GetiriPuanYuzdeNet",             "width": 18, "enabled": false},
-          
+            
+            {"field": "ProfitFactorPuan",               "header": "ProfitFactorPuan",               "width": 16, "enabled": true},
+            {"field": "ProfitFactor",                   "header": "ProfitFactor",                   "width": 12, "enabled": true},
+            {"field": "ProfitFactorNet",                "header": "ProfitFactorNet",                "width": 15, "enabled": true},
+
             {"field": "MinBakiyeFiyat",                 "header": "MinBakiyeFiyat",                 "width": 14, "enabled": true},
             {"field": "MaxBakiyeFiyat",                 "header": "MaxBakiyeFiyat",                 "width": 14, "enabled": true},
             {"field": "MinBakiyePuan",                  "header": "MinBakiyePuan",                  "width": 13, "enabled": true},
@@ -467,11 +467,6 @@
       "listOutputs": {
         "full": {
           "optimizationResult": [
-          
-            {"field": "ProfitFactorPuan",               "header": "ProfitFactorPuan",               "width": 16, "enabled": true},
-            {"field": "ProfitFactor",                   "header": "ProfitFactor",                   "width": 12, "enabled": true},
-            {"field": "ProfitFactorNet",                "header": "ProfitFactorNet",                "width": 15, "enabled": true},       
-            
             {"field": "KarliIslemOrani",                "header": "KarliIslemOrani",                "width": 15, "enabled": true},
             
             {"field": "IlkBakiyePuan",                  "header": "IlkBakiyePuan",                  "width": 14, "enabled": false},
@@ -497,6 +492,10 @@
             {"field": "GetiriPuanNet",                  "header": "GetiriPuanNet",                  "width": 14, "enabled": false},
             {"field": "GetiriPuanYuzdeNet",             "header": "GetiriPuanYuzdeNet",             "width": 18, "enabled": false},
           
+            {"field": "ProfitFactorPuan",               "header": "ProfitFactorPuan",               "width": 16, "enabled": true},
+            {"field": "ProfitFactor",                   "header": "ProfitFactor",                   "width": 12, "enabled": true},
+            {"field": "ProfitFactorNet",                "header": "ProfitFactorNet",                "width": 15, "enabled": true},
+
             {"field": "MinBakiyeFiyat",                 "header": "MinBakiyeFiyat",                 "width": 14, "enabled": true},
             {"field": "MaxBakiyeFiyat",                 "header": "MaxBakiyeFiyat",                 "width": 14, "enabled": true},
             {"field": "MinBakiyePuan",                  "header": "MinBakiyePuan",                  "width": 13, "enabled": true},
