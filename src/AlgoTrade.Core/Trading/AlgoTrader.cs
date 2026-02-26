@@ -1121,9 +1121,46 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         });
     }
 
-    public async Task WriteTraderDataToFilesAsync(MultipleTrader trader)
+    public async Task WriteTraderDataToFilesAsync(MultipleTrader trader, bool writeChildTraders = false)
     {
-		// TODO : Burası WriteTraderDataToFilesAsync(SingleTrader trader)'dekine benzer implement edilecek
+        if (trader is null)
+        {
+            Log("[WriteTraderDataToFilesAsync] trader is null, skipping.");
+            return;
+        }
+
+        await Task.Run(() =>
+        {
+            if (!trader.IsStopRequested)
+            {
+                // mainTrader
+                var mainTrader = trader.GetMainTrader();
+                if (mainTrader is not null && mainTrader.SaveStatisticsToFile)
+                {
+                    Log($"\n[WriteTraderDataToFilesAsync] Saving mainTrader statistics to files...");
+                    mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+                    Log($"\n[WriteTraderDataToFilesAsync] ✓ mainTrader file writing completed.");
+                }
+
+                // childTraders (optional)
+                if (writeChildTraders)
+                {
+                    foreach (var childTrader in trader.Traders)
+                    {
+                        if (childTrader.SaveStatisticsToFile)
+                        {
+                            Log($"\n[WriteTraderDataToFilesAsync] Saving {childTrader.GetName()} statistics to files...");
+                            childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+                            Log($"\n[WriteTraderDataToFilesAsync] ✓ {childTrader.GetName()} file writing completed.");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Log($"\n[WriteTraderDataToFilesAsync] Skipped. IsStopRequested={trader.IsStopRequested}");
+            }
+        });
     }
 
     void createChildTraders()
@@ -1284,13 +1321,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             if (childTrader.RunMode == TraderRunMode.TradeOnly || childTrader.RunMode == TraderRunMode.TradeAndQuery)
             {
-                strategy = GetStrategy(1);
+                strategy = GetStrategy(2);
                 childTrader.SetStrategy(strategy);
             }
 
             if (childTrader.RunMode == TraderRunMode.TradeAndQuery || childTrader.RunMode == TraderRunMode.QueryOnly)
             {
-                query = GetQuery(1);
+                query = GetQuery(2);
                 childTrader.SetQuery(query);
             }
 

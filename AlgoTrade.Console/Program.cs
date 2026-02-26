@@ -1007,11 +1007,19 @@ async Task runMultipleTraderAlgoTrade()
         await algoTrader.RunMultipleTraderWithProgressAsync();
 
         // Dosya yazımını arka plana al; grafik açıkken paralel çalışır.
-        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader);
+        bool writeChildTraders = false;
+        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader, writeChildTraders);
 
         // Grafik kapandıktan sonra dosya yazımının bitmesini garantile.
         await writeTask;
-        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
+        if (writeChildTraders)
+        {
+            LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)");
+        }
+        else
+        {
+            LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
+        }
     }
     catch (Exception ex)
     {
