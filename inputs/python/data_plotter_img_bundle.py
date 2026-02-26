@@ -3057,7 +3057,9 @@ class DataPlotterImgBundle:
                 implot.end_subplots()
         else:
             # Vertical scroll mode: render each panel with fixed pixel height in a scrollable child (Yaplacak 3)
-            if imgui.begin_child("##plots_scroll", imgui.ImVec2(-1, -1), False, imgui.WindowFlags_.no_scroll_with_mouse):
+            # begin_child() ne döndürürse döndürsün end_child() çağrılmalı (ImGui kuralı).
+            imgui.begin_child("##plots_scroll", imgui.ImVec2(-1, -1), False, imgui.WindowFlags_.no_scroll_with_mouse)
+            if True:
                 # Shared crosshair state for this frame (scroll mode)
                 shared_cross = {
                     "enabled": getattr(self, "enable_shared_crosshair", False),
