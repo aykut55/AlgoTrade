@@ -1412,6 +1412,42 @@ void showMainMenu()
     Console.Write("\nSeçiminiz (default: 8): ");
 }
 
+/// <summary>
+/// Menü inputunu okur. ESC basılırsa null döner (exit sinyali).
+/// Enter basılırsa yazılan string döner (boş string = default seçim).
+/// </summary>
+string? ReadMenuInput()
+{
+    var sb = new System.Text.StringBuilder();
+    while (true)
+    {
+        var key = Console.ReadKey(intercept: true);
+
+        if (key.Key == ConsoleKey.Escape)
+        {
+            Console.WriteLine();
+            return null;
+        }
+
+        if (key.Key == ConsoleKey.Enter)
+        {
+            Console.WriteLine();
+            return sb.ToString().Trim();
+        }
+
+        if (key.Key == ConsoleKey.Backspace && sb.Length > 0)
+        {
+            sb.Remove(sb.Length - 1, 1);
+            Console.Write("\b \b");
+        }
+        else if (!char.IsControl(key.KeyChar))
+        {
+            sb.Append(key.KeyChar);
+            Console.Write(key.KeyChar);
+        }
+    }
+}
+
 async Task main()
 {
     AppSettings.EnsureDirectories();
@@ -1433,7 +1469,8 @@ async Task main()
     while (running)
     {
         showMainMenu();
-        var input = Console.ReadLine()?.Trim();
+        var input = ReadMenuInput();
+        if (input == null) { running = false; break; }   // ESC → çık
         if (string.IsNullOrEmpty(input)) input = "8";
 
         switch (input)
