@@ -44,6 +44,7 @@ public class MultipleTrader
     public Action<MultipleTrader, int, int>? OnProgress { get; set; }
 
     public bool SaveStatisticsToFile { get; set; } = true;
+    public bool WriteChildTradersDataToFiles { get; set; } = false;
 
     // Output file settings
     public string MultipleTraderListsTxtFileName { get; set; } = "MultipleTraderLists.txt";

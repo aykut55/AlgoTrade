@@ -225,7 +225,7 @@ public class SingleTraderOptimizer : IDisposable
         OnApplyUserFlags(singleTrader);
 
         // Apply user flags (2)
-        OnApplyUserFlags2(singleTrader);
+        OnApplyUserFlags2(singleTrader, TraderApplyMode.SingleTraderOptimizer);
 
         // Configure equity curve filter
         SetSingleTraderConfigureEquityCurveFilter(singleTrader);
@@ -828,7 +828,7 @@ public class SingleTraderOptimizer : IDisposable
         trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
         trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
     }
-    private void OnApplyUserFlags2(SingleTrader trader)
+    private void OnApplyUserFlags2(SingleTrader trader, TraderApplyMode mode)
     {
         // Configure optimization flag
         trader.OptimizationEnabled = true;

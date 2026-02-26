@@ -17,6 +17,13 @@ using static Nessos.LinqOptimizer.Core.QueryExpr;
 
 namespace AlgoTrade.Core.Trading;
 
+public enum TraderApplyMode
+{
+    SingleTrader,
+    MultipleTrader,
+    SingleTraderOptimizer
+}
+
 public class AlgoTrader : MarketDataProvider, IDisposable
 {
     #region Properties
@@ -257,12 +264,38 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
             trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
         }
+        else if (traderId == 2)
+        {
+            // 2 id'li trader icin
+
+            trader.signals.AlEnabled                   = true;
+            trader.signals.SatEnabled                  = true;
+            trader.signals.FlatOlEnabled               = true;
+            trader.signals.PasGecEnabled               = true;
+            trader.signals.KarAlEnabled                = true;
+            trader.signals.ZararKesEnabled             = true;
+            trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+
+            var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+            trader.StartDateTimeStr = dateTimes[0];
+            trader.StopDateTimeStr  = dateTimes[1];
+
+            var startDateTime       = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StartDateStr     = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
+            trader.StartTimeStr     = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
+
+            var stopDateTime        = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
+            trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
+            trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
+        }
         else
         {
         }
     }
 
-    private void OnApplyUserFlags2(SingleTrader trader)
+    private void OnApplyUserFlags2(SingleTrader trader, TraderApplyMode mode)
     {
         int traderId = trader.GetId();
         if (traderId == -1)
@@ -325,19 +358,38 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.SavePerformansTxtEnabled            = true;
             trader.SavePerformansCsvEnabled            = true;
 
-            // Manually assign custom output file names (as requested)
-            trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
-            trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
-            trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
-            trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
-            trader.FullListsTxtFileName                = "SingleTraderLists.txt";
-            trader.FullListsCsvFileName                = "SingleTraderLists.csv";
-            trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
-            trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
-            trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-            trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
-            trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
-            trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+            if (mode == TraderApplyMode.SingleTrader)
+            {
+                trader.FullStatsTxtFileName                = $"SingleTraderStatistics.txt";
+                trader.FullStatsCsvFileName                = $"SingleTraderStatistics.csv";
+                trader.MinimalStatsTxtFileName             = $"SingleTraderStatisticsMinimal.txt";
+                trader.MinimalStatsCsvFileName             = $"SingleTraderStatisticsMinimal.csv";
+                trader.FullListsTxtFileName                = $"SingleTraderLists.txt";
+                trader.FullListsCsvFileName                = $"SingleTraderLists.csv";
+                trader.MinimalListsTxtFileName             = $"SingleTraderListsMinimal.txt";
+                trader.MinimalListsCsvFileName             = $"SingleTraderListsMinimal.csv";
+                trader.FullStatsTxtFormattedFileName       = $"SingleTraderStatisticsFormatted.txt";
+                trader.MinimalStatsTxtFormattedFileName    = $"SingleTraderStatisticsMinimalFormatted.txt";
+                trader.PerformansTxtFileName               = $"SingleTraderPerformans.txt";
+                trader.PerformansCsvFileName               = $"SingleTraderPerformans.csv";
+            }
+            else if (mode == TraderApplyMode.MultipleTrader)
+            {
+                // Unique output file names per trader
+                string t = $"T{traderId}";
+                trader.FullStatsTxtFileName                = $"{t}_SingleTraderStatistics.txt";
+                trader.FullStatsCsvFileName                = $"{t}_SingleTraderStatistics.csv";
+                trader.MinimalStatsTxtFileName             = $"{t}_SingleTraderStatisticsMinimal.txt";
+                trader.MinimalStatsCsvFileName             = $"{t}_SingleTraderStatisticsMinimal.csv";
+                trader.FullListsTxtFileName                = $"{t}_SingleTraderLists.txt";
+                trader.FullListsCsvFileName                = $"{t}_SingleTraderLists.csv";
+                trader.MinimalListsTxtFileName             = $"{t}_SingleTraderListsMinimal.txt";
+                trader.MinimalListsCsvFileName             = $"{t}_SingleTraderListsMinimal.csv";
+                trader.FullStatsTxtFormattedFileName       = $"{t}_SingleTraderStatisticsFormatted.txt";
+                trader.MinimalStatsTxtFormattedFileName    = $"{t}_SingleTraderStatisticsMinimalFormatted.txt";
+                trader.PerformansTxtFileName               = $"{t}_SingleTraderPerformans.txt";
+                trader.PerformansCsvFileName               = $"{t}_SingleTraderPerformans.csv";
+            }
         }
         else if (traderId == 1)
         {
@@ -361,19 +413,57 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.SavePerformansTxtEnabled            = true;
             trader.SavePerformansCsvEnabled            = true;
 
-            // Manually assign custom output file names (as requested)
-            trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
-            trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
-            trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
-            trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
-            trader.FullListsTxtFileName                = "SingleTraderLists.txt";
-            trader.FullListsCsvFileName                = "SingleTraderLists.csv";
-            trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
-            trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
-            trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-            trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
-            trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
-            trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+            // Unique output file names per trader
+            string t = $"T{traderId}";
+            trader.FullStatsTxtFileName                = $"{t}_SingleTraderStatistics.txt";
+            trader.FullStatsCsvFileName                = $"{t}_SingleTraderStatistics.csv";
+            trader.MinimalStatsTxtFileName             = $"{t}_SingleTraderStatisticsMinimal.txt";
+            trader.MinimalStatsCsvFileName             = $"{t}_SingleTraderStatisticsMinimal.csv";
+            trader.FullListsTxtFileName                = $"{t}_SingleTraderLists.txt";
+            trader.FullListsCsvFileName                = $"{t}_SingleTraderLists.csv";
+            trader.MinimalListsTxtFileName             = $"{t}_SingleTraderListsMinimal.txt";
+            trader.MinimalListsCsvFileName             = $"{t}_SingleTraderListsMinimal.csv";
+            trader.FullStatsTxtFormattedFileName       = $"{t}_SingleTraderStatisticsFormatted.txt";
+            trader.MinimalStatsTxtFormattedFileName    = $"{t}_SingleTraderStatisticsMinimalFormatted.txt";
+            trader.PerformansTxtFileName               = $"{t}_SingleTraderPerformans.txt";
+            trader.PerformansCsvFileName               = $"{t}_SingleTraderPerformans.csv";
+        }
+        else if (traderId == 2)
+        {
+            // Configure optimization flag
+            trader.OptimizationEnabled = false;
+
+            // Enable savingStatistics
+            trader.SaveStatisticsToFile = true;
+
+            // Enable all per-output statistics flags explicitly
+            trader.SaveFullStatsTxtEnabled             = true;
+            trader.SaveFullStatsCsvEnabled             = true;
+            trader.SaveMinimalStatsTxtEnabled          = true;
+            trader.SaveMinimalStatsCsvEnabled          = true;
+            trader.SaveFullListsTxtEnabled             = true;
+            trader.SaveFullListsCsvEnabled             = true;
+            trader.SaveMinimalListsTxtEnabled          = true;
+            trader.SaveMinimalListsCsvEnabled          = true;
+            trader.SaveFullStatsTxtFormattedEnabled    = true;
+            trader.SaveMinimalStatsTxtFormattedEnabled = true;
+            trader.SavePerformansTxtEnabled            = true;
+            trader.SavePerformansCsvEnabled            = true;
+
+            // Unique output file names per trader
+            string t = $"T{traderId}";
+            trader.FullStatsTxtFileName                = $"{t}_SingleTraderStatistics.txt";
+            trader.FullStatsCsvFileName                = $"{t}_SingleTraderStatistics.csv";
+            trader.MinimalStatsTxtFileName             = $"{t}_SingleTraderStatisticsMinimal.txt";
+            trader.MinimalStatsCsvFileName             = $"{t}_SingleTraderStatisticsMinimal.csv";
+            trader.FullListsTxtFileName                = $"{t}_SingleTraderLists.txt";
+            trader.FullListsCsvFileName                = $"{t}_SingleTraderLists.csv";
+            trader.MinimalListsTxtFileName             = $"{t}_SingleTraderListsMinimal.txt";
+            trader.MinimalListsCsvFileName             = $"{t}_SingleTraderListsMinimal.csv";
+            trader.FullStatsTxtFormattedFileName       = $"{t}_SingleTraderStatisticsFormatted.txt";
+            trader.MinimalStatsTxtFormattedFileName    = $"{t}_SingleTraderStatisticsMinimalFormatted.txt";
+            trader.PerformansTxtFileName               = $"{t}_SingleTraderPerformans.txt";
+            trader.PerformansCsvFileName               = $"{t}_SingleTraderPerformans.csv";
         }
         else
         {
@@ -919,7 +1009,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(singleTrader);
 
             // Apply user flags (2)
-            OnApplyUserFlags2(singleTrader);
+            OnApplyUserFlags2(singleTrader, TraderApplyMode.SingleTrader);
 
             // Configure equity curve filter
             SetSingleTraderConfigureEquityCurveFilter(singleTrader);
@@ -1127,7 +1217,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         });
     }
 
-    public async Task WriteTraderDataToFilesAsync(MultipleTrader trader, bool writeChildTraders = false)
+    public async Task WriteTraderDataToFilesAsync(MultipleTrader trader)
     {
         if (trader is null)
         {
@@ -1154,7 +1244,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 }
 
                 // childTraders (optional)
-                if (writeChildTraders)
+                if (trader.WriteChildTradersDataToFiles)
                 {
                     foreach (var childTrader in trader.Traders)
                     {
@@ -1210,7 +1300,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(childTrader);
 
             // Apply user flags (2)
-            OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+            OnApplyUserFlags2(childTrader, TraderApplyMode.MultipleTrader);
 
             // Configure multiple trader mode flag
             childTrader.MultipleTraderModeEnabled = true;
@@ -1270,7 +1360,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(childTrader);
 
             // Apply user flags (2)
-            OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+            OnApplyUserFlags2(childTrader, TraderApplyMode.MultipleTrader);
 
             // Configure multiple trader mode flag
             childTrader.MultipleTraderModeEnabled = true;
@@ -1330,7 +1420,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(childTrader);
 
             // Apply user flags (2)
-            OnApplyUserFlags2(childTrader); // TODO : Kontrol et...
+            OnApplyUserFlags2(childTrader, TraderApplyMode.MultipleTrader);
 
             // Configure multiple trader mode flag
             childTrader.MultipleTraderModeEnabled = true;
@@ -1453,7 +1543,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             OnApplyUserFlags(mainTrader);
 
             // Apply user flags (2)
-            OnApplyUserFlags2(mainTrader);
+            OnApplyUserFlags2(mainTrader, TraderApplyMode.MultipleTrader);
 
             // Configure multiple trader mode flag
             mainTrader.MultipleTraderModeEnabled = true;
