@@ -1056,6 +1056,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         });
     }
 
+    public async Task WriteTraderDataToFilesAsync(MultipleTrader trader)
+    {
+		// TODO : Burası WriteTraderDataToFilesAsync(SingleTrader trader)'dekine benzer implement edilecek
+    }
+
     void createChildTraders()
     {
         int childId = 0;
