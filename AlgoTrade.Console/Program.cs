@@ -27,7 +27,7 @@ ConcurrentDictionary<string, string>? stockMetaData = null;
 AlgoTrader? algoTrader = null;
 TimeManager timer = TimeManager.GetInstance();
 LogManager logger = LogManager.GetInstance();
-DateTime? _progressStartTime = null;
+//DateTime? _progressStartTime = null;
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // If true, show config selection menus; if false, pick defaults from files
@@ -38,7 +38,7 @@ bool bShowConfigSelectionMenuMultiTrader = false;
 // If true show Run Mode menu; if false pick default 1 (TradeOnly)
 bool bShowRunModeMenu = false;
 
-bool bReadStockDataFastMode = true; // Silinecek
+bool bReadStockDataFastMode = false; // Silinecek
 
 string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
 
