@@ -317,7 +317,7 @@ class DataPlotter:
             plotter.setTradeSignals(sinyal_list)
             plotter.setWindowTitle(f"{title} {periyot} - Multi Panel Chart")
 
-            plotter.setEnableVerticalScrollBar(False)
+            plotter.setEnableVerticalScrollBar(True)
             plotter.setEnableSharedCrossHair(True)
             plotter.setEnableSharedXAxis(True)
             plotter.setShowInfoOnAllPanels(True)
@@ -325,7 +325,7 @@ class DataPlotter:
             plotter.setEnableRangeSlider(True)
 
             # Panel:              0     1     2     3     4     5     6
-            HeightRatioList = [2.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0]
+            HeightRatioList = [1.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5]
 
             # ------------------------------------------------------------------
             # Panel 0: Price Chart (OHLC)

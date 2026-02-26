@@ -3086,7 +3086,7 @@ class DataPlotterImgBundle:
                     static.needs_update = True
 
                 # Render panels with fixed or ratio-based pixel heights
-                base_height = 220.0
+                base_height = 320.0
                 for idx in sorted_indices:
                     panel = self.panels[idx]
 
