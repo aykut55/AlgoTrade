@@ -271,7 +271,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.OptimizationEnabled = false;
 
             // Enable savingStatistics
-            singleTrader.SaveStatisticsToFile = false;
+            singleTrader.SaveStatisticsToFile = true;
 
             // Enable all per-output statistics flags explicitly
             singleTrader.SaveFullStatsTxtEnabled             = true;
@@ -957,20 +957,21 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             var csvHeader = singleTrader.GetStatisticsHeaderRow(";");
             var csvData   = singleTrader.GetStatisticsDataRow(";");
 
-            // Dosyaya yazma: stop edilmediyse,kullanıcı istiyorsa yaz
-            if (!singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
-            {
-                if (!singleTrader.OptimizationEnabled)
-                {
-                    Log($"\nSaving statistics to files...");
-                    singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
-                }
-                else
-                {
-                    Log($"\nSkipping full statistics write in optimization mode...");
-                    // Buraya gerçekten minimal write gelecekse çağrı ekle
-                }
-            }
+            // Dosyaya yazma: WriteTraderDataToFilesAsync metoduna taşındı.
+            // Grafik açıkken arka planda çalışsın diye buradan kaldırıldı.
+            // Orijinal kod:
+            // if (!singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
+            // {
+            //     if (!singleTrader.OptimizationEnabled)
+            //     {
+            //         Log($"\nSaving statistics to files...");
+            //         singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+            //     }
+            //     else
+            //     {
+            //         Log($"\nSkipping full statistics write in optimization mode...");
+            //     }
+            // }
 
             _timer!.StopTimer("3");
 
@@ -1014,8 +1015,45 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
         Log("");
         Log($"AlgoTrader '{Name}' completed. Processed {totalBars} bars.");
-        Log("");
+    }
 
+    /// <summary>
+    /// SingleTrader verilerini arka planda dosyalara yazar.
+    /// RunSingleTraderWithProgressAsync içinden alındı; grafik açıkken
+    /// paralel çalışması için ayrı metod yapıldı.
+    /// Çağrı örneği:
+    ///     var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
+    ///     await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
+    ///     await writeTask;
+    /// </summary>
+    public async Task WriteTraderDataToFilesAsync(SingleTrader trader)
+    {
+        if (trader is null)
+        {
+            Log("[WriteTraderDataToFilesAsync] trader is null, skipping.");
+            return;
+        }
+
+        await Task.Run(() =>
+        {
+            if (!trader.IsStopRequested && trader.SaveStatisticsToFile)
+            {
+                if (!trader.OptimizationEnabled)
+                {
+                    Log($"\n[WriteTraderDataToFilesAsync] Saving statistics to files...");
+                    trader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+                    Log($"\n[WriteTraderDataToFilesAsync] ✓ File writing completed.");
+                }
+                else
+                {
+                    Log($"\n[WriteTraderDataToFilesAsync] Skipping full statistics write in optimization mode.");
+                }
+            }
+            else
+            {
+                Log($"\n[WriteTraderDataToFilesAsync] Skipped. IsStopRequested={trader.IsStopRequested}, SaveStatisticsToFile={trader.SaveStatisticsToFile}");
+            }
+        });
     }
 
     void createChildTraders()

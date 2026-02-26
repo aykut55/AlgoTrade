@@ -935,7 +935,11 @@ async Task runSingleTraderAlgoTrade()
 
         await algoTrader.RunSingleTraderWithProgressAsync();
 
+        // Dosya yazımını arka plana al; grafik açıkken paralel çalışır.
+        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
+
         LogManager.LogRaw("");
+
         if (algoTrader.SetupPython())
         {
             LogManager.LogRaw("");
@@ -945,6 +949,10 @@ async Task runSingleTraderAlgoTrade()
         {
             LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
         }
+
+        // Grafik kapandıktan sonra dosya yazımının bitmesini garantile.
+        await writeTask;
+        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
     }
     catch (Exception ex)
     {
