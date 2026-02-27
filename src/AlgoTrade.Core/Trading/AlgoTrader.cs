@@ -2012,7 +2012,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (!_pythonPlotter.IsInitialized)
                 _pythonPlotter.Initialize();
 
-            _logger?.WriteRaw($"✓ Python DLL seçildi: {PythonDll}");
+            _logger?.WriteRaw($"✓ Python DLL selected: {PythonDll}");
 
             // Basit doğrulama: main.py -> hello()
             if (runHello)

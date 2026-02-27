@@ -152,14 +152,14 @@ public class PythonPlotter : IDisposable
                         if (Directory.Exists(venvPath))
                         {
                             sys.path.insert(0, new PyString(venvPath));
-                            _logger?.WriteRaw($"✓ Venv site-packages eklendi: {venvPath}");
+                            _logger?.WriteRaw($"✓ Venv site-packages added: {venvPath}");
 
                             // imgui_bundle native DLL'leri için kendi dizinini arama yoluna ekle
                             string imguiBundleDir = Path.Combine(venvPath, "imgui_bundle");
                             if (Directory.Exists(imguiBundleDir))
                             {
                                 os.add_dll_directory(imguiBundleDir);
-                                _logger?.WriteRaw($"✓ imgui_bundle DLL dizini eklendi: {imguiBundleDir}");
+                                _logger?.WriteRaw($"✓ imgui_bundle DLL directory added: {imguiBundleDir}");
                             }
 
                             break;
@@ -457,7 +457,7 @@ public class PythonPlotter : IDisposable
                 try
                 {
                     Py.Import("imgui_bundle");
-                    _logger?.WriteRaw("✓ imgui_bundle başarıyla import edildi.\n");
+                    _logger?.WriteRaw("✓ imgui_bundle imported successfully.\n");
                 }
                 catch (PythonException)
                 {

@@ -50,13 +50,13 @@ void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string>
     var meta         = sender.GetMetaData();
     int padding      = 18;
     sb.Clear();
-    sb.AppendLine($"{"\tKayit Zamani".PadRight(padding)}: {meta.GetValueOrDefault("Kayit_Zamani",    "N/A")}");
-    sb.AppendLine($"{"\tGrafikSembol".PadRight(padding)}: {meta.GetValueOrDefault("GrafikSembol",    "N/A")}");
-    sb.AppendLine($"{"\tGrafikPeriyot".PadRight(padding)}: {meta.GetValueOrDefault("GrafikPeriyot",  "N/A")}");
-    sb.AppendLine($"{"\tBarCount".PadRight(padding)}: {meta.GetValueOrDefault("BarCount",            "N/A")}");
-    sb.AppendLine($"{"\tBaslangic Tarihi".PadRight(padding)}: {meta.GetValueOrDefault("Baslangic_Tarihi", "N/A")}");
-    sb.AppendLine($"{"\tBitis Tarihi".PadRight(padding)}: {meta.GetValueOrDefault("Bitis_Tarihi",    "N/A")}");
-    sb.Append(    $"{"\tFormat".PadRight(padding)}: {meta.GetValueOrDefault("Format",                "N/A")}");
+    sb.AppendLine($"{"\tRecord Time".PadRight(padding)}:  {meta.GetValueOrDefault("Kayit_Zamani",    "N/A")}");
+    sb.AppendLine($"{"\tChart Symbol".PadRight(padding)}: {meta.GetValueOrDefault("GrafikSembol",    "N/A")}");
+    sb.AppendLine($"{"\tChart Period".PadRight(padding)}: {meta.GetValueOrDefault("GrafikPeriyot",  "N/A")}");
+    sb.AppendLine($"{"\tBar Count".PadRight(padding)}:    {meta.GetValueOrDefault("BarCount",            "N/A")}");
+    sb.AppendLine($"{"\tStart Date".PadRight(padding)}:   {meta.GetValueOrDefault("Baslangic_Tarihi", "N/A")}");
+    sb.AppendLine($"{"\tEnd Date".PadRight(padding)}:     {meta.GetValueOrDefault("Bitis_Tarihi",    "N/A")}");
+    sb.Append(    $"{"\tFormat".PadRight(padding)}:       {meta.GetValueOrDefault("Format",                "N/A")}");
     LogManager.LogRaw(sb.ToString());
 }
 
@@ -1367,7 +1367,7 @@ async Task main()
 
     appConfig             = AppConfigLoader.Load(appConfigPath);
     stockDataFullFileName = AppConfigApplier.ApplyAppSettings(appConfig.AppSettings);
-    LogManager.LogRaw($"[AppConfig] Yüklendi: {appConfigPath}");
+    LogManager.LogRaw($"[AppConfig] Loaded: {appConfigPath}");
     if (!string.IsNullOrEmpty(stockDataFullFileName))
         LogManager.LogRaw($"[AppConfig] StockDataFile: {stockDataFullFileName}");
 
@@ -1443,22 +1443,3 @@ catch (Exception ex)
     Console.WriteLine("Press any key to exit...");
     Console.ReadKey();
 }
-
-
-/*
- * 
- * 
- singleTrader için OnApplyUserFlags  içinde set edilen seyleri AppConfig'e almak!
-singleTrader için OnApplyUserFlags2 içinde set edilen seyleri AppConfig'e almak!
-
-AnaMenüde 5 ile SingleTrader menüsüne gelince orada seçimler yaptırıyor
-	[1/2/3]  RunMode seçilince hangisi secildiyse onun içeriğini ekrana yazdırmak
-        singleTrader için OnApplyUserFlags  içinde set edilen seyleri ekranda göstermek
-        singleTrader için OnApplyUserFlags2  içinde set edilen seyleri
-Son adımda ENTER ile çalıştırmak
-
- * AppConfig'e readStockData nın parametrelerini girmek ve kullancııdan onay istemek.
- * stockDataReader.ReadDataFast()
- * Defaultları gösterir : ENTER ise okuma baslar, değilse kullanıcıdan parametre girişi istenir..
- * 
- */
