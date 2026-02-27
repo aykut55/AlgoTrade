@@ -10,7 +10,7 @@ public class AppConfig
     public ReadDataConfig        ReadData       { get; set; } = new();
     public SingleTraderConfig    SingleTrader   { get; set; } = new();
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
-    public SingleTraderOptConfig SingleTraderOpt { get; set; } = new();
+    public SingleTraderOptConfig SingleTraderOptimizer { get; set; } = new();
 }
 
 // =============================================================================
@@ -32,7 +32,7 @@ public class AppSettingsConfig
     /// Otomatik çalıştırma modu. Uygulama başlarken JSON config'den
     /// okuyup hiç onay almadan doğrudan çalıştırır ve çıkar.
     /// Boş veya "None" → normal menü akışı.
-    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOpt
+    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOptimizer
     /// </summary>
     public string AutoRunMode { get; set; } = "";
 }
@@ -234,7 +234,7 @@ public class MultipleTraderConfig
 }
 
 // =============================================================================
-// SingleTraderOpt
+// SingleTraderOptimizer
 // =============================================================================
 
 public class SingleTraderOptConfig

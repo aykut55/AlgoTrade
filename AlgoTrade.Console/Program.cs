@@ -861,7 +861,7 @@ async Task runSingleTraderOptimization()
             algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
         }
 
-        AppConfigApplier.ApplySingleTraderOpt(algoTrader, appConfig.SingleTraderOpt, AppSettings.ConfigsDir);
+        AppConfigApplier.ApplySingleTraderOpt(algoTrader, appConfig.SingleTraderOptimizer, AppSettings.ConfigsDir);
 
         algoTrader.Initialize();
 
@@ -971,9 +971,9 @@ void showModeConfigSummary(string title)
         return;
     }
 
-    if (title == "SingleTraderOpt")
+    if (title == "SingleTraderOptimizer")
     {
-        var cfg = appConfig.SingleTraderOpt;
+        var cfg = appConfig.SingleTraderOptimizer;
         var tp  = cfg.TradeParams;
 
         string stratInfo = Trunc($"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}  |  Opt:{cfg.Optimization.Name}", 50);
@@ -1189,7 +1189,7 @@ void showSingleTraderRunPreview(TraderRunMode mode)
 
 void showSingleTraderOptRunPreview()
 {
-    var cfg = appConfig.SingleTraderOpt;
+    var cfg = appConfig.SingleTraderOptimizer;
 
     var jsonOpts = new JsonSerializerOptions
     {
@@ -1281,7 +1281,7 @@ void showSingleTraderOptRunPreview()
 
     string sep = new string('═', 66);
     Console.WriteLine();
-    Console.WriteLine("══ SingleTraderOpt — Run Preview ══════════════════════════════════");
+    Console.WriteLine("══ SingleTraderOptimizer — Run Preview ════════════════════════════");
     foreach (string rawLine in json.Split('\n'))
     {
         string line     = rawLine.TrimEnd('\r');
@@ -1400,7 +1400,7 @@ async Task handleSingleTraderOpt()
     reloadAppConfig();
     while (true)
     {
-        showModeConfigSummary("SingleTraderOpt");
+        showModeConfigSummary("SingleTraderOptimizer");
         var input = MenuInput("");
 
         if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
@@ -1587,13 +1587,13 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [2]  SingleTrader                                               ║");
     Console.WriteLine("║    [3]  MultipleTrader                                             ║");
-    Console.WriteLine("║    [4]  SingleTraderOpt                                            ║");
+    Console.WriteLine("║    [4]  SingleTraderOptimizer                                      ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Read Data + Run ════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [5]  Read Data + SingleTrader                                   ║");
     Console.WriteLine("║    [6]  Read Data + MultipleTrader                                 ║");
-    Console.WriteLine("║    [7]  Read Data + SingleTraderOpt                                ║");
+    Console.WriteLine("║    [7]  Read Data + SingleTraderOptimizer                          ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Script ═════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -1655,11 +1655,11 @@ async Task main()
                 selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
                 await runMultipleTraderAlgoTrade();
                 break;
-            case "SINGLETRADEROPT":
+            case "SINGLETRADEROPTIMIZER":
                 await runSingleTraderOptimization();
                 break;
             default:
-                LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOpt", ConsoleColor.Red);
+                LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOptimizer", ConsoleColor.Red);
                 break;
         }
         return; // Menüye geçmeden çık

@@ -134,7 +134,7 @@ public static class AppConfigLoader
             }
         },
 
-        SingleTraderOpt = new SingleTraderOptConfig
+        SingleTraderOptimizer = new SingleTraderOptConfig
         {
             Optimization      = new OptRef      { Name = "SimpleMostStrategy", Version = "v1" },
             Strategy          = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
