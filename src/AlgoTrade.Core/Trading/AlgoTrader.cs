@@ -107,6 +107,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private InitialTradeParams?         _singleTraderTradeParamsConfig = null;
     private SingleTraderSignalsConfig?  _singleTraderSignalsConfig     = null;
     private SingleTraderSaveConfig?     _singleTraderSaveConfig        = null;
+    private SingleTraderPlotConfig?     _singleTraderPlotConfig        = null;
 
     // Python görselleştirme
     private PythonPlotter? _pythonPlotter;
@@ -853,6 +854,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _singleTraderSaveConfig = config;
     }
 
+    public void SetSingleTraderPlotConfig(SingleTraderPlotConfig config)
+    {
+        _singleTraderPlotConfig = config;
+    }
+
     /// <summary>
     /// _singleTraderSignalsConfig ve _singleTraderSaveConfig'i trader'a uygular.
     /// OnApplyUserFlags / OnApplyUserFlags2 (SingleTrader) yerine çağrılır.
@@ -915,6 +921,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) trader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
             if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            trader.PerformansTxtFileName            = sv.PerformansTxtFileName;
             if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            trader.PerformansCsvFileName            = sv.PerformansCsvFileName;
+        }
+
+        if (_singleTraderPlotConfig is { } pl)
+        {
+            trader.PlotEnabled = pl.PlotEnabled;
         }
     }
 
@@ -2192,6 +2203,11 @@ public class SingleTraderSaveConfig
     public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsMinimalFormatted.txt";
     public string PerformansTxtFileName            { get; set; } = "SingleTraderPerformans.txt";
     public string PerformansCsvFileName            { get; set; } = "SingleTraderPerformans.csv";
+}
+
+public class SingleTraderPlotConfig
+{
+    public bool PlotEnabled { get; set; } = false;
 }
 
 /// <summary>

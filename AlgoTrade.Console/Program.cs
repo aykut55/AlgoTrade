@@ -733,7 +733,7 @@ async Task runSingleTraderAlgoTrade()
 
         var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
 
-        bool plotEnabled = appConfig.SingleTrader.Plot?.PlotEnabled ?? false;
+        bool plotEnabled = algoTrader.SingleTrader.PlotEnabled;
         if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
         {
             LogManager.LogRaw("");

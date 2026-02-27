@@ -87,18 +87,24 @@ public static class AppConfigApplier
             SaveMinimalStatsTxtFormattedEnabled = cfg.Save.SaveMinimalStatsTxtFormattedEnabled,
             SavePerformansTxtEnabled            = cfg.Save.SavePerformansTxtEnabled,
             SavePerformansCsvEnabled            = cfg.Save.SavePerformansCsvEnabled,
-            FullStatsTxtFileName             = cfg.Save.FullStatsTxtFileName,
-            FullStatsCsvFileName             = cfg.Save.FullStatsCsvFileName,
-            MinimalStatsTxtFileName          = cfg.Save.MinimalStatsTxtFileName,
-            MinimalStatsCsvFileName          = cfg.Save.MinimalStatsCsvFileName,
-            FullListsTxtFileName             = cfg.Save.FullListsTxtFileName,
-            FullListsCsvFileName             = cfg.Save.FullListsCsvFileName,
-            MinimalListsTxtFileName          = cfg.Save.MinimalListsTxtFileName,
-            MinimalListsCsvFileName          = cfg.Save.MinimalListsCsvFileName,
-            FullStatsTxtFormattedFileName    = cfg.Save.FullStatsTxtFormattedFileName,
-            MinimalStatsTxtFormattedFileName = cfg.Save.MinimalStatsTxtFormattedFileName,
-            PerformansTxtFileName            = cfg.Save.PerformansTxtFileName,
-            PerformansCsvFileName            = cfg.Save.PerformansCsvFileName,
+            FullStatsTxtFileName                = cfg.Save.FullStatsTxtFileName,
+            FullStatsCsvFileName                = cfg.Save.FullStatsCsvFileName,
+            MinimalStatsTxtFileName             = cfg.Save.MinimalStatsTxtFileName,
+            MinimalStatsCsvFileName             = cfg.Save.MinimalStatsCsvFileName,
+            FullListsTxtFileName                = cfg.Save.FullListsTxtFileName,
+            FullListsCsvFileName                = cfg.Save.FullListsCsvFileName,
+            MinimalListsTxtFileName             = cfg.Save.MinimalListsTxtFileName,
+            MinimalListsCsvFileName             = cfg.Save.MinimalListsCsvFileName,
+            FullStatsTxtFormattedFileName       = cfg.Save.FullStatsTxtFormattedFileName,
+            MinimalStatsTxtFormattedFileName    = cfg.Save.MinimalStatsTxtFormattedFileName,
+            PerformansTxtFileName               = cfg.Save.PerformansTxtFileName,
+            PerformansCsvFileName               = cfg.Save.PerformansCsvFileName,
+        });
+
+        // Plot
+        algoTrader.SetSingleTraderPlotConfig(new SingleTraderPlotConfig
+        {
+            PlotEnabled = cfg.Plot.PlotEnabled,
         });
     }
 

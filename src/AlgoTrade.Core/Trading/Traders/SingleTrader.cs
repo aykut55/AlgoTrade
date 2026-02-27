@@ -179,6 +179,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool BakiyeInitialized { get; set; }
     public bool OptimizationEnabled { get; set; }
     public bool MultipleTraderModeEnabled { get; set; }
+    public bool PlotEnabled { get; set; } = false;
 
     #region StateFlags
     // State flags
