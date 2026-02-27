@@ -1,5 +1,5 @@
 class TradeData:
-    """C# tarafından pythonnet üzerinden setter'larla doldurulan veri transfer nesnesi."""
+    """Data transfer object populated from C# via pythonnet setters."""
 
     def __init__(self):
         self.date_times             = []
@@ -21,7 +21,7 @@ class TradeData:
         self.kar_zarar_fiyat_yuzde_list = []
         self.getiri_fiyat_yuzde_list    = []
         self.getiri_fiyat_net_yuzde_list = []
-        self.indicators                 = {}   # genel indikatörler (strateji bağımsız)
-        self.strategy_indicators        = {}   # strateji tarafından üretilen indikatörler
+        self.indicators                 = {}   # general indicators (strategy-independent)
+        self.strategy_indicators        = {}   # indicators produced by strategy
         self.title                  = "AlgoTrade"
         self.periyot                = "1H"

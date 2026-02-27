@@ -281,9 +281,9 @@ class DataPlotter:
         periyot = td.periyot
         dates   = td.date_times
 
-        print("=== DataPlotter._plot_imgui BAŞLADI ===")
-        print(f"Grafik: {title} {periyot}")
-        print(f"Bar sayısı: {len(dates)}")
+        print("=== DataPlotter._plot_imgui STARTED ===")
+        print(f"Chart: {title} {periyot}")
+        print(f"Bar count: {len(dates)}")
 
         try:
             # Numpy array'e çevir
@@ -424,17 +424,17 @@ class DataPlotter:
                         arr   = np.array(values, dtype=np.float64)
                         color = colors[data_idx % len(colors)]
                         panel6.setData(data_idx, DataType.Line, arr, name, color)
-                        print(f"✓ Indicator '{name}' plot edildi ({len(arr)} değer)")
+                        print(f"✓ Indicator '{name}' plotted ({len(arr)} values)")
 
             # Y-axis sync
             plotter.RegisterYSyncGroup(0, panel0)
 
-            print(f"\n✓ {len(plotter.panels)} panel oluşturuldu")
+            print(f"\n✓ {len(plotter.panels)} panels created")
             for idx in sorted(plotter.panels.keys()):
                 p = plotter.panels[idx]
                 print(f"  Panel {idx}: {p.title} ({len(p.data_items)} data series)")
 
-            print(f"\n🚀 ImGui window açılıyor...")
+            print(f"\n🚀 Opening ImGui window...")
             try:
                 immapp.run(plotter.Plot, with_implot=True, window_size=(1600, 2000))
                 print("✓ immapp.run() completed successfully")

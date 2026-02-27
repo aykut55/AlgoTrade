@@ -1,6 +1,6 @@
 class PanelData:
     """
-    Bir panel içindeki tek bir veri serisini temsil eder.
+    Represents a single data series within a panel.
 
     data_type: "line" | "bar" | "scatter" | "candlestick" | "histogram"
     """
@@ -9,7 +9,7 @@ class PanelData:
         self.id        = data_id
         self.name      = name
         self.data_type = data_type
-        self.values    = []        # list[float] veya list[tuple[o,h,l,c]]
+        self.values    = []        # list[float] or list[tuple[o,h,l,c]]
         self.color     = None      # str | tuple[r,g,b,a] | None
         self.visible   = True
         self.label     = name

@@ -1,13 +1,13 @@
 """
 plotter.py — AlgoTrade Python Plotter
 ======================================
-C# PythonPlotter tarafından pythonnet üzerinden çağrılır.
+Called by C# PythonPlotter via pythonnet.
 
 Public API:
-    show_optimization_results(data)   →  Optimizasyon sonuçları penceresi
-    show_single_trader_data(data)     →  SingleTrader equity curve penceresi
+    show_optimization_results(data)   →  Optimization results window
+    show_single_trader_data(data)     →  SingleTrader equity curve window
 
-Gereksinimler:
+Requirements:
     pip install imgui-bundle
 """
 
@@ -19,26 +19,26 @@ from imgui_bundle import imgui, implot, hello_imgui, immapp
 # ──────────────────────────────────────────────────────────────────────────────
 # Session state
 # ──────────────────────────────────────────────────────────────────────────────
-_results: list[dict] = []          # show_optimization_results için
-_trader_data: dict   = {}          # show_single_trader_data için
+_results: list[dict] = []          # for show_optimization_results
+_trader_data: dict   = {}          # for show_single_trader_data
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Public API — C# tarafından çağrılan fonksiyon
+# Public API — function called from C#
 # ──────────────────────────────────────────────────────────────────────────────
 
 def show_optimization_results(data: Any) -> None:
     """
-    Optimizasyon sonuçlarını imgui_bundle penceresiyle gösterir.
-    Pencere kapanana dek bloklar (C# thread bekler).
+    Shows optimization results in an imgui_bundle window.
+    Blocks until the window is closed (C# thread waits).
 
     Parameters
     ----------
     data :
-        Python list of dict — json.loads() çıktısı.
-        Her eleman şu anahtarları içerir:
-            parameters        : dict[str, str]   — test edilen parametre kombinasyonu
-            values            : dict[str, str]   — tüm istatistik değerleri
+        Python list of dict — output of json.loads().
+        Each element contains the following keys:
+            parameters        : dict[str, str]   — tested parameter combination
+            values            : dict[str, str]   — all statistic values
             net_profit        : float
             win_rate          : float
             profit_factor     : float
@@ -51,7 +51,7 @@ def show_optimization_results(data: Any) -> None:
     # pythonnet PyObject → saf Python list[dict]
     _results = [dict(item) for item in data]
 
-    # Varsayılan sıralama: net_profit azalan
+    # Default sort: net_profit descending
     _results.sort(key=lambda r: r.get("net_profit", 0.0), reverse=True)
 
     runner = hello_imgui.RunnerParams()
@@ -69,7 +69,7 @@ def show_optimization_results(data: Any) -> None:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _gui() -> None:
-    """Her frame imgui tarafından çağrılır."""
+    """Called by imgui every frame."""
 
     vp = imgui.get_main_viewport()
     imgui.set_next_window_pos(vp.work_pos)

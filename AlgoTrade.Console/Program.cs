@@ -36,7 +36,7 @@ TraderRunMode       selectedRunMode                 = TraderRunMode.TradeOnly;
 bool                addHeadTailInfo                 = false;
 
 string              appConfigPath                   = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "AppConfig.json");
-AppConfig           appConfig                       = new();          // startup'ta AppConfigLoader.Load() ile doldurulur
+AppConfig           appConfig                       = new();          // populated with AppConfigLoader.Load() at startup
 string              stockDataFullFileName           = "";
 
 // =============================================================================
@@ -82,8 +82,8 @@ void OnTraderProgress(int currentBar, int totalBars, double percentage) { }
 // =============================================================================
 
 /// <summary>
-/// AppConfig.AppSettings.MenuTimeoutSeconds'a göre otomatik olarak
-/// ReadMenuInputWithTimeout veya ReadMenuInput çağırır.
+/// Calls ReadMenuInputWithTimeout or ReadMenuInput automatically
+/// based on AppConfig.AppSettings.MenuTimeoutSeconds.
 /// </summary>
 string? MenuInput(string defaultReturn = "")
 {
@@ -98,7 +98,7 @@ string? MenuInput(string defaultReturn = "")
 /// </summary>
 string? ReadMenuInput()
 {
-    Console.Write("Seçiminiz: ");
+    Console.Write("Selection: ");
     var buf = new StringBuilder();
     while (true)
     {
@@ -112,9 +112,9 @@ string? ReadMenuInput()
 }
 
 /// <summary>
-/// ReadMenuInput ile aynı davranış, ancak timeoutSeconds sonra defaultReturn döner.
-/// Geri sayım "\rSeçiminiz (XX sn): " şeklinde aynı satırda güncellenir.
-/// Kullanıcı bir tuşa basınca countdown durur ve normal yazma moduna geçer.
+/// Same behavior as ReadMenuInput, but returns defaultReturn after timeoutSeconds.
+/// The countdown is updated on the same line as "\rSelection (XX s): ".
+/// When the user presses a key, the countdown stops and normal input mode begins.
 /// </summary>
 string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
 {
@@ -127,10 +127,10 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
     {
         int remaining = Math.Max(0, (int)(deadline - DateTime.Now).TotalSeconds);
 
-        // Geri sayımı güncelle (sadece kullanıcı henüz yazmaya başlamadıysa)
+        // Update countdown (only if the user has not started typing yet)
         if (!userStarted && remaining != lastShown)
         {
-            Console.Write($"\rSeçiminiz ({remaining:D2} sn): ");
+            Console.Write($"\rSelection ({remaining:D2} s): ");
             lastShown = remaining;
         }
 
@@ -151,14 +151,14 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
             {
                 if (!userStarted)
                 {
-                    // İlk karakter: prompt'u sabit hale getir, countdown'ı kaldır
-                    Console.Write($"\rSeçiminiz: ");
+                    // First character: fix the prompt, remove the countdown
+                    Console.Write($"\rSelection: ");
                     userStarted = true;
                 }
                 buf.Append(key.KeyChar);
                 Console.Write(key.KeyChar);
             }
-            // Her tuşa basınca timeout'u sıfırla
+            // Reset timeout on each key press
             deadline = DateTime.Now.AddSeconds(timeoutSeconds);
         }
         else
@@ -175,12 +175,12 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
 {
     if (configs.Count == 0)
     {
-        LogManager.LogRaw($"\n{configType} config dosyasinda yapilandirma bulunamadi.");
+        LogManager.LogRaw($"\nNo configuration found in {configType} config file.");
         return null;
     }
 
     Console.WriteLine();
-    Console.WriteLine($"{configType} Config Secimi:");
+    Console.WriteLine($"{configType} Config Selection:");
     for (int i = 0; i < configs.Count; i++)
         Console.WriteLine($"  [{i + 1}] {configs[i].name} | {configs[i].version} | {configs[i].display}");
     Console.WriteLine();
@@ -188,23 +188,23 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
     string? input = null;
     for (int i = timeoutSeconds; i > 0; i--)
     {
-        Console.Write($"\rSeciminiz (default: 1) ({i} sn): ");
+        Console.Write($"\rSelection (default: 1) ({i} s): ");
         if (Console.KeyAvailable) { input = Console.ReadLine()?.Trim(); break; }
         Thread.Sleep(1000);
     }
 
     if (input == null)
     {
-        Console.Write($"\rSeciminiz (default: 1) (0 sn): ");
+        Console.Write($"\rSelection (default: 1) (0 s): ");
         Console.WriteLine();
-        Console.WriteLine("Zaman asimi - ilk config secildi.");
+        Console.WriteLine("Timeout - first config selected.");
     }
 
     if (string.IsNullOrEmpty(input)) return (configs[0].name, configs[0].version);
     if (int.TryParse(input, out int sel) && sel >= 1 && sel <= configs.Count)
         return (configs[sel - 1].name, configs[sel - 1].version);
 
-    Console.WriteLine("Gecersiz secim - ilk config secildi.");
+    Console.WriteLine("Invalid selection - first config selected.");
     return (configs[0].name, configs[0].version);
 }
 
@@ -215,12 +215,12 @@ List<(string name, string version)>? ShowMultiConfigSelectionMenu(
 {
     if (configs.Count == 0)
     {
-        LogManager.LogRaw($"\n{configType} config dosyasinda yapilandirma bulunamadi.");
+        LogManager.LogRaw($"\nNo configuration found in {configType} config file.");
         return null;
     }
 
     Console.WriteLine();
-    Console.WriteLine($"{configType} Config Secimi (virgul ile coklu secim, ornek: 1,3,5 | all=tumunu sec):");
+    Console.WriteLine($"{configType} Config Selection (comma-separated multi-select, e.g.: 1,3,5 | all=select all):");
     for (int i = 0; i < configs.Count; i++)
         Console.WriteLine($"  [{i + 1}] {configs[i].name} | {configs[i].version} | {configs[i].display}");
     Console.WriteLine();
@@ -228,16 +228,16 @@ List<(string name, string version)>? ShowMultiConfigSelectionMenu(
     string? input = null;
     for (int i = timeoutSeconds; i > 0; i--)
     {
-        Console.Write($"\rSeciminiz (default: all) ({i} sn): ");
+        Console.Write($"\rSelection (default: all) ({i} s): ");
         if (Console.KeyAvailable) { input = Console.ReadLine()?.Trim(); break; }
         Thread.Sleep(1000);
     }
 
     if (input == null)
     {
-        Console.Write($"\rSeciminiz (default: all) (0 sn): ");
+        Console.Write($"\rSelection (default: all) (0 s): ");
         Console.WriteLine();
-        Console.WriteLine("Zaman asimi - tum config'ler secildi.");
+        Console.WriteLine("Timeout - all configs selected.");
     }
 
     if (string.IsNullOrEmpty(input) || input.Equals("all", StringComparison.OrdinalIgnoreCase))
@@ -249,12 +249,12 @@ List<(string name, string version)>? ShowMultiConfigSelectionMenu(
         if (int.TryParse(part, out int sel) && sel >= 1 && sel <= configs.Count)
             selections.Add((configs[sel - 1].name, configs[sel - 1].version));
         else
-            Console.WriteLine($"Gecersiz numara: {part} — atlanıyor.");
+            Console.WriteLine($"Invalid number: {part} — skipping.");
     }
 
     if (selections.Count == 0)
     {
-        Console.WriteLine("Gecersiz secim - tum config'ler secildi.");
+        Console.WriteLine("Invalid selection - all configs selected.");
         return configs.Select(c => (c.name, c.version)).ToList();
     }
 
@@ -264,7 +264,7 @@ List<(string name, string version)>? ShowMultiConfigSelectionMenu(
 TraderRunMode showRunModeMenu(int timeoutSeconds = 10)
 {
     Console.WriteLine();
-    Console.WriteLine("Run Mode Secimi:");
+    Console.WriteLine("Run Mode Selection:");
     Console.WriteLine("  [1] TradeOnly");
     Console.WriteLine("  [2] TradeAndQuery");
     Console.WriteLine("  [3] QueryOnly");
@@ -273,16 +273,16 @@ TraderRunMode showRunModeMenu(int timeoutSeconds = 10)
     string? input = null;
     for (int i = timeoutSeconds; i > 0; i--)
     {
-        Console.Write($"\rSeciminiz (default: 1) ({i} sn): ");
+        Console.Write($"\rSelection (default: 1) ({i} s): ");
         if (Console.KeyAvailable) { input = Console.ReadLine()?.Trim(); break; }
         Thread.Sleep(1000);
     }
 
     if (input == null)
     {
-        Console.Write($"\rSeciminiz (default: 1) (0 sn): ");
+        Console.Write($"\rSelection (default: 1) (0 s): ");
         Console.WriteLine();
-        Console.WriteLine("Zaman asimi - TradeOnly secildi.");
+        Console.WriteLine("Timeout - TradeOnly selected.");
     }
 
     return (input ?? "1") switch
@@ -306,20 +306,20 @@ TraderRunMode ParseRunMode(string s) => s.Trim().ToLowerInvariant() switch
 
 void editAndReloadAppConfig()
 {
-    LogManager.LogRaw($"\n[AppConfig] Açılıyor: {appConfigPath}", ConsoleColor.Cyan);
+    LogManager.LogRaw($"\n[AppConfig] Opening: {appConfigPath}", ConsoleColor.Cyan);
     try
     {
         Process.Start(new ProcessStartInfo(appConfigPath) { UseShellExecute = true });
     }
     catch (Exception ex)
     {
-        LogManager.LogRaw($"  Dosya açılamadı: {ex.Message}  (Manuel yol: {appConfigPath})", ConsoleColor.Red);
+        LogManager.LogRaw($"  File could not be opened: {ex.Message}  (Manual path: {appConfigPath})", ConsoleColor.Red);
     }
-    LogManager.LogRaw("Düzenlemeyi tamamlayın ve kaydedin, sonra ENTER'a basın...");
+    LogManager.LogRaw("Complete editing and save, then press ENTER...");
     Console.ReadLine();
     appConfig            = AppConfigLoader.Load(appConfigPath);
     stockDataFullFileName = AppConfigApplier.ApplyAppSettings(appConfig.AppSettings);
-    LogManager.LogRaw("[AppConfig] Yeniden yüklendi.", ConsoleColor.Green);
+    LogManager.LogRaw("[AppConfig] Reloaded.", ConsoleColor.Green);
 }
 
 void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectories = false)
@@ -333,7 +333,7 @@ void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectorie
 }
 
 // =============================================================================
-// Configure  (TODO: AppConfigApplier'a taşınacak)
+// Configure  (TODO: to be moved to AppConfigApplier)
 // =============================================================================
 
 void ConfigureStrategy(bool bShowConfigSelectionMenu = true)
