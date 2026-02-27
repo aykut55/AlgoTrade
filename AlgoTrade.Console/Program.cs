@@ -98,6 +98,63 @@ string? ReadMenuInput()
     }
 }
 
+/// <summary>
+/// ReadMenuInput ile aynı davranış, ancak timeoutSeconds sonra defaultReturn döner.
+/// Geri sayım "\rSeçiminiz (XX sn): " şeklinde aynı satırda güncellenir.
+/// Kullanıcı bir tuşa basınca countdown durur ve normal yazma moduna geçer.
+/// </summary>
+string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
+{
+    var buf          = new StringBuilder();
+    var deadline     = DateTime.Now.AddSeconds(timeoutSeconds);
+    int lastShown    = -1;
+    bool userStarted = false;
+
+    while (true)
+    {
+        int remaining = Math.Max(0, (int)(deadline - DateTime.Now).TotalSeconds);
+
+        // Geri sayımı güncelle (sadece kullanıcı henüz yazmaya başlamadıysa)
+        if (!userStarted && remaining != lastShown)
+        {
+            Console.Write($"\rSeçiminiz ({remaining:D2} sn): ");
+            lastShown = remaining;
+        }
+
+        if (remaining == 0 && !userStarted)
+        {
+            Console.WriteLine();
+            return defaultReturn;
+        }
+
+        if (Console.KeyAvailable)
+        {
+            var key = Console.ReadKey(intercept: true);
+            if (key.Key == ConsoleKey.Escape)    { Console.WriteLine(); return null; }
+            if (key.Key == ConsoleKey.Enter)     { Console.WriteLine(); return buf.ToString().Trim(); }
+            if (key.Key == ConsoleKey.Backspace && buf.Length > 0) { buf.Remove(buf.Length - 1, 1); Console.Write("\b \b"); }
+            else if (key.Key == ConsoleKey.Backspace) { Console.WriteLine(); return "b"; }
+            else if (!char.IsControl(key.KeyChar))
+            {
+                if (!userStarted)
+                {
+                    // İlk karakter: prompt'u sabit hale getir, countdown'ı kaldır
+                    Console.Write($"\rSeçiminiz: ");
+                    userStarted = true;
+                }
+                buf.Append(key.KeyChar);
+                Console.Write(key.KeyChar);
+            }
+            // Her tuşa basınca timeout'u sıfırla
+            deadline = DateTime.Now.AddSeconds(timeoutSeconds);
+        }
+        else
+        {
+            Thread.Sleep(100);
+        }
+    }
+}
+
 (string name, string version)? ShowConfigSelectionMenu(
     string configType,
     List<(string name, string version, string display)> configs,
@@ -480,7 +537,7 @@ void ConfigureEquityCurveFilters()
 // Data
 // =============================================================================
 
-void readStockData()
+void readStockData(ReadDataConfig? cfg = null)
 {
     try
     {
@@ -518,10 +575,24 @@ void readStockData()
 
         if (!stockDataReader.IsMetaDataRead) return;
 
+        // ReadDataFast parametrelerini config'den çöz
+        var    filterMode = StockDataReader.FilterMode.All;
+        int    n1 = 0, n2 = 0;
+        DateTime? dt1 = null, dt2 = null;
+
+        if (cfg != null)
+        {
+            Enum.TryParse<StockDataReader.FilterMode>(cfg.FilterMode, ignoreCase: true, out filterMode);
+            n1 = cfg.N1;
+            n2 = cfg.N2;
+            if (!string.IsNullOrWhiteSpace(cfg.Dt1)) dt1 = DateTime.Parse(cfg.Dt1);
+            if (!string.IsNullOrWhiteSpace(cfg.Dt2)) dt2 = DateTime.Parse(cfg.Dt2);
+        }
+
         LogManager.LogRaw($"Loading data from        : {filePath}");
 
         stockDataReader.ReStartTimer();
-        stockDataReader.ReadDataFast(filePath);
+        stockDataReader.ReadDataFast(filePath, filterMode, n1, n2, dt1, dt2);
         stockDataReader.StopTimer();
 
         long t2 = stockDataReader.GetElapsedTimeMsec();
@@ -547,6 +618,61 @@ void readStockData()
     catch (Exception ex)
     {
         LogManager.LogError($"An error occurred while reading data: {ex.Message}", ex);
+    }
+}
+
+void showReadDataPreview()
+{
+    var cfg = appConfig.ReadData;
+
+    var jsonOpts = new JsonSerializerOptions
+    {
+        WriteIndented          = true,
+        PropertyNamingPolicy   = null,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        Converters             = { new JsonStringEnumConverter() }
+    };
+
+    var preview = new
+    {
+        StockDataFile = string.IsNullOrEmpty(stockDataFullFileName) ? "(tanımsız)" : stockDataFullFileName,
+        cfg.FilterMode,
+        cfg.N1,
+        cfg.N2,
+        cfg.Dt1,
+        cfg.Dt2
+    };
+
+    string json = JsonSerializer.Serialize(preview, jsonOpts);
+    string sep  = new string('═', 66);
+    Console.WriteLine();
+    Console.WriteLine("══ Veri Okuma Önizlemesi ══════════════════════════════════════════");
+    Console.WriteLine(json);
+    Console.WriteLine(sep);
+    Console.WriteLine("  [ENTER]  Okumayı Başlat");
+    Console.WriteLine("  [E]      AppConfig.json Düzenle + Yeniden Yükle");
+    Console.WriteLine("  [B]      Geri");
+    Console.WriteLine();
+}
+
+bool handleReadData()
+{
+    while (true)
+    {
+        showReadDataPreview();
+        var input = ReadMenuInputWithTimeout(10, "");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return false;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        // ENTER → oku
+        readStockData(appConfig.ReadData);
+        return true;
     }
 }
 
@@ -778,7 +904,7 @@ void showModeConfigSummary(string title)
         Console.WriteLine("║  [E]      AppConfig.json Düzenle + Yeniden Yükle                ║");
         Console.WriteLine("║  [B]      Ana Menüye Dön                                        ║");
         Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
-        Console.Write("\nSeçiminiz: ");
+        Console.WriteLine();
         return;
     }
 
@@ -815,7 +941,7 @@ void showModeConfigSummary(string title)
     Console.WriteLine("║  [E]      AppConfig.json Düzenle + Yeniden Yükle                ║");
     Console.WriteLine("║  [B]      Ana Menüye Dön                                        ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
-    Console.Write("\nSeçiminiz: ");
+    Console.WriteLine();
 }
 
 void showSingleTraderRunPreview(TraderRunMode mode)
@@ -933,7 +1059,7 @@ void showSingleTraderRunPreview(TraderRunMode mode)
     Console.WriteLine("  [ENTER]  Çalıştır");
     Console.WriteLine("  [E]      AppConfig.json Düzenle + Yeniden Yükle");
     Console.WriteLine("  [B]      Geri");
-    Console.Write("\nSeçiminiz: ");
+    Console.WriteLine();
 
     static void WriteColoredJsonLines(string json)
     {
@@ -964,7 +1090,7 @@ async Task handleSingleTrader()
     while (true)
     {
         showModeConfigSummary("SingleTrader");
-        var input = ReadMenuInput();
+        var input = ReadMenuInputWithTimeout(10, "");
 
         if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
 
@@ -985,7 +1111,7 @@ async Task handleSingleTrader()
 
         // Seçilen config'i önizle, ENTER/E/B bekle
         showSingleTraderRunPreview(selectedRunMode);
-        var confirm = ReadMenuInput();
+        var confirm = ReadMenuInputWithTimeout(10, "");
 
         // B veya ESC → özet ekranına geri dön
         if (confirm == null || confirm.Equals("b", StringComparison.OrdinalIgnoreCase)) continue;
@@ -1198,7 +1324,7 @@ void showMainMenu()
     Console.WriteLine("║    [0]  Çıkış                                                      ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
-    Console.Write("\nSeçiminiz (default: 5): ");
+    Console.WriteLine();
 }
 
 // =============================================================================
@@ -1233,19 +1359,19 @@ async Task main()
     while (running)
     {
         showMainMenu();
-        var input = ReadMenuInput();
+        var input = ReadMenuInputWithTimeout(10, defaultReturn: "5");
         if (input == null) { running = false; break; }
         if (string.IsNullOrEmpty(input)) input = "5";
 
         switch (input)
         {
-            case "1": readStockData();                                      break;
-            case "2": await handleSingleTrader();                           break;
-            case "3": await handleMultipleTrader();                         break;
-            case "4": await handleSingleTraderOpt();                        break;
-            case "5": readStockData(); await handleSingleTrader();          break;
-            case "6": readStockData(); await handleMultipleTrader();        break;
-            case "7": readStockData(); await handleSingleTraderOpt();       break;
+            case "1": handleReadData();                                                              break;
+            case "2": await handleSingleTrader();                                                    break;
+            case "3": await handleMultipleTrader();                                                  break;
+            case "4": await handleSingleTraderOpt();                                                 break;
+            case "5": if (handleReadData()) await handleSingleTrader();                              break;
+            case "6": if (handleReadData()) await handleMultipleTrader();                            break;
+            case "7": if (handleReadData()) await handleSingleTraderOpt();                           break;
             case "8": await runFullScript();                                break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Geçersiz seçim.");                 break;

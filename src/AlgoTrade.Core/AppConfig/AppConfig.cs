@@ -7,6 +7,7 @@ namespace AlgoTrade.Core.AppConfig;
 public class AppConfig
 {
     public AppSettingsConfig     AppSettings    { get; set; } = new();
+    public ReadDataConfig        ReadData       { get; set; } = new();
     public SingleTraderConfig    SingleTrader   { get; set; } = new();
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
     public SingleTraderOptConfig SingleTraderOpt { get; set; } = new();
@@ -20,6 +21,23 @@ public class AppSettingsConfig
 {
     /// <summary>CSV veri dosyasının tam yolu.</summary>
     public string StockDataFile { get; set; } = "";
+}
+
+// =============================================================================
+// ReadData
+// =============================================================================
+
+/// <summary>
+/// ReadDataFast parametreleri.
+/// FilterMode: All | LastN | FirstN | IndexRange | AfterDateTime | BeforeDateTime | DateTimeRange
+/// </summary>
+public class ReadDataConfig
+{
+    public string FilterMode { get; set; } = "All";
+    public int    N1         { get; set; } = 0;
+    public int    N2         { get; set; } = 0;
+    public string Dt1        { get; set; } = "";
+    public string Dt2        { get; set; } = "";
 }
 
 // =============================================================================

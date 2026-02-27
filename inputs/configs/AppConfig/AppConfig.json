@@ -3,6 +3,22 @@
     "StockDataFile": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv"
   },
 
+  "ReadData": {
+    // FilterMode : All | LastN | FirstN | IndexRange | AfterDateTime | BeforeDateTime | DateTimeRange
+    "FilterMode": "All",
+
+    // N1 : LastN/FirstN → kaç bar | IndexRange → başlangıç index'i (0 tabanlı)
+    // N2 : IndexRange   → bitiş index'i (dahil)
+    "N1": 100000,
+    "N2": 100000,
+
+    // Dt1 : AfterDateTime / DateTimeRange → başlangıç tarihi
+    // Dt2 : BeforeDateTime / DateTimeRange → bitiş tarihi
+    // Format: yyyy.MM.dd HH:mm:ss
+    "Dt1": "2020.01.01 00:00:00",
+    "Dt2": "2025.12.31 23:59:59"
+  },
+
   "SingleTrader": {
     "RunMode": "TradeOnly",
     "Strategy": {
