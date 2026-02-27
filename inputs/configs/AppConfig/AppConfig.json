@@ -10,11 +10,15 @@
       "Name": "SimpleMostStrategy",
       "Version": "v1"
     },
-    "Query": null,
+    "Query": {
+      "ConfigFile": "QueryConfig.txt",
+      "Name": "SimpleQuery1",
+      "Version": "v1"
+    },
     "EquityCurveFilter": {
       "ConfigFile": "EquityCurveFilterConfig.txt",
       "Name": "",
-      "Version": "v1-Disabled"
+      "Version": "v1"
     },
     "TradeParams": {
       "MarketType": "ViopEndex",
@@ -38,7 +42,11 @@
           "Name": "SimpleMostStrategy",
           "Version": "v1"
         },
-        "Query": null,
+        "Query": {
+          "ConfigFile": "QueryConfig.txt",
+          "Name": "SimpleQuery1",
+          "Version": "v1"
+        },
         "EquityCurveFilter": null,
         "TradeParams": {
           "MarketType": "ViopEndex",
@@ -58,7 +66,11 @@
           "Name": "SimpleMostStrategy",
           "Version": "v2"
         },
-        "Query": null,
+        "Query": {
+          "ConfigFile": "QueryConfig.txt",
+          "Name": "SimpleQuery1",
+          "Version": "v1"
+        },
         "EquityCurveFilter": null,
         "TradeParams": {
           "MarketType": "ViopEndex",

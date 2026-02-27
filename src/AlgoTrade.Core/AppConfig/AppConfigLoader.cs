@@ -75,6 +75,7 @@ public static class AppConfigLoader
         {
             RunMode  = "TradeOnly",
             Strategy = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
+            Query    = new QueryRef    { Name = "SimpleQuery1",        Version = "v1" },
             TradeParams = new TradeParamsConfig
             {
                 MarketType     = "ViopEndex",
@@ -91,8 +92,10 @@ public static class AppConfigLoader
             ChildTraders = new List<ChildTraderEntry>
             {
                 new() { ChildId = 0, Strategy = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
+                        Query = new QueryRef { Name = "SimpleQuery1", Version = "v1" },
                         TradeParams = new TradeParamsConfig { MarketType = "ViopEndex", IlkBakiye = 100_000.0, KontratSayisi = 1, KomisyonCarpan = 20.0, KaymaMiktari = 0.5 } },
                 new() { ChildId = 1, Strategy = new StrategyRef { Name = "SimpleMostStrategy", Version = "v2" },
+                        Query = new QueryRef { Name = "SimpleQuery1", Version = "v1" },
                         TradeParams = new TradeParamsConfig { MarketType = "ViopEndex", IlkBakiye = 100_000.0, KontratSayisi = 1, KomisyonCarpan = 20.0, KaymaMiktari = 0.5 } }
             }
         },

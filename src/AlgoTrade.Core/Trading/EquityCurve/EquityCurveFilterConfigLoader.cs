@@ -11,6 +11,7 @@ namespace AlgoTrade.Core.Trading.EquityCurve
     public class EquityCurveFilterConfiguration
     {
         public string Version { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
         public bool Enabled { get; set; }
         public bool ThresholdTypeIsPercent { get; set; }
         public double ProfitThreshold { get; set; }
@@ -19,9 +20,10 @@ namespace AlgoTrade.Core.Trading.EquityCurve
 
         public EquityCurveFilterConfiguration() { }
 
-        public EquityCurveFilterConfiguration(string version)
+        public EquityCurveFilterConfiguration(string version, string displayName = "")
         {
-            Version = version;
+            Version     = version;
+            DisplayName = displayName;
         }
 
         /// <summary>
@@ -85,24 +87,25 @@ namespace AlgoTrade.Core.Trading.EquityCurve
 
         /// <summary>
         /// Parse a single configuration line
-        /// Format: Version|enabled:bool:value|thresholdType:string:value|profitThreshold:double:value|lossThreshold:double:value|trigger:string:value
+        /// Format: Version|DisplayName|enabled:bool:value|thresholdType:string:value|profitThreshold:double:value|lossThreshold:double:value|trigger:string:value
         /// </summary>
         private EquityCurveFilterConfiguration ParseConfigurationLine(string line)
         {
             var parts = line.Split('|');
 
-            if (parts.Length < 6)
+            if (parts.Length < 7)
             {
-                throw new FormatException($"Invalid configuration line format. Expected 6 parts (Version|enabled|thresholdType|profitThreshold|lossThreshold|trigger), got {parts.Length}");
+                throw new FormatException($"Invalid configuration line format. Expected 7 parts (Version|DisplayName|enabled|thresholdType|profitThreshold|lossThreshold|trigger), got {parts.Length}");
             }
 
             var config = new EquityCurveFilterConfiguration
             {
-                Version = parts[0].Trim()
+                Version     = parts[0].Trim(),
+                DisplayName = parts[1].Trim()
             };
 
             // Parse each key:type:value field
-            for (int i = 1; i < parts.Length; i++)
+            for (int i = 2; i < parts.Length; i++)
             {
                 var paramParts = parts[i].Split(':');
                 if (paramParts.Length != 3)

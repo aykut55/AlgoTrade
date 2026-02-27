@@ -49,6 +49,7 @@ public class QueryConfiguration
 {
     public string QueryName { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
     public Dictionary<string, QueryParameterInfo> Parameters { get; set; } = new Dictionary<string, QueryParameterInfo>();
 
     /// <summary>
@@ -116,21 +117,22 @@ public class QueryConfigLoader
     }
 
     /// <summary>
-    /// Format: QueryName|Version|param1:type:value|param2:type:value|...
+    /// Format: QueryName|Version|DisplayName|param1:type:value|param2:type:value|...
     /// </summary>
     private static QueryConfiguration ParseConfigurationLine(string line)
     {
         var parts = line.Split('|');
-        if (parts.Length < 2)
-            throw new FormatException($"Invalid configuration line format. Expected at least 2 parts (QueryName|Version), got {parts.Length}");
+        if (parts.Length < 3)
+            throw new FormatException($"Invalid configuration line format. Expected at least 3 parts (QueryName|Version|DisplayName), got {parts.Length}");
 
         var config = new QueryConfiguration
         {
-            QueryName = parts[0].Trim(),
-            Version = parts[1].Trim()
+            QueryName   = parts[0].Trim(),
+            Version     = parts[1].Trim(),
+            DisplayName = parts[2].Trim()
         };
 
-        for (int i = 2; i < parts.Length; i++)
+        for (int i = 3; i < parts.Length; i++)
         {
             var paramParts = parts[i].Split(':');
             if (paramParts.Length != 3)
