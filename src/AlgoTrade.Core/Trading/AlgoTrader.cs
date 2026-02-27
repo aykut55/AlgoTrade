@@ -86,14 +86,6 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private readonly List<OptimizationParameterRangeEntry> _optimizationParameterRanges = new();
     public IReadOnlyList<OptimizationParameterRangeEntry> OptimizationParameterRanges => _optimizationParameterRanges;
     private StrategyFactory? _optimizationStrategyFactory;
-    public int OptimizationFrom { get; set; } = -1;   // -1 = en bastan
-    public int OptimizationTo { get; set; } = -1;     // -1 = en sona kadar
-
-    // Trade params for SingleTraderOptimizer
-    private double _optIlkBakiye = 100000.0;
-    private int _optKontratSayisi = 1;
-    private double _optKomisyonCarpan = 20.0;
-    private double _optKaymaMiktari = 0.5;
 
     // EquityCurveFilter list for MultipleTrader
     private readonly List<EquityCurveFilterConfigEntry> _equityCurveFilterConfigs = new();
@@ -108,8 +100,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTraderSignalsConfig?  _singleTraderSignalsConfig     = null;
     private SingleTraderSaveConfig?     _singleTraderSaveConfig        = null;
     private SingleTraderPlotConfig?         _singleTraderPlotConfig         = null;
-    private SingleTraderOptimizationConfig? _singleTraderOptimizationConfig = null;
-    private SingleTraderSignalsConfig?  _singleTraderOptSignalsConfig  = null;
+    private SingleTraderOptimizationConfig?  _singleTraderOptimizationConfig  = null;
+    private SingleTraderOptRangeConfig?      _singleTraderOptRangeConfig      = null;
+    private SingleTraderOptTradeParamsConfig? _singleTraderOptTradeParamsConfig = null;
+    private SingleTraderSignalsConfig?       _singleTraderOptSignalsConfig    = null;
     private SingleTraderOptLogConfig?   _singleTraderOptLogConfig      = null;
     private SingleTraderOptSortOutputConfig?  _singleTraderOptSortConfig     = null;
 
@@ -974,18 +968,14 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _optimizationStrategyFactory = factory ?? throw new ArgumentNullException(nameof(factory));
     }
 
-    public void SetOptimizationRange(int from, int to)
+    public void SetSingleTraderOptRangeConfig(SingleTraderOptRangeConfig config)
     {
-        OptimizationFrom = from;
-        OptimizationTo = to;
+        _singleTraderOptRangeConfig = config;
     }
 
-    public void SetOptimizationTradeParams(double ilkBakiye, int kontratSayisi, double komisyonCarpan, double kaymaMiktari)
+    public void SetSingleTraderOptTradeParamsConfig(SingleTraderOptTradeParamsConfig config)
     {
-        _optIlkBakiye      = ilkBakiye;
-        _optKontratSayisi  = kontratSayisi;
-        _optKomisyonCarpan = komisyonCarpan;
-        _optKaymaMiktari   = kaymaMiktari;
+        _singleTraderOptTradeParamsConfig = config;
     }
 
     public IStrategy CreateStrategyFromRegistry(List<StockData> data, IndicatorManager ind, string strategyName, Dictionary<string, object> parameters)
@@ -1914,19 +1904,23 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 });
             }
 
-            // TODO: Bu 3 blok direkt stored config'den okunacak şekilde yeniden yazılacak.
-            //       Ara değişkenler (OptimizationFrom, _optIlkBakiye, _equityCurveFilterConfigs vb.) büyük ihtimalle silinecek.
-
             // Set optimization range (PartialOpt)
-            singleTraderOptimizer.OptimizationFrom = OptimizationFrom;
-            singleTraderOptimizer.OptimizationTo = OptimizationTo;
+            if (_singleTraderOptRangeConfig is { } rng)
+            {
+                singleTraderOptimizer.OptimizationFrom = rng.OptimizationFrom;
+                singleTraderOptimizer.OptimizationTo   = rng.OptimizationTo;
+            }
 
             // Set trade params
-            singleTraderOptimizer.IlkBakiye      = _optIlkBakiye;
-            singleTraderOptimizer.KontratSayisi  = _optKontratSayisi;
-            singleTraderOptimizer.KomisyonCarpan = _optKomisyonCarpan;
-            singleTraderOptimizer.KaymaMiktari   = _optKaymaMiktari;
+            if (_singleTraderOptTradeParamsConfig is { } tp)
+            {
+                singleTraderOptimizer.IlkBakiye      = tp.IlkBakiye;
+                singleTraderOptimizer.KontratSayisi  = tp.KontratSayisi;
+                singleTraderOptimizer.KomisyonCarpan = tp.KomisyonCarpan;
+                singleTraderOptimizer.KaymaMiktari   = tp.KaymaMiktari;
+            }
 
+            // TODO: ECF bloğu da stored config pattern'e alınacak (_equityCurveFilterConfigs → kendi stored config'i).
             // Set equity curve filter config (id=0 varsa optimizer'a aktar)
             var ecfConfig = _equityCurveFilterConfigs.FirstOrDefault(c => c.Id == 0);
             singleTraderOptimizer.EquityCurveFilterConfig = ecfConfig;
@@ -2244,6 +2238,20 @@ public class SingleTraderPlotConfig
 public class SingleTraderOptimizationConfig
 {
     public bool OptimizationEnabled { get; set; } = false;
+}
+
+public class SingleTraderOptRangeConfig
+{
+    public int OptimizationFrom { get; set; } = -1;
+    public int OptimizationTo   { get; set; } = -1;
+}
+
+public class SingleTraderOptTradeParamsConfig
+{
+    public double IlkBakiye      { get; set; } = 100_000.0;
+    public int    KontratSayisi  { get; set; } = 1;
+    public double KomisyonCarpan { get; set; } = 20.0;
+    public double KaymaMiktari   { get; set; } = 0.5;
 }
 
 public class SingleTraderOptLogConfig

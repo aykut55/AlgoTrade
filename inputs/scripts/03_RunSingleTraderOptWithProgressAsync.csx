@@ -98,15 +98,20 @@ algoTrader.SetOptimizationStrategyFactory((factoryData, ind, parameters) =>
 });
 
 // Trade params
-algoTrader.SetOptimizationTradeParams(
-    ilkBakiye:      ilkBakiye,
-    kontratSayisi:  kontratSayisi,
-    komisyonCarpan: komisyonCarpan,
-    kaymaMiktari:   kaymaMiktari
-);
+algoTrader.SetSingleTraderOptTradeParamsConfig(new SingleTraderOptTradeParamsConfig
+{
+    IlkBakiye      = ilkBakiye,
+    KontratSayisi  = kontratSayisi,
+    KomisyonCarpan = komisyonCarpan,
+    KaymaMiktari   = kaymaMiktari,
+});
 
 // Optimization range (PartialOpt)
-algoTrader.SetOptimizationRange(optimizationFrom, optimizationTo);
+algoTrader.SetSingleTraderOptRangeConfig(new SingleTraderOptRangeConfig
+{
+    OptimizationFrom = optimizationFrom,
+    OptimizationTo   = optimizationTo,
+});
 if (optimizationFrom != -1 || optimizationTo != -1)
 {
     Log($"  PartialOpt: [{optimizationFrom} - {optimizationTo}]");

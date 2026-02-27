@@ -3,6 +3,8 @@ using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.EquityCurve;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Queries;
+using TradingOptRangeConfig      = AlgoTrade.Core.Trading.SingleTraderOptRangeConfig;
+using TradingOptTradeParamsConfig = AlgoTrade.Core.Trading.SingleTraderOptTradeParamsConfig;
 
 namespace AlgoTrade.Core.AppConfig;
 
@@ -227,15 +229,20 @@ public static class AppConfigApplier
         algoTrader.ConfigureOptimizationFromConfig(optPath, cfg.Optimization.Name, cfg.Optimization.Version);
 
         // Range (PartialOpt)
-        algoTrader.SetOptimizationRange(cfg.Range.OptimizationFrom, cfg.Range.OptimizationTo);
+        algoTrader.SetSingleTraderOptRangeConfig(new TradingOptRangeConfig
+        {
+            OptimizationFrom = cfg.Range.OptimizationFrom,
+            OptimizationTo   = cfg.Range.OptimizationTo,
+        });
 
         // TradeParams
-        var tp = cfg.TradeParams;
-        algoTrader.SetOptimizationTradeParams(
-            ilkBakiye:      tp.IlkBakiye,
-            kontratSayisi:  (int)tp.KontratSayisi,
-            komisyonCarpan: tp.KomisyonCarpan,
-            kaymaMiktari:   tp.KaymaMiktari);
+        algoTrader.SetSingleTraderOptTradeParamsConfig(new TradingOptTradeParamsConfig
+        {
+            IlkBakiye      = cfg.TradeParams.IlkBakiye,
+            KontratSayisi  = (int)cfg.TradeParams.KontratSayisi,
+            KomisyonCarpan = cfg.TradeParams.KomisyonCarpan,
+            KaymaMiktari   = cfg.TradeParams.KaymaMiktari,
+        });
 
         // EquityCurveFilter (opsiyonel)
         if (cfg.EquityCurveFilter is not null)
