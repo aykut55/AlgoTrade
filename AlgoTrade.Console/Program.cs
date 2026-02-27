@@ -1355,9 +1355,12 @@ async Task main()
     try { consoleLogger.Clear(); } catch { }
 
     LogManager.LogRaw("Application started", ConsoleColor.Green);
+    
+    LogManager.LogRaw("");
     DeleteFilesInGivenDirectory(AppSettings.LogsDir);
     LogManager.LogRaw($"{AppSettings.LogsDir} cleared...");
 
+    LogManager.LogRaw("");
     // AppConfig.json yükle
     Directory.CreateDirectory(Path.GetDirectoryName(appConfigPath)!);
     AppConfigLoader.CreateSampleIfNotExists(appConfigPath);
@@ -1368,6 +1371,7 @@ async Task main()
     if (!string.IsNullOrEmpty(stockDataFullFileName))
         LogManager.LogRaw($"[AppConfig] StockDataFile: {stockDataFullFileName}");
 
+    LogManager.LogRaw("");
     // AutoRun: JSON'dan okuyup onay almadan çalıştır
     var autoRun = appConfig.AppSettings.AutoRunMode?.Trim() ?? "";
     if (!string.IsNullOrEmpty(autoRun) && !autoRun.Equals("None", StringComparison.OrdinalIgnoreCase))
