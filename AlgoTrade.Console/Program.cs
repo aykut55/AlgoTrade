@@ -733,7 +733,8 @@ async Task runSingleTraderAlgoTrade()
 
         var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
 
-        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly)
+        bool plotEnabled = appConfig.SingleTrader.Plot?.PlotEnabled ?? false;
+        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
         {
             LogManager.LogRaw("");
 
@@ -1060,13 +1061,13 @@ void showSingleTraderRunPreview(TraderRunMode mode)
     switch (mode)
     {
         case TraderRunMode.TradeOnly:
-            preview = new { RunMode = runModeStr, Strategy = strategySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Save };
+            preview = new { RunMode = runModeStr, Strategy = strategySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Save };
             break;
         case TraderRunMode.TradeAndQuery:
-            preview = new { RunMode = runModeStr, Strategy = strategySection, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Save };
+            preview = new { RunMode = runModeStr, Strategy = strategySection, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Save };
             break;
         default: // QueryOnly
-            preview = new { RunMode = runModeStr, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Save };
+            preview = new { RunMode = runModeStr, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Save };
             break;
     }
 

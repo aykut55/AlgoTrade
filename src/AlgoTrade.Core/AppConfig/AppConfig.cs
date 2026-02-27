@@ -151,7 +151,7 @@ public class TraderSignalsConfig
 public class TraderSaveConfig
 {
     public bool OptimizationEnabled                 { get; set; } = false;
-    public bool SaveStatisticsToFile                { get; set; } = true;
+    public bool SaveStatisticsToFile                { get; set; } = false;
     public bool SaveFullStatsTxtEnabled             { get; set; } = true;
     public bool SaveFullStatsCsvEnabled             { get; set; } = true;
     public bool SaveMinimalStatsTxtEnabled          { get; set; } = true;
@@ -180,6 +180,12 @@ public class TraderSaveConfig
     public string PerformansCsvFileName            { get; set; } = "SingleTraderPerformans.csv";
 }
 
+/// <summary>SingleTrader plot ayarları.</summary>
+public class TraderPlotConfig
+{
+    public bool PlotEnabled { get; set; } = false;
+}
+
 // =============================================================================
 // SingleTrader
 // =============================================================================
@@ -194,6 +200,7 @@ public class SingleTraderConfig
     public EcfRef?             EquityCurveFilter { get; set; }
     public TradeParamsConfig   TradeParams       { get; set; } = new();
     public TraderSignalsConfig Signals           { get; set; } = new();
+    public TraderPlotConfig    Plot              { get; set; } = new();
     public TraderSaveConfig    Save              { get; set; } = new();
 }
 

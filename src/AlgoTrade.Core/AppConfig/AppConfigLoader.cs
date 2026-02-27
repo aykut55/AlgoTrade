@@ -100,7 +100,7 @@ public static class AppConfigLoader
             Save = new TraderSaveConfig
             {
                 OptimizationEnabled                 = false,
-                SaveStatisticsToFile                = true,
+                SaveStatisticsToFile                = false,
                 SaveFullStatsTxtEnabled             = true,
                 SaveFullStatsCsvEnabled             = true,
                 SaveMinimalStatsTxtEnabled          = true,
@@ -113,7 +113,11 @@ public static class AppConfigLoader
                 SaveMinimalStatsTxtFormattedEnabled = true,
                 SavePerformansTxtEnabled            = true,
                 SavePerformansCsvEnabled            = true
-            }
+            },
+            Plot = new TraderPlotConfig
+            {
+                PlotEnabled = false
+            },
         },
 
         MultipleTrader = new MultipleTraderConfig
