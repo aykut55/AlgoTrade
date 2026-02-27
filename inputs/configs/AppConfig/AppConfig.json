@@ -58,7 +58,7 @@
     },
     "Save": {
       "OptimizationEnabled": false,
-      "SaveStatisticsToFile": false,
+      "SaveStatisticsToFile": true,
       "SaveFullStatsTxtEnabled": true,
       "SaveFullStatsCsvEnabled": true,
       "SaveMinimalStatsTxtEnabled": true,
