@@ -1,7 +1,7 @@
 {
   "AppSettings": {
     "StockDataFile": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv",
-    "AutoRunMode": "SingleTrader",
+    "AutoRunMode": "",
     "MenuTimeoutSeconds": 5
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOpt"
 	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
@@ -147,18 +147,21 @@
     ]
   },
 
-  "SingleTraderOpt": {
-    "Strategy": {
-      "ConfigFile": "StrategyConfig.txt",
-      "Name": "SimpleMostStrategy",
-      "Version": "v1"
-    },
+  "SingleTraderOptimizer": {
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
       "Name": "SimpleMostStrategy",
       "Version": "v1"
     },
-    "EquityCurveFilter": null,
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "Range": {
+      "OptimizationFrom": -1,
+      "OptimizationTo": -1
+    },
     "TradeParams": {
       "MarketType": "ViopEndex",
       "IlkBakiye": 100000.0,
@@ -168,6 +171,70 @@
       "KomisyonCarpan": 20.0,
       "KaymaMiktari": 0.5,
       "PyramidingEnabled": false
+    },
+    "EquityCurveFilter": {
+      "ConfigFile": "EquityCurveFilterConfig.txt",
+      "Name": "",
+      "Version": "v1"
+    },
+    "Signals": {
+      "AlEnabled": true,
+      "SatEnabled": true,
+      "FlatOlEnabled": true,
+      "PasGecEnabled": true,
+      "KarAlEnabled": true,
+      "ZararKesEnabled": true,
+      "GunSonuPozKapatEnabled": false,
+      "TimeFilteringEnabled": false,
+      "StartDateTime": "2025.05.25 09:35:00",
+      "StopDateTime": "2025.06.02 17:55:00"
+    },
+    "Save": {
+      "CsvFileLoggingEnabled": true,
+      "TxtFileLoggingEnabled": true,
+      "StatisticsExporterConfigFileEnabled": true,
+      "CsvFileName": "singleTraderOptLog.csv",
+      "TxtFileName": "singleTraderOptLog.txt",
+      "StatisticsExporterConfigFile": "StatisticsExporterConfig.json",
+      "AppendEnabled": true
+    },
+    "Sort": {
+      "SortField": "GetiriFiyatNet",
+      "SortedCsvFileName": "singleTraderOptLog_sorted.csv",
+      "SortedTxtFileName": "singleTraderOptLog_sorted.txt"
+    },
+    "SingleTrader": {
+      "Plot": {
+        "PlotEnabled": false
+      },
+      "Save": {
+        "OptimizationEnabled": false,
+        "SaveStatisticsToFile": true,
+        "SaveFullStatsTxtEnabled": true,
+        "SaveFullStatsCsvEnabled": true,
+        "SaveMinimalStatsTxtEnabled": true,
+        "SaveMinimalStatsCsvEnabled": true,
+        "SaveFullListsTxtEnabled": true,
+        "SaveFullListsCsvEnabled": true,
+        "SaveMinimalListsTxtEnabled": true,
+        "SaveMinimalListsCsvEnabled": true,
+        "SaveFullStatsTxtFormattedEnabled": true,
+        "SaveMinimalStatsTxtFormattedEnabled": true,
+        "SavePerformansTxtEnabled": true,
+        "SavePerformansCsvEnabled": true,
+        "FullStatsTxtFileName": "SingleTraderOptStatistics.txt",
+        "FullStatsCsvFileName": "SingleTraderOptStatistics.csv",
+        "MinimalStatsTxtFileName": "SingleTraderOptStatisticsMinimal.txt",
+        "MinimalStatsCsvFileName": "SingleTraderOptStatisticsMinimal.csv",
+        "FullListsTxtFileName": "SingleTraderOptLists.txt",
+        "FullListsCsvFileName": "SingleTraderOptLists.csv",
+        "MinimalListsTxtFileName": "SingleTraderOptListsMinimal.txt",
+        "MinimalListsCsvFileName": "SingleTraderOptListsMinimal.csv",
+        "FullStatsTxtFormattedFileName": "SingleTraderOptStatisticsFormatted.txt",
+        "MinimalStatsTxtFormattedFileName": "SingleTraderOptStatisticsMinimalFormatted.txt",
+        "PerformansTxtFileName": "SingleTraderOptPerformans.txt",
+        "PerformansCsvFileName": "SingleTraderOptPerformans.csv"
+      }
     }
   }
 }

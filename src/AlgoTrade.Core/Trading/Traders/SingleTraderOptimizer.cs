@@ -220,12 +220,8 @@ public class SingleTraderOptimizer : IDisposable
         // Configure position sizing
         singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: IlkBakiye).SetKontratParamsViopEndex(kontratSayisi: KontratSayisi).SetKomisyonParams(komisyonCarpan: KomisyonCarpan).SetKaymaParams(kaymaMiktari: KaymaMiktari);
 
-        // Siralama Onemli
-        // Apply user flags
-        OnApplyUserFlags(singleTrader);
-
-        // Apply user flags (2)
-        OnApplyUserFlags2(singleTrader, TraderApplyMode.SingleTraderOptimizer);
+        // Apply configs (AppConfig.SingleTraderOptimizer — Signals + optimization mode flags)
+        ApplyConfigsToTrader(singleTrader);
 
         // Configure equity curve filter
         SetSingleTraderConfigureEquityCurveFilter(singleTrader);
@@ -354,6 +350,9 @@ public class SingleTraderOptimizer : IDisposable
             // Update state flags
             singleTrader.IsRunning = false;
             singleTrader.IsStopped = true;
+
+            // TODO : Get optimization results map iel başlayan kısımdan // Report optimization progress kısmına kadar olan bloklarda
+            // AppendSingleOptSummaryToFiles() içindeki dosyaya yazmaları AppConfig.jsondan yönetmeye gerek var mı? 
 
             // Get optimization results map
             var optResultsMap = singleTrader.statistics.GetOptimizationSummary();
@@ -800,72 +799,42 @@ public class SingleTraderOptimizer : IDisposable
         OnSingleTraderProgressCallback?.Invoke(trader, currentBar, totalBars, percentage);
     }
 
-    private void OnApplyUserFlags(SingleTrader trader)
+    public EquityCurveFilterConfigEntry? EquityCurveFilterConfig { get; set; }
+    public SingleTraderSignalsConfig?    SignalsConfig           { get; set; }
+
+    private void ApplyConfigsToTrader(SingleTrader trader)
     {
         trader.ConfigureUserFlagsOnce();
 
-        // 0 id'li trader icin (SingleTrader için bu default'dur)
+        // Optimization mode flags (test trader'lar için sabit)
+        trader.OptimizationEnabled    = true;
+        trader.SaveStatisticsToFile   = false;
 
-        trader.signals.AlEnabled                   = true;
-        trader.signals.SatEnabled                  = true;
-        trader.signals.FlatOlEnabled               = true;
-        trader.signals.PasGecEnabled               = true;
-        trader.signals.KarAlEnabled                = true;
-        trader.signals.ZararKesEnabled             = true;
-        trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-        trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
-        trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
+        // Signals (AppConfig.SingleTraderOptimizer.Signals)
+        trader.signals.EquityCurveFilteringEnabled = false; // Her zaman false — asıl değer ECF config'den gelir
+        if (SignalsConfig is { } s)
+        {
+            trader.signals.AlEnabled              = s.AlEnabled;
+            trader.signals.SatEnabled             = s.SatEnabled;
+            trader.signals.FlatOlEnabled          = s.FlatOlEnabled;
+            trader.signals.PasGecEnabled          = s.PasGecEnabled;
+            trader.signals.KarAlEnabled           = s.KarAlEnabled;
+            trader.signals.ZararKesEnabled        = s.ZararKesEnabled;
+            trader.signals.GunSonuPozKapatEnabled = s.GunSonuPozKapatEnabled;
+            trader.signals.TimeFilteringEnabled   = s.TimeFilteringEnabled;
 
-        var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
-        trader.StartDateTimeStr = dateTimes[0];
-        trader.StopDateTimeStr  = dateTimes[1];
+            trader.StartDateTimeStr = s.StartDateTime;
+            trader.StopDateTimeStr  = s.StopDateTime;
 
-        var startDateTime       = System.DateTime.ParseExact(dateTimes[0], "yyyy.MM.dd HH:mm:ss", null);
-        trader.StartDateStr     = startDateTime.ToString("yyyy.MM.dd");  // "2025.05.25"
-        trader.StartTimeStr     = startDateTime.ToString("HH:mm:ss");    // "14:30:00"
+            var startDt         = System.DateTime.ParseExact(s.StartDateTime, "yyyy.MM.dd HH:mm:ss", null);
+            trader.StartDateStr = startDt.ToString("yyyy.MM.dd");
+            trader.StartTimeStr = startDt.ToString("HH:mm:ss");
 
-        var stopDateTime        = System.DateTime.ParseExact(dateTimes[1], "yyyy.MM.dd HH:mm:ss", null);
-        trader.StopDateStr      = stopDateTime.ToString("yyyy.MM.dd");    // "2025.06.02"
-        trader.StopTimeStr      = stopDateTime.ToString("HH:mm:ss");      // "14:00:00"
+            var stopDt         = System.DateTime.ParseExact(s.StopDateTime, "yyyy.MM.dd HH:mm:ss", null);
+            trader.StopDateStr = stopDt.ToString("yyyy.MM.dd");
+            trader.StopTimeStr = stopDt.ToString("HH:mm:ss");
+        }
     }
-    private void OnApplyUserFlags2(SingleTrader trader, TraderApplyMode mode)
-    {
-        // Configure optimization flag
-        trader.OptimizationEnabled = true;
-
-        // Enable savingStatistics
-        trader.SaveStatisticsToFile = false;
-
-        // Enable all per-output statistics flags explicitly
-        trader.SaveFullStatsTxtEnabled             = true;
-        trader.SaveFullStatsCsvEnabled             = true;
-        trader.SaveMinimalStatsTxtEnabled          = true;
-        trader.SaveMinimalStatsCsvEnabled          = true;
-        trader.SaveFullListsTxtEnabled             = true;
-        trader.SaveFullListsCsvEnabled             = true;
-        trader.SaveMinimalListsTxtEnabled          = true;
-        trader.SaveMinimalListsCsvEnabled          = true;
-        trader.SaveFullStatsTxtFormattedEnabled    = true;
-        trader.SaveMinimalStatsTxtFormattedEnabled = true;
-        trader.SavePerformansTxtEnabled            = true;
-        trader.SavePerformansCsvEnabled            = true;
-
-        // Manually assign custom output file names (as requested)
-        trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
-        trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
-        trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
-        trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
-        trader.FullListsTxtFileName                = "SingleTraderLists.txt";
-        trader.FullListsCsvFileName                = "SingleTraderLists.csv";
-        trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
-        trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
-        trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-        trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
-        trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
-        trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
-    }    
-
-    public EquityCurveFilterConfigEntry? EquityCurveFilterConfig { get; set; }
 
     private void SetSingleTraderConfigureEquityCurveFilter(SingleTrader trader)
     {

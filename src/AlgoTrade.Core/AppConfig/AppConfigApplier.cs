@@ -221,6 +221,17 @@ public static class AppConfigApplier
         string optPath = Path.Combine(configsDir, cfg.Optimization.ConfigFile);
         algoTrader.ConfigureOptimizationFromConfig(optPath, cfg.Optimization.Name, cfg.Optimization.Version);
 
+        // Range (PartialOpt)
+        algoTrader.SetOptimizationRange(cfg.Range.OptimizationFrom, cfg.Range.OptimizationTo);
+
+        // TradeParams
+        var tp = cfg.TradeParams;
+        algoTrader.SetOptimizationTradeParams(
+            ilkBakiye:      tp.IlkBakiye,
+            kontratSayisi:  (int)tp.KontratSayisi,
+            komisyonCarpan: tp.KomisyonCarpan,
+            kaymaMiktari:   tp.KaymaMiktari);
+
         // EquityCurveFilter (opsiyonel)
         if (cfg.EquityCurveFilter is not null)
         {
@@ -229,13 +240,77 @@ public static class AppConfigApplier
             algoTrader.ConfigureEquityCurveFilterFromConfig(ecfPath, cfg.EquityCurveFilter.Version, id: 0);
         }
 
-        // TradeParams → Optimization trade params
-        var tp = cfg.TradeParams;
-        algoTrader.SetOptimizationTradeParams(
-            ilkBakiye:      tp.IlkBakiye,
-            kontratSayisi:  (int)tp.KontratSayisi,
-            komisyonCarpan: tp.KomisyonCarpan,
-            kaymaMiktari:   tp.KaymaMiktari);
+        // Signals (her test trader'ına uygulanır)
+        algoTrader.SetSingleTraderOptSignalsConfig(new SingleTraderSignalsConfig
+        {
+            AlEnabled              = cfg.Signals.AlEnabled,
+            SatEnabled             = cfg.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
+            TimeFilteringEnabled   = cfg.Signals.TimeFilteringEnabled,
+            StartDateTime          = cfg.Signals.StartDateTime,
+            StopDateTime           = cfg.Signals.StopDateTime,
+        });
+
+        // Optimizer log
+        algoTrader.SetSingleTraderOptLogConfig(new SingleTraderOptLogConfig
+        {
+            CsvFileLoggingEnabled               = cfg.Save.CsvFileLoggingEnabled,
+            CsvFileName                         = cfg.Save.CsvFileName,
+            TxtFileLoggingEnabled               = cfg.Save.TxtFileLoggingEnabled,
+            TxtFileName                         = cfg.Save.TxtFileName,
+            AppendEnabled                       = cfg.Save.AppendEnabled,
+            StatisticsExporterConfigFileEnabled = cfg.Save.StatisticsExporterConfigFileEnabled,
+            StatisticsExporterConfigFile        = cfg.Save.StatisticsExporterConfigFile,
+        });
+
+        // Sort
+        algoTrader.SetSingleTraderOptSortOutputConfig(new SingleTraderOptSortOutputConfig
+        {
+            SortField         = cfg.Sort.SortField,
+            SortedCsvFileName = cfg.Sort.SortedCsvFileName,
+            SortedTxtFileName = cfg.Sort.SortedTxtFileName,
+        });
+
+        // Best trader — Plot
+        algoTrader.SetSingleTraderPlotConfig(new SingleTraderPlotConfig
+        {
+            PlotEnabled = cfg.SingleTrader.Plot.PlotEnabled,
+        });
+
+        // Best trader — Save
+        algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
+        {
+            OptimizationEnabled                 = cfg.SingleTrader.Save.OptimizationEnabled,
+            SaveStatisticsToFile                = cfg.SingleTrader.Save.SaveStatisticsToFile,
+            SaveFullStatsTxtEnabled             = cfg.SingleTrader.Save.SaveFullStatsTxtEnabled,
+            SaveFullStatsCsvEnabled             = cfg.SingleTrader.Save.SaveFullStatsCsvEnabled,
+            SaveMinimalStatsTxtEnabled          = cfg.SingleTrader.Save.SaveMinimalStatsTxtEnabled,
+            SaveMinimalStatsCsvEnabled          = cfg.SingleTrader.Save.SaveMinimalStatsCsvEnabled,
+            SaveFullListsTxtEnabled             = cfg.SingleTrader.Save.SaveFullListsTxtEnabled,
+            SaveFullListsCsvEnabled             = cfg.SingleTrader.Save.SaveFullListsCsvEnabled,
+            SaveMinimalListsTxtEnabled          = cfg.SingleTrader.Save.SaveMinimalListsTxtEnabled,
+            SaveMinimalListsCsvEnabled          = cfg.SingleTrader.Save.SaveMinimalListsCsvEnabled,
+            SaveFullStatsTxtFormattedEnabled    = cfg.SingleTrader.Save.SaveFullStatsTxtFormattedEnabled,
+            SaveMinimalStatsTxtFormattedEnabled = cfg.SingleTrader.Save.SaveMinimalStatsTxtFormattedEnabled,
+            SavePerformansTxtEnabled            = cfg.SingleTrader.Save.SavePerformansTxtEnabled,
+            SavePerformansCsvEnabled            = cfg.SingleTrader.Save.SavePerformansCsvEnabled,
+            FullStatsTxtFileName                = cfg.SingleTrader.Save.FullStatsTxtFileName,
+            FullStatsCsvFileName                = cfg.SingleTrader.Save.FullStatsCsvFileName,
+            MinimalStatsTxtFileName             = cfg.SingleTrader.Save.MinimalStatsTxtFileName,
+            MinimalStatsCsvFileName             = cfg.SingleTrader.Save.MinimalStatsCsvFileName,
+            FullListsTxtFileName                = cfg.SingleTrader.Save.FullListsTxtFileName,
+            FullListsCsvFileName                = cfg.SingleTrader.Save.FullListsCsvFileName,
+            MinimalListsTxtFileName             = cfg.SingleTrader.Save.MinimalListsTxtFileName,
+            MinimalListsCsvFileName             = cfg.SingleTrader.Save.MinimalListsCsvFileName,
+            FullStatsTxtFormattedFileName       = cfg.SingleTrader.Save.FullStatsTxtFormattedFileName,
+            MinimalStatsTxtFormattedFileName    = cfg.SingleTrader.Save.MinimalStatsTxtFormattedFileName,
+            PerformansTxtFileName               = cfg.SingleTrader.Save.PerformansTxtFileName,
+            PerformansCsvFileName               = cfg.SingleTrader.Save.PerformansCsvFileName,
+        });
     }
 
     // =========================================================================

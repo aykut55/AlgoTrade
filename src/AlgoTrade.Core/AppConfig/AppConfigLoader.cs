@@ -136,15 +136,25 @@ public static class AppConfigLoader
 
         SingleTraderOpt = new SingleTraderOptConfig
         {
-            Strategy     = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
-            Optimization = new OptRef      { Name = "SimpleMostStrategy", Version = "v1" },
-            TradeParams  = new TradeParamsConfig
+            Optimization      = new OptRef      { Name = "SimpleMostStrategy", Version = "v1" },
+            Strategy          = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
+            Range             = new SingleTraderOptRangeConfig { OptimizationFrom = -1, OptimizationTo = -1 },
+            TradeParams       = new TradeParamsConfig
             {
                 MarketType     = "ViopEndex",
                 IlkBakiye      = 100_000.0,
                 KontratSayisi  = 1,
                 KomisyonCarpan = 20.0,
                 KaymaMiktari   = 0.5
+            },
+            EquityCurveFilter = null,
+            Signals           = new TraderSignalsConfig(),
+            Save              = new SingleTraderOptSaveConfig(),
+            Sort              = new SingleTraderOptSortConfig(),
+            SingleTrader      = new SingleTraderOptTraderConfig
+            {
+                Plot = new TraderPlotConfig { PlotEnabled = false },
+                Save = new TraderSaveConfig()
             }
         }
     };

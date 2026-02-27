@@ -239,8 +239,44 @@ public class MultipleTraderConfig
 
 public class SingleTraderOptConfig
 {
-    public StrategyRef       Strategy          { get; set; } = new();
-    public OptRef            Optimization      { get; set; } = new();
-    public EcfRef?           EquityCurveFilter { get; set; }
-    public TradeParamsConfig TradeParams       { get; set; } = new();
+    public OptRef                      Optimization      { get; set; } = new();
+    public StrategyRef                 Strategy          { get; set; } = new();
+    public SingleTraderOptRangeConfig  Range             { get; set; } = new();
+    public TradeParamsConfig           TradeParams       { get; set; } = new();
+    public EcfRef?                     EquityCurveFilter { get; set; }
+    public TraderSignalsConfig         Signals           { get; set; } = new();
+    public SingleTraderOptSaveConfig   Save              { get; set; } = new();
+    public SingleTraderOptSortConfig   Sort              { get; set; } = new();
+    public SingleTraderOptTraderConfig SingleTrader      { get; set; } = new();
+}
+
+public class SingleTraderOptRangeConfig
+{
+    public int OptimizationFrom { get; set; } = -1;
+    public int OptimizationTo   { get; set; } = -1;
+}
+
+public class SingleTraderOptSaveConfig
+{
+    public bool   CsvFileLoggingEnabled               { get; set; } = true;
+    public bool   TxtFileLoggingEnabled               { get; set; } = true;
+    public bool   StatisticsExporterConfigFileEnabled { get; set; } = true;
+    public string CsvFileName                         { get; set; } = "singleTraderOptLog.csv";
+    public string TxtFileName                         { get; set; } = "singleTraderOptLog.txt";
+    public string StatisticsExporterConfigFile        { get; set; } = "StatisticsExporterConfig.json";
+    public bool   AppendEnabled                       { get; set; } = true;
+}
+
+public class SingleTraderOptSortConfig
+{
+    public string SortField         { get; set; } = "GetiriFiyatNet";
+    public string SortedCsvFileName { get; set; } = "singleTraderOptLog_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "singleTraderOptLog_sorted.txt";
+}
+
+/// <summary>Best trader (optimizasyon sonucu) için ayarlar.</summary>
+public class SingleTraderOptTraderConfig
+{
+    public TraderPlotConfig Plot { get; set; } = new();
+    public TraderSaveConfig Save { get; set; } = new();
 }

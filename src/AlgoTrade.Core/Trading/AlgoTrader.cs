@@ -108,6 +108,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTraderSignalsConfig?  _singleTraderSignalsConfig     = null;
     private SingleTraderSaveConfig?     _singleTraderSaveConfig        = null;
     private SingleTraderPlotConfig?     _singleTraderPlotConfig        = null;
+    private SingleTraderSignalsConfig?  _singleTraderOptSignalsConfig  = null;
+    private SingleTraderOptLogConfig?   _singleTraderOptLogConfig      = null;
+    private SingleTraderOptSortOutputConfig?  _singleTraderOptSortConfig     = null;
 
     // Python görselleştirme
     private PythonPlotter? _pythonPlotter;
@@ -857,6 +860,21 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public void SetSingleTraderPlotConfig(SingleTraderPlotConfig config)
     {
         _singleTraderPlotConfig = config;
+    }
+
+    public void SetSingleTraderOptSignalsConfig(SingleTraderSignalsConfig config)
+    {
+        _singleTraderOptSignalsConfig = config;
+    }
+
+    public void SetSingleTraderOptLogConfig(SingleTraderOptLogConfig config)
+    {
+        _singleTraderOptLogConfig = config;
+    }
+
+    public void SetSingleTraderOptSortOutputConfig(SingleTraderOptSortOutputConfig config)
+    {
+        _singleTraderOptSortConfig = config;
     }
 
     /// <summary>
@@ -1836,25 +1854,28 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTraderOptimizer.Reset();
 
             // Optimization log file settings
-            singleTraderOptimizer.CsvFileLoggingEnabled = true;
-            singleTraderOptimizer.CsvFilePath           = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog.csv");
-            singleTraderOptimizer.TxtFileLoggingEnabled = true;
-            singleTraderOptimizer.TxtFilePath           = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog.txt");
-            singleTraderOptimizer.AppendEnabled         = true;
-            singleTraderOptimizer.ConfigFilePath        = Path.Combine(AppSettings.ConfigsDir, "StatisticsExporterConfig.json");
+            if (_singleTraderOptLogConfig is { } lg)
+            {
+                singleTraderOptimizer.CsvFileLoggingEnabled = lg.CsvFileLoggingEnabled;
+                singleTraderOptimizer.CsvFilePath           = Path.Combine(AppSettings.OptLogsDir, lg.CsvFileName);
+                singleTraderOptimizer.TxtFileLoggingEnabled = lg.TxtFileLoggingEnabled;
+                singleTraderOptimizer.TxtFilePath           = Path.Combine(AppSettings.OptLogsDir, lg.TxtFileName);
+                singleTraderOptimizer.AppendEnabled         = lg.AppendEnabled;
+                singleTraderOptimizer.ConfigFilePath        = lg.StatisticsExporterConfigFileEnabled
+                    ? Path.Combine(AppSettings.ConfigsDir, lg.StatisticsExporterConfigFile)
+                    : string.Empty;
+            }
 
-            // Sorted output settings            
-            // singleTraderOptimizer.SortField      = "ProfitFactorPuan";
-            // singleTraderOptimizer.SortField      = "ProfitFactor";
-            // singleTraderOptimizer.SortField      = "ProfitFactorNet";            
-            // singleTraderOptimizer.SortField      = "GetiriPuan";
-            // singleTraderOptimizer.SortField      = "GetiriFiyat";
-            singleTraderOptimizer.SortField         = "GetiriFiyatNet";
-            // singleTraderOptimizer.SortField      = "GetiriPuanYuzde";
-            // singleTraderOptimizer.SortField      = "GetiriFiyatYuzde";
-            // singleTraderOptimizer.SortField      = "GetiriFiyatYuzdeNet";
-            singleTraderOptimizer.SortedCsvFilePath = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog_sorted.csv");
-            singleTraderOptimizer.SortedTxtFilePath = Path.Combine(AppSettings.OptLogsDir, "singleTraderOptLog_sorted.txt");
+            // Sorted output settings
+            if (_singleTraderOptSortConfig is { } sr)
+            {
+                singleTraderOptimizer.SortField         = sr.SortField;
+                singleTraderOptimizer.SortedCsvFilePath = Path.Combine(AppSettings.OptLogsDir, sr.SortedCsvFileName);
+                singleTraderOptimizer.SortedTxtFilePath = Path.Combine(AppSettings.OptLogsDir, sr.SortedTxtFileName);
+            }
+
+            // Signals config (her test trader'ına uygulanır)
+            singleTraderOptimizer.SignalsConfig = _singleTraderOptSignalsConfig;
 
             // Parametre range'leri (stored config'den)
             if (_optimizationParameterRanges.Count == 0)
@@ -1884,6 +1905,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                     return _strategyRegistry.CreateStrategy(data, ind, _logger, strategyName, parameters);
                 });
             }
+
+            // TODO: Bu 3 blok direkt stored config'den okunacak şekilde yeniden yazılacak.
+            //       Ara değişkenler (OptimizationFrom, _optIlkBakiye, _equityCurveFilterConfigs vb.) büyük ihtimalle silinecek.
 
             // Set optimization range (PartialOpt)
             singleTraderOptimizer.OptimizationFrom = OptimizationFrom;
@@ -2208,6 +2232,24 @@ public class SingleTraderSaveConfig
 public class SingleTraderPlotConfig
 {
     public bool PlotEnabled { get; set; } = false;
+}
+
+public class SingleTraderOptLogConfig
+{
+    public bool   CsvFileLoggingEnabled               { get; set; } = true;
+    public string CsvFileName                         { get; set; } = "singleTraderOptLog.csv";
+    public bool   TxtFileLoggingEnabled               { get; set; } = true;
+    public string TxtFileName                         { get; set; } = "singleTraderOptLog.txt";
+    public bool   AppendEnabled                       { get; set; } = true;
+    public bool   StatisticsExporterConfigFileEnabled { get; set; } = true;
+    public string StatisticsExporterConfigFile        { get; set; } = "StatisticsExporterConfig.json";
+}
+
+public class SingleTraderOptSortOutputConfig
+{
+    public string SortField         { get; set; } = "GetiriFiyatNet";
+    public string SortedCsvFileName { get; set; } = "singleTraderOptLog_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "singleTraderOptLog_sorted.txt";
 }
 
 /// <summary>

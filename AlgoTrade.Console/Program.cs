@@ -1452,3 +1452,7 @@ catch (Exception ex)
     Console.WriteLine("Press any key to exit...");
     Console.ReadKey();
 }
+
+// TODO : Menüden [7]  Read Data + SingleTraderOpt   nin çalıştırılabilmesini sağla
+// Aslında [5]  Read Data + SingleTrader   ile yapılabilen herseyi bu menüye de uygula.
+// Selection'u Sayac bazlı alma, statik alma, app calıstığıjnda doğrudan Opt menüsünün calısması vs..   
