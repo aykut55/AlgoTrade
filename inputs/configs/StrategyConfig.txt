@@ -1,8 +1,8 @@
 # Strategy Configuration File
-# Format: StrategyName|Version|ParameterName:Type:DefaultValue|...
+# Format: StrategyName|Version|DisplayName|ParameterName:Type:DefaultValue|...
 
-SimpleMostStrategy|v1-Default|period:int:21|percent:double:1.0|choice:int:0
-SimpleMostStrategy|v2-ExmovCross|period:int:21|percent:double:1.0|choice:int:1
-SimpleMAStrategy|v1-Default|fastPeriod:int:10|slowPeriod:int:20|choice:int:0
-SimpleMAStrategy|v2-Fast|fastPeriod:int:5|slowPeriod:int:13|choice:int:0
-SimpleRSIStrategy|v1-Default|period:int:14|oversold:double:30|overbought:double:70
+SimpleMostStrategy|v1|Default|period:int:21|percent:double:1.0|choice:int:0
+SimpleMostStrategy|v2|ExmovCross|period:int:21|percent:double:1.0|choice:int:1
+SimpleMAStrategy|v1|Default|fastPeriod:int:10|slowPeriod:int:20|choice:int:0
+SimpleMAStrategy|v2|Fast|fastPeriod:int:5|slowPeriod:int:13|choice:int:0
+SimpleRSIStrategy|v1|Default|period:int:14|oversold:double:30|overbought:double:70

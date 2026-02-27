@@ -47,14 +47,17 @@ namespace AlgoTrade.Core.Trading.Strategies
     {
         public string StrategyName { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
+        /// <summary>İnsan okunabilir açıklama — menülerde gösterilir, eşleşmede kullanılmaz.</summary>
+        public string DisplayName { get; set; } = string.Empty;
         public Dictionary<string, ParameterInfo> Parameters { get; set; } = new Dictionary<string, ParameterInfo>();
 
         public StrategyConfiguration() { }
 
-        public StrategyConfiguration(string strategyName, string version)
+        public StrategyConfiguration(string strategyName, string version, string displayName = "")
         {
             StrategyName = strategyName;
-            Version = version;
+            Version      = version;
+            DisplayName  = displayName;
         }
 
         /// <summary>
@@ -141,25 +144,26 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         /// <summary>
         /// Parse a single configuration line
-        /// Format: StrategyName|Version|param1:type:value|param2:type:value|...
+        /// Format: StrategyName|Version|DisplayName|param1:type:value|param2:type:value|...
         /// </summary>
         private StrategyConfiguration ParseConfigurationLine(string line)
         {
             var parts = line.Split('|');
 
-            if (parts.Length < 2)
+            if (parts.Length < 3)
             {
-                throw new FormatException($"Invalid configuration line format. Expected at least 2 parts (StrategyName|Version), got {parts.Length}");
+                throw new FormatException($"Invalid configuration line format. Expected at least 3 parts (StrategyName|Version|DisplayName), got {parts.Length}");
             }
 
             var config = new StrategyConfiguration
             {
                 StrategyName = parts[0].Trim(),
-                Version = parts[1].Trim()
+                Version      = parts[1].Trim(),
+                DisplayName  = parts[2].Trim()
             };
 
             // Parse parameters (if any)
-            for (int i = 2; i < parts.Length; i++)
+            for (int i = 3; i < parts.Length; i++)
             {
                 var paramParts = parts[i].Split(':');
                 if (paramParts.Length != 3)

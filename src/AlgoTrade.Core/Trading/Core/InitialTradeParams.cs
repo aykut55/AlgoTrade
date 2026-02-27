@@ -613,6 +613,38 @@ namespace AlgoTrade.Core.Trading.Core
             return this;
         }
 
+        /// <summary>
+        /// Tüm alanları kaynak nesneden kopyalar.
+        /// initialTradeParams'ın private set'i olduğu durumlarda direkt atama yerine kullanılır.
+        /// </summary>
+        public InitialTradeParams ApplyFrom(InitialTradeParams src)
+        {
+            KontratSayisi                 = src.KontratSayisi;
+            LotSayisi                     = src.LotSayisi;
+            HisseSayisi                   = src.HisseSayisi;
+            VarlikAdedCarpani             = src.VarlikAdedCarpani;
+            VarlikAdedSayisi              = src.VarlikAdedSayisi;
+            KomisyonVarlikAdedSayisi      = src.KomisyonVarlikAdedSayisi;
+            MarketType                    = src.MarketType;
+            MicroLotSizeEnabled           = src.MicroLotSizeEnabled;
+            VarlikAdedSayisiMicro         = src.VarlikAdedSayisiMicro;
+            KomisyonVarlikAdedSayisiMicro = src.KomisyonVarlikAdedSayisiMicro;
+            KomisyonCarpan                = src.KomisyonCarpan;
+            KomisyonuDahilEt              = src.KomisyonuDahilEt;
+            KaymaMiktari                  = src.KaymaMiktari;
+            KaymayiDahilEt                = src.KaymayiDahilEt;
+            IlkBakiyeFiyat                = src.IlkBakiyeFiyat;
+            IlkBakiyePuan                 = src.IlkBakiyePuan;
+            SonBakiyeFiyat                = src.SonBakiyeFiyat;
+            NetBakiyeFiyat                = src.NetBakiyeFiyat;
+            GetiriFiyatTipi               = src.GetiriFiyatTipi;
+            PyramidingEnabled             = src.PyramidingEnabled;
+            MaxPositionSizeEnabled        = src.MaxPositionSizeEnabled;
+            MaxPositionSize               = src.MaxPositionSize;
+            MaxPositionSizeMicro          = src.MaxPositionSizeMicro;
+            return this;
+        }
+
         #endregion
     }
 }

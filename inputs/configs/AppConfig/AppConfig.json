@@ -1,0 +1,100 @@
+{
+  "AppSettings": {
+    "StockDataFile": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv"
+  },
+
+  "SingleTrader": {
+    "RunMode": "TradeOnly",
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "Query": null,
+    "EquityCurveFilter": {
+      "ConfigFile": "EquityCurveFilterConfig.txt",
+      "Name": "",
+      "Version": "v1-Disabled"
+    },
+    "TradeParams": {
+      "MarketType": "ViopEndex",
+      "IlkBakiye": 100000.0,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000.0,
+      "KomisyonCarpan": 20.0,
+      "KaymaMiktari": 0.5,
+      "PyramidingEnabled": false
+    }
+  },
+
+  "MultipleTrader": {
+    "RunMode": "TradeOnly",
+    "ChildTraders": [
+      {
+        "ChildId": 0,
+        "Strategy": {
+          "ConfigFile": "StrategyConfig.txt",
+          "Name": "SimpleMostStrategy",
+          "Version": "v1"
+        },
+        "Query": null,
+        "EquityCurveFilter": null,
+        "TradeParams": {
+          "MarketType": "ViopEndex",
+          "IlkBakiye": 100000.0,
+          "KontratSayisi": 1,
+          "LotSayisi": 0.01,
+          "HisseSayisi": 1000.0,
+          "KomisyonCarpan": 20.0,
+          "KaymaMiktari": 0.5,
+          "PyramidingEnabled": false
+        }
+      },
+      {
+        "ChildId": 1,
+        "Strategy": {
+          "ConfigFile": "StrategyConfig.txt",
+          "Name": "SimpleMostStrategy",
+          "Version": "v2"
+        },
+        "Query": null,
+        "EquityCurveFilter": null,
+        "TradeParams": {
+          "MarketType": "ViopEndex",
+          "IlkBakiye": 100000.0,
+          "KontratSayisi": 2,
+          "LotSayisi": 0.01,
+          "HisseSayisi": 1000.0,
+          "KomisyonCarpan": 20.0,
+          "KaymaMiktari": 0.5,
+          "PyramidingEnabled": false
+        }
+      }
+    ]
+  },
+
+  "SingleTraderOpt": {
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "Optimization": {
+      "ConfigFile": "OptimizationConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1-Opt"
+    },
+    "EquityCurveFilter": null,
+    "TradeParams": {
+      "MarketType": "ViopEndex",
+      "IlkBakiye": 100000.0,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000.0,
+      "KomisyonCarpan": 20.0,
+      "KaymaMiktari": 0.5,
+      "PyramidingEnabled": false
+    }
+  }
+}
