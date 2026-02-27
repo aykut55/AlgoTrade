@@ -33,15 +33,17 @@ namespace AlgoTrade.Core.Trading.Strategies
     {
         public string StrategyName { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
         public List<OptimizationParameterRange> ParameterRanges { get; set; } = new();
         public Dictionary<string, ParameterInfo> FixedParameters { get; set; } = new();
 
         public OptimizationConfiguration() { }
 
-        public OptimizationConfiguration(string strategyName, string version)
+        public OptimizationConfiguration(string strategyName, string version, string displayName = "")
         {
             StrategyName = strategyName;
-            Version = version;
+            Version      = version;
+            DisplayName  = displayName;
         }
 
         /// <summary>
@@ -124,24 +126,25 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         /// <summary>
         /// Parse a single configuration line
-        /// Format: StrategyName|Version|paramName:min:max:step|...|fixed:paramName:type:value|...
+        /// Format: StrategyName|Version|DisplayName|paramName:min:max:step|...|fixed:paramName:type:value|...
         /// </summary>
         private OptimizationConfiguration ParseConfigurationLine(string line)
         {
             var parts = line.Split('|');
 
-            if (parts.Length < 3)
+            if (parts.Length < 4)
             {
-                throw new FormatException($"Invalid optimization config line format. Expected at least 3 parts (StrategyName|Version|param...), got {parts.Length}");
+                throw new FormatException($"Invalid optimization config line format. Expected at least 4 parts (StrategyName|Version|DisplayName|param...), got {parts.Length}");
             }
 
             var config = new OptimizationConfiguration
             {
                 StrategyName = parts[0].Trim(),
-                Version = parts[1].Trim()
+                Version      = parts[1].Trim(),
+                DisplayName  = parts[2].Trim()
             };
 
-            for (int i = 2; i < parts.Length; i++)
+            for (int i = 3; i < parts.Length; i++)
             {
                 var segment = parts[i].Trim();
 

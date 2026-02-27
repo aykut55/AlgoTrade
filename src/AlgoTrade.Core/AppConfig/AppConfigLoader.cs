@@ -103,7 +103,7 @@ public static class AppConfigLoader
         SingleTraderOpt = new SingleTraderOptConfig
         {
             Strategy     = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
-            Optimization = new OptRef      { Name = "SimpleMostStrategy", Version = "v1-Opt" },
+            Optimization = new OptRef      { Name = "SimpleMostStrategy", Version = "v1" },
             TradeParams  = new TradeParamsConfig
             {
                 MarketType     = "ViopEndex",

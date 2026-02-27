@@ -583,12 +583,18 @@ async Task runSingleTraderAlgoTrade()
 
         var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
 
-        LogManager.LogRaw("");
+        // TODO aa_001 : Kullanıcı menüden Query secmesine rağmen algoTrader.SingleTraderRunMode = TradeOnly kalmış
+        // algoTrader.SingleTraderRunMode kullanıcının secimine göre update edilmesi lazım
 
-        if (algoTrader.SetupPython())
-            await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
-        else
-            LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly)
+        {
+            LogManager.LogRaw("");
+
+            if (algoTrader.SetupPython())
+                await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
+            else
+                LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+        }
 
         await writeTask;
         LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
@@ -694,47 +700,115 @@ void showModeConfigSummary(string title)
         ? $"{stockDataReader.GetDataCount()} bar yüklü"
         : "Veri yüklenmedi";
 
-    string stratInfo  = "";
-    string runModeStr = "";
-    string tradeInfo  = "";
-
-    if (title == "SingleTrader")
-    {
-        var cfg   = appConfig.SingleTrader;
-        var tp    = cfg.TradeParams;
-        stratInfo  = $"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}";
-        runModeStr = cfg.RunMode;
-        tradeInfo  = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}";
-    }
-    else if (title == "MultipleTrader")
-    {
-        var cfg   = appConfig.MultipleTrader;
-        stratInfo  = $"{cfg.ChildTraders.Count} child trader";
-        runModeStr = cfg.RunMode;
-        if (cfg.ChildTraders.Count > 0)
-        {
-            var tp = cfg.ChildTraders[0].TradeParams;
-            tradeInfo = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  (child[0])";
-        }
-    }
-    else if (title == "SingleTraderOpt")
-    {
-        var cfg   = appConfig.SingleTraderOpt;
-        var tp    = cfg.TradeParams;
-        stratInfo  = $"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}  |  Opt:{cfg.Optimization.Name}";
-        runModeStr = "Optimization";
-        tradeInfo  = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}";
-    }
+    // Toplam kutu genişliği: 67 karakter (║ + 65 içerik + ║)
+    // İçerik genişliği: 65 karakter
+    string Trunc(string s, int max) => s.Length > max ? s[..max] : s;
 
     Console.WriteLine();
     Console.WriteLine("╔═════════════════════════════════════════════════════════════════╗");
     Console.WriteLine($"║  {title,-63}║");
     Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
-    Console.WriteLine($"║  Veri       : {file,-50}║");
-    Console.WriteLine($"║  Durum      : {dataOk,-50}║");
-    Console.WriteLine($"║  RunMode    : {runModeStr,-50}║");
-    Console.WriteLine($"║  Strateji   : {stratInfo,-50}║");
-    Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
+    Console.WriteLine($"║  Veri       : {Trunc(file, 50),-50}║");
+    Console.WriteLine($"║  Durum      : {Trunc(dataOk, 50),-50}║");
+
+    if (title == "SingleTrader")
+    {
+        var cfg = appConfig.SingleTrader;
+        var tp  = cfg.TradeParams;
+
+        // Strateji
+        string stratInfo = Trunc($"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}", 50);
+        Console.WriteLine($"║  Strateji   : {stratInfo,-50}║");
+
+        // Query — null ise Disabled, dolu ise Enabled
+        string queryLine   = cfg.Query != null
+            ? Trunc($"{cfg.Query.Name}  /  {cfg.Query.Version}", 40)
+            : "(tanımsız)";
+        string queryStatus = cfg.Query != null ? "[Enabled]" : "[Disabled]";
+        // "  Query      : " = 15, queryLine = 40, queryStatus right-aligned = 10  → 15+40+10=65 ✓
+        Console.WriteLine($"║  Query      : {queryLine,-40}{queryStatus,10}║");
+
+        // EquityCurveFilter — config dosyasından Enabled alanını okumaya çalış
+        string ecfLine   = "(tanımsız)";
+        string ecfStatus = "[Disabled]";
+        if (cfg.EquityCurveFilter != null)
+        {
+            ecfLine = Trunc(cfg.EquityCurveFilter.Version, 40);
+            try
+            {
+                string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.EquityCurveFilter.ConfigFile);
+                var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+                ecfLoader.LoadFromFile();
+                var ecfCfg = ecfLoader.GetConfiguration(cfg.EquityCurveFilter.Version);
+                if (ecfCfg != null)
+                {
+                    ecfLine   = Trunc($"{ecfCfg.Version}  ({ecfCfg.DisplayName})", 40);
+                    ecfStatus = ecfCfg.Enabled ? "[Enabled]" : "[Disabled]";
+                }
+            }
+            catch { }
+        }
+        Console.WriteLine($"║  ECFilter   : {ecfLine,-40}{ecfStatus,10}║");
+
+        // TradeParams
+        string tradeInfo = Trunc($"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}", 50);
+        Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
+
+        // RunMode seçim bölümü
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+
+        string cur = cfg.RunMode;
+        // İçerik = 65 karakter: seçili satırda PadRight(57) + "◄ seçili"(8) = 65
+        string RmLine(string key, string name, bool selected)
+        {
+            string left = $"  [{key}]  {name}";
+            return selected
+                ? $"║{left.PadRight(57)}◄ seçili║"
+                : $"║{left.PadRight(65)}║";
+        }
+
+        Console.WriteLine(RmLine("1", "TradeOnly",     cur.Equals("TradeOnly",     StringComparison.OrdinalIgnoreCase)));
+        Console.WriteLine(RmLine("2", "TradeAndQuery", cur.Equals("TradeAndQuery", StringComparison.OrdinalIgnoreCase)));
+        Console.WriteLine(RmLine("3", "QueryOnly",     cur.Equals("QueryOnly",     StringComparison.OrdinalIgnoreCase)));
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [1/2/3]  RunMode seçip çalıştır                               ║");
+        Console.WriteLine("║  [ENTER]  Çalıştır  (AppConfig RunMode)                         ║");
+        Console.WriteLine("║  [E]      AppConfig.json Düzenle + Yeniden Yükle                ║");
+        Console.WriteLine("║  [B]      Ana Menüye Dön                                        ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.Write("\nSeçiminiz: ");
+        return;
+    }
+
+    // MultipleTrader / SingleTraderOpt — mevcut tasarım korunur
+    string stratInfo2  = "";
+    string runModeStr2 = "";
+    string tradeInfo2  = "";
+
+    if (title == "MultipleTrader")
+    {
+        var cfg    = appConfig.MultipleTrader;
+        stratInfo2  = $"{cfg.ChildTraders.Count} child trader";
+        runModeStr2 = cfg.RunMode;
+        if (cfg.ChildTraders.Count > 0)
+        {
+            var tp = cfg.ChildTraders[0].TradeParams;
+            tradeInfo2 = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  (child[0])";
+        }
+    }
+    else if (title == "SingleTraderOpt")
+    {
+        var cfg    = appConfig.SingleTraderOpt;
+        var tp     = cfg.TradeParams;
+        stratInfo2  = $"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}  |  Opt:{cfg.Optimization.Name}";
+        runModeStr2 = "Optimization";
+        tradeInfo2  = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}";
+    }
+
+    Console.WriteLine($"║  RunMode    : {Trunc(runModeStr2, 50),-50}║");
+    Console.WriteLine($"║  Strateji   : {Trunc(stratInfo2, 50),-50}║");
+    Console.WriteLine($"║  TradeParam : {Trunc(tradeInfo2, 50),-50}║");
     Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║  [ENTER]  Çalıştır                                              ║");
     Console.WriteLine("║  [E]      AppConfig.json Düzenle + Yeniden Yükle                ║");
@@ -756,6 +830,10 @@ async Task handleSingleTrader()
     }
 
     selectedRunMode = ParseRunMode(appConfig.SingleTrader.RunMode);
+
+    // TODO aa_001 : Kullanıcı menüden Query secmesine rağmen algoTrader.SingleTraderRunMode = TradeOnly kalmış
+    // algoTrader.SingleTraderRunMode kullanıcının secimine göre update edilmesi lazım
+
     await runSingleTraderAlgoTrade();
 }
 
@@ -978,6 +1056,7 @@ async Task main()
     // AppConfig.json yükle
     Directory.CreateDirectory(Path.GetDirectoryName(appConfigPath)!);
     AppConfigLoader.CreateSampleIfNotExists(appConfigPath);
+
     appConfig             = AppConfigLoader.Load(appConfigPath);
     stockDataFullFileName = AppConfigApplier.ApplyAppSettings(appConfig.AppSettings);
     LogManager.LogRaw($"[AppConfig] Yüklendi: {appConfigPath}");
@@ -1029,3 +1108,20 @@ catch (Exception ex)
     Console.WriteLine("Press any key to exit...");
     Console.ReadKey();
 }
+
+
+/*
+ * 
+ * 
+ singleTrader için OnApplyUserFlags  içinde set edilen seyleri AppConfig'e almak!
+singleTrader için OnApplyUserFlags2 içinde set edilen seyleri AppConfig'e almak!
+
+AnaMenüde 5 ile SingleTrader menüsüne gelince orada seçimler yaptırıyor
+	[1/2/3]  RunMode seçilince hangisi secildiyse onun içeriğini ekrana yazdırmak
+        singleTrader için OnApplyUserFlags  içinde set edilen seyleri ekranda göstermek
+        singleTrader için OnApplyUserFlags2  içinde set edilen seyleri
+Son adımda ENTER ile çalıştırmak
+
+ * 
+ * 
+ */

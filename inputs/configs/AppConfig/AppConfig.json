@@ -95,7 +95,7 @@
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
       "Name": "SimpleMostStrategy",
-      "Version": "v1-Opt"
+      "Version": "v1"
     },
     "EquityCurveFilter": null,
     "TradeParams": {
