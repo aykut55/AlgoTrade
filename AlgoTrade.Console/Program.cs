@@ -122,6 +122,15 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
     var deadline     = DateTime.Now.AddSeconds(timeoutSeconds);
     int lastShown    = -1;
     bool userStarted = false;
+    int lastPromptLen = 0;
+
+    void RewritePrompt(string prompt)
+    {
+        int clearLen = Math.Max(lastPromptLen, prompt.Length);
+        Console.Write("\r" + new string(' ', clearLen));
+        Console.Write("\r" + prompt);
+        lastPromptLen = prompt.Length;
+    }
 
     while (true)
     {
@@ -130,7 +139,7 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
         // Update countdown (only if the user has not started typing yet)
         if (!userStarted && remaining != lastShown)
         {
-            Console.Write($"\rSelection ({remaining:D2} s): ");
+            RewritePrompt($"Selection ({remaining:D2} s): ");
             lastShown = remaining;
         }
 
@@ -151,8 +160,7 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
             {
                 if (!userStarted)
                 {
-                    // First character: fix the prompt, remove the countdown
-                    Console.Write($"\rSelection: ");
+                    // Keep typing on the same countdown prompt line.
                     userStarted = true;
                 }
                 buf.Append(key.KeyChar);
@@ -469,7 +477,7 @@ void ConfigureStrategies()
         algoTrader.ClearStrategyConfigs();
         algoTrader.ConfigureStrategiesFromConfig(configPath, selections);
 
-        LogManager.LogRaw($"\nStrategies loaded from config ({selections.Count} adet):");
+        LogManager.LogRaw($"\nStrategies loaded from config ({selections.Count} items):");
         for (int i = 0; i < selections.Count; i++)
             LogManager.LogRaw($"  Id={i}: {selections[i].name} | {selections[i].version}");
     }
@@ -648,7 +656,7 @@ void showReadDataPreview()
 
     var preview = new
     {
-        StockDataFile = string.IsNullOrEmpty(stockDataFullFileName) ? "(tanımsız)" : stockDataFullFileName,
+        StockDataFile = string.IsNullOrEmpty(stockDataFullFileName) ? "(undefined)" : stockDataFullFileName,
         cfg.FilterMode,
         cfg.N1,
         cfg.N2,
@@ -659,12 +667,12 @@ void showReadDataPreview()
     string json = JsonSerializer.Serialize(preview, jsonOpts);
     string sep  = new string('═', 66);
     Console.WriteLine();
-    Console.WriteLine("══ Veri Okuma Önizlemesi ══════════════════════════════════════════");
+    Console.WriteLine("══ Data Read Preview ══════════════════════════════════════════════");
     Console.WriteLine(json);
     Console.WriteLine(sep);
-    Console.WriteLine("  [ENTER]  Okumayı Başlat");
-    Console.WriteLine("  [E]      AppConfig.json Düzenle + Yeniden Yükle");
-    Console.WriteLine("  [B]      Geri");
+    Console.WriteLine("  [ENTER]  Start Reading");
+    Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [B]      Back");
     Console.WriteLine();
 }
 
@@ -834,10 +842,10 @@ async Task runSingleTraderOptimization()
 
 void showModeConfigSummary(string title)
 {
-    string file   = string.IsNullOrEmpty(stockDataFullFileName) ? "(tanımsız)" : Path.GetFileName(stockDataFullFileName);
+    string file   = string.IsNullOrEmpty(stockDataFullFileName) ? "(undefined)" : Path.GetFileName(stockDataFullFileName);
     string dataOk = (stockDataReader?.IsDataReady == true)
-        ? $"{stockDataReader.GetDataCount()} bar yüklü"
-        : "Veri yüklenmedi";
+        ? $"{stockDataReader.GetDataCount()} bars loaded"
+        : "Data not loaded";
 
     // Toplam kutu genişliği: 67 karakter (║ + 65 içerik + ║)
     // İçerik genişliği: 65 karakter
@@ -847,8 +855,8 @@ void showModeConfigSummary(string title)
     Console.WriteLine("╔═════════════════════════════════════════════════════════════════╗");
     Console.WriteLine($"║  {title,-63}║");
     Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
-    Console.WriteLine($"║  Veri       : {Trunc(file, 50),-50}║");
-    Console.WriteLine($"║  Durum      : {Trunc(dataOk, 50),-50}║");
+    Console.WriteLine($"║  Data       : {Trunc(file, 50),-50}║");
+    Console.WriteLine($"║  Status     : {Trunc(dataOk, 50),-50}║");
 
     if (title == "SingleTrader")
     {
@@ -857,18 +865,18 @@ void showModeConfigSummary(string title)
 
         // Strateji
         string stratInfo = Trunc($"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}", 50);
-        Console.WriteLine($"║  Strateji   : {stratInfo,-50}║");
+        Console.WriteLine($"║  Strategy   : {stratInfo,-50}║");
 
         // Query — null ise Disabled, dolu ise Enabled
         string queryLine   = cfg.Query != null
             ? Trunc($"{cfg.Query.Name}  /  {cfg.Query.Version}", 40)
-            : "(tanımsız)";
+            : "(undefined)";
         string queryStatus = cfg.Query != null ? "[Enabled]" : "[Disabled]";
         // "  Query      : " = 15, queryLine = 40, queryStatus right-aligned = 10  → 15+40+10=65 ✓
         Console.WriteLine($"║  Query      : {queryLine,-40}{queryStatus,10}║");
 
         // EquityCurveFilter — config dosyasından Enabled alanını okumaya çalış
-        string ecfLine   = "(tanımsız)";
+        string ecfLine   = "(undefined)";
         string ecfStatus = "[Disabled]";
         if (cfg.EquityCurveFilter != null)
         {
@@ -890,7 +898,7 @@ void showModeConfigSummary(string title)
         Console.WriteLine($"║  ECFilter   : {ecfLine,-40}{ecfStatus,10}║");
 
         // TradeParams
-        string tradeInfo = Trunc($"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}", 50);
+        string tradeInfo = Trunc($"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  |  Contract:{tp.KontratSayisi}", 50);
         Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
 
         // RunMode seçim bölümü
@@ -902,7 +910,7 @@ void showModeConfigSummary(string title)
         {
             string left = $"  [{key}]  {name}";
             return selected
-                ? $"║{left.PadRight(57)}◄ seçili║"
+                ? $"║{left.PadRight(55)}◄ selected║"
                 : $"║{left.PadRight(65)}║";
         }
 
@@ -911,11 +919,11 @@ void showModeConfigSummary(string title)
         Console.WriteLine(RmLine("3", "QueryOnly",     cur.Equals("QueryOnly",     StringComparison.OrdinalIgnoreCase)));
 
         Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  [1/2/3]  RunMode seçip çalıştır                                ║");
+        Console.WriteLine("║  [1/2/3]  Select RunMode and Run                                ║");
         Console.WriteLine("║                                                                 ║");
-        Console.WriteLine("║  [ENTER]  Çalıştır  (AppConfig RunMode)                         ║");
-        Console.WriteLine("║  [E]      AppConfig.json Düzenle + Yeniden Yükle                ║");
-        Console.WriteLine("║  [B]      Ana Menüye Dön                                        ║");
+        Console.WriteLine("║  [ENTER]  Run  (AppConfig RunMode)                              ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
         Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
         Console.WriteLine();
         return;
@@ -934,7 +942,7 @@ void showModeConfigSummary(string title)
         if (cfg.ChildTraders.Count > 0)
         {
             var tp = cfg.ChildTraders[0].TradeParams;
-            tradeInfo2 = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  (child[0])";
+            tradeInfo2 = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (child[0])";
         }
     }
     else if (title == "SingleTraderOpt")
@@ -943,16 +951,16 @@ void showModeConfigSummary(string title)
         var tp     = cfg.TradeParams;
         stratInfo2  = $"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}  |  Opt:{cfg.Optimization.Name}";
         runModeStr2 = "Optimization";
-        tradeInfo2  = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}";
+        tradeInfo2  = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  |  Contract:{tp.KontratSayisi}";
     }
 
     Console.WriteLine($"║  RunMode    : {Trunc(runModeStr2, 50),-50}║");
-    Console.WriteLine($"║  Strateji   : {Trunc(stratInfo2, 50),-50}║");
+    Console.WriteLine($"║  Strategy   : {Trunc(stratInfo2, 50),-50}║");
     Console.WriteLine($"║  TradeParam : {Trunc(tradeInfo2, 50),-50}║");
     Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
-    Console.WriteLine("║  [ENTER]  Çalıştır                                              ║");
-    Console.WriteLine("║  [E]      AppConfig.json Düzenle + Yeniden Yükle                ║");
-    Console.WriteLine("║  [B]      Ana Menüye Dön                                        ║");
+    Console.WriteLine("║  [ENTER]  Run                                                    ║");
+    Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+    Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
     Console.WriteLine();
 }
@@ -1066,12 +1074,12 @@ void showSingleTraderRunPreview(TraderRunMode mode)
 
     string sep = new string('═', 66);
     Console.WriteLine();
-    Console.WriteLine("══ SingleTrader — Çalıştırma Önizlemesi ══════════════════════════");
+    Console.WriteLine("══ SingleTrader — Run Preview ════════════════════════════════════");
     WriteColoredJsonLines(json);
     Console.WriteLine(sep);
-    Console.WriteLine("  [ENTER]  Çalıştır");
-    Console.WriteLine("  [E]      AppConfig.json Düzenle + Yeniden Yükle");
-    Console.WriteLine("  [B]      Geri");
+    Console.WriteLine("  [ENTER]  Run");
+    Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [B]      Back");
     Console.WriteLine();
 
     static void WriteColoredJsonLines(string json)
@@ -1185,19 +1193,19 @@ CancellationTokenSource? scriptCts = null;
     string defaultDir = AppSettings.ScriptsDir;
     if (!Directory.Exists(defaultDir)) Directory.CreateDirectory(defaultDir);
 
-    Console.Write($"\nScript dosya yolu (default: {defaultDir}\\): ");
+    Console.Write($"\nScript file path (default: {defaultDir}\\): ");
     var filePath = Console.ReadLine()?.Trim();
 
     if (string.IsNullOrEmpty(filePath))
     {
         var files = Directory.GetFiles(defaultDir, "*.csx");
-        if (files.Length == 0) { LogManager.LogRaw($"Dizinde script bulunamadi: {defaultDir}"); return ("", ""); }
+        if (files.Length == 0) { LogManager.LogRaw($"No script found in directory: {defaultDir}"); return ("", ""); }
 
-        Console.WriteLine("\nMevcut scriptler:");
+        Console.WriteLine("\nAvailable scripts:");
         for (int idx = 0; idx < files.Length; idx++)
             Console.WriteLine($"  [{idx + 1}] {Path.GetFileName(files[idx])}");
 
-        Console.Write("\nSeçiminiz: ");
+        Console.Write("\nYour selection: ");
         var choice = Console.ReadLine()?.Trim();
         if (int.TryParse(choice, out int sel) && sel >= 1 && sel <= files.Length)
             filePath = files[sel - 1];
@@ -1205,7 +1213,7 @@ CancellationTokenSource? scriptCts = null;
             return ("", "");
     }
 
-    if (!File.Exists(filePath)) { LogManager.LogRaw($"Dosya bulunamadi: {filePath}"); return ("", ""); }
+    if (!File.Exists(filePath)) { LogManager.LogRaw($"File not found: {filePath}"); return ("", ""); }
     return (File.ReadAllText(filePath), filePath);
 }
 
@@ -1214,13 +1222,13 @@ async Task<ScriptExecutionResult> executeScriptWithCancellation(string code, Scr
     scriptCts = new CancellationTokenSource();
     var scriptTask = scriptExecutor.ExecuteAsync(code, globals, scriptCts.Token, sourceDirectory);
 
-    LogManager.LogRaw("\n[INFO] Script calisiyor... (ESC ile durdurabilirsiniz)\n", ConsoleColor.Cyan);
+    LogManager.LogRaw("\n[INFO] Script is running... (you can stop with ESC)\n", ConsoleColor.Cyan);
 
     while (!scriptTask.IsCompleted)
     {
         if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape)
         {
-            LogManager.LogRaw("\n[ESC] Script durdurma istegi gonderildi...", ConsoleColor.Yellow);
+            LogManager.LogRaw("\n[ESC] Script stop request sent...", ConsoleColor.Yellow);
             scriptCts.Cancel();
         }
         await Task.Delay(100);
@@ -1232,7 +1240,7 @@ void printScriptResult(ScriptExecutionResult result)
 {
     if (result.Success)
     {
-        LogManager.LogRaw($"[OK] Script basariyla tamamlandi ({result.ExecutionTime.TotalMilliseconds:F0} ms)", ConsoleColor.Green);
+        LogManager.LogRaw($"[OK] Script completed successfully ({result.ExecutionTime.TotalMilliseconds:F0} ms)", ConsoleColor.Green);
         if (result.ReturnValue != null)
             LogManager.LogRaw($"[RETURN] {result.ReturnValue}", ConsoleColor.Cyan);
     }
@@ -1240,13 +1248,13 @@ void printScriptResult(ScriptExecutionResult result)
     {
         if (result.CompilationErrors?.Count > 0)
         {
-            LogManager.LogRaw("[HATA] Derleme hatalari:", ConsoleColor.Red);
+            LogManager.LogRaw("[ERROR] Compilation errors:", ConsoleColor.Red);
             foreach (var err in result.CompilationErrors)
                 LogManager.LogRaw($"  {err}", ConsoleColor.Red);
         }
         else
         {
-            LogManager.LogRaw($"[HATA] {result.Error}", ConsoleColor.Red);
+            LogManager.LogRaw($"[ERROR] {result.Error}", ConsoleColor.Red);
             if (!string.IsNullOrEmpty(result.StackTrace))
                 LogManager.LogRaw($"[STACK] {result.StackTrace}", ConsoleColor.DarkYellow);
         }
@@ -1273,17 +1281,17 @@ async Task runInteractiveScript()
 {
     if (algoTrader is null)
     {
-        LogManager.LogRaw("\n[UYARI] AlgoTrader henuz olusturulmadi. Once [2] veya [5] calistirin.", ConsoleColor.Yellow);
+        LogManager.LogRaw("\n[WARNING] AlgoTrader has not been created yet. Run [2] or [5] first.", ConsoleColor.Yellow);
         return;
     }
 
     if (stockDataList != null && algoTrader.GetDataCount() == 0)
     {
         algoTrader.SetData(stockDataList);
-        LogManager.LogRaw($"[INFO] Mevcut stockData ({stockDataList.Count} bar) AlgoTrader'a atandi.");
+        LogManager.LogRaw($"[INFO] Current stockData ({stockDataList.Count} bars) assigned to AlgoTrader.");
     }
 
-    Console.WriteLine("\nScript kodunu yapistirin (bos satir + ENTER ile bitirin):");
+    Console.WriteLine("\nPaste script code (finish with an empty line + ENTER):");
     Console.WriteLine("─────────────────────────────────────────────────────────");
     var lines = new List<string>();
     string? line;
@@ -1311,10 +1319,10 @@ void showMainMenu()
 {
     Console.WriteLine();
     Console.WriteLine("╔════════════════════════════════════════════════════════════════════╗");
-    Console.WriteLine("║        AlgoTrade — Ana Menü                                        ║");
+    Console.WriteLine("║        AlgoTrade — Main Menu                                       ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [1]  Veri Oku                                                   ║");
+    Console.WriteLine("║    [1]  Read Data                                                  ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Trader ═════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -1322,19 +1330,19 @@ void showMainMenu()
     Console.WriteLine("║    [3]  MultipleTrader                                             ║");
     Console.WriteLine("║    [4]  SingleTraderOpt                                            ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("╠═══ Veri Oku + Çalıştır ════════════════════════════════════════════╣");
+    Console.WriteLine("╠═══ Read Data + Run ════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [5]  Veri Oku + SingleTrader                                    ║");
-    Console.WriteLine("║    [6]  Veri Oku + MultipleTrader                                  ║");
-    Console.WriteLine("║    [7]  Veri Oku + SingleTraderOpt                                 ║");
+    Console.WriteLine("║    [5]  Read Data + SingleTrader                                   ║");
+    Console.WriteLine("║    [6]  Read Data + MultipleTrader                                 ║");
+    Console.WriteLine("║    [7]  Read Data + SingleTraderOpt                                ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Script ═════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [8]  Script Çalıştır                                            ║");
+    Console.WriteLine("║    [8]  Run Script                                                 ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [0]  Çıkış                                                      ║");
+    Console.WriteLine("║    [0]  Exit                                                       ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
     Console.WriteLine();
@@ -1376,7 +1384,7 @@ async Task main()
     var autoRun = appConfig.AppSettings.AutoRunMode?.Trim() ?? "";
     if (!string.IsNullOrEmpty(autoRun) && !autoRun.Equals("None", StringComparison.OrdinalIgnoreCase))
     {
-        LogManager.LogRaw($"[AutoRun] Mod: {autoRun}", ConsoleColor.Cyan);
+        LogManager.LogRaw($"[AutoRun] Mode: {autoRun}", ConsoleColor.Cyan);
         readStockData(appConfig.ReadData);
         switch (autoRun.ToUpperInvariant())
         {
@@ -1392,7 +1400,7 @@ async Task main()
                 await runSingleTraderOptimization();
                 break;
             default:
-                LogManager.LogRaw($"[AutoRun] Bilinmeyen mod: '{autoRun}'. Geçerli: SingleTrader, MultipleTrader, SingleTraderOpt", ConsoleColor.Red);
+                LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOpt", ConsoleColor.Red);
                 break;
         }
         return; // Menüye geçmeden çık
@@ -1417,7 +1425,7 @@ async Task main()
             case "7": if (handleReadData()) await handleSingleTraderOpt();                           break;
             case "8": await runFullScript();                                break;
             case "0": running = false;                                      break;
-            default:  Console.WriteLine("Geçersiz seçim.");                 break;
+            default:  Console.WriteLine("Invalid selection.");              break;
         }
     }
 
