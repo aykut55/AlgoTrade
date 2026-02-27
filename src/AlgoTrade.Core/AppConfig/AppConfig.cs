@@ -21,6 +21,20 @@ public class AppSettingsConfig
 {
     /// <summary>CSV veri dosyasının tam yolu.</summary>
     public string StockDataFile { get; set; } = "";
+
+    /// <summary>
+    /// Menü geri sayım süresi (saniye).
+    /// 0 → sayaç yok, kullanıcı giriş yapana kadar bekler.
+    /// </summary>
+    public int MenuTimeoutSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// Otomatik çalıştırma modu. Uygulama başlarken JSON config'den
+    /// okuyup hiç onay almadan doğrudan çalıştırır ve çıkar.
+    /// Boş veya "None" → normal menü akışı.
+    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOpt
+    /// </summary>
+    public string AutoRunMode { get; set; } = "";
 }
 
 // =============================================================================

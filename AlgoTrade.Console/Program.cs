@@ -82,10 +82,23 @@ void OnTraderProgress(int currentBar, int totalBars, double percentage) { }
 // =============================================================================
 
 /// <summary>
+/// AppConfig.AppSettings.MenuTimeoutSeconds'a göre otomatik olarak
+/// ReadMenuInputWithTimeout veya ReadMenuInput çağırır.
+/// </summary>
+string? MenuInput(string defaultReturn = "")
+{
+    int t = appConfig.AppSettings.MenuTimeoutSeconds;
+    return t > 0
+        ? ReadMenuInputWithTimeout(t, defaultReturn)
+        : ReadMenuInput();
+}
+
+/// <summary>
 /// ESC → null (exit signal) | ENTER → typed string (empty = default)
 /// </summary>
 string? ReadMenuInput()
 {
+    Console.Write("Seçiminiz: ");
     var buf = new StringBuilder();
     while (true)
     {
@@ -660,7 +673,7 @@ bool handleReadData()
     while (true)
     {
         showReadDataPreview();
-        var input = ReadMenuInputWithTimeout(10, "");
+        var input = MenuInput("");
 
         if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return false;
 
@@ -1090,7 +1103,7 @@ async Task handleSingleTrader()
     while (true)
     {
         showModeConfigSummary("SingleTrader");
-        var input = ReadMenuInputWithTimeout(10, "");
+        var input = MenuInput("");
 
         if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
 
@@ -1111,7 +1124,7 @@ async Task handleSingleTrader()
 
         // Seçilen config'i önizle, ENTER/E/B bekle
         showSingleTraderRunPreview(selectedRunMode);
-        var confirm = ReadMenuInputWithTimeout(10, "");
+        var confirm = MenuInput("");
 
         // B veya ESC → özet ekranına geri dön
         if (confirm == null || confirm.Equals("b", StringComparison.OrdinalIgnoreCase)) continue;
@@ -1355,11 +1368,37 @@ async Task main()
     if (!string.IsNullOrEmpty(stockDataFullFileName))
         LogManager.LogRaw($"[AppConfig] StockDataFile: {stockDataFullFileName}");
 
+    // AutoRun: JSON'dan okuyup onay almadan çalıştır
+    var autoRun = appConfig.AppSettings.AutoRunMode?.Trim() ?? "";
+    if (!string.IsNullOrEmpty(autoRun) && !autoRun.Equals("None", StringComparison.OrdinalIgnoreCase))
+    {
+        LogManager.LogRaw($"[AutoRun] Mod: {autoRun}", ConsoleColor.Cyan);
+        readStockData(appConfig.ReadData);
+        switch (autoRun.ToUpperInvariant())
+        {
+            case "SINGLETRADER":
+                selectedRunMode = ParseRunMode(appConfig.SingleTrader.RunMode);
+                await runSingleTraderAlgoTrade();
+                break;
+            case "MULTIPLETRADER":
+                selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
+                await runMultipleTraderAlgoTrade();
+                break;
+            case "SINGLETRADEROPT":
+                await runSingleTraderOptimization();
+                break;
+            default:
+                LogManager.LogRaw($"[AutoRun] Bilinmeyen mod: '{autoRun}'. Geçerli: SingleTrader, MultipleTrader, SingleTraderOpt", ConsoleColor.Red);
+                break;
+        }
+        return; // Menüye geçmeden çık
+    }
+
     bool running = true;
     while (running)
     {
         showMainMenu();
-        var input = ReadMenuInputWithTimeout(10, defaultReturn: "5");
+        var input = MenuInput("5");
         if (input == null) { running = false; break; }
         if (string.IsNullOrEmpty(input)) input = "5";
 
