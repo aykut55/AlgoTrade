@@ -1,7 +1,7 @@
 {
   "AppSettings": {
     "StockDataFile": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv",
-    "AutoRunMode": "",
+    "AutoRunMode": "None",
     "MenuTimeoutSeconds": 5
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOpt"
 	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
@@ -147,7 +147,7 @@
     ]
   },
 
-  "SingleTraderOptimizer": {
+  "SingleTraderOpt": {
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
       "Name": "SimpleMostStrategy",
@@ -208,8 +208,8 @@
         "PlotEnabled": false
       },
       "Save": {
-        "OptimizationEnabled": false,
-        "SaveStatisticsToFile": true,
+        "OptimizationEnabled": true,
+        "SaveStatisticsToFile": false,
         "SaveFullStatsTxtEnabled": true,
         "SaveFullStatsCsvEnabled": true,
         "SaveMinimalStatsTxtEnabled": true,

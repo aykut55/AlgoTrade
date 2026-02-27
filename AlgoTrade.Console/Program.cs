@@ -50,13 +50,13 @@ void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string>
     var meta         = sender.GetMetaData();
     int padding      = 18;
     sb.Clear();
-    sb.AppendLine($"{"\tRecord Time".PadRight(padding)}:  {meta.GetValueOrDefault("Kayit_Zamani",    "N/A")}");
+    sb.AppendLine($"{"\tRecord Time".PadRight(padding)}: {meta.GetValueOrDefault("Kayit_Zamani",    "N/A")}");
     sb.AppendLine($"{"\tChart Symbol".PadRight(padding)}: {meta.GetValueOrDefault("GrafikSembol",    "N/A")}");
     sb.AppendLine($"{"\tChart Period".PadRight(padding)}: {meta.GetValueOrDefault("GrafikPeriyot",  "N/A")}");
-    sb.AppendLine($"{"\tBar Count".PadRight(padding)}:    {meta.GetValueOrDefault("BarCount",            "N/A")}");
-    sb.AppendLine($"{"\tStart Date".PadRight(padding)}:   {meta.GetValueOrDefault("Baslangic_Tarihi", "N/A")}");
-    sb.AppendLine($"{"\tEnd Date".PadRight(padding)}:     {meta.GetValueOrDefault("Bitis_Tarihi",    "N/A")}");
-    sb.Append(    $"{"\tFormat".PadRight(padding)}:       {meta.GetValueOrDefault("Format",                "N/A")}");
+    sb.AppendLine($"{"\tBar Count".PadRight(padding)}: {meta.GetValueOrDefault("BarCount",            "N/A")}");
+    sb.AppendLine($"{"\tStart Date".PadRight(padding)}: {meta.GetValueOrDefault("Baslangic_Tarihi", "N/A")}");
+    sb.AppendLine($"{"\tEnd Date".PadRight(padding)}: {meta.GetValueOrDefault("Bitis_Tarihi",    "N/A")}");
+    sb.Append(    $"{"\tFormat".PadRight(padding)}: {meta.GetValueOrDefault("Format",                "N/A")}");
     LogManager.LogRaw(sb.ToString());
 }
 
@@ -118,11 +118,13 @@ string? ReadMenuInput()
 /// </summary>
 string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
 {
-    var buf          = new StringBuilder();
-    var deadline     = DateTime.Now.AddSeconds(timeoutSeconds);
-    int lastShown    = -1;
-    bool userStarted = false;
-    int lastPromptLen = 0;
+    var buf             = new StringBuilder();
+    var deadline        = DateTime.Now.AddSeconds(timeoutSeconds);
+    int lastShown       = -1;
+    bool userStarted    = false;
+    bool paused         = false;
+    int pausedRemaining = 0;
+    int lastPromptLen   = 0;
 
     void RewritePrompt(string prompt)
     {
@@ -134,16 +136,18 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
 
     while (true)
     {
-        int remaining = Math.Max(0, (int)(deadline - DateTime.Now).TotalSeconds);
+        int remaining = paused
+            ? pausedRemaining
+            : Math.Max(0, (int)(deadline - DateTime.Now).TotalSeconds);
 
         // Update countdown (only if the user has not started typing yet)
-        if (!userStarted && remaining != lastShown)
+        if (!userStarted && !paused && remaining != lastShown)
         {
             RewritePrompt($"Selection ({remaining:D2} s): ");
             lastShown = remaining;
         }
 
-        if (remaining == 0 && !userStarted)
+        if (!paused && remaining == 0 && !userStarted)
         {
             Console.WriteLine();
             return defaultReturn;
@@ -152,15 +156,33 @@ string? ReadMenuInputWithTimeout(int timeoutSeconds, string? defaultReturn = "")
         if (Console.KeyAvailable)
         {
             var key = Console.ReadKey(intercept: true);
-            if (key.Key == ConsoleKey.Escape)    { Console.WriteLine(); return null; }
-            if (key.Key == ConsoleKey.Enter)     { Console.WriteLine(); return buf.ToString().Trim(); }
+            if (key.Key == ConsoleKey.Escape) { Console.WriteLine(); return null; }
+            if (key.Key == ConsoleKey.Enter)  { Console.WriteLine(); return buf.ToString().Trim(); }
+
             if (key.Key == ConsoleKey.Backspace && buf.Length > 0) { buf.Remove(buf.Length - 1, 1); Console.Write("\b \b"); }
             else if (key.Key == ConsoleKey.Backspace) { Console.WriteLine(); return "b"; }
+            else if (!userStarted && (key.KeyChar == 't' || key.KeyChar == 'T'))
+            {
+                // Toggle pause / resume
+                if (!paused)
+                {
+                    paused          = true;
+                    pausedRemaining = remaining;
+                    RewritePrompt($"Selection (PAUSED {pausedRemaining:D2} s): ");
+                    lastShown = -1;
+                }
+                else
+                {
+                    paused   = false;
+                    deadline = DateTime.Now.AddSeconds(pausedRemaining);
+                    lastShown = -1;
+                }
+                continue; // deadline reset'i atla
+            }
             else if (!char.IsControl(key.KeyChar))
             {
                 if (!userStarted)
                 {
-                    // Keep typing on the same countdown prompt line.
                     userStarted = true;
                 }
                 buf.Append(key.KeyChar);
@@ -327,6 +349,15 @@ void editAndReloadAppConfig()
     Console.ReadLine();
     appConfig            = AppConfigLoader.Load(appConfigPath);
     stockDataFullFileName = AppConfigApplier.ApplyAppSettings(appConfig.AppSettings);
+    LogManager.LogRaw("");
+    LogManager.LogRaw("[AppConfig] Reloaded.", ConsoleColor.Green);
+}
+
+void reloadAppConfig()
+{
+    appConfig            = AppConfigLoader.Load(appConfigPath);
+    stockDataFullFileName = AppConfigApplier.ApplyAppSettings(appConfig.AppSettings);
+    LogManager.LogRaw("");
     LogManager.LogRaw("[AppConfig] Reloaded.", ConsoleColor.Green);
 }
 
@@ -672,6 +703,8 @@ void showReadDataPreview()
     Console.WriteLine(sep);
     Console.WriteLine("  [ENTER]  Start Reading");
     Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [R]      Reload AppConfig");
+    Console.WriteLine("  [T]      Pause/Resume Timer");
     Console.WriteLine("  [B]      Back");
     Console.WriteLine();
 }
@@ -688,6 +721,12 @@ bool handleReadData()
         if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
         {
             editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
             continue;
         }
 
@@ -924,13 +963,58 @@ void showModeConfigSummary(string title)
         Console.WriteLine("║                                                                 ║");
         Console.WriteLine("║  [ENTER]  Run  (AppConfig RunMode)                              ║");
         Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
         Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
         Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
         Console.WriteLine();
         return;
     }
 
-    // MultipleTrader / SingleTraderOpt — mevcut tasarım korunur
+    if (title == "SingleTraderOpt")
+    {
+        var cfg = appConfig.SingleTraderOpt;
+        var tp  = cfg.TradeParams;
+
+        string stratInfo = Trunc($"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}  |  Opt:{cfg.Optimization.Name}", 50);
+        Console.WriteLine($"║  Strategy   : {stratInfo,-50}║");
+
+        string ecfLine   = "(undefined)";
+        string ecfStatus = "[Disabled]";
+        if (cfg.EquityCurveFilter != null)
+        {
+            ecfLine = Trunc(cfg.EquityCurveFilter.Version, 40);
+            try
+            {
+                string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.EquityCurveFilter.ConfigFile);
+                var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+                ecfLoader.LoadFromFile();
+                var ecfCfg = ecfLoader.GetConfiguration(cfg.EquityCurveFilter.Version);
+                if (ecfCfg != null)
+                {
+                    ecfLine   = Trunc($"{ecfCfg.Version}  ({ecfCfg.DisplayName})", 40);
+                    ecfStatus = ecfCfg.Enabled ? "[Enabled]" : "[Disabled]";
+                }
+            }
+            catch { }
+        }
+        Console.WriteLine($"║  ECFilter   : {ecfLine,-40}{ecfStatus,10}║");
+
+        string tradeInfo = Trunc($"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  |  Contract:{tp.KontratSayisi}", 50);
+        Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                    ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    // MultipleTrader — mevcut tasarım korunur
     string stratInfo2  = "";
     string runModeStr2 = "";
     string tradeInfo2  = "";
@@ -946,14 +1030,6 @@ void showModeConfigSummary(string title)
             tradeInfo2 = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (child[0])";
         }
     }
-    else if (title == "SingleTraderOpt")
-    {
-        var cfg    = appConfig.SingleTraderOpt;
-        var tp     = cfg.TradeParams;
-        stratInfo2  = $"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}  |  Opt:{cfg.Optimization.Name}";
-        runModeStr2 = "Optimization";
-        tradeInfo2  = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  |  Contract:{tp.KontratSayisi}";
-    }
 
     Console.WriteLine($"║  RunMode    : {Trunc(runModeStr2, 50),-50}║");
     Console.WriteLine($"║  Strategy   : {Trunc(stratInfo2, 50),-50}║");
@@ -961,6 +1037,8 @@ void showModeConfigSummary(string title)
     Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║  [ENTER]  Run                                                    ║");
     Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+    Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+    Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
     Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
     Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
     Console.WriteLine();
@@ -1080,6 +1158,8 @@ void showSingleTraderRunPreview(TraderRunMode mode)
     Console.WriteLine(sep);
     Console.WriteLine("  [ENTER]  Run");
     Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [R]      Reload AppConfig");
+    Console.WriteLine("  [T]      Pause/Resume Timer");
     Console.WriteLine("  [B]      Back");
     Console.WriteLine();
 
@@ -1107,8 +1187,132 @@ void showSingleTraderRunPreview(TraderRunMode mode)
     }
 }
 
+void showSingleTraderOptRunPreview()
+{
+    var cfg = appConfig.SingleTraderOpt;
+
+    var jsonOpts = new JsonSerializerOptions
+    {
+        WriteIndented          = true,
+        PropertyNamingPolicy   = null,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        Converters             = { new JsonStringEnumConverter() }
+    };
+
+    // Strategy: config dosyasından parse edilmiş parametreler
+    object strategySection = new { cfg.Strategy.Name, cfg.Strategy.Version };
+    try
+    {
+        string stratPath = Path.Combine(AppSettings.ConfigsDir, cfg.Strategy.ConfigFile);
+        var stratLoader  = new StrategyConfigLoader(stratPath);
+        stratLoader.LoadFromFile();
+        var stratCfg = stratLoader.GetConfiguration(cfg.Strategy.Name, cfg.Strategy.Version);
+        if (stratCfg != null)
+            strategySection = new
+            {
+                stratCfg.StrategyName,
+                stratCfg.Version,
+                stratCfg.DisplayName,
+                Parameters = stratCfg.GetParameterValues()
+            };
+    }
+    catch { }
+
+    // Optimization: config dosyasından parse edilmiş parametre aralıkları
+    object optimizationSection = new { cfg.Optimization.Name, cfg.Optimization.Version };
+    try
+    {
+        string optPath = Path.Combine(AppSettings.ConfigsDir, cfg.Optimization.ConfigFile);
+        var optLoader  = new OptimizationConfigLoader(optPath);
+        optLoader.LoadFromFile();
+        var optCfg = optLoader.GetConfiguration(cfg.Optimization.Name, cfg.Optimization.Version);
+        if (optCfg != null)
+            optimizationSection = new
+            {
+                optCfg.StrategyName,
+                optCfg.Version,
+                optCfg.DisplayName,
+                ParameterRanges = optCfg.ParameterRanges.Select(r => new { r.Name, r.Min, r.Max, r.Step }).ToList(),
+                FixedParameters = optCfg.GetFixedParameterValues()
+            };
+    }
+    catch { }
+
+    // EquityCurveFilter: config dosyasından parse edilmiş parametreler
+    object? ecfSection = null;
+    if (cfg.EquityCurveFilter != null)
+    {
+        ecfSection = new { cfg.EquityCurveFilter.Version };
+        try
+        {
+            string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.EquityCurveFilter.ConfigFile);
+            var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+            ecfLoader.LoadFromFile();
+            var ecfCfg = ecfLoader.GetConfiguration(cfg.EquityCurveFilter.Version);
+            if (ecfCfg != null)
+                ecfSection = new
+                {
+                    ecfCfg.Version,
+                    ecfCfg.DisplayName,
+                    ecfCfg.Enabled,
+                    ecfCfg.ThresholdTypeIsPercent,
+                    ecfCfg.ProfitThreshold,
+                    ecfCfg.LossThreshold,
+                    ecfCfg.Trigger
+                };
+        }
+        catch { }
+    }
+
+    var preview = new
+    {
+        Strategy          = strategySection,
+        Optimization      = optimizationSection,
+        cfg.Range,
+        EquityCurveFilter = ecfSection,
+        cfg.TradeParams,
+        cfg.Signals,
+        cfg.Save,
+        cfg.Sort,
+        SingleTrader      = new { cfg.SingleTrader.Plot, cfg.SingleTrader.Save }
+    };
+
+    string json = JsonSerializer.Serialize(preview, jsonOpts);
+
+    string sep = new string('═', 66);
+    Console.WriteLine();
+    Console.WriteLine("══ SingleTraderOpt — Run Preview ══════════════════════════════════");
+    foreach (string rawLine in json.Split('\n'))
+    {
+        string line     = rawLine.TrimEnd('\r');
+        int    colonIdx = line.IndexOf("\": ");
+        if (colonIdx >= 0)
+        {
+            string valuePart = line.Substring(colonIdx + 3).TrimEnd(',').Trim();
+            if (valuePart == "true" || valuePart == "false")
+            {
+                Console.Write(line.Substring(0, colonIdx + 3));
+                Console.ForegroundColor = valuePart == "true" ? ConsoleColor.Green : ConsoleColor.Red;
+                Console.Write(line.Substring(colonIdx + 3));
+                Console.ResetColor();
+                Console.WriteLine();
+                continue;
+            }
+        }
+        Console.WriteLine(line);
+    }
+    Console.WriteLine(sep);
+    Console.WriteLine("  [ENTER]  Run");
+    Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [R]      Reload AppConfig");
+    Console.WriteLine("  [T]      Pause/Resume Timer");
+    Console.WriteLine("  [B]      Back");
+    Console.WriteLine();
+}
+
 async Task handleSingleTrader()
 {
+    reloadAppConfig();
     while (true)
     {
         showModeConfigSummary("SingleTrader");
@@ -1119,6 +1323,12 @@ async Task handleSingleTrader()
         if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
         {
             editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
             continue;
         }
 
@@ -1145,6 +1355,12 @@ async Task handleSingleTrader()
             continue;
         }
 
+        if (confirm.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
         // ENTER → çalıştır
         await runSingleTraderAlgoTrade();
         return;
@@ -1153,33 +1369,75 @@ async Task handleSingleTrader()
 
 async Task handleMultipleTrader()
 {
-    showModeConfigSummary("MultipleTrader");
-    var input = ReadMenuInput();
-    if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
-
-    if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+    reloadAppConfig();
+    while (true)
     {
-        editAndReloadAppConfig();
+        showModeConfigSummary("MultipleTrader");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
+        await runMultipleTraderAlgoTrade();
         return;
     }
-
-    selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
-    await runMultipleTraderAlgoTrade();
 }
 
 async Task handleSingleTraderOpt()
 {
-    showModeConfigSummary("SingleTraderOpt");
-    var input = ReadMenuInput();
-    if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
-
-    if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+    reloadAppConfig();
+    while (true)
     {
-        editAndReloadAppConfig();
+        showModeConfigSummary("SingleTraderOpt");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → önizleme göster
+        showSingleTraderOptRunPreview();
+        var confirm = MenuInput("");
+
+        if (confirm == null || confirm.Equals("b", StringComparison.OrdinalIgnoreCase)) continue;
+
+        if (confirm.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (confirm.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        await runSingleTraderOptimization();
         return;
     }
-
-    await runSingleTraderOptimization();
 }
 
 // =============================================================================
@@ -1417,13 +1675,13 @@ async Task main()
 
         switch (input)
         {
-            case "1": handleReadData();                                                              break;
-            case "2": await handleSingleTrader();                                                    break;
-            case "3": await handleMultipleTrader();                                                  break;
-            case "4": await handleSingleTraderOpt();                                                 break;
-            case "5": if (handleReadData()) await handleSingleTrader();                              break;
-            case "6": if (handleReadData()) await handleMultipleTrader();                            break;
-            case "7": if (handleReadData()) await handleSingleTraderOpt();                           break;
+            case "1": handleReadData();                                     break;
+            case "2": await handleSingleTrader();                           break;
+            case "3": await handleMultipleTrader();                         break;
+            case "4": await handleSingleTraderOpt();                        break;
+            case "5": if (handleReadData()) await handleSingleTrader();     break;
+            case "6": if (handleReadData()) await handleMultipleTrader();   break;
+            case "7": if (handleReadData()) await handleSingleTraderOpt();  break;
             case "8": await runFullScript();                                break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
@@ -1453,6 +1711,3 @@ catch (Exception ex)
     Console.ReadKey();
 }
 
-// TODO : Menüden [7]  Read Data + SingleTraderOpt   nin çalıştırılabilmesini sağla
-// Aslında [5]  Read Data + SingleTrader   ile yapılabilen herseyi bu menüye de uygula.
-// Selection'u Sayac bazlı alma, statik alma, app calıstığıjnda doğrudan Opt menüsünün calısması vs..   
