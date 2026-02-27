@@ -1,7 +1,7 @@
 {
   "AppSettings": {
     "StockDataFile": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv",
-    "AutoRunMode": "",  // AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOpt"
+    "AutoRunMode": "SingleTrader",  // AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOpt"
     "MenuTimeoutSeconds": 5         // MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
   },
 
