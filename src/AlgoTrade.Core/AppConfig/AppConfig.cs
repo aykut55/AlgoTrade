@@ -97,6 +97,44 @@ public class TradeParamsConfig
 }
 
 // =============================================================================
+// Trader Signals & Save Config
+// =============================================================================
+
+/// <summary>SingleTrader sinyal bayrakları ve zaman filtresi (OnApplyUserFlags karşılığı).</summary>
+public class TraderSignalsConfig
+{
+    public bool   AlEnabled              { get; set; } = true;
+    public bool   SatEnabled             { get; set; } = true;
+    public bool   FlatOlEnabled          { get; set; } = true;
+    public bool   PasGecEnabled          { get; set; } = true;
+    public bool   KarAlEnabled           { get; set; } = true;
+    public bool   ZararKesEnabled        { get; set; } = true;
+    public bool   GunSonuPozKapatEnabled { get; set; } = false;
+    public bool   TimeFilteringEnabled   { get; set; } = false;
+    public string StartDateTime          { get; set; } = "2025.05.25 09:35:00";
+    public string StopDateTime           { get; set; } = "2025.06.02 17:55:00";
+}
+
+/// <summary>SingleTrader kayıt ve optimizasyon bayrakları (OnApplyUserFlags2 karşılığı).</summary>
+public class TraderSaveConfig
+{
+    public bool OptimizationEnabled                 { get; set; } = false;
+    public bool SaveStatisticsToFile                { get; set; } = true;
+    public bool SaveFullStatsTxtEnabled             { get; set; } = true;
+    public bool SaveFullStatsCsvEnabled             { get; set; } = true;
+    public bool SaveMinimalStatsTxtEnabled          { get; set; } = true;
+    public bool SaveMinimalStatsCsvEnabled          { get; set; } = true;
+    public bool SaveFullListsTxtEnabled             { get; set; } = true;
+    public bool SaveFullListsCsvEnabled             { get; set; } = true;
+    public bool SaveMinimalListsTxtEnabled          { get; set; } = true;
+    public bool SaveMinimalListsCsvEnabled          { get; set; } = true;
+    public bool SaveFullStatsTxtFormattedEnabled    { get; set; } = true;
+    public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SavePerformansTxtEnabled            { get; set; } = true;
+    public bool SavePerformansCsvEnabled            { get; set; } = true;
+}
+
+// =============================================================================
 // SingleTrader
 // =============================================================================
 
@@ -105,10 +143,12 @@ public class SingleTraderConfig
     /// <summary>TradeOnly | TradeAndQuery | QueryOnly</summary>
     public string RunMode { get; set; } = "TradeOnly";
 
-    public StrategyRef       Strategy          { get; set; } = new();
-    public QueryRef?         Query             { get; set; }
-    public EcfRef?           EquityCurveFilter { get; set; }
-    public TradeParamsConfig TradeParams       { get; set; } = new();
+    public StrategyRef         Strategy          { get; set; } = new();
+    public QueryRef?           Query             { get; set; }
+    public EcfRef?             EquityCurveFilter { get; set; }
+    public TradeParamsConfig   TradeParams       { get; set; } = new();
+    public TraderSignalsConfig Signals           { get; set; } = new();
+    public TraderSaveConfig    Save              { get; set; } = new();
 }
 
 // =============================================================================

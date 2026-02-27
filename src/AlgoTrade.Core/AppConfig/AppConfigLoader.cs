@@ -83,6 +83,36 @@ public static class AppConfigLoader
                 KontratSayisi  = 1,
                 KomisyonCarpan = 20.0,
                 KaymaMiktari   = 0.5
+            },
+            Signals = new TraderSignalsConfig
+            {
+                AlEnabled              = true,
+                SatEnabled             = true,
+                FlatOlEnabled          = true,
+                PasGecEnabled          = true,
+                KarAlEnabled           = true,
+                ZararKesEnabled        = true,
+                GunSonuPozKapatEnabled = false,
+                TimeFilteringEnabled   = false,
+                StartDateTime          = "2025.05.25 09:35:00",
+                StopDateTime           = "2025.06.02 17:55:00"
+            },
+            Save = new TraderSaveConfig
+            {
+                OptimizationEnabled                 = false,
+                SaveStatisticsToFile                = true,
+                SaveFullStatsTxtEnabled             = true,
+                SaveFullStatsCsvEnabled             = true,
+                SaveMinimalStatsTxtEnabled          = true,
+                SaveMinimalStatsCsvEnabled          = true,
+                SaveFullListsTxtEnabled             = true,
+                SaveFullListsCsvEnabled             = true,
+                SaveMinimalListsTxtEnabled          = true,
+                SaveMinimalListsCsvEnabled          = true,
+                SaveFullStatsTxtFormattedEnabled    = true,
+                SaveMinimalStatsTxtFormattedEnabled = true,
+                SavePerformansTxtEnabled            = true,
+                SavePerformansCsvEnabled            = true
             }
         },
 

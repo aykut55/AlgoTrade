@@ -817,24 +817,128 @@ void showModeConfigSummary(string title)
     Console.Write("\nSeçiminiz: ");
 }
 
-async Task handleSingleTrader()
+void showSingleTraderRunPreview(TraderRunMode mode)
 {
-    showModeConfigSummary("SingleTrader");
-    var input = ReadMenuInput();
-    if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+    var cfg = appConfig.SingleTrader;
+    var sig = cfg.Signals;
+    var sav = cfg.Save;
+    var tp  = cfg.TradeParams;
 
-    if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+    string Fld(string lbl, bool val) => $"{lbl}:{(val ? "true" : "false")}";
+
+    // 3 sütunlu satır  (2 + 21 + 21 + 21 = 65 ✓)
+    string Row3(string l1, bool v1, string l2, bool v2, string l3, bool v3) =>
+        $"║  {Fld(l1,v1),-21}{Fld(l2,v2),-21}{Fld(l3,v3),-21}║";
+
+    // 2 sütunlu satır — bool  (2 + 31 + 32 = 65 ✓)
+    string Row2B(string l1, bool v1, string l2, bool v2) =>
+        $"║  {Fld(l1,v1),-31}{Fld(l2,v2),-32}║";
+
+    // 2 sütunlu satır — string  (2 + 31 + 32 = 65 ✓)
+    string Row2S(string l1, string v1, string l2, string v2) =>
+        $"║  {(l1 + ": " + v1),-31}{(l2 + ": " + v2),-32}║";
+
+    string runModeStr = mode switch
     {
-        editAndReloadAppConfig();
-        return;
+        TraderRunMode.TradeAndQuery => "TradeAndQuery",
+        TraderRunMode.QueryOnly     => "QueryOnly",
+        _                           => "TradeOnly"
+    };
+
+    string stratInfo = $"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}";
+    string tradeInfo = $"{tp.MarketType}  |  Bakiye:{tp.IlkBakiye:N0}  |  Kontrat:{tp.KontratSayisi}";
+
+    string queryLine   = cfg.Query != null ? $"{cfg.Query.Name}  /  {cfg.Query.Version}" : "(tanımsız)";
+    string queryStatus = cfg.Query != null ? "[Enabled]" : "[Disabled]";
+
+    string ecfLine = "(tanımsız)", ecfStatus = "[Disabled]";
+    if (cfg.EquityCurveFilter != null)
+    {
+        ecfLine = cfg.EquityCurveFilter.Version;
+        try
+        {
+            string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.EquityCurveFilter.ConfigFile);
+            var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+            ecfLoader.LoadFromFile();
+            var ecfCfg     = ecfLoader.GetConfiguration(cfg.EquityCurveFilter.Version);
+            if (ecfCfg != null)
+            {
+                ecfLine   = $"{ecfCfg.Version}  ({ecfCfg.DisplayName})";
+                ecfStatus = ecfCfg.Enabled ? "[Enabled]" : "[Disabled]";
+            }
+        }
+        catch { }
     }
 
-    selectedRunMode = ParseRunMode(appConfig.SingleTrader.RunMode);
+    Console.WriteLine();
+    Console.WriteLine("╔═════════════════════════════════════════════════════════════════╗");
+    Console.WriteLine($"║  {"SingleTrader  —  Çalıştırma Önizlemesi",-63}║");
+    Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+    Console.WriteLine($"║  RunMode    : {runModeStr,-50}║");
+    Console.WriteLine($"║  Strateji   : {stratInfo,-50}║");
+    Console.WriteLine($"║  Query      : {queryLine,-40}{queryStatus,10}║");
+    Console.WriteLine($"║  ECFilter   : {ecfLine,-40}{ecfStatus,10}║");
+    Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
+    Console.WriteLine("╠══ Signals ══════════════════════════════════════════════════════╣");
+    Console.WriteLine(Row3("Al",       sig.AlEnabled,
+                            "Sat",      sig.SatEnabled,
+                            "FlatOl",   sig.FlatOlEnabled));
+    Console.WriteLine(Row3("PasGec",   sig.PasGecEnabled,
+                            "KarAl",    sig.KarAlEnabled,
+                            "ZararKes", sig.ZararKesEnabled));
+    Console.WriteLine(Row2B("GunSonu", sig.GunSonuPozKapatEnabled,
+                             "TimeFilt", sig.TimeFilteringEnabled));
+    Console.WriteLine(Row2S("Start", sig.StartDateTime, "Stop", sig.StopDateTime));
+    Console.WriteLine("╠══ Save ═════════════════════════════════════════════════════════╣");
+    Console.WriteLine(Row2B("Optimization", sav.OptimizationEnabled,              "SaveStats",    sav.SaveStatisticsToFile));
+    Console.WriteLine(Row2B("FullStatsTxt", sav.SaveFullStatsTxtEnabled,           "FullStatsCsv", sav.SaveFullStatsCsvEnabled));
+    Console.WriteLine(Row2B("MinStatsTxt",  sav.SaveMinimalStatsTxtEnabled,        "MinStatsCsv",  sav.SaveMinimalStatsCsvEnabled));
+    Console.WriteLine(Row2B("FullListsTxt", sav.SaveFullListsTxtEnabled,           "FullListsCsv", sav.SaveFullListsCsvEnabled));
+    Console.WriteLine(Row2B("MinListsTxt",  sav.SaveMinimalListsTxtEnabled,        "MinListsCsv",  sav.SaveMinimalListsCsvEnabled));
+    Console.WriteLine(Row2B("FmtStatsTxt",  sav.SaveFullStatsTxtFormattedEnabled,  "FmtMinStats",  sav.SaveMinimalStatsTxtFormattedEnabled));
+    Console.WriteLine(Row2B("PerfTxt",      sav.SavePerformansTxtEnabled,          "PerfCsv",      sav.SavePerformansCsvEnabled));
+    Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+    Console.WriteLine("║  [ENTER]  Çalıştır                                              ║");
+    Console.WriteLine("║  [B]      Geri                                                  ║");
+    Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+    Console.Write("\nSeçiminiz: ");
+}
 
-    // TODO aa_001 : Kullanıcı menüden Query secmesine rağmen algoTrader.SingleTraderRunMode = TradeOnly kalmış
-    // algoTrader.SingleTraderRunMode kullanıcının secimine göre update edilmesi lazım
+async Task handleSingleTrader()
+{
+    while (true)
+    {
+        showModeConfigSummary("SingleTrader");
+        var input = ReadMenuInput();
 
-    await runSingleTraderAlgoTrade();
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        // 1/2/3 → RunMode seç | ENTER → AppConfig'deki mevcut RunMode
+        selectedRunMode = input switch
+        {
+            "1" => TraderRunMode.TradeOnly,
+            "2" => TraderRunMode.TradeAndQuery,
+            "3" => TraderRunMode.QueryOnly,
+            _   => ParseRunMode(appConfig.SingleTrader.RunMode)
+        };
+
+        // Seçilen config'i önizle, ENTER bekle
+        showSingleTraderRunPreview(selectedRunMode);
+        var confirm = ReadMenuInput();
+
+        // B veya ESC → özet ekranına geri dön
+        if (confirm == null || confirm.Equals("b", StringComparison.OrdinalIgnoreCase)) continue;
+
+        // ENTER → çalıştır
+        await runSingleTraderAlgoTrade();
+        return;
+    }
 }
 
 async Task handleMultipleTrader()
@@ -1123,6 +1227,7 @@ AnaMenüde 5 ile SingleTrader menüsüne gelince orada seçimler yaptırıyor
 Son adımda ENTER ile çalıştırmak
 
  * AppConfig'e readStockData nın parametrelerini girmek ve kullancııdan onay istemek.
+ * stockDataReader.ReadDataFast()
  * Defaultları gösterir : ENTER ise okuma baslar, değilse kullanıcıdan parametre girişi istenir..
  * 
  */

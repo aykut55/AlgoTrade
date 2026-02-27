@@ -50,6 +50,40 @@ public static class AppConfigApplier
         // TradeParams → SingleTrader override
         var tradeParams = BuildInitialTradeParams(cfg.TradeParams);
         algoTrader.SetSingleTraderTradeParams(tradeParams);
+
+        // Signals (OnApplyUserFlags karşılığı)
+        algoTrader.SetSingleTraderSignalsConfig(new SingleTraderSignalsConfig
+        {
+            AlEnabled              = cfg.Signals.AlEnabled,
+            SatEnabled             = cfg.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
+            TimeFilteringEnabled   = cfg.Signals.TimeFilteringEnabled,
+            StartDateTime          = cfg.Signals.StartDateTime,
+            StopDateTime           = cfg.Signals.StopDateTime,
+        });
+
+        // Save (OnApplyUserFlags2 karşılığı)
+        algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
+        {
+            OptimizationEnabled                 = cfg.Save.OptimizationEnabled,
+            SaveStatisticsToFile                = cfg.Save.SaveStatisticsToFile,
+            SaveFullStatsTxtEnabled             = cfg.Save.SaveFullStatsTxtEnabled,
+            SaveFullStatsCsvEnabled             = cfg.Save.SaveFullStatsCsvEnabled,
+            SaveMinimalStatsTxtEnabled          = cfg.Save.SaveMinimalStatsTxtEnabled,
+            SaveMinimalStatsCsvEnabled          = cfg.Save.SaveMinimalStatsCsvEnabled,
+            SaveFullListsTxtEnabled             = cfg.Save.SaveFullListsTxtEnabled,
+            SaveFullListsCsvEnabled             = cfg.Save.SaveFullListsCsvEnabled,
+            SaveMinimalListsTxtEnabled          = cfg.Save.SaveMinimalListsTxtEnabled,
+            SaveMinimalListsCsvEnabled          = cfg.Save.SaveMinimalListsCsvEnabled,
+            SaveFullStatsTxtFormattedEnabled    = cfg.Save.SaveFullStatsTxtFormattedEnabled,
+            SaveMinimalStatsTxtFormattedEnabled = cfg.Save.SaveMinimalStatsTxtFormattedEnabled,
+            SavePerformansTxtEnabled            = cfg.Save.SavePerformansTxtEnabled,
+            SavePerformansCsvEnabled            = cfg.Save.SavePerformansCsvEnabled,
+        });
     }
 
     /// <summary>

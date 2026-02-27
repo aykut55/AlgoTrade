@@ -104,7 +104,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public IReadOnlyList<ChildTraderConfigEntry> ChildTraderConfigs => _childTraderConfigs;
 
     // SingleTrader trade params override (AppConfig ile set edilir, null ise hardcoded parametreler kullanılır)
-    private InitialTradeParams? _singleTraderTradeParamsConfig = null;
+    private InitialTradeParams?         _singleTraderTradeParamsConfig = null;
+    private SingleTraderSignalsConfig?  _singleTraderSignalsConfig     = null;
+    private SingleTraderSaveConfig?     _singleTraderSaveConfig        = null;
 
     // Python görselleştirme
     private PythonPlotter? _pythonPlotter;
@@ -838,6 +840,85 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     }
 
     // ==========================================================================
+    // SingleTrader Signals & Save Config (AppConfig ile set edilir)
+    // ==========================================================================
+
+    public void SetSingleTraderSignalsConfig(SingleTraderSignalsConfig config)
+    {
+        _singleTraderSignalsConfig = config;
+    }
+
+    public void SetSingleTraderSaveConfig(SingleTraderSaveConfig config)
+    {
+        _singleTraderSaveConfig = config;
+    }
+
+    /// <summary>
+    /// _singleTraderSignalsConfig ve _singleTraderSaveConfig'i trader'a uygular.
+    /// OnApplyUserFlags / OnApplyUserFlags2 (SingleTrader) yerine çağrılır.
+    /// </summary>
+    private void ApplySingleTraderFlagsConfigs(SingleTrader trader)
+    {
+        trader.ConfigureUserFlagsOnce();
+
+        if (_singleTraderSignalsConfig is { } s)
+        {
+            trader.signals.AlEnabled              = s.AlEnabled;
+            trader.signals.SatEnabled             = s.SatEnabled;
+            trader.signals.FlatOlEnabled          = s.FlatOlEnabled;
+            trader.signals.PasGecEnabled          = s.PasGecEnabled;
+            trader.signals.KarAlEnabled           = s.KarAlEnabled;
+            trader.signals.ZararKesEnabled        = s.ZararKesEnabled;
+            trader.signals.GunSonuPozKapatEnabled = s.GunSonuPozKapatEnabled;
+            trader.signals.TimeFilteringEnabled   = s.TimeFilteringEnabled;
+            trader.signals.EquityCurveFilteringEnabled = false; // asıl değer ECF config'den gelir
+
+            trader.StartDateTimeStr = s.StartDateTime;
+            trader.StopDateTimeStr  = s.StopDateTime;
+
+            var startDt         = System.DateTime.ParseExact(s.StartDateTime, "yyyy.MM.dd HH:mm:ss", null);
+            trader.StartDateStr = startDt.ToString("yyyy.MM.dd");
+            trader.StartTimeStr = startDt.ToString("HH:mm:ss");
+
+            var stopDt         = System.DateTime.ParseExact(s.StopDateTime, "yyyy.MM.dd HH:mm:ss", null);
+            trader.StopDateStr = stopDt.ToString("yyyy.MM.dd");
+            trader.StopTimeStr = stopDt.ToString("HH:mm:ss");
+        }
+
+        if (_singleTraderSaveConfig is { } sv)
+        {
+            trader.OptimizationEnabled                = sv.OptimizationEnabled;
+            trader.SaveStatisticsToFile               = sv.SaveStatisticsToFile;
+            trader.SaveFullStatsTxtEnabled            = sv.SaveFullStatsTxtEnabled;
+            trader.SaveFullStatsCsvEnabled            = sv.SaveFullStatsCsvEnabled;
+            trader.SaveMinimalStatsTxtEnabled         = sv.SaveMinimalStatsTxtEnabled;
+            trader.SaveMinimalStatsCsvEnabled         = sv.SaveMinimalStatsCsvEnabled;
+            trader.SaveFullListsTxtEnabled            = sv.SaveFullListsTxtEnabled;
+            trader.SaveFullListsCsvEnabled            = sv.SaveFullListsCsvEnabled;
+            trader.SaveMinimalListsTxtEnabled         = sv.SaveMinimalListsTxtEnabled;
+            trader.SaveMinimalListsCsvEnabled         = sv.SaveMinimalListsCsvEnabled;
+            trader.SaveFullStatsTxtFormattedEnabled   = sv.SaveFullStatsTxtFormattedEnabled;
+            trader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+            trader.SavePerformansTxtEnabled           = sv.SavePerformansTxtEnabled;
+            trader.SavePerformansCsvEnabled           = sv.SavePerformansCsvEnabled;
+
+            // Dosya adları sabit kalır (SingleTrader prefix)
+            trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
+            trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
+            trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
+            trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
+            trader.FullListsTxtFileName                = "SingleTraderLists.txt";
+            trader.FullListsCsvFileName                = "SingleTraderLists.csv";
+            trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
+            trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
+            trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
+            trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+            trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
+            trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+        }
+    }
+
+    // ==========================================================================
     // Optimization Configuration (for SingleTraderOptimizer)
     // ==========================================================================
 
@@ -1062,11 +1143,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 singleTrader.initialTradeParams!.ApplyFrom(_singleTraderTradeParamsConfig);
 
             // Sıralama Onemli
-            // Apply user flags
-            OnApplyUserFlags(singleTrader);
-
-            // Apply user flags (2)
-            OnApplyUserFlags2(singleTrader, TraderApplyMode.SingleTrader);
+            // Apply user flags — AppConfig'den okunur (SetSingleTraderSignalsConfig / SetSingleTraderSaveConfig)
+            // OnApplyUserFlags(singleTrader);          // → AppConfig.SingleTrader.Signals ile değiştirildi
+            // OnApplyUserFlags2(singleTrader, TraderApplyMode.SingleTrader); // → AppConfig.SingleTrader.Save ile değiştirildi
+            ApplySingleTraderFlagsConfigs(singleTrader);
 
             // Configure equity curve filter
             SetSingleTraderConfigureEquityCurveFilter(singleTrader);
@@ -2059,6 +2139,45 @@ public class OptimizationParameterRangeEntry
         Max = max;
         Step = step;
     }
+}
+
+// ==========================================================================
+// SingleTrader Signals & Save config (AlgoTrade.Core.Trading namespace'inde yaşar;
+// AppConfigApplier bunları AppConfig verilerinden oluşturur ve AlgoTrader'a iletir.)
+// ==========================================================================
+
+/// <summary>OnApplyUserFlags (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>
+public class SingleTraderSignalsConfig
+{
+    public bool   AlEnabled              { get; set; } = true;
+    public bool   SatEnabled             { get; set; } = true;
+    public bool   FlatOlEnabled          { get; set; } = true;
+    public bool   PasGecEnabled          { get; set; } = true;
+    public bool   KarAlEnabled           { get; set; } = true;
+    public bool   ZararKesEnabled        { get; set; } = true;
+    public bool   GunSonuPozKapatEnabled { get; set; } = false;
+    public bool   TimeFilteringEnabled   { get; set; } = false;
+    public string StartDateTime          { get; set; } = "2025.05.25 09:35:00";
+    public string StopDateTime           { get; set; } = "2025.06.02 17:55:00";
+}
+
+/// <summary>OnApplyUserFlags2 (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>
+public class SingleTraderSaveConfig
+{
+    public bool OptimizationEnabled                 { get; set; } = false;
+    public bool SaveStatisticsToFile                { get; set; } = true;
+    public bool SaveFullStatsTxtEnabled             { get; set; } = true;
+    public bool SaveFullStatsCsvEnabled             { get; set; } = true;
+    public bool SaveMinimalStatsTxtEnabled          { get; set; } = true;
+    public bool SaveMinimalStatsCsvEnabled          { get; set; } = true;
+    public bool SaveFullListsTxtEnabled             { get; set; } = true;
+    public bool SaveFullListsCsvEnabled             { get; set; } = true;
+    public bool SaveMinimalListsTxtEnabled          { get; set; } = true;
+    public bool SaveMinimalListsCsvEnabled          { get; set; } = true;
+    public bool SaveFullStatsTxtFormattedEnabled    { get; set; } = true;
+    public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SavePerformansTxtEnabled            { get; set; } = true;
+    public bool SavePerformansCsvEnabled            { get; set; } = true;
 }
 
 /// <summary>
