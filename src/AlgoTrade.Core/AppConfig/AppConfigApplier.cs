@@ -70,10 +70,15 @@ public static class AppConfigApplier
             StopDateTime           = cfg.Signals.StopDateTime,
         });
 
+        // Optimization
+        algoTrader.SetSingleTraderOptimizationConfig(new SingleTraderOptimizationConfig
+        {
+            OptimizationEnabled = cfg.Optimization.OptimizationEnabled,
+        });
+
         // Save (OnApplyUserFlags2 karşılığı)
         algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
         {
-            OptimizationEnabled                 = cfg.Save.OptimizationEnabled,
             SaveStatisticsToFile                = cfg.Save.SaveStatisticsToFile,
             SaveFullStatsTxtEnabled             = cfg.Save.SaveFullStatsTxtEnabled,
             SaveFullStatsCsvEnabled             = cfg.Save.SaveFullStatsCsvEnabled,
@@ -281,10 +286,15 @@ public static class AppConfigApplier
             PlotEnabled = cfg.SingleTrader.Plot.PlotEnabled,
         });
 
+        // Best trader — Optimization
+        algoTrader.SetSingleTraderOptimizationConfig(new SingleTraderOptimizationConfig
+        {
+            OptimizationEnabled = cfg.SingleTrader.Optimization.OptimizationEnabled,
+        });
+
         // Best trader — Save
         algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
         {
-            OptimizationEnabled                 = cfg.SingleTrader.Save.OptimizationEnabled,
             SaveStatisticsToFile                = cfg.SingleTrader.Save.SaveStatisticsToFile,
             SaveFullStatsTxtEnabled             = cfg.SingleTrader.Save.SaveFullStatsTxtEnabled,
             SaveFullStatsCsvEnabled             = cfg.SingleTrader.Save.SaveFullStatsCsvEnabled,

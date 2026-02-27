@@ -147,10 +147,9 @@ public class TraderSignalsConfig
     public string StopDateTime           { get; set; } = "2025.06.02 17:55:00";
 }
 
-/// <summary>SingleTrader kayıt ve optimizasyon bayrakları (OnApplyUserFlags2 karşılığı).</summary>
+/// <summary>SingleTrader kayıt bayrakları (OnApplyUserFlags2 karşılığı).</summary>
 public class TraderSaveConfig
 {
-    public bool OptimizationEnabled                 { get; set; } = false;
     public bool SaveStatisticsToFile                { get; set; } = false;
     public bool SaveFullStatsTxtEnabled             { get; set; } = true;
     public bool SaveFullStatsCsvEnabled             { get; set; } = true;
@@ -186,6 +185,12 @@ public class TraderPlotConfig
     public bool PlotEnabled { get; set; } = false;
 }
 
+/// <summary>SingleTrader optimizasyon modu ayarları.</summary>
+public class TraderOptimizationConfig
+{
+    public bool OptimizationEnabled { get; set; } = false;
+}
+
 // =============================================================================
 // SingleTrader
 // =============================================================================
@@ -199,9 +204,10 @@ public class SingleTraderConfig
     public QueryRef?           Query             { get; set; }
     public EcfRef?             EquityCurveFilter { get; set; }
     public TradeParamsConfig   TradeParams       { get; set; } = new();
-    public TraderSignalsConfig Signals           { get; set; } = new();
-    public TraderPlotConfig    Plot              { get; set; } = new();
-    public TraderSaveConfig    Save              { get; set; } = new();
+    public TraderSignalsConfig      Signals      { get; set; } = new();
+    public TraderPlotConfig         Plot         { get; set; } = new();
+    public TraderOptimizationConfig Optimization { get; set; } = new();
+    public TraderSaveConfig         Save         { get; set; } = new();
 }
 
 // =============================================================================
@@ -277,6 +283,7 @@ public class SingleTraderOptSortConfig
 /// <summary>Best trader (optimizasyon sonucu) için ayarlar.</summary>
 public class SingleTraderOptTraderConfig
 {
-    public TraderPlotConfig Plot { get; set; } = new();
-    public TraderSaveConfig Save { get; set; } = new();
+    public TraderPlotConfig         Plot         { get; set; } = new();
+    public TraderOptimizationConfig Optimization { get; set; } = new();
+    public TraderSaveConfig         Save         { get; set; } = new();
 }

@@ -99,7 +99,6 @@ public static class AppConfigLoader
             },
             Save = new TraderSaveConfig
             {
-                OptimizationEnabled                 = false,
                 SaveStatisticsToFile                = false,
                 SaveFullStatsTxtEnabled             = true,
                 SaveFullStatsCsvEnabled             = true,
@@ -117,6 +116,10 @@ public static class AppConfigLoader
             Plot = new TraderPlotConfig
             {
                 PlotEnabled = false
+            },
+            Optimization = new TraderOptimizationConfig
+            {
+                OptimizationEnabled = false
             },
         },
 
@@ -153,8 +156,9 @@ public static class AppConfigLoader
             Sort              = new SingleTraderOptSortConfig(),
             SingleTrader      = new SingleTraderOptTraderConfig
             {
-                Plot = new TraderPlotConfig { PlotEnabled = false },
-                Save = new TraderSaveConfig()
+                Plot         = new TraderPlotConfig         { PlotEnabled         = false },
+                Optimization = new TraderOptimizationConfig { OptimizationEnabled = true  },
+                Save         = new TraderSaveConfig()
             }
         }
     };

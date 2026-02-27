@@ -107,7 +107,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private InitialTradeParams?         _singleTraderTradeParamsConfig = null;
     private SingleTraderSignalsConfig?  _singleTraderSignalsConfig     = null;
     private SingleTraderSaveConfig?     _singleTraderSaveConfig        = null;
-    private SingleTraderPlotConfig?     _singleTraderPlotConfig        = null;
+    private SingleTraderPlotConfig?         _singleTraderPlotConfig         = null;
+    private SingleTraderOptimizationConfig? _singleTraderOptimizationConfig = null;
     private SingleTraderSignalsConfig?  _singleTraderOptSignalsConfig  = null;
     private SingleTraderOptLogConfig?   _singleTraderOptLogConfig      = null;
     private SingleTraderOptSortOutputConfig?  _singleTraderOptSortConfig     = null;
@@ -862,6 +863,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _singleTraderPlotConfig = config;
     }
 
+    public void SetSingleTraderOptimizationConfig(SingleTraderOptimizationConfig config)
+    {
+        _singleTraderOptimizationConfig = config;
+    }
+
     public void SetSingleTraderOptSignalsConfig(SingleTraderSignalsConfig config)
     {
         _singleTraderOptSignalsConfig = config;
@@ -909,9 +915,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.StopTimeStr = stopDt.ToString("HH:mm:ss");
         }
 
+        if (_singleTraderOptimizationConfig is { } oc)
+            trader.OptimizationEnabled = oc.OptimizationEnabled;
+
         if (_singleTraderSaveConfig is { } sv)
         {
-            trader.OptimizationEnabled                = sv.OptimizationEnabled;
             trader.SaveStatisticsToFile               = sv.SaveStatisticsToFile;
             trader.SaveFullStatsTxtEnabled            = sv.SaveFullStatsTxtEnabled;
             trader.SaveFullStatsCsvEnabled            = sv.SaveFullStatsCsvEnabled;
@@ -2199,7 +2207,6 @@ public class SingleTraderSignalsConfig
 /// <summary>OnApplyUserFlags2 (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>
 public class SingleTraderSaveConfig
 {
-    public bool OptimizationEnabled                 { get; set; } = false;
     public bool SaveStatisticsToFile                { get; set; } = true;
     public bool SaveFullStatsTxtEnabled             { get; set; } = true;
     public bool SaveFullStatsCsvEnabled             { get; set; } = true;
@@ -2232,6 +2239,11 @@ public class SingleTraderSaveConfig
 public class SingleTraderPlotConfig
 {
     public bool PlotEnabled { get; set; } = false;
+}
+
+public class SingleTraderOptimizationConfig
+{
+    public bool OptimizationEnabled { get; set; } = false;
 }
 
 public class SingleTraderOptLogConfig

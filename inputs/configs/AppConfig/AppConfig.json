@@ -63,8 +63,10 @@
     "Plot": {
       "PlotEnabled": true,
     },
-    "Save": {
+    "Optimization": {
       "OptimizationEnabled": false,
+    },
+    "Save": {
       "SaveStatisticsToFile": true,
       "SaveFullStatsTxtEnabled": true,
       "SaveFullStatsCsvEnabled": true,
@@ -207,8 +209,10 @@
       "Plot": {
         "PlotEnabled": false
       },
-      "Save": {
+      "Optimization": {
         "OptimizationEnabled": true,
+      },
+      "Save": {
         "SaveStatisticsToFile": false,
         "SaveFullStatsTxtEnabled": true,
         "SaveFullStatsCsvEnabled": true,

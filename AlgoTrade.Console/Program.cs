@@ -1139,13 +1139,13 @@ void showSingleTraderRunPreview(TraderRunMode mode)
     switch (mode)
     {
         case TraderRunMode.TradeOnly:
-            preview = new { RunMode = runModeStr, Strategy = strategySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Save };
+            preview = new { RunMode = runModeStr, Strategy = strategySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Optimization, cfg.Save };
             break;
         case TraderRunMode.TradeAndQuery:
-            preview = new { RunMode = runModeStr, Strategy = strategySection, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Save };
+            preview = new { RunMode = runModeStr, Strategy = strategySection, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Optimization, cfg.Save };
             break;
         default: // QueryOnly
-            preview = new { RunMode = runModeStr, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Save };
+            preview = new { RunMode = runModeStr, Query = querySection, EquityCurveFilter = ecfSection, cfg.TradeParams, cfg.Signals, cfg.Plot, cfg.Optimization, cfg.Save };
             break;
     }
 
@@ -1274,7 +1274,7 @@ void showSingleTraderOptRunPreview()
         cfg.Signals,
         cfg.Save,
         cfg.Sort,
-        SingleTrader      = new { cfg.SingleTrader.Plot, cfg.SingleTrader.Save }
+        SingleTrader      = new { cfg.SingleTrader.Plot, cfg.SingleTrader.Optimization, cfg.SingleTrader.Save }
     };
 
     string json = JsonSerializer.Serialize(preview, jsonOpts);
