@@ -351,8 +351,9 @@ public class SingleTraderOptimizer : IDisposable
             singleTrader.IsRunning = false;
             singleTrader.IsStopped = true;
 
-            // TODO : Get optimization results map iel başlayan kısımdan // Report optimization progress kısmına kadar olan bloklarda
-            // AppendSingleOptSummaryToFiles() içindeki dosyaya yazmaları AppConfig.jsondan yönetmeye gerek var mı? 
+            // ************************************************************************************************************
+            // ************************************************************************************************************
+            // ************************************************************************************************************
 
             // Get optimization results map
             var optResultsMap = singleTrader.statistics.GetOptimizationSummary();
@@ -370,6 +371,10 @@ public class SingleTraderOptimizer : IDisposable
 
             // Append to files
             AppendSingleOptSummaryToFiles(optResult, currentCombination);
+
+            // ************************************************************************************************************
+            // ************************************************************************************************************
+            // ************************************************************************************************************
 
             // Report optimization progress
             OnReadOptimizationResultsFile?.Invoke(this, singleTrader, currentCombination);
