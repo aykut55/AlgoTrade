@@ -1122,6 +1122,7 @@ AnaMenüde 5 ile SingleTrader menüsüne gelince orada seçimler yaptırıyor
         singleTrader için OnApplyUserFlags2  içinde set edilen seyleri
 Son adımda ENTER ile çalıştırmak
 
- * 
+ * AppConfig'e readStockData nın parametrelerini girmek ve kullancııdan onay istemek.
+ * Defaultları gösterir : ENTER ise okuma baslar, değilse kullanıcıdan parametre girişi istenir..
  * 
  */
