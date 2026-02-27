@@ -63,7 +63,7 @@ namespace AlgoTrade.Core.Trading.Queries
             _ma8 = Indicators.MA.SMA(closes, _ma8Period);
             _ma200 = Indicators.MA.SMA(closes, _ma200Period);
 
-            Log($"SimpleMAQuery initialized: MA8={_ma8Period}, MA200={_ma200Period}, Choice={_choice}");
+            //Log($"SimpleMAQuery initialized: MA8={_ma8Period}, MA200={_ma200Period}, Choice={_choice}");
         }
 
         public override List<object> OnExecute(int lastBarIndex)

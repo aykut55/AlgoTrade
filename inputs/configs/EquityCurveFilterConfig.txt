@@ -6,5 +6,8 @@
 
 v1|Disabled|enabled:bool:false|thresholdType:string:percent|profitThreshold:double:0.05|lossThreshold:double:-0.05|trigger:string:Both
 v2|PercentBoth|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.05|lossThreshold:double:-0.05|trigger:string:Both
-v3|PercentProfit|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.10|lossThreshold:double:-0.10|trigger:string:ProfitOnly
-v4|AbsoluteBoth|enabled:bool:true|thresholdType:string:absolute|profitThreshold:double:1000|lossThreshold:double:-1000|trigger:string:Both
+v3|PercentProfitOnly|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.05|lossThreshold:double:-0.05|trigger:string:ProfitOnly
+v4|PercentLossOnly|enabled:bool:true|thresholdType:string:percent|profitThreshold:double:0.05|lossThreshold:double:-0.05|trigger:string:LossOnly
+v5|AbsoluteBoth|enabled:bool:true|thresholdType:string:absolute|profitThreshold:double:1000|lossThreshold:double:-1000|trigger:string:Both
+v6|AbsoluteProfitOnly|enabled:bool:true|thresholdType:string:absolute|profitThreshold:double:1000|lossThreshold:double:-1000|trigger:string:ProfitOnly
+v7|AbsoluteLossOnly|enabled:bool:true|thresholdType:string:absolute|profitThreshold:double:1000|lossThreshold:double:-1000|trigger:string:LossOnly

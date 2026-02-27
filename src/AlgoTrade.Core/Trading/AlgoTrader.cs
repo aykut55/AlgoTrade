@@ -902,19 +902,19 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.SavePerformansTxtEnabled           = sv.SavePerformansTxtEnabled;
             trader.SavePerformansCsvEnabled           = sv.SavePerformansCsvEnabled;
 
-            // Dosya adları sabit kalır (SingleTrader prefix)
-            trader.FullStatsTxtFileName                = "SingleTraderStatistics.txt";
-            trader.FullStatsCsvFileName                = "SingleTraderStatistics.csv";
-            trader.MinimalStatsTxtFileName             = "SingleTraderStatisticsMinimal.txt";
-            trader.MinimalStatsCsvFileName             = "SingleTraderStatisticsMinimal.csv";
-            trader.FullListsTxtFileName                = "SingleTraderLists.txt";
-            trader.FullListsCsvFileName                = "SingleTraderLists.csv";
-            trader.MinimalListsTxtFileName             = "SingleTraderListsMinimal.txt";
-            trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
-            trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
-            trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
-            trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
-            trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+            // Dosya adları: AppConfig'den gelir, boşsa varsayılan değer korunur
+            if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFileName))             trader.FullStatsTxtFileName             = sv.FullStatsTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.FullStatsCsvFileName))             trader.FullStatsCsvFileName             = sv.FullStatsCsvFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFileName))          trader.MinimalStatsTxtFileName          = sv.MinimalStatsTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalStatsCsvFileName))          trader.MinimalStatsCsvFileName          = sv.MinimalStatsCsvFileName;
+            if (!string.IsNullOrWhiteSpace(sv.FullListsTxtFileName))             trader.FullListsTxtFileName             = sv.FullListsTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.FullListsCsvFileName))             trader.FullListsCsvFileName             = sv.FullListsCsvFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalListsTxtFileName))          trader.MinimalListsTxtFileName          = sv.MinimalListsTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          trader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
+            if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    trader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) trader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+            if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            trader.PerformansTxtFileName            = sv.PerformansTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            trader.PerformansCsvFileName            = sv.PerformansCsvFileName;
         }
     }
 
@@ -2178,6 +2178,20 @@ public class SingleTraderSaveConfig
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
     public bool SavePerformansTxtEnabled            { get; set; } = true;
     public bool SavePerformansCsvEnabled            { get; set; } = true;
+
+    // Çıktı dosya adları
+    public string FullStatsTxtFileName             { get; set; } = "SingleTraderStatistics.txt";
+    public string FullStatsCsvFileName             { get; set; } = "SingleTraderStatistics.csv";
+    public string MinimalStatsTxtFileName          { get; set; } = "SingleTraderStatisticsMinimal.txt";
+    public string MinimalStatsCsvFileName          { get; set; } = "SingleTraderStatisticsMinimal.csv";
+    public string FullListsTxtFileName             { get; set; } = "SingleTraderLists.txt";
+    public string FullListsCsvFileName             { get; set; } = "SingleTraderLists.csv";
+    public string MinimalListsTxtFileName          { get; set; } = "SingleTraderListsMinimal.txt";
+    public string MinimalListsCsvFileName          { get; set; } = "SingleTraderListsMinimal.csv";
+    public string FullStatsTxtFormattedFileName    { get; set; } = "SingleTraderStatisticsFormatted.txt";
+    public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsMinimalFormatted.txt";
+    public string PerformansTxtFileName            { get; set; } = "SingleTraderPerformans.txt";
+    public string PerformansCsvFileName            { get; set; } = "SingleTraderPerformans.csv";
 }
 
 /// <summary>

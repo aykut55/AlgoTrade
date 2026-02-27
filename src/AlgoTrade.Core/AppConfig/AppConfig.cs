@@ -132,6 +132,20 @@ public class TraderSaveConfig
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
     public bool SavePerformansTxtEnabled            { get; set; } = true;
     public bool SavePerformansCsvEnabled            { get; set; } = true;
+
+    // Çıktı dosya adları
+    public string FullStatsTxtFileName             { get; set; } = "SingleTraderStatistics.txt";
+    public string FullStatsCsvFileName             { get; set; } = "SingleTraderStatistics.csv";
+    public string MinimalStatsTxtFileName          { get; set; } = "SingleTraderStatisticsMinimal.txt";
+    public string MinimalStatsCsvFileName          { get; set; } = "SingleTraderStatisticsMinimal.csv";
+    public string FullListsTxtFileName             { get; set; } = "SingleTraderLists.txt";
+    public string FullListsCsvFileName             { get; set; } = "SingleTraderLists.csv";
+    public string MinimalListsTxtFileName          { get; set; } = "SingleTraderListsMinimal.txt";
+    public string MinimalListsCsvFileName          { get; set; } = "SingleTraderListsMinimal.csv";
+    public string FullStatsTxtFormattedFileName    { get; set; } = "SingleTraderStatisticsFormatted.txt";
+    public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsMinimalFormatted.txt";
+    public string PerformansTxtFileName            { get; set; } = "SingleTraderPerformans.txt";
+    public string PerformansCsvFileName            { get; set; } = "SingleTraderPerformans.csv";
 }
 
 // =============================================================================

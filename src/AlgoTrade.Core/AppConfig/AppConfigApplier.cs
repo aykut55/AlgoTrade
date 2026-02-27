@@ -28,6 +28,10 @@ public static class AppConfigApplier
     /// </summary>
     public static void ApplySingleTrader(AlgoTrader algoTrader, SingleTraderConfig cfg, string configsDir)
     {
+        // RunMode (AppConfig baseline — çağıran taraf sonradan override edebilir)
+        if (Enum.TryParse<TraderRunMode>(cfg.RunMode, ignoreCase: true, out var runMode))
+            algoTrader.SingleTraderRunMode = runMode;
+
         // Strategy
         string stratPath = Path.Combine(configsDir, cfg.Strategy.ConfigFile);
         algoTrader.ConfigureStrategyFromConfig(stratPath, cfg.Strategy.Name, cfg.Strategy.Version);
@@ -83,6 +87,18 @@ public static class AppConfigApplier
             SaveMinimalStatsTxtFormattedEnabled = cfg.Save.SaveMinimalStatsTxtFormattedEnabled,
             SavePerformansTxtEnabled            = cfg.Save.SavePerformansTxtEnabled,
             SavePerformansCsvEnabled            = cfg.Save.SavePerformansCsvEnabled,
+            FullStatsTxtFileName             = cfg.Save.FullStatsTxtFileName,
+            FullStatsCsvFileName             = cfg.Save.FullStatsCsvFileName,
+            MinimalStatsTxtFileName          = cfg.Save.MinimalStatsTxtFileName,
+            MinimalStatsCsvFileName          = cfg.Save.MinimalStatsCsvFileName,
+            FullListsTxtFileName             = cfg.Save.FullListsTxtFileName,
+            FullListsCsvFileName             = cfg.Save.FullListsCsvFileName,
+            MinimalListsTxtFileName          = cfg.Save.MinimalListsTxtFileName,
+            MinimalListsCsvFileName          = cfg.Save.MinimalListsCsvFileName,
+            FullStatsTxtFormattedFileName    = cfg.Save.FullStatsTxtFormattedFileName,
+            MinimalStatsTxtFormattedFileName = cfg.Save.MinimalStatsTxtFormattedFileName,
+            PerformansTxtFileName            = cfg.Save.PerformansTxtFileName,
+            PerformansCsvFileName            = cfg.Save.PerformansCsvFileName,
         });
     }
 

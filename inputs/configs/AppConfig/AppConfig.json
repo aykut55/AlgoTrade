@@ -56,7 +56,19 @@
       "SaveFullStatsTxtFormattedEnabled": true,
       "SaveMinimalStatsTxtFormattedEnabled": true,
       "SavePerformansTxtEnabled": true,
-      "SavePerformansCsvEnabled": true
+      "SavePerformansCsvEnabled": true,
+      "FullStatsTxtFileName": "SingleTraderStatistics.txt",
+      "FullStatsCsvFileName": "SingleTraderStatistics.csv",
+      "MinimalStatsTxtFileName": "SingleTraderStatisticsMinimal.txt",
+      "MinimalStatsCsvFileName": "SingleTraderStatisticsMinimal.csv",
+      "FullListsTxtFileName": "SingleTraderLists.txt",
+      "FullListsCsvFileName": "SingleTraderLists.csv",
+      "MinimalListsTxtFileName": "SingleTraderListsMinimal.txt",
+      "MinimalListsCsvFileName": "SingleTraderListsMinimal.csv",
+      "FullStatsTxtFormattedFileName": "SingleTraderStatisticsFormatted.txt",
+      "MinimalStatsTxtFormattedFileName": "SingleTraderStatisticsMinimalFormatted.txt",
+      "PerformansTxtFileName": "SingleTraderPerformans.txt",
+      "PerformansCsvFileName": "SingleTraderPerformans.csv"
     }
   },
 
