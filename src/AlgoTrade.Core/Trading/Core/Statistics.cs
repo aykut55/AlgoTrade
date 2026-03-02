@@ -896,7 +896,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                     StatisticsMap[key] = "...";
                     return;
                 }
-                StatisticsMap[key] = string.IsNullOrEmpty(format) ? value.ToString() : string.Format(CultureInfo.InvariantCulture, "{0:" + format + "}", value);
+                StatisticsMap[key] = string.IsNullOrEmpty(format) ? string.Format(CultureInfo.InvariantCulture, "{0}", value) : string.Format(CultureInfo.InvariantCulture, "{0:" + format + "}", value);
             }
 
             // --- Identification ---
@@ -1271,7 +1271,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                     StatisticsMapMinimal[key] = "...";
                     return;
                 }
-                StatisticsMapMinimal[key] = string.IsNullOrEmpty(format) ? value.ToString() : string.Format("{0:" + format + "}", value);
+                StatisticsMapMinimal[key] = string.IsNullOrEmpty(format) ? string.Format(CultureInfo.InvariantCulture, "{0}", value) : string.Format(CultureInfo.InvariantCulture, "{0:" + format + "}", value);
             }
 
             // --- Identification ---
@@ -1978,7 +1978,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append(current.ToString().PadLeft(4));
 
             foreach (var kvp in parameters)
-                sb.Append($" | {(kvp.Value?.ToString() ?? "").PadLeft(8)}");
+                sb.Append($" | {(Convert.ToString(kvp.Value, CultureInfo.InvariantCulture) ?? "").PadLeft(8)}");
 
             sb.Append($" | {$"[{current}/{total}]".PadLeft(11)}");
             sb.Append($" | {ScoreFiyatNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(11)}");

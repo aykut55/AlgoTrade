@@ -293,7 +293,7 @@ public class SingleTraderOptimizer : IDisposable
         LogManager.LogRaw($"Starting optimization: {totalCombinations} combinations total, running [{effectiveFrom}-{effectiveTo}]");
         foreach (var range in ParameterRanges)
         {
-            LogManager.LogRaw($"  - {range.Name}: {range.Min} to {range.Max} (step: {range.Step})");
+            LogManager.LogRaw($"  - {range.Name}: {range.Min.ToString(CultureInfo.InvariantCulture)} to {range.Max.ToString(CultureInfo.InvariantCulture)} (step: {range.Step.ToString(CultureInfo.InvariantCulture)})");
         }
         LogManager.LogRaw("");
         var headerLine = AlgoTrade.Core.Trading.Statistics.Statistics.GetOptimizationProgressHeader(AllCombinations[0].Keys);
@@ -368,7 +368,7 @@ public class SingleTraderOptimizer : IDisposable
             // Build OptimizationResult
             var optResult = new OptimizationResult();
             foreach (var kvp in paramCombo)
-                optResult.Parameters[kvp.Key] = kvp.Value?.ToString() ?? "";
+                optResult.Parameters[kvp.Key] = Convert.ToString(kvp.Value, CultureInfo.InvariantCulture) ?? "";
             optResult.Values = new Dictionary<string, string>(optResultsMap);
 
             Results.Add(optResult);
