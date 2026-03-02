@@ -1814,6 +1814,8 @@ void showMainMenu()
 
 async Task main()
 {
+    bool returnedFromAutoRun = false;
+
     AppSettings.EnsureDirectories();
 
     logger.RegisterSink(new ConsoleSink());
@@ -1844,33 +1846,45 @@ async Task main()
     var autoRun = appConfig.AppSettings.AutoRunMode?.Trim() ?? "";
     if (!string.IsNullOrEmpty(autoRun) && !autoRun.Equals("None", StringComparison.OrdinalIgnoreCase))
     {
-        LogManager.LogRaw($"[AutoRun] Mode: {autoRun}", ConsoleColor.Cyan);
-        readStockData(appConfig.ReadData);
-        switch (autoRun.ToUpperInvariant())
+        while (true)
         {
-            case "SINGLETRADER":
-                selectedRunMode = ParseRunMode(appConfig.SingleTrader.RunMode);
-                await runSingleTraderAlgoTrade();
-                break;
-            case "MULTIPLETRADER":
-                selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
-                await runMultipleTraderAlgoTrade();
-                break;
-            case "SINGLETRADEROPTIMIZER":
-                await runSingleTraderOptimization();
-                break;
-            default:
-                LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOptimizer", ConsoleColor.Red);
-                break;
+            LogManager.LogRaw($"[AutoRun] Mode: {autoRun}", ConsoleColor.Cyan);
+            readStockData(appConfig.ReadData);
+            switch (autoRun.ToUpperInvariant())
+            {
+                case "SINGLETRADER":
+                    selectedRunMode = ParseRunMode(appConfig.SingleTrader.RunMode);
+                    await runSingleTraderAlgoTrade();
+                    break;
+                case "MULTIPLETRADER":
+                    selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
+                    await runMultipleTraderAlgoTrade();
+                    break;
+                case "SINGLETRADEROPTIMIZER":
+                    await runSingleTraderOptimization();
+                    break;
+                default:
+                    LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOptimizer", ConsoleColor.Red);
+                    break;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+            Console.WriteLine();
+            var postRunInput = ReadMenuInput();
+            if (postRunInput == null) { exitRequested = true; break; } // ESC → program çıkışı
+            if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+            returnedFromAutoRun = true;
+            break; // ENTER/diğer tuşlar → ana menü
         }
-        return; // Menüye geçmeden çık
     }
 
     bool running = true;
     while (running && !exitRequested)
     {
         showMainMenu();
-        var input = MenuInput("5");
+        var input = returnedFromAutoRun ? MenuInput("") : MenuInput("5");
+        returnedFromAutoRun = false;
         if (input == null) { running = false; break; }
         if (string.IsNullOrEmpty(input)) input = "5";
 
