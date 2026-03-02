@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using AlgoTrade.Core.Trading.Utils;
@@ -220,8 +221,11 @@ public class SingleTraderOptimizer : IDisposable
         singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
         singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 
-        // Configure position sizing
-        singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: IlkBakiye).SetKontratParamsViopEndex(kontratSayisi: KontratSayisi).SetKomisyonParams(komisyonCarpan: KomisyonCarpan).SetKaymaParams(kaymaMiktari: KaymaMiktari);
+        // Configure position sizing — AppConfig.SingleTraderOptimizer.TradeParams
+        if (TradeParamsOverride is not null)
+            singleTrader.initialTradeParams!.ApplyFrom(TradeParamsOverride);
+        else
+            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: IlkBakiye).SetKontratParamsViopEndex(kontratSayisi: KontratSayisi).SetKomisyonParams(komisyonCarpan: KomisyonCarpan).SetKaymaParams(kaymaMiktari: KaymaMiktari);
 
         // Apply configs (AppConfig.SingleTraderOptimizer — Signals + optimization mode flags)
         ApplyConfigsToTrader(singleTrader);
@@ -876,6 +880,13 @@ public class SingleTraderOptimizer : IDisposable
     public int    KontratSayisi  { get; set; } = 1;
     public double KomisyonCarpan { get; set; } = 20.0;
     public double KaymaMiktari   { get; set; } = 0.5;
+
+    /// <summary>
+    /// AppConfig'den gelen tam InitialTradeParams (MarketType dahil).
+    /// Null değilse createSingleTrader() içinde ApplyFrom() ile uygulanır;
+    /// null ise IlkBakiye/KontratSayisi/KomisyonCarpan/KaymaMiktari ile ViopEndex fallback kullanılır.
+    /// </summary>
+    public InitialTradeParams? TradeParamsOverride { get; set; }
 
     #endregion
 

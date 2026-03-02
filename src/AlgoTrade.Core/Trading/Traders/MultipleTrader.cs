@@ -149,7 +149,32 @@ public class MultipleTrader
     #region Consensus & Run
 
     /// <summary>
-    /// Build consensus signal from all traders (sinyal sayisi bazli - her trader = 1 oy)
+    /// Build consensus signal from all traders (sinyal sayisi bazli - her trader = 1 oy).
+    ///
+    /// Şu an hardcoded "Net" modunda çalışır (buyCount - sellCount).
+    /// AppConfig.json'daki MultipleTrader.Consensus bloğu gelecekte bu davranışı kontrol edecek:
+    ///
+    ///   Mode: Net (varsayılan)
+    ///     buyCount - sellCount > MinNetCount  → Buy
+    ///     buyCount - sellCount &lt; -MinNetCount → Sell
+    ///     aksi                                → Flat
+    ///
+    ///   Mode: Majority
+    ///     buyCount  > N/2 → Buy
+    ///     sellCount > N/2 → Sell
+    ///     aksi            → Flat
+    ///
+    ///   Mode: All
+    ///     tüm child'lar aynı yönde → o yön
+    ///     aksi                    → Flat
+    ///
+    ///   Mode: Any
+    ///     en az 1 Buy  → Buy
+    ///     en az 1 Sell → Sell  (ikisi de varsa → Flat)
+    ///     aksi         → Flat
+    ///
+    /// TODO: ConsensusConfig alanı AlgoTrader'a bağlandığında bu metot
+    ///       config.Mode ve config.MinNetCount'u okuyacak şekilde güncellenmeli.
     /// </summary>
     public TradeSignals BuildConsensusSignal()
     {

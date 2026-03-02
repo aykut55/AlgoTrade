@@ -225,6 +225,29 @@ public class MultipleTraderSaveConfig
     public bool   SaveMultipleTraderListsCsvEnabled   { get; set; } = true;
     public string MultipleTraderListsTxtFileName      { get; set; } = "MultipleTraderLists.txt";
     public string MultipleTraderListsCsvFileName      { get; set; } = "MultipleTraderLists.csv";
+
+    /// <summary>
+    /// MainTrader ve child trader dosya isimlerine eklenen ön ek.
+    /// MainTrader → {FilePrefix}_Main_{FileName}
+    /// ChildTrader → {FilePrefix}_Child{i}_{FileName}
+    /// </summary>
+    public string FilePrefix                          { get; set; } = "MultipleTrader";
+}
+
+/// <summary>
+/// BuildConsensusSignal() için konfigürasyon.
+/// Mode:
+///   Net      → buyCount - sellCount &gt; 0 → Buy; &lt; 0 → Sell; = 0 → Flat  (varsayılan)
+///   Majority → buyCount &gt; N/2 → Buy; sellCount &gt; N/2 → Sell; aksi → Flat
+///   All      → tüm child aynı yönde → o yön; aksi → Flat
+///   Any      → en az 1 Buy → Buy; en az 1 Sell → Sell; ikisi de varsa → Flat
+/// MinNetCount: Net modunda minimum net fark eşiği (varsayılan: 1).
+///   Örn. MinNetCount=2 → buyCount - sellCount &gt;= 2 ise Buy, &lt;= -2 ise Sell.
+/// </summary>
+public class ConsensusConfig
+{
+    public string Mode        { get; set; } = "Net";
+    public int    MinNetCount { get; set; } = 1;
 }
 
 /// <summary>
@@ -265,6 +288,9 @@ public class MultipleTraderConfig
 
     /// <summary>MultipleTrader nesnesinin liste/kayıt ayarları.</summary>
     public MultipleTraderSaveConfig Save   { get; set; } = new();
+
+    /// <summary>BuildConsensusSignal() davranışını belirler.</summary>
+    public ConsensusConfig    Consensus    { get; set; } = new();
 
     /// <summary>Ana trader konfigürasyonu (composite sinyal → gerçek işlem).</summary>
     public MainTraderConfig   MainTrader   { get; set; } = new();

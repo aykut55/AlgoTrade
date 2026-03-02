@@ -1167,11 +1167,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             singleTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             
-            // Configure position sizing
-            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            singleTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-            // AppConfig trade params override varsa uygula
+            // Configure position sizing — AppConfig.SingleTrader.TradeParams
             if (_singleTraderTradeParamsConfig != null)
                 singleTrader.initialTradeParams!.ApplyFrom(_singleTraderTradeParamsConfig);
 
@@ -1459,7 +1455,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 
-            // TradeParams — AppConfig.MultipleTrader.MainTrader.TradeParams'tan gelir
+            // Configure position sizing — AppConfig.MultipleTrader.MainTrader.TradeParams (tüm child'lara uygulanır)
             childTrader.initialTradeParams!.ApplyFrom(config.TradeParams);
 
             // Sıralama Onemli
@@ -1649,8 +1645,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             mainTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             mainTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             
-            // Sıralama Onemli
-            // AppConfig.MultipleTrader.MainTrader.TradeParams
+            // Configure position sizing — AppConfig.MultipleTrader.MainTrader.TradeParams
             if (_singleTraderTradeParamsConfig is not null)
                 mainTrader.initialTradeParams!.ApplyFrom(_singleTraderTradeParamsConfig);
 
@@ -1987,6 +1982,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 singleTraderOptimizer.KomisyonCarpan = tp.KomisyonCarpan;
                 singleTraderOptimizer.KaymaMiktari   = tp.KaymaMiktari;
             }
+
+            // Full InitialTradeParams (MarketType dahil) — createSingleTrader() içinde ApplyFrom ile kullanılır
+            singleTraderOptimizer.TradeParamsOverride = _singleTraderTradeParamsConfig;
 
             // TODO: ECF bloğu da stored config pattern'e alınacak (_equityCurveFilterConfigs → kendi stored config'i).
             // Set equity curve filter config (id=0 varsa optimizer'a aktar)

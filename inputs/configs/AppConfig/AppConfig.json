@@ -103,7 +103,21 @@
       "SaveMultipleTraderListsTxtEnabled": true,
       "SaveMultipleTraderListsCsvEnabled": true,
       "MultipleTraderListsTxtFileName": "MultipleTraderLists.txt",
-      "MultipleTraderListsCsvFileName": "MultipleTraderLists.csv"
+      "MultipleTraderListsCsvFileName": "MultipleTraderLists.csv",
+      // FilePrefix: MainTrader → {FilePrefix}_Main_{FileName}  |  Child → {FilePrefix}_Child{i}_{FileName}
+      "FilePrefix": "MultipleTrader"
+    },
+
+    "Consensus": {
+      // Mode     : Net | Majority | All | Any
+      //   Net      → buyCount - sellCount > 0  → Buy; < 0 → Sell; = 0 → Flat  (varsayılan)
+      //   Majority → buyCount > N/2 → Buy; sellCount > N/2 → Sell; aksi → Flat
+      //   All      → tüm child aynı yönde → o yön; aksi → Flat
+      //   Any      → en az 1 Buy → Buy; en az 1 Sell → Sell; ikisi de varsa → Flat
+      // MinNetCount: Net modunda minimum net fark eşiği (varsayılan: 1)
+      //   Örn. MinNetCount=2 → buyCount - sellCount >= 2 ise Buy
+      "Mode": "Net",
+      "MinNetCount": 1
     },
 
     "MainTrader": {

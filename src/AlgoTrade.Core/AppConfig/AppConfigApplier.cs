@@ -176,6 +176,9 @@ public static class AppConfigApplier
             PlotEnabled = cfg.MainTrader.Plot.PlotEnabled,
         });
 
+        // FilePrefix — MainTrader: {prefix}_Main_{file}, Child: {prefix}_Child{i}_{file}
+        string filePrefix = cfg.Save.FilePrefix;
+
         // Save
         var ms = cfg.MainTrader.Save;
         algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
@@ -193,18 +196,18 @@ public static class AppConfigApplier
             SaveMinimalStatsTxtFormattedEnabled = ms.SaveMinimalStatsTxtFormattedEnabled,
             SavePerformansTxtEnabled            = ms.SavePerformansTxtEnabled,
             SavePerformansCsvEnabled            = ms.SavePerformansCsvEnabled,
-            FullStatsTxtFileName                = ms.FullStatsTxtFileName,
-            FullStatsCsvFileName                = ms.FullStatsCsvFileName,
-            MinimalStatsTxtFileName             = ms.MinimalStatsTxtFileName,
-            MinimalStatsCsvFileName             = ms.MinimalStatsCsvFileName,
-            FullListsTxtFileName                = ms.FullListsTxtFileName,
-            FullListsCsvFileName                = ms.FullListsCsvFileName,
-            MinimalListsTxtFileName             = ms.MinimalListsTxtFileName,
-            MinimalListsCsvFileName             = ms.MinimalListsCsvFileName,
-            FullStatsTxtFormattedFileName       = ms.FullStatsTxtFormattedFileName,
-            MinimalStatsTxtFormattedFileName    = ms.MinimalStatsTxtFormattedFileName,
-            PerformansTxtFileName               = ms.PerformansTxtFileName,
-            PerformansCsvFileName               = ms.PerformansCsvFileName,
+            FullStatsTxtFileName                = $"{filePrefix}_Main_{ms.FullStatsTxtFileName}",
+            FullStatsCsvFileName                = $"{filePrefix}_Main_{ms.FullStatsCsvFileName}",
+            MinimalStatsTxtFileName             = $"{filePrefix}_Main_{ms.MinimalStatsTxtFileName}",
+            MinimalStatsCsvFileName             = $"{filePrefix}_Main_{ms.MinimalStatsCsvFileName}",
+            FullListsTxtFileName                = $"{filePrefix}_Main_{ms.FullListsTxtFileName}",
+            FullListsCsvFileName                = $"{filePrefix}_Main_{ms.FullListsCsvFileName}",
+            MinimalListsTxtFileName             = $"{filePrefix}_Main_{ms.MinimalListsTxtFileName}",
+            MinimalListsCsvFileName             = $"{filePrefix}_Main_{ms.MinimalListsCsvFileName}",
+            FullStatsTxtFormattedFileName       = $"{filePrefix}_Main_{ms.FullStatsTxtFormattedFileName}",
+            MinimalStatsTxtFormattedFileName    = $"{filePrefix}_Main_{ms.MinimalStatsTxtFormattedFileName}",
+            PerformansTxtFileName               = $"{filePrefix}_Main_{ms.PerformansTxtFileName}",
+            PerformansCsvFileName               = $"{filePrefix}_Main_{ms.PerformansCsvFileName}",
         });
 
         // =====================================================================
@@ -330,8 +333,9 @@ public static class AppConfigApplier
                 StopDateTime           = cs.StopDateTime,
             };
 
-            // Save — per-child, dosya adları JSON'dan direkt (prefix koda bırakıldı)
+            // Save — per-child, dosya adlarına {filePrefix}_Child{i}_ ön eki eklenir
             var sv = child.Save;
+            string cp = $"{filePrefix}_Child{i}";
             entry.Save = new SingleTraderSaveConfig
             {
                 SaveStatisticsToFile                = sv.SaveStatisticsToFile,
@@ -347,18 +351,18 @@ public static class AppConfigApplier
                 SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled,
                 SavePerformansTxtEnabled            = sv.SavePerformansTxtEnabled,
                 SavePerformansCsvEnabled            = sv.SavePerformansCsvEnabled,
-                FullStatsTxtFileName                = sv.FullStatsTxtFileName,
-                FullStatsCsvFileName                = sv.FullStatsCsvFileName,
-                MinimalStatsTxtFileName             = sv.MinimalStatsTxtFileName,
-                MinimalStatsCsvFileName             = sv.MinimalStatsCsvFileName,
-                FullListsTxtFileName                = sv.FullListsTxtFileName,
-                FullListsCsvFileName                = sv.FullListsCsvFileName,
-                MinimalListsTxtFileName             = sv.MinimalListsTxtFileName,
-                MinimalListsCsvFileName             = sv.MinimalListsCsvFileName,
-                FullStatsTxtFormattedFileName       = sv.FullStatsTxtFormattedFileName,
-                MinimalStatsTxtFormattedFileName    = sv.MinimalStatsTxtFormattedFileName,
-                PerformansTxtFileName               = sv.PerformansTxtFileName,
-                PerformansCsvFileName               = sv.PerformansCsvFileName,
+                FullStatsTxtFileName                = $"{cp}_{sv.FullStatsTxtFileName}",
+                FullStatsCsvFileName                = $"{cp}_{sv.FullStatsCsvFileName}",
+                MinimalStatsTxtFileName             = $"{cp}_{sv.MinimalStatsTxtFileName}",
+                MinimalStatsCsvFileName             = $"{cp}_{sv.MinimalStatsCsvFileName}",
+                FullListsTxtFileName                = $"{cp}_{sv.FullListsTxtFileName}",
+                FullListsCsvFileName                = $"{cp}_{sv.FullListsCsvFileName}",
+                MinimalListsTxtFileName             = $"{cp}_{sv.MinimalListsTxtFileName}",
+                MinimalListsCsvFileName             = $"{cp}_{sv.MinimalListsCsvFileName}",
+                FullStatsTxtFormattedFileName       = $"{cp}_{sv.FullStatsTxtFormattedFileName}",
+                MinimalStatsTxtFormattedFileName    = $"{cp}_{sv.MinimalStatsTxtFormattedFileName}",
+                PerformansTxtFileName               = $"{cp}_{sv.PerformansTxtFileName}",
+                PerformansCsvFileName               = $"{cp}_{sv.PerformansCsvFileName}",
             };
         });
     }
@@ -383,7 +387,9 @@ public static class AppConfigApplier
             OptimizationTo   = cfg.Range.OptimizationTo,
         });
 
-        // TradeParams
+        // TradeParams (MarketType dahil tam params — createSingleTrader() TradeParamsOverride olarak kullanır)
+        algoTrader.SetSingleTraderTradeParams(BuildInitialTradeParams(cfg.TradeParams));
+
         algoTrader.SetSingleTraderOptTradeParamsConfig(new TradingOptTradeParamsConfig
         {
             IlkBakiye      = cfg.TradeParams.IlkBakiye,
