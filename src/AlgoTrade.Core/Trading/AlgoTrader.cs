@@ -1275,8 +1275,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.Finalize();
 
             // Pipe ile (default)
-            var header = singleTrader.GetStatisticsHeaderRow(); // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
-            var data   = singleTrader.GetStatisticsDataRow();   // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
+            var header = singleTrader.GetStatisticsHeaderRow();
+            var data   = singleTrader.GetStatisticsDataRow();
 
             // Noktalı virgülle (CSV için)
             var csvHeader = singleTrader.GetStatisticsHeaderRow(";");

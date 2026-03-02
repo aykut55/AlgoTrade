@@ -235,9 +235,9 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double ProfitFactorNet { get; set; }  // Commission-adjusted profit factor
         public double ProfitFactorSistem { get; set; }
         public double KarliIslemOrani { get; set; }
-        public double ScoreFiyatNet { get; set; }   // TODO : Bunu tüm log dosyalarına ekle
-        public double ScoreFiyat { get; set; }      // TODO : Bunu tüm log dosyalarına ekle
-        public double ScorePuan { get; set; }       // TODO : Bunu tüm log dosyalarına ekle
+        public double ScoreFiyatNet { get; set; }
+        public double ScoreFiyat { get; set; }
+        public double ScorePuan { get; set; }
 
         #endregion
 
