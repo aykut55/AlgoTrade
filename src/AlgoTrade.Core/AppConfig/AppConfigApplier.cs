@@ -432,6 +432,7 @@ public static class AppConfigApplier
             AppendEnabled                       = cfg.Save.AppendEnabled,
             StatisticsExporterConfigFileEnabled = cfg.Save.StatisticsExporterConfigFileEnabled,
             StatisticsExporterConfigFile        = cfg.Save.StatisticsExporterConfigFile,
+            FileFlushIntervalMs                 = cfg.Save.FileFlushIntervalMs,
         });
 
         // Sort

@@ -1919,12 +1919,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             // Optimization log file settings
             if (_singleTraderOptLogConfig is { } lg)
             {
-                singleTraderOptimizer.CsvFileLoggingEnabled = lg.CsvFileLoggingEnabled;
-                singleTraderOptimizer.CsvFilePath           = Path.Combine(AppSettings.OptLogsDir, lg.CsvFileName);
-                singleTraderOptimizer.TxtFileLoggingEnabled = lg.TxtFileLoggingEnabled;
-                singleTraderOptimizer.TxtFilePath           = Path.Combine(AppSettings.OptLogsDir, lg.TxtFileName);
-                singleTraderOptimizer.AppendEnabled         = lg.AppendEnabled;
-                singleTraderOptimizer.ConfigFilePath        = lg.StatisticsExporterConfigFileEnabled
+                singleTraderOptimizer.CsvFileLoggingEnabled  = lg.CsvFileLoggingEnabled;
+                singleTraderOptimizer.CsvFilePath            = Path.Combine(AppSettings.OptLogsDir, lg.CsvFileName);
+                singleTraderOptimizer.TxtFileLoggingEnabled  = lg.TxtFileLoggingEnabled;
+                singleTraderOptimizer.TxtFilePath            = Path.Combine(AppSettings.OptLogsDir, lg.TxtFileName);
+                singleTraderOptimizer.AppendEnabled          = lg.AppendEnabled;
+                singleTraderOptimizer.FileFlushIntervalMs    = lg.FileFlushIntervalMs;
+                singleTraderOptimizer.ConfigFilePath         = lg.StatisticsExporterConfigFileEnabled
                     ? Path.Combine(AppSettings.ConfigsDir, lg.StatisticsExporterConfigFile)
                     : string.Empty;
             }
@@ -2345,6 +2346,7 @@ public class SingleTraderOptLogConfig
     public bool   AppendEnabled                       { get; set; } = true;
     public bool   StatisticsExporterConfigFileEnabled { get; set; } = true;
     public string StatisticsExporterConfigFile        { get; set; } = "StatisticsExporterConfig.json";
+    public int    FileFlushIntervalMs                 { get; set; } = -1;
 }
 
 public class SingleTraderOptSortOutputConfig

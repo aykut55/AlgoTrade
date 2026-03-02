@@ -364,7 +364,8 @@
       "CsvFileName": "singleTraderOptLog.csv",
       "TxtFileName": "singleTraderOptLog.txt",
       "StatisticsExporterConfigFile": "StatisticsExporterConfig.json",
-      "AppendEnabled": true
+      "AppendEnabled": true,
+      "FileFlushIntervalMs": -1
     },
     "Sort": {
       "SortField": "GetiriFiyatNet",

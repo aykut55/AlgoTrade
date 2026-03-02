@@ -337,6 +337,8 @@ public class SingleTraderOptSaveConfig
     public string TxtFileName                         { get; set; } = "singleTraderOptLog.txt";
     public string StatisticsExporterConfigFile        { get; set; } = "StatisticsExporterConfig.json";
     public bool   AppendEnabled                       { get; set; } = true;
+    /// <summary>-1: her kombinasyonda yaz. >=0: ms cinsinden aralıkta yaz (bellekte biriktirir).</summary>
+    public int    FileFlushIntervalMs                 { get; set; } = -1;
 }
 
 public class SingleTraderOptSortConfig

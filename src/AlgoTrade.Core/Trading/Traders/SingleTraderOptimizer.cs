@@ -129,11 +129,19 @@ public class SingleTraderOptimizer : IDisposable
     public string SortedCsvFilePath { get; set; } = "";
     public string SortedTxtFilePath { get; set; } = "";
 
+    // Optimization log file settings
+    /// <summary>-1: her kombinasyonda yaz. >=0: ms cinsinden aralıkta yaz (bellekte biriktirir).</summary>
+    public int FileFlushIntervalMs { get; set; } = -1;
+
     // Tracks which output files have been created/cleared in the current run (used when AppendEnabled=false)
     private readonly HashSet<string> _initializedFiles = new HashSet<string>();
 
     // Cached opt results for sorted output (loaded from file on first WriteSortedFiles() call)
     private List<(int CombNo, OptimizationResult Result)>? _cachedOptResults = null;
+
+    // Zaman bazlı flush için buffer ve zamanlayıcı
+    private readonly List<(int CombNo, OptimizationResult Result)> _pendingFlushResults = new();
+    private readonly System.Diagnostics.Stopwatch _flushStopwatch = new();
 
     #endregion
 
@@ -282,6 +290,8 @@ public class SingleTraderOptimizer : IDisposable
         var indicators = this.Indicators;
 
         Results.Clear();
+        _pendingFlushResults.Clear();
+        _flushStopwatch.Restart();
         int totalCombinations = AllCombinations.Count;
         int currentCombination = 0;
 
@@ -400,6 +410,10 @@ public class SingleTraderOptimizer : IDisposable
             singleTrader = null;
         }
 
+        // Bellekte kalan sonuçları diske yaz
+        if (_pendingFlushResults.Count > 0)
+            FlushPendingToFiles();
+
         LogManager.LogRaw($"Optimization completed! Tested {currentCombination}/{totalCombinations} combinations");
 
         IsRunning = false;
@@ -417,43 +431,53 @@ public class SingleTraderOptimizer : IDisposable
 
     private void AppendSingleOptSummaryToFiles(OptimizationResult optResult, int currentCombination)
     {
+        if (FileFlushIntervalMs < 0)
+        {
+            // -1: her kombinasyonda doğrudan yaz
+            WriteResultToFiles(optResult, currentCombination);
+            WriteSortedFilesIfEnabled();
+        }
+        else
+        {
+            // Zaman bazlı: buffer'a ekle, süre dolunca toplu yaz
+            _pendingFlushResults.Add((currentCombination, optResult));
+            if (_flushStopwatch.ElapsedMilliseconds >= FileFlushIntervalMs)
+                FlushPendingToFiles();
+        }
+    }
+
+    private void WriteResultToFiles(OptimizationResult optResult, int currentCombination)
+    {
         if (CsvFileLoggingEnabled && !string.IsNullOrEmpty(CsvFilePath))
         {
-            try
-            {
-                AppendSingleOptSummaryCsvFromConfig(optResult, currentCombination, CsvFilePath);
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogRaw($"Error appending OptSummary (config) to CSV: {ex.Message}");
-            }
+            try { AppendSingleOptSummaryCsvFromConfig(optResult, currentCombination, CsvFilePath); }
+            catch (Exception ex) { LogManager.LogRaw($"Error appending OptSummary (config) to CSV: {ex.Message}"); }
         }
 
         if (TxtFileLoggingEnabled && !string.IsNullOrEmpty(TxtFilePath))
         {
-            try
-            {
-                AppendSingleOptSummaryTxtFromConfig(optResult, currentCombination, TxtFilePath);
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogRaw($"Error appending OptSummary (config) to TXT: {ex.Message}");
-            }
+            try { AppendSingleOptSummaryTxtFromConfig(optResult, currentCombination, TxtFilePath); }
+            catch (Exception ex) { LogManager.LogRaw($"Error appending OptSummary (config) to TXT: {ex.Message}"); }
         }
+    }
 
-        // Her kombinasyondan sonra sorted dosyaları da güncelle
+    private void WriteSortedFilesIfEnabled()
+    {
         if ((CsvFileLoggingEnabled && !string.IsNullOrEmpty(SortedCsvFilePath)) ||
             (TxtFileLoggingEnabled && !string.IsNullOrEmpty(SortedTxtFilePath)))
         {
-            try
-            {
-                WriteSortedFiles();
-            }
-            catch (Exception ex)
-            {
-                LogManager.LogRaw($"Error writing sorted opt files: {ex.Message}");
-            }
+            try { WriteSortedFiles(); }
+            catch (Exception ex) { LogManager.LogRaw($"Error writing sorted opt files: {ex.Message}"); }
         }
+    }
+
+    private void FlushPendingToFiles()
+    {
+        foreach (var (combNo, result) in _pendingFlushResults)
+            WriteResultToFiles(result, combNo);
+        _pendingFlushResults.Clear();
+        WriteSortedFilesIfEnabled();
+        _flushStopwatch.Restart();
     }
 
     private void AppendSingleOptSummaryCsvFromConfig(
