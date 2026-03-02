@@ -2371,6 +2371,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double GetiriMaxDD;
             public double GetiriMaxKayip;
             public string GetiriMaxDDTarih;
+            public double ScoreFiyatNet;
+            public double ScoreFiyat;
+            public double ScorePuan;
 
             // Position Info
             public double VarlikAdedSayisi;
@@ -2397,7 +2400,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "BakiyeFiyatNet;GetiriFiyatNet;GetiriFiyatYuzdeNet;" +
                        "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;MinBakiyePuanYuzde;MaxBakiyePuanYuzde;" +
                        "MinBakiyeFiyatNet;MaxBakiyeFiyatNet;MinBakiyeFiyatNetYuzde;MaxBakiyeFiyatNetYuzde;" +
-                       "ProfitFactor;ProfitFactorPuan;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;" +
+                       "ProfitFactor;ProfitFactorPuan;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;ScoreFiyatNet;ScoreFiyat;ScorePuan;" +
                        "VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KomisyonCarpan;" +
                        "MicroLotSizeEnabled;PyramidingEnabled;MaxPositionSizeEnabled";
             }
@@ -2417,7 +2420,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{BakiyeFiyatNet:F2};{GetiriFiyatNet:F2};{GetiriFiyatYuzdeNet:F2};" +
                        $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};{MinBakiyePuanYuzde:F2};{MaxBakiyePuanYuzde:F2};" +
                        $"{MinBakiyeFiyatNet:F2};{MaxBakiyeFiyatNet:F2};{MinBakiyeFiyatNetYuzde:F2};{MaxBakiyeFiyatNetYuzde:F2};" +
-                       $"{ProfitFactor:F2};{ProfitFactorPuan:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};" +
+                       $"{ProfitFactor:F2};{ProfitFactorPuan:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};{ScoreFiyatNet:F2};{ScoreFiyat:F2};{ScorePuan:F2};" +
                        $"{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{SonVarlikAdedSayisi:F2};{SonVarlikAdedSayisiMicro:F4};{KomisyonCarpan:F4};" +
                        $"{MicroLotSizeEnabled};{PyramidingEnabled};{MaxPositionSizeEnabled}";
             }
@@ -2444,7 +2447,10 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{ProfitFactor,8:F2} | " +
                        $"{ProfitFactorNet,8:F2} | " +
                        $"{GetiriMaxDD,10:F2} | " +
-                       $"{KarliIslemOrani,10:F2}";
+                       $"{KarliIslemOrani,10:F2} | " +
+                       $"{ScoreFiyatNet,10:F2} | " +
+                       $"{ScoreFiyat,10:F2} | " +
+                       $"{ScorePuan,10:F2}";
             }
 
             /// <summary>
@@ -2469,7 +2475,10 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{"ProfitF",8} | " +
                        $"{"ProfitFNet",8} | " +
                        $"{"MaxDD%",10} | " +
-                       $"{"KarliOran",10}";
+                       $"{"KarliOran",10} | " +
+                       $"{"ScoreNet",10} | " +
+                       $"{"ScoreFiyat",10} | " +
+                       $"{"ScorePuan",10}";
             }
 
             /// <summary>
@@ -2477,7 +2486,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             /// </summary>
             public static string GetTxtSeparator()
             {
-                return "".PadRight(230, '-');
+                return "".PadRight(270, '-');
             }
         }
 
@@ -2556,6 +2565,9 @@ namespace AlgoTrade.Core.Trading.Statistics
                 GetiriMaxDD = GetiriMaxDD,
                 GetiriMaxKayip = GetiriMaxKayip,
                 GetiriMaxDDTarih = GetiriMaxDDTarih ?? "...",
+                ScoreFiyatNet = ScoreFiyatNet,
+                ScoreFiyat = ScoreFiyat,
+                ScorePuan = ScorePuan,
 
                 // Position Info
                 VarlikAdedSayisi = VarlikAdedSayisi,

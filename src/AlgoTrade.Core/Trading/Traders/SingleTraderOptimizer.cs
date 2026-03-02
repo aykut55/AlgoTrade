@@ -63,6 +63,9 @@ public class OptimizationResult
     public double ProfitFactor    => TryGetD("ProfitFactor");
     public double ProfitFactorNet => TryGetD("ProfitFactorNet");
     public double MaxDrawdown     => TryGetD("MaxDrawdown");
+    public double ScoreFiyatNet   => TryGetD("ScoreFiyatNet");
+    public double ScoreFiyat      => TryGetD("ScoreFiyat");
+    public double ScorePuan       => TryGetD("ScorePuan");
     public string StrategyName    => Values.GetValueOrDefault("StrategyName", "");
 
     public OptimizationResult()

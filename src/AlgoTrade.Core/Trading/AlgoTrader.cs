@@ -1953,7 +1953,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 Log($"  NetProfit: {bestResult.NetProfit:F2}");
                 Log($"  WinRate: {bestResult.WinRate:F2}%");
                 Log($"  ProfitFactor: {bestResult.ProfitFactor:F2}");
-                // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
+                Log($"  ScoreFiyatNet: {bestResult.ScoreFiyatNet:F2}");
+                Log($"  ScoreFiyat: {bestResult.ScoreFiyat:F2}");
+                Log($"  ScorePuan: {bestResult.ScorePuan:F2}");
             }
 
             _timer!.StopTimer("0");
