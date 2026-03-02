@@ -51,6 +51,7 @@ public class MultipleTrader
     public string MultipleTraderListsCsvFileName { get; set; } = "MultipleTraderLists.csv";
     public bool SaveMultipleTraderListsTxtEnabled { get; set; } = true;
     public bool SaveMultipleTraderListsCsvEnabled { get; set; } = true;
+    public bool PlotEnabled { get; set; } = false;
 
     #endregion
 

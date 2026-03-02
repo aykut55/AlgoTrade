@@ -2,6 +2,7 @@ using AlgoTrade.Core;
 using AlgoTrade.Core.AppConfig;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Logging.Sinks;
+using AlgoTrade.Core.Python;
 using AlgoTrade.Core.Scripting;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
@@ -38,6 +39,8 @@ bool                addHeadTailInfo                 = false;
 string              appConfigPath                   = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "AppConfig.json");
 AppConfig           appConfig                       = new();          // populated with AppConfigLoader.Load() at startup
 string              stockDataFullFileName           = "";
+
+bool exitRequested = false;
 
 // =============================================================================
 // Callbacks
@@ -826,8 +829,20 @@ async Task runMultipleTraderAlgoTrade()
         await algoTrader.RunMultipleTraderWithProgressAsync();
 
         var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader!);
-        await writeTask;
 
+        var mainTrader = algoTrader.MultipleTrader.GetMainTrader();
+        bool plotEnabled = mainTrader.PlotEnabled;
+        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)   // Multipltrader calıstırıyorum, algoTrader.SingleTraderRunMode kullanılamsı anlamlı mı, değilse algoTrader.SingleTraderRunMode = assign yapılmalı 
+        {
+            LogManager.LogRaw("");
+
+            if (algoTrader.SetupPython())   // TODO Daha önceden pytho setup yapılmıs olabilir. Bence bunu bir flagle kontrol etmek lazım.
+                await algoTrader.PlotSingleTraderData(mainTrader);
+            else
+                LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+        }
+
+        await writeTask;
         LogManager.LogRaw(algoTrader.MultipleTrader.WriteChildTradersDataToFiles
             ? "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)"
             : "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
@@ -1454,6 +1469,7 @@ void showMultipleTraderRunPreview()
 async Task handleSingleTrader()
 {
     reloadAppConfig();
+
     while (true)
     {
         showModeConfigSummary("SingleTrader");
@@ -1505,18 +1521,21 @@ async Task handleSingleTrader()
         // ENTER → çalıştır
         await runSingleTraderAlgoTrade();
 
-        // Run tamamlandı — tekrar çalıştır veya ana menüye dön
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
         Console.WriteLine();
-        Console.WriteLine("  Run completed.  [ENTER] Run again   [ESC] Back to Main Menu");
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
         Console.WriteLine();
-        if (ReadMenuInput() == null) return; // ESC → ana menü
-        // ENTER / herhangi tuş → döngü devam eder (config özeti tekrar gösterilir)
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
     }
 }
 
 async Task handleMultipleTrader()
 {
     reloadAppConfig();
+
     while (true)
     {
         showModeConfigSummary("MultipleTrader");
@@ -1557,18 +1576,21 @@ async Task handleMultipleTrader()
         selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
         await runMultipleTraderAlgoTrade();
 
-        // Run tamamlandı — tekrar çalıştır veya ana menüye dön
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
         Console.WriteLine();
-        Console.WriteLine("  Run completed.  [ENTER] Run again   [ESC] Back to Main Menu");
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
         Console.WriteLine();
-        if (ReadMenuInput() == null) return; // ESC → ana menü
-        // ENTER / herhangi tuş → döngü devam eder (config özeti tekrar gösterilir)
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
     }
 }
 
 async Task handleSingleTraderOpt()
 {
     reloadAppConfig();
+
     while (true)
     {
         showModeConfigSummary("SingleTraderOptimizer");
@@ -1608,12 +1630,14 @@ async Task handleSingleTraderOpt()
 
         await runSingleTraderOptimization();
 
-        // Run tamamlandı — tekrar çalıştır veya ana menüye dön
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
         Console.WriteLine();
-        Console.WriteLine("  Run completed.  [ENTER] Run again   [ESC] Back to Main Menu");
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
         Console.WriteLine();
-        if (ReadMenuInput() == null) return; // ESC → ana menü
-        // ENTER / herhangi tuş → döngü devam eder (config özeti tekrar gösterilir)
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
     }
 }
 
@@ -1843,7 +1867,7 @@ async Task main()
     }
 
     bool running = true;
-    while (running)
+    while (running && !exitRequested)
     {
         showMainMenu();
         var input = MenuInput("5");
@@ -1868,6 +1892,7 @@ async Task main()
     LogManager.LogRaw("Application finished", ConsoleColor.Green);
 
     algoTrader?.Dispose();
+    try { PythonPlotter.Shutdown(); } catch { }
     stockDataReader?.Dispose();
     LogManager.Instance.Dispose();
 
