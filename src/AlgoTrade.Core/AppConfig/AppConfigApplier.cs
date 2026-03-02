@@ -117,7 +117,9 @@ public static class AppConfigApplier
 
     /// <summary>
     /// MultipleTrader bölümünü AlgoTrader'a uygular.
-    /// Her ChildTraderEntry için strategy, query, ecf ve trade params uygulanır.
+    /// MainTrader config SetSingle* metodlarıyla uygulanır.
+    /// Her ChildTraderEntry için strategy, query, ecf, signals ve save uygulanır.
+    /// TradeParams tüm child'lara MainTrader'dan aktarılır.
     /// </summary>
     public static void ApplyMultipleTrader(AlgoTrader algoTrader, MultipleTraderConfig cfg, string configsDir)
     {
@@ -125,7 +127,89 @@ public static class AppConfigApplier
         if (children.Count == 0)
             throw new InvalidOperationException("MultipleTrader.ChildTraders boş — en az 1 child tanımlanmalı.");
 
+        // RunMode
+        if (Enum.TryParse<TraderRunMode>(cfg.RunMode, ignoreCase: true, out var runMode))
+            algoTrader.SingleTraderRunMode = runMode;
+
+        // MultipleTrader nesnesi kayıt ayarları
+        algoTrader.SetMultipleTraderSaveConfig(new MultipleTraderObjectSaveConfig
+        {
+            SaveStatisticsToFile              = cfg.Save.SaveStatisticsToFile,
+            SaveMultipleTraderListsTxtEnabled = cfg.Save.SaveMultipleTraderListsTxtEnabled,
+            SaveMultipleTraderListsCsvEnabled = cfg.Save.SaveMultipleTraderListsCsvEnabled,
+            MultipleTraderListsTxtFileName    = cfg.Save.MultipleTraderListsTxtFileName,
+            MultipleTraderListsCsvFileName    = cfg.Save.MultipleTraderListsCsvFileName,
+        });
+
+        // =====================================================================
+        // MainTrader config → algoTrader (SetSingle* metodları ile)
+        // =====================================================================
+
+        // TradeParams
+        var mainTradeParams = BuildInitialTradeParams(cfg.MainTrader.TradeParams);
+        algoTrader.SetSingleTraderTradeParams(mainTradeParams);
+
+        // Signals
+        algoTrader.SetSingleTraderSignalsConfig(new SingleTraderSignalsConfig
+        {
+            AlEnabled              = cfg.MainTrader.Signals.AlEnabled,
+            SatEnabled             = cfg.MainTrader.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.MainTrader.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.MainTrader.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.MainTrader.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.MainTrader.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.MainTrader.Signals.GunSonuPozKapatEnabled,
+            TimeFilteringEnabled   = cfg.MainTrader.Signals.TimeFilteringEnabled,
+            StartDateTime          = cfg.MainTrader.Signals.StartDateTime,
+            StopDateTime           = cfg.MainTrader.Signals.StopDateTime,
+        });
+
+        // Optimization
+        algoTrader.SetSingleTraderOptimizationConfig(new SingleTraderOptimizationConfig
+        {
+            OptimizationEnabled = cfg.MainTrader.Optimization.OptimizationEnabled,
+        });
+
+        // Plot
+        algoTrader.SetSingleTraderPlotConfig(new SingleTraderPlotConfig
+        {
+            PlotEnabled = cfg.MainTrader.Plot.PlotEnabled,
+        });
+
+        // Save
+        var ms = cfg.MainTrader.Save;
+        algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
+        {
+            SaveStatisticsToFile                = ms.SaveStatisticsToFile,
+            SaveFullStatsTxtEnabled             = ms.SaveFullStatsTxtEnabled,
+            SaveFullStatsCsvEnabled             = ms.SaveFullStatsCsvEnabled,
+            SaveMinimalStatsTxtEnabled          = ms.SaveMinimalStatsTxtEnabled,
+            SaveMinimalStatsCsvEnabled          = ms.SaveMinimalStatsCsvEnabled,
+            SaveFullListsTxtEnabled             = ms.SaveFullListsTxtEnabled,
+            SaveFullListsCsvEnabled             = ms.SaveFullListsCsvEnabled,
+            SaveMinimalListsTxtEnabled          = ms.SaveMinimalListsTxtEnabled,
+            SaveMinimalListsCsvEnabled          = ms.SaveMinimalListsCsvEnabled,
+            SaveFullStatsTxtFormattedEnabled    = ms.SaveFullStatsTxtFormattedEnabled,
+            SaveMinimalStatsTxtFormattedEnabled = ms.SaveMinimalStatsTxtFormattedEnabled,
+            SavePerformansTxtEnabled            = ms.SavePerformansTxtEnabled,
+            SavePerformansCsvEnabled            = ms.SavePerformansCsvEnabled,
+            FullStatsTxtFileName                = ms.FullStatsTxtFileName,
+            FullStatsCsvFileName                = ms.FullStatsCsvFileName,
+            MinimalStatsTxtFileName             = ms.MinimalStatsTxtFileName,
+            MinimalStatsCsvFileName             = ms.MinimalStatsCsvFileName,
+            FullListsTxtFileName                = ms.FullListsTxtFileName,
+            FullListsCsvFileName                = ms.FullListsCsvFileName,
+            MinimalListsTxtFileName             = ms.MinimalListsTxtFileName,
+            MinimalListsCsvFileName             = ms.MinimalListsCsvFileName,
+            FullStatsTxtFormattedFileName       = ms.FullStatsTxtFormattedFileName,
+            MinimalStatsTxtFormattedFileName    = ms.MinimalStatsTxtFormattedFileName,
+            PerformansTxtFileName               = ms.PerformansTxtFileName,
+            PerformansCsvFileName               = ms.PerformansCsvFileName,
+        });
+
+        // =====================================================================
         // Stratejileri yükle (benzersiz Name+Version → tek _strategyConfigs girişi)
+        // =====================================================================
         algoTrader.ClearStrategyConfigs();
         var strategyIndexMap = new Dictionary<(string name, string version), int>(StringComparer.OrdinalIgnoreCase as IEqualityComparer<(string, string)>);
         int nextStratId = 0;
@@ -146,7 +230,9 @@ public static class AppConfigApplier
             }
         }
 
+        // =====================================================================
         // QueryConfigs yükle
+        // =====================================================================
         algoTrader.ClearQueryConfigs();
         var queryIndexMap = new Dictionary<(string name, string version), int>(StringComparer.OrdinalIgnoreCase as IEqualityComparer<(string, string)>);
         int nextQueryId = 0;
@@ -168,10 +254,24 @@ public static class AppConfigApplier
             }
         }
 
+        // =====================================================================
         // ECF configs yükle
+        // MainTrader ECF → id=0 (SetSingleTraderConfigureEquityCurveFilter default)
+        // Child ECFs     → id=1,2,...
+        // =====================================================================
         algoTrader.ClearEquityCurveFilterConfigs();
-        var ecfIndexMap = new Dictionary<(string configFile, string version), int>(StringComparer.OrdinalIgnoreCase as IEqualityComparer<(string, string)>);
         int nextEcfId = 0;
+
+        // MainTrader ECF (id=0)
+        if (cfg.MainTrader.EquityCurveFilter is not null)
+        {
+            string ecfPath = Path.Combine(configsDir, cfg.MainTrader.EquityCurveFilter.ConfigFile);
+            algoTrader.ConfigureEquityCurveFilterFromConfig(ecfPath, cfg.MainTrader.EquityCurveFilter.Version, id: 0);
+            nextEcfId = 1;
+        }
+
+        // Child ECFs
+        var ecfIndexMap = new Dictionary<(string configFile, string version), int>(StringComparer.OrdinalIgnoreCase as IEqualityComparer<(string, string)>);
 
         foreach (var child in children)
         {
@@ -186,7 +286,9 @@ public static class AppConfigApplier
             }
         }
 
+        // =====================================================================
         // ChildTraderConfigs oluştur
+        // =====================================================================
         algoTrader.SetChildTraderCount(children.Count, (entry, i) =>
         {
             var child = children[i];
@@ -195,23 +297,69 @@ public static class AppConfigApplier
             var stratKey = (child.Strategy.Name, child.Strategy.Version);
             entry.StrategyId = strategyIndexMap[stratKey];
 
-            // QueryId (null → createChildTraders childId kullanır)
+            // QueryId
             if (child.Query is not null)
             {
                 var qKey = (child.Query.Name, child.Query.Version);
                 entry.QueryId = queryIndexMap[qKey];
             }
 
-            // EcfConfigId (null → createChildTraders childId kullanır)
+            // EcfConfigId
             if (child.EquityCurveFilter is not null)
             {
                 var ecfKey = (child.EquityCurveFilter.ConfigFile, child.EquityCurveFilter.Version);
                 entry.EcfConfigId = ecfIndexMap[ecfKey];
             }
 
-            // TradeParams
-            var tradeParams = BuildInitialTradeParams(child.TradeParams);
-            entry.TradeParams.ApplyFrom(tradeParams);
+            // TradeParams — MainTrader'dan (tüm child'lar aynı parametreleri kullanır)
+            entry.TradeParams.ApplyFrom(mainTradeParams);
+
+            // Signals — per-child
+            var cs = child.Signals;
+            entry.Signals = new SingleTraderSignalsConfig
+            {
+                AlEnabled              = cs.AlEnabled,
+                SatEnabled             = cs.SatEnabled,
+                FlatOlEnabled          = cs.FlatOlEnabled,
+                PasGecEnabled          = cs.PasGecEnabled,
+                KarAlEnabled           = cs.KarAlEnabled,
+                ZararKesEnabled        = cs.ZararKesEnabled,
+                GunSonuPozKapatEnabled = cs.GunSonuPozKapatEnabled,
+                TimeFilteringEnabled   = cs.TimeFilteringEnabled,
+                StartDateTime          = cs.StartDateTime,
+                StopDateTime           = cs.StopDateTime,
+            };
+
+            // Save — per-child, dosya adları JSON'dan direkt (prefix koda bırakıldı)
+            var sv = child.Save;
+            entry.Save = new SingleTraderSaveConfig
+            {
+                SaveStatisticsToFile                = sv.SaveStatisticsToFile,
+                SaveFullStatsTxtEnabled             = sv.SaveFullStatsTxtEnabled,
+                SaveFullStatsCsvEnabled             = sv.SaveFullStatsCsvEnabled,
+                SaveMinimalStatsTxtEnabled          = sv.SaveMinimalStatsTxtEnabled,
+                SaveMinimalStatsCsvEnabled          = sv.SaveMinimalStatsCsvEnabled,
+                SaveFullListsTxtEnabled             = sv.SaveFullListsTxtEnabled,
+                SaveFullListsCsvEnabled             = sv.SaveFullListsCsvEnabled,
+                SaveMinimalListsTxtEnabled          = sv.SaveMinimalListsTxtEnabled,
+                SaveMinimalListsCsvEnabled          = sv.SaveMinimalListsCsvEnabled,
+                SaveFullStatsTxtFormattedEnabled    = sv.SaveFullStatsTxtFormattedEnabled,
+                SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled,
+                SavePerformansTxtEnabled            = sv.SavePerformansTxtEnabled,
+                SavePerformansCsvEnabled            = sv.SavePerformansCsvEnabled,
+                FullStatsTxtFileName                = sv.FullStatsTxtFileName,
+                FullStatsCsvFileName                = sv.FullStatsCsvFileName,
+                MinimalStatsTxtFileName             = sv.MinimalStatsTxtFileName,
+                MinimalStatsCsvFileName             = sv.MinimalStatsCsvFileName,
+                FullListsTxtFileName                = sv.FullListsTxtFileName,
+                FullListsCsvFileName                = sv.FullListsCsvFileName,
+                MinimalListsTxtFileName             = sv.MinimalListsTxtFileName,
+                MinimalListsCsvFileName             = sv.MinimalListsCsvFileName,
+                FullStatsTxtFormattedFileName       = sv.FullStatsTxtFormattedFileName,
+                MinimalStatsTxtFormattedFileName    = sv.MinimalStatsTxtFormattedFileName,
+                PerformansTxtFileName               = sv.PerformansTxtFileName,
+                PerformansCsvFileName               = sv.PerformansCsvFileName,
+            };
         });
     }
 

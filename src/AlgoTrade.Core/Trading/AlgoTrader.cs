@@ -101,6 +101,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTraderSaveConfig?     _singleTraderSaveConfig        = null;
     private SingleTraderPlotConfig?         _singleTraderPlotConfig         = null;
     private SingleTraderOptimizationConfig?  _singleTraderOptimizationConfig  = null;
+    private MultipleTraderObjectSaveConfig?  _multipleTraderSaveConfig        = null;
     private SingleTraderOptRangeConfig?      _singleTraderOptRangeConfig      = null;
     private SingleTraderOptTradeParamsConfig? _singleTraderOptTradeParamsConfig = null;
     private SingleTraderSignalsConfig?       _singleTraderOptSignalsConfig    = null;
@@ -852,6 +853,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _singleTraderSaveConfig = config;
     }
 
+    public void SetMultipleTraderSaveConfig(MultipleTraderObjectSaveConfig config)
+    {
+        _multipleTraderSaveConfig = config;
+    }
+
     public void SetSingleTraderPlotConfig(SingleTraderPlotConfig config)
     {
         _singleTraderPlotConfig = config;
@@ -1453,19 +1459,71 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
 
-            // Hardcoded default params
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            childTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
-            // ChildTraderConfigEntry'deki TradeParams override'ı uygula
+            // TradeParams — AppConfig.MultipleTrader.MainTrader.TradeParams'tan gelir
             childTrader.initialTradeParams!.ApplyFrom(config.TradeParams);
 
             // Sıralama Onemli
-            // Apply user flags
-            OnApplyUserFlags(childTrader);
+            // Apply per-child signals config (AppConfig.MultipleTrader.ChildTraders[i].Signals)
+            // OnApplyUserFlags(childTrader); → AppConfig.MultipleTrader.ChildTraders[i].Signals ile değiştirildi
+            if (config.Signals is { } s)
+            {
+                childTrader.ConfigureUserFlagsOnce();
+                childTrader.signals.AlEnabled              = s.AlEnabled;
+                childTrader.signals.SatEnabled             = s.SatEnabled;
+                childTrader.signals.FlatOlEnabled          = s.FlatOlEnabled;
+                childTrader.signals.PasGecEnabled          = s.PasGecEnabled;
+                childTrader.signals.KarAlEnabled           = s.KarAlEnabled;
+                childTrader.signals.ZararKesEnabled        = s.ZararKesEnabled;
+                childTrader.signals.GunSonuPozKapatEnabled = s.GunSonuPozKapatEnabled;
+                childTrader.signals.TimeFilteringEnabled   = s.TimeFilteringEnabled;
+                childTrader.signals.EquityCurveFilteringEnabled = false;
+                childTrader.StartDateTimeStr = s.StartDateTime;
+                childTrader.StopDateTimeStr  = s.StopDateTime;
+                var startDt = System.DateTime.ParseExact(s.StartDateTime, "yyyy.MM.dd HH:mm:ss", null);
+                childTrader.StartDateStr = startDt.ToString("yyyy.MM.dd");
+                childTrader.StartTimeStr = startDt.ToString("HH:mm:ss");
+                var stopDt = System.DateTime.ParseExact(s.StopDateTime, "yyyy.MM.dd HH:mm:ss", null);
+                childTrader.StopDateStr = stopDt.ToString("yyyy.MM.dd");
+                childTrader.StopTimeStr = stopDt.ToString("HH:mm:ss");
+            }
+            else
+            {
+                OnApplyUserFlags(childTrader); // fallback
+            }
 
-            // Apply user flags (2)
+            // Apply user flags (2) — config.Save bloğu ile override edilecek
             OnApplyUserFlags2(childTrader, TraderApplyMode.MultipleTrader);
+
+            // Apply per-child save config (AppConfig.MultipleTrader.Save'den üretilir)
+            if (config.Save is { } sv)
+            {
+                childTrader.SaveStatisticsToFile                = sv.SaveStatisticsToFile;
+                childTrader.SaveFullStatsTxtEnabled             = sv.SaveFullStatsTxtEnabled;
+                childTrader.SaveFullStatsCsvEnabled             = sv.SaveFullStatsCsvEnabled;
+                childTrader.SaveMinimalStatsTxtEnabled          = sv.SaveMinimalStatsTxtEnabled;
+                childTrader.SaveMinimalStatsCsvEnabled          = sv.SaveMinimalStatsCsvEnabled;
+                childTrader.SaveFullListsTxtEnabled             = sv.SaveFullListsTxtEnabled;
+                childTrader.SaveFullListsCsvEnabled             = sv.SaveFullListsCsvEnabled;
+                childTrader.SaveMinimalListsTxtEnabled          = sv.SaveMinimalListsTxtEnabled;
+                childTrader.SaveMinimalListsCsvEnabled          = sv.SaveMinimalListsCsvEnabled;
+                childTrader.SaveFullStatsTxtFormattedEnabled    = sv.SaveFullStatsTxtFormattedEnabled;
+                childTrader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+                childTrader.SavePerformansTxtEnabled            = sv.SavePerformansTxtEnabled;
+                childTrader.SavePerformansCsvEnabled            = sv.SavePerformansCsvEnabled;
+
+                if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFileName))             childTrader.FullStatsTxtFileName             = sv.FullStatsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullStatsCsvFileName))             childTrader.FullStatsCsvFileName             = sv.FullStatsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFileName))          childTrader.MinimalStatsTxtFileName          = sv.MinimalStatsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalStatsCsvFileName))          childTrader.MinimalStatsCsvFileName          = sv.MinimalStatsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullListsTxtFileName))             childTrader.FullListsTxtFileName             = sv.FullListsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullListsCsvFileName))             childTrader.FullListsCsvFileName             = sv.FullListsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalListsTxtFileName))          childTrader.MinimalListsTxtFileName          = sv.MinimalListsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          childTrader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    childTrader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) childTrader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+                if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            childTrader.PerformansTxtFileName            = sv.PerformansTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            childTrader.PerformansCsvFileName            = sv.PerformansCsvFileName;
+            }
 
             // Configure multiple trader mode flag
             childTrader.MultipleTraderModeEnabled = true;
@@ -1488,8 +1546,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 childTrader.SetQuery(query);
             }
 
-            // Enable savingStatistics
-            childTrader.SaveStatisticsToFile = true;
+            // Fallback: SaveStatisticsToFile'ı aktif et (config.Save yoksa)
+            if (config.Save is null)
+                childTrader.SaveStatisticsToFile = true;
 
             childTrader.Init();
 
@@ -1546,16 +1605,26 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             multipleTrader.Reset();
 
-            // Enable savingStatistics
-            multipleTrader.SaveStatisticsToFile = true;
-
-            // Enable all per-output statistics flags explicitly
-            multipleTrader.SaveMultipleTraderListsTxtEnabled = true;
-            multipleTrader.SaveMultipleTraderListsCsvEnabled = true;
-
-            // Manually assign custom output file names (as requested)
-            multipleTrader.MultipleTraderListsTxtFileName = "MultipleTraderLists.txt";
-            multipleTrader.MultipleTraderListsCsvFileName = "MultipleTraderLists.csv";
+            // MultipleTrader save config (AppConfig.MultipleTrader.Save)
+            if (_multipleTraderSaveConfig is { } mts)
+            {
+                multipleTrader.SaveStatisticsToFile              = mts.SaveStatisticsToFile;
+                multipleTrader.SaveMultipleTraderListsTxtEnabled = mts.SaveMultipleTraderListsTxtEnabled;
+                multipleTrader.SaveMultipleTraderListsCsvEnabled = mts.SaveMultipleTraderListsCsvEnabled;
+                if (!string.IsNullOrWhiteSpace(mts.MultipleTraderListsTxtFileName))
+                    multipleTrader.MultipleTraderListsTxtFileName = mts.MultipleTraderListsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(mts.MultipleTraderListsCsvFileName))
+                    multipleTrader.MultipleTraderListsCsvFileName = mts.MultipleTraderListsCsvFileName;
+            }
+            else
+            {
+                // Fallback
+                multipleTrader.SaveStatisticsToFile              = true;
+                multipleTrader.SaveMultipleTraderListsTxtEnabled = true;
+                multipleTrader.SaveMultipleTraderListsCsvEnabled = true;
+                multipleTrader.MultipleTraderListsTxtFileName    = "MultipleTraderLists.txt";
+                multipleTrader.MultipleTraderListsCsvFileName    = "MultipleTraderLists.csv";
+            }
 
 
             var mainTrader = multipleTrader.GetMainTrader();
@@ -1580,16 +1649,15 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             mainTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             mainTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
             
-            // Configure position sizing for mainTrader
-            mainTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsFxParite(lotSayisi: 0.01).SetKomisyonParams(komisyonCarpan: 3.0).SetKaymaParams(kaymaMiktari: 0.5);
-            mainTrader.initialTradeParams!.Reset().SetBakiyeParams(ilkBakiye: 100000.0).SetKontratParamsViopEndex(kontratSayisi: 1).SetKomisyonParams(komisyonCarpan: 20.0).SetKaymaParams(kaymaMiktari: 0.5);
-
             // Sıralama Onemli
-            // Apply user flags
-            OnApplyUserFlags(mainTrader);
+            // AppConfig.MultipleTrader.MainTrader.TradeParams
+            if (_singleTraderTradeParamsConfig is not null)
+                mainTrader.initialTradeParams!.ApplyFrom(_singleTraderTradeParamsConfig);
 
-            // Apply user flags (2)
-            OnApplyUserFlags2(mainTrader, TraderApplyMode.MultipleTrader);
+            // Apply flags from AppConfig (replaces OnApplyUserFlags + OnApplyUserFlags2)
+            // OnApplyUserFlags(mainTrader);           → AppConfig.MultipleTrader.MainTrader.Signals ile değiştirildi
+            // OnApplyUserFlags2(mainTrader, ...);     → AppConfig.MultipleTrader.MainTrader.Save ile değiştirildi
+            ApplySingleTraderFlagsConfigs(mainTrader);
 
             // Configure multiple trader mode flag
             mainTrader.MultipleTraderModeEnabled = true;
@@ -2201,6 +2269,16 @@ public class SingleTraderSignalsConfig
     public string StopDateTime           { get; set; } = "2025.06.02 17:55:00";
 }
 
+/// <summary>MultipleTrader nesnesinin kayıt ayarları (composite liste dosyaları).</summary>
+public class MultipleTraderObjectSaveConfig
+{
+    public bool   SaveStatisticsToFile                { get; set; } = true;
+    public bool   SaveMultipleTraderListsTxtEnabled   { get; set; } = true;
+    public bool   SaveMultipleTraderListsCsvEnabled   { get; set; } = true;
+    public string MultipleTraderListsTxtFileName      { get; set; } = "MultipleTraderLists.txt";
+    public string MultipleTraderListsCsvFileName      { get; set; } = "MultipleTraderLists.csv";
+}
+
 /// <summary>OnApplyUserFlags2 (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>
 public class SingleTraderSaveConfig
 {
@@ -2295,9 +2373,21 @@ public class ChildTraderConfigEntry
 
     /// <summary>
     /// Bu child trader için trade parametreleri.
-    /// createChildTraders() içinde ApplyFrom() ile uygulanır.
+    /// createChildTraders() içinde ApplyFrom() ile uygulanır (MainTrader'dan aktarılır).
     /// </summary>
     public InitialTradeParams TradeParams { get; } = new();
+
+    /// <summary>
+    /// Bu child trader için sinyal bayrakları.
+    /// null → createChildTraders() içinde OnApplyUserFlags fallback kullanılır.
+    /// </summary>
+    public SingleTraderSignalsConfig? Signals { get; set; }
+
+    /// <summary>
+    /// Bu child trader için kayıt ayarları (dosya adları dahil).
+    /// null → createChildTraders() içinde OnApplyUserFlags2 sonucu korunur.
+    /// </summary>
+    public SingleTraderSaveConfig? Save { get; set; }
 
     public ChildTraderConfigEntry(int childId, int strategyId, int? queryId = null, int? ecfConfigId = null)
     {

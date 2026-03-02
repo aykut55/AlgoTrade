@@ -1024,11 +1024,8 @@ void showModeConfigSummary(string title)
         var cfg    = appConfig.MultipleTrader;
         stratInfo2  = $"{cfg.ChildTraders.Count} child trader";
         runModeStr2 = cfg.RunMode;
-        if (cfg.ChildTraders.Count > 0)
-        {
-            var tp = cfg.ChildTraders[0].TradeParams;
-            tradeInfo2 = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (child[0])";
-        }
+        var tp = cfg.MainTrader.TradeParams;
+        tradeInfo2 = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (MainTrader)";
     }
 
     Console.WriteLine($"║  RunMode    : {Trunc(runModeStr2, 50),-50}║");

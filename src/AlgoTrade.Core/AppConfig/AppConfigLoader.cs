@@ -125,15 +125,17 @@ public static class AppConfigLoader
 
         MultipleTrader = new MultipleTraderConfig
         {
-            RunMode      = "TradeOnly",
+            RunMode    = "TradeOnly",
+            MainTrader = new MainTraderConfig
+            {
+                TradeParams = new TradeParamsConfig { MarketType = "ViopEndex", IlkBakiye = 100_000.0, KontratSayisi = 1, KomisyonCarpan = 20.0, KaymaMiktari = 0.5 }
+            },
             ChildTraders = new List<ChildTraderEntry>
             {
                 new() { ChildId = 0, Strategy = new StrategyRef { Name = "SimpleMostStrategy", Version = "v1" },
-                        Query = new QueryRef { Name = "SimpleQuery1", Version = "v1" },
-                        TradeParams = new TradeParamsConfig { MarketType = "ViopEndex", IlkBakiye = 100_000.0, KontratSayisi = 1, KomisyonCarpan = 20.0, KaymaMiktari = 0.5 } },
+                        Query = new QueryRef { Name = "SimpleQuery1", Version = "v1" } },
                 new() { ChildId = 1, Strategy = new StrategyRef { Name = "SimpleMostStrategy", Version = "v2" },
-                        Query = new QueryRef { Name = "SimpleQuery1", Version = "v1" },
-                        TradeParams = new TradeParamsConfig { MarketType = "ViopEndex", IlkBakiye = 100_000.0, KontratSayisi = 1, KomisyonCarpan = 20.0, KaymaMiktari = 0.5 } }
+                        Query = new QueryRef { Name = "SimpleQuery1", Version = "v1" } }
             }
         },
 

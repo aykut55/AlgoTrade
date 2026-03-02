@@ -215,22 +215,59 @@ public class SingleTraderConfig
 // =============================================================================
 
 /// <summary>
+/// MultipleTrader nesnesinin kayıt ayarları (composite liste dosyaları).
+/// MainTrader ve child'ların istatistiklerinden ayrı, MultipleTrader'a özgü.
+/// </summary>
+public class MultipleTraderSaveConfig
+{
+    public bool   SaveStatisticsToFile                { get; set; } = true;
+    public bool   SaveMultipleTraderListsTxtEnabled   { get; set; } = true;
+    public bool   SaveMultipleTraderListsCsvEnabled   { get; set; } = true;
+    public string MultipleTraderListsTxtFileName      { get; set; } = "MultipleTraderLists.txt";
+    public string MultipleTraderListsCsvFileName      { get; set; } = "MultipleTraderLists.csv";
+}
+
+/// <summary>
+/// MultipleTrader'ın ana trader konfigürasyonu.
+/// ChildTrader'lardan gelen composite sinyal üzerinde işlem yapar.
+/// Strategy ve Query yok — sinyal tamamen ChildTrader'lardan gelir.
+/// </summary>
+public class MainTraderConfig
+{
+    public EcfRef?                  EquityCurveFilter { get; set; }
+    public TradeParamsConfig        TradeParams       { get; set; } = new();
+    public TraderSignalsConfig      Signals           { get; set; } = new();
+    public TraderPlotConfig         Plot              { get; set; } = new();
+    public TraderOptimizationConfig Optimization      { get; set; } = new();
+    public TraderSaveConfig         Save              { get; set; } = new();
+}
+
+/// <summary>
 /// MultipleTrader içindeki tek bir child trader tanımı.
-/// Her child kendi stratejisine ve trade parametrelerine sahiptir.
+/// TradeParams MainTrader'dan alınır; her child kendi Strategy/Signals/Save'ine sahiptir.
 /// </summary>
 public class ChildTraderEntry
 {
-    public int               ChildId           { get; set; }
-    public StrategyRef       Strategy          { get; set; } = new();
-    public QueryRef?         Query             { get; set; }
-    public EcfRef?           EquityCurveFilter { get; set; }
-    public TradeParamsConfig TradeParams       { get; set; } = new();
+    public int                      ChildId           { get; set; }
+    public StrategyRef              Strategy          { get; set; } = new();
+    public QueryRef?                Query             { get; set; }
+    public EcfRef?                  EquityCurveFilter { get; set; }
+    public TraderSignalsConfig      Signals           { get; set; } = new();
+    public TraderPlotConfig         Plot              { get; set; } = new();
+    public TraderOptimizationConfig Optimization      { get; set; } = new();
+    public TraderSaveConfig         Save              { get; set; } = new();
 }
 
 public class MultipleTraderConfig
 {
     /// <summary>TradeOnly | TradeAndQuery | QueryOnly</summary>
-    public string RunMode { get; set; } = "TradeOnly";
+    public string             RunMode      { get; set; } = "TradeOnly";
+
+    /// <summary>MultipleTrader nesnesinin liste/kayıt ayarları.</summary>
+    public MultipleTraderSaveConfig Save   { get; set; } = new();
+
+    /// <summary>Ana trader konfigürasyonu (composite sinyal → gerçek işlem).</summary>
+    public MainTraderConfig   MainTrader   { get; set; } = new();
 
     /// <summary>
     /// Her child trader tanımı burada listelenir.
