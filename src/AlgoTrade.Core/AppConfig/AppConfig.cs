@@ -226,6 +226,9 @@ public class MultipleTraderSaveConfig
     public string MultipleTraderListsTxtFileName      { get; set; } = "MultipleTraderLists.txt";
     public string MultipleTraderListsCsvFileName      { get; set; } = "MultipleTraderLists.csv";
 
+    /// <summary>true → child trader istatistikleri de dosyaya yazılır.</summary>
+    public bool   WriteChildTradersDataToFiles        { get; set; } = true;
+
     /// <summary>
     /// MainTrader ve child trader dosya isimlerine eklenen ön ek.
     /// MainTrader → {FilePrefix}_Main_{FileName}

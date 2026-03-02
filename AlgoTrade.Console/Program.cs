@@ -825,8 +825,7 @@ async Task runMultipleTraderAlgoTrade()
 
         await algoTrader.RunMultipleTraderWithProgressAsync();
 
-        algoTrader.MultipleTrader!.WriteChildTradersDataToFiles = false;
-        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader);
+        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader!);
         await writeTask;
 
         LogManager.LogRaw(algoTrader.MultipleTrader.WriteChildTradersDataToFiles

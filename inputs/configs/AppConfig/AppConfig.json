@@ -104,6 +104,8 @@
       "SaveMultipleTraderListsCsvEnabled": true,
       "MultipleTraderListsTxtFileName": "MultipleTraderLists.txt",
       "MultipleTraderListsCsvFileName": "MultipleTraderLists.csv",
+      // WriteChildTradersDataToFiles: true → child trader istatistikleri de dosyaya yazılır
+      "WriteChildTradersDataToFiles": true,
       // FilePrefix: MainTrader → {FilePrefix}_Main_{FileName}  |  Child → {FilePrefix}_Child{i}_{FileName}
       "FilePrefix": "MultipleTrader"
     },

@@ -1611,6 +1611,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                     multipleTrader.MultipleTraderListsTxtFileName = mts.MultipleTraderListsTxtFileName;
                 if (!string.IsNullOrWhiteSpace(mts.MultipleTraderListsCsvFileName))
                     multipleTrader.MultipleTraderListsCsvFileName = mts.MultipleTraderListsCsvFileName;
+                multipleTrader.WriteChildTradersDataToFiles      = mts.WriteChildTradersDataToFiles;
             }
             else
             {
@@ -1620,6 +1621,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 multipleTrader.SaveMultipleTraderListsCsvEnabled = true;
                 multipleTrader.MultipleTraderListsTxtFileName    = "MultipleTraderLists.txt";
                 multipleTrader.MultipleTraderListsCsvFileName    = "MultipleTraderLists.csv";
+                multipleTrader.WriteChildTradersDataToFiles      = false;
             }
 
 
@@ -2275,6 +2277,7 @@ public class MultipleTraderObjectSaveConfig
     public bool   SaveMultipleTraderListsCsvEnabled   { get; set; } = true;
     public string MultipleTraderListsTxtFileName      { get; set; } = "MultipleTraderLists.txt";
     public string MultipleTraderListsCsvFileName      { get; set; } = "MultipleTraderLists.csv";
+    public bool   WriteChildTradersDataToFiles        { get; set; } = false;
 }
 
 /// <summary>OnApplyUserFlags2 (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>

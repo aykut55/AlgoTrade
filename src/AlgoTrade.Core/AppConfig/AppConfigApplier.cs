@@ -139,6 +139,7 @@ public static class AppConfigApplier
             SaveMultipleTraderListsCsvEnabled = cfg.Save.SaveMultipleTraderListsCsvEnabled,
             MultipleTraderListsTxtFileName    = cfg.Save.MultipleTraderListsTxtFileName,
             MultipleTraderListsCsvFileName    = cfg.Save.MultipleTraderListsCsvFileName,
+            WriteChildTradersDataToFiles      = cfg.Save.WriteChildTradersDataToFiles,
         });
 
         // =====================================================================
