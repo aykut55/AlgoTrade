@@ -14,26 +14,27 @@ _TRADER_COLORS = [
     (1.0, 0.2, 0.8, 1.0),   # child 7    — pembe
 ]
 
+# SingleTrader ile aynı panel sırası:
+#   0 — OHLC
+#   1 — Signals
+#   2 — PnL Price      (kar_zarar_fiyat_list)
+#   3 — PnL Price %    (kar_zarar_fiyat_yuzde_list)
+#   4 — Return         (getiri_fiyat_list  +  getiri_fiyat_net_list)
+#   5 — Return %       (getiri_fiyat_yuzde_list  +  getiri_fiyat_net_yuzde_list)
+# Her panelde tüm trader'lar overlay — her trader kendi rengiyle
+
 
 class MultipleDataPlotter:
     """
     trader_list[0]  = mainTrader (TradeData)
     trader_list[1:] = child traders (TradeData)
-
-    Tüm trader'lar aynı OHLC sembolünü paylaşır.
-    Paneller:
-        0 — OHLC (mainTrader'dan)
-        1 — Sinyaller overlay  (mainTrader + child'lar)
-        2 — Getiri Net overlay (mainTrader + child'lar)
-        3 — Bakiye Net overlay (mainTrader + child'lar)
-        4 — mainTrader PnL
     """
 
     def __init__(self, trader_list):
         if not trader_list or len(trader_list) == 0:
             raise ValueError("trader_list boş olamaz.")
-        self._traders = list(trader_list)   # [mainTrader, child0, child1, ...]
-        self._main    = self._traders[0]
+        self._traders  = list(trader_list)
+        self._main     = self._traders[0]
         self._children = self._traders[1:]
 
     # ------------------------------------------------------------------
@@ -57,10 +58,10 @@ class MultipleDataPlotter:
               f"({len(self._children)} child)")
         print(sep)
         for i, td in enumerate(self._traders):
-            label = "mainTrader" if i == 0 else f"child[{i - 1}]"
-            n     = len(td.closes)
-            buys  = sum(1 for v in td.sinyal_list if v > 0)
-            sells = sum(1 for v in td.sinyal_list if v < 0)
+            label    = "mainTrader" if i == 0 else f"child[{i - 1}]"
+            n        = len(td.closes)
+            buys     = sum(1 for v in td.sinyal_list if v > 0)
+            sells    = sum(1 for v in td.sinyal_list if v < 0)
             last_net = td.getiri_fiyat_net_list[-1] if td.getiri_fiyat_net_list else 0
             print(f"  {label:<14}  bars={n}  Al={buys}  Sat={sells}  "
                   f"GetiriNet={last_net:.2f}")
@@ -79,9 +80,9 @@ class MultipleDataPlotter:
             print(f"Import error: {e}")
             return
 
-        main  = self._main
-        n     = len(main.closes)
-        t     = np.arange(n, dtype=np.float64)
+        main = self._main
+        n    = len(main.closes)
+        t    = np.arange(n, dtype=np.float64)
 
         opens   = np.array(main.opens,   dtype=np.float64)
         highs   = np.array(main.highs,   dtype=np.float64)
@@ -115,7 +116,7 @@ class MultipleDataPlotter:
         p0.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
         # ------------------------------------------------------------------
-        # Panel 1: Sinyaller overlay
+        # Panel 1: Signals  (tüm trader'lar overlay)
         # ------------------------------------------------------------------
         p1 = plotter.AddPanel(1)
         p1.setTitle("Signals")
@@ -125,61 +126,99 @@ class MultipleDataPlotter:
         p1.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
         for i, td in enumerate(self._traders):
-            label  = "Main" if i == 0 else f"Child {i}"
-            color  = _TRADER_COLORS[i % len(_TRADER_COLORS)]
-            sig    = np.array(td.sinyal_list, dtype=np.float64)
+            label = "Main" if i == 0 else f"Child {i}"
+            color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
+            sig   = np.array(td.sinyal_list, dtype=np.float64)
             p1.setData(i, DataType.Stairs, sig, label, color)
 
         padding = np.full(n, 2.0, dtype=np.float64)
-        p1.setData(998, DataType.Line,  padding,  "##pad+", (1, 1, 1, 0))
-        p1.setData(999, DataType.Line, -padding,  "##pad-", (1, 1, 1, 0))
+        p1.setData(998, DataType.Line,  padding, "##pad+", (1, 1, 1, 0))
+        p1.setData(999, DataType.Line, -padding, "##pad-", (1, 1, 1, 0))
 
         # ------------------------------------------------------------------
-        # Panel 2: Getiri Net overlay
+        # Panel 2: PnL Price  (kar_zarar_fiyat_list — overlay)
         # ------------------------------------------------------------------
         p2 = plotter.AddPanel(2)
-        p2.setTitle("Net Return")
-        p2.setYAxisLabel("Getiri Net")
+        p2.setTitle("PnL Price")
+        p2.setYAxisLabel("PnL Price")
         p2.setHeightRatio(0.5)
         p2.setInfoPanelPosition(100, 2)
         p2.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
         for i, td in enumerate(self._traders):
-            if td.getiri_fiyat_net_list:
+            if td.kar_zarar_fiyat_list:
                 label = "Main" if i == 0 else f"Child {i}"
                 color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
-                arr   = np.array(td.getiri_fiyat_net_list, dtype=np.float64)
+                arr   = np.array(td.kar_zarar_fiyat_list, dtype=np.float64)
                 p2.setData(i, DataType.Line, arr, label, color)
 
         # ------------------------------------------------------------------
-        # Panel 3: Bakiye Net overlay
+        # Panel 3: PnL Price %  (kar_zarar_fiyat_yuzde_list — overlay)
         # ------------------------------------------------------------------
         p3 = plotter.AddPanel(3)
-        p3.setTitle("Net Balance")
-        p3.setYAxisLabel("Bakiye Net")
+        p3.setTitle("PnL Price %")
+        p3.setYAxisLabel("PnL %")
         p3.setHeightRatio(0.5)
         p3.setInfoPanelPosition(100, 2)
         p3.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
         for i, td in enumerate(self._traders):
-            if td.bakiye_fiyat_net_list:
+            if td.kar_zarar_fiyat_yuzde_list:
                 label = "Main" if i == 0 else f"Child {i}"
                 color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
-                arr   = np.array(td.bakiye_fiyat_net_list, dtype=np.float64)
+                arr   = np.array(td.kar_zarar_fiyat_yuzde_list, dtype=np.float64)
                 p3.setData(i, DataType.Line, arr, label, color)
 
         # ------------------------------------------------------------------
-        # Panel 4: mainTrader PnL (Kar/Zarar)
+        # Panel 4: Return  (getiri_fiyat_list + getiri_fiyat_net_list — overlay)
+        # Her trader için 2 çizgi: gross (açık renk) + net (tam renk)
         # ------------------------------------------------------------------
-        if main.kar_zarar_fiyat_list:
-            p4 = plotter.AddPanel(4)
-            p4.setTitle("Main PnL")
-            p4.setYAxisLabel("PnL")
-            p4.setHeightRatio(0.5)
-            p4.setInfoPanelPosition(100, 2)
-            p4.setInfoPanelOffsets(label_dx=5, value_dx=80)
-            arr = np.array(main.kar_zarar_fiyat_list, dtype=np.float64)
-            p4.setData(0, DataType.Line, arr, "PnL", _TRADER_COLORS[0])
+        p4 = plotter.AddPanel(4)
+        p4.setTitle("Return")
+        p4.setYAxisLabel("Return")
+        p4.setHeightRatio(0.5)
+        p4.setInfoPanelPosition(100, 2)
+        p4.setInfoPanelOffsets(label_dx=5, value_dx=80)
+
+        data_id = 0
+        for i, td in enumerate(self._traders):
+            label  = "Main" if i == 0 else f"Child {i}"
+            color  = _TRADER_COLORS[i % len(_TRADER_COLORS)]
+            dim    = tuple(c * 0.5 for c in color[:3]) + (0.7,)   # soluk = gross
+
+            if td.getiri_fiyat_list:
+                arr = np.array(td.getiri_fiyat_list, dtype=np.float64)
+                p4.setData(data_id, DataType.Line, arr, f"{label} Gross", dim)
+                data_id += 1
+            if td.getiri_fiyat_net_list:
+                arr = np.array(td.getiri_fiyat_net_list, dtype=np.float64)
+                p4.setData(data_id, DataType.Line, arr, f"{label} Net", color)
+                data_id += 1
+
+        # ------------------------------------------------------------------
+        # Panel 5: Return %  (getiri_fiyat_yuzde_list + getiri_fiyat_net_yuzde_list)
+        # ------------------------------------------------------------------
+        p5 = plotter.AddPanel(5)
+        p5.setTitle("Return %")
+        p5.setYAxisLabel("Return %")
+        p5.setHeightRatio(0.5)
+        p5.setInfoPanelPosition(100, 2)
+        p5.setInfoPanelOffsets(label_dx=5, value_dx=80)
+
+        data_id = 0
+        for i, td in enumerate(self._traders):
+            label = "Main" if i == 0 else f"Child {i}"
+            color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
+            dim   = tuple(c * 0.5 for c in color[:3]) + (0.7,)
+
+            if td.getiri_fiyat_yuzde_list:
+                arr = np.array(td.getiri_fiyat_yuzde_list, dtype=np.float64)
+                p5.setData(data_id, DataType.Line, arr, f"{label} Gross %", dim)
+                data_id += 1
+            if td.getiri_fiyat_net_yuzde_list:
+                arr = np.array(td.getiri_fiyat_net_yuzde_list, dtype=np.float64)
+                p5.setData(data_id, DataType.Line, arr, f"{label} Net %", color)
+                data_id += 1
 
         # Y-axis sync
         plotter.RegisterYSyncGroup(0, p0)
