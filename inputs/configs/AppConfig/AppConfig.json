@@ -151,7 +151,7 @@
         "StopDateTime": "2025.06.02 17:55:00"
       },
       "Plot": {
-        "PlotEnabled": false
+        "PlotEnabled": true
       },
       "Optimization": {
         "OptimizationEnabled": false

@@ -289,15 +289,17 @@ public class PythonPlotter : IDisposable
             ["ma200"] = _indicators?.MA.SMA(closes, 200),
         };
 
+        _logger?.WriteRaw($"  [Plot] Preparing data ({trader.Data.Count:N0} bars)...");
+
         using (Py.GIL())
         {
             ExtractTraderData(trader, lists);
-
             dynamic tradeData = BuildPyTradeData();
-
             SetPyIndicators(tradeData, indicatorsToPlot);
 
+            _logger?.WriteRaw($"  [Plot] Data ready. Opening plot window...");
             CallPlotDataImgBundleNew(tradeData);
+            _logger?.WriteRaw($"  [Plot] Window closed.");
         }
     }
 
@@ -316,14 +318,22 @@ public class PythonPlotter : IDisposable
         var mainTrader = multipleTrader.GetMainTrader()
             ?? throw new ArgumentException("multipleTrader.GetMainTrader() null döndü.", nameof(multipleTrader));
 
+        int totalTraders = 1 + multipleTrader.Traders.Count;
+        int doneTraders  = 0;
+        int totalBars    = mainTrader.Data?.Count ?? 0;
+        int totalAllBars = totalBars * totalTraders;
+
+        _logger?.WriteRaw($"  [Plot] Preparing data for {totalTraders} traders ({totalBars:N0} bars each, {totalAllBars:N0} bars total)...");
+
         using (Py.GIL())
         {
             var pyTraderList = new PyList();
 
             // mainTrader
+            _logger?.WriteRaw($"  [Plot] [{++doneTraders}/{totalTraders}] mainTrader → Python...");
             ExtractTraderData(mainTrader, mainTrader.lists
                 ?? throw new ArgumentException("mainTrader.lists is null"));
-            var mainData = BuildPyTradeData();
+            var mainData   = BuildPyTradeData();
             var mainCloses = mainTrader.GetClosePrices();
             SetPyIndicators(mainData, new Dictionary<string, double[]?>
             {
@@ -339,8 +349,9 @@ public class PythonPlotter : IDisposable
             {
                 if (child?.lists == null) continue;
 
+                _logger?.WriteRaw($"  [Plot] [{++doneTraders}/{totalTraders}] child[{doneTraders - 2}] → Python...");
                 ExtractTraderData(child, child.lists);
-                var childData = BuildPyTradeData();
+                var childData   = BuildPyTradeData();
                 var childCloses = child.GetClosePrices();
                 SetPyIndicators(childData, new Dictionary<string, double[]?>
                 {
@@ -352,7 +363,9 @@ public class PythonPlotter : IDisposable
                 pyTraderList.Append(childData);
             }
 
+            _logger?.WriteRaw($"  [Plot] Data ready. Opening plot window...");
             CallPlotMultipleTraderData(pyTraderList);
+            _logger?.WriteRaw($"  [Plot] Window closed.");
         }
     }
 
