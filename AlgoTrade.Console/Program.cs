@@ -1013,31 +1013,41 @@ void showModeConfigSummary(string title)
         return;
     }
 
-    // MultipleTrader — mevcut tasarım korunur
-    string stratInfo2  = "";
-    string runModeStr2 = "";
-    string tradeInfo2  = "";
-
     if (title == "MultipleTrader")
     {
-        var cfg    = appConfig.MultipleTrader;
-        stratInfo2  = $"{cfg.ChildTraders.Count} child trader";
-        runModeStr2 = cfg.RunMode;
-        var tp = cfg.MainTrader.TradeParams;
-        tradeInfo2 = $"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (MainTrader)";
-    }
+        var cfg = appConfig.MultipleTrader;
+        var tp  = cfg.MainTrader.TradeParams;
 
-    Console.WriteLine($"║  RunMode    : {Trunc(runModeStr2, 50),-50}║");
-    Console.WriteLine($"║  Strategy   : {Trunc(stratInfo2, 50),-50}║");
-    Console.WriteLine($"║  TradeParam : {Trunc(tradeInfo2, 50),-50}║");
-    Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
-    Console.WriteLine("║  [ENTER]  Run                                                    ║");
-    Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
-    Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
-    Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
-    Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
-    Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
-    Console.WriteLine();
+        string runMode  = Trunc($"{cfg.RunMode}  |  Consensus: {cfg.Consensus.Mode}", 50);
+        string tpInfo   = Trunc($"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (MainTrader)", 50);
+
+        Console.WriteLine($"║  RunMode    : {runMode,-50}║");
+
+        // Per-child strategy rows (max 4, then "...")
+        int nChildren = cfg.ChildTraders.Count;
+        foreach (var child in cfg.ChildTraders.Take(4))
+        {
+            string childLine = Trunc($"[{child.ChildId}]  {child.Strategy.Name} / {child.Strategy.Version}", 50);
+            Console.WriteLine($"║  Child      : {childLine,-50}║");
+        }
+        if (nChildren > 4)
+        {
+            string more = Trunc($"... and {nChildren - 4} more", 50);
+            Console.WriteLine($"║  Child      : {more,-50}║");
+        }
+
+        Console.WriteLine($"║  TradeParam : {tpInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Preview & Run                                         ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
 }
 
 void showSingleTraderRunPreview(TraderRunMode mode)
@@ -1306,6 +1316,141 @@ void showSingleTraderOptRunPreview()
     Console.WriteLine();
 }
 
+void showMultipleTraderRunPreview()
+{
+    var cfg = appConfig.MultipleTrader;
+
+    var jsonOpts = new JsonSerializerOptions
+    {
+        WriteIndented          = true,
+        PropertyNamingPolicy   = null,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        Converters             = { new JsonStringEnumConverter() }
+    };
+
+    // MainTrader ECF
+    object? mainEcfSection = null;
+    if (cfg.MainTrader.EquityCurveFilter != null)
+    {
+        mainEcfSection = new { cfg.MainTrader.EquityCurveFilter.Version };
+        try
+        {
+            string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.MainTrader.EquityCurveFilter.ConfigFile);
+            var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+            ecfLoader.LoadFromFile();
+            var ecfCfg = ecfLoader.GetConfiguration(cfg.MainTrader.EquityCurveFilter.Version);
+            if (ecfCfg != null)
+                mainEcfSection = new { ecfCfg.Version, ecfCfg.DisplayName, ecfCfg.Enabled,
+                    ecfCfg.ThresholdTypeIsPercent, ecfCfg.ProfitThreshold, ecfCfg.LossThreshold, ecfCfg.Trigger };
+        }
+        catch { }
+    }
+
+    // ChildTraders — her biri için Strategy, Query, ECF, Signals
+    var childSections = new List<object>();
+    foreach (var child in cfg.ChildTraders)
+    {
+        // Strategy
+        object stratSection = new { child.Strategy.Name, child.Strategy.Version };
+        try
+        {
+            string stratPath = Path.Combine(AppSettings.ConfigsDir, child.Strategy.ConfigFile);
+            var stratLoader  = new StrategyConfigLoader(stratPath);
+            stratLoader.LoadFromFile();
+            var stratCfg = stratLoader.GetConfiguration(child.Strategy.Name, child.Strategy.Version);
+            if (stratCfg != null)
+                stratSection = new { stratCfg.StrategyName, stratCfg.Version, stratCfg.DisplayName,
+                    Parameters = stratCfg.GetParameterValues() };
+        }
+        catch { }
+
+        // Query
+        object? querySection = null;
+        if (child.Query != null)
+        {
+            querySection = new { child.Query.Name, child.Query.Version };
+            try
+            {
+                string queryPath = Path.Combine(AppSettings.ConfigsDir, child.Query.ConfigFile);
+                var queryLoader  = new QueryConfigLoader(queryPath);
+                queryLoader.LoadFromFile();
+                var queryCfg = queryLoader.GetConfiguration(child.Query.Name, child.Query.Version);
+                if (queryCfg != null)
+                    querySection = new { queryCfg.QueryName, queryCfg.Version, queryCfg.DisplayName,
+                        Parameters = queryCfg.GetParameterValues() };
+            }
+            catch { }
+        }
+
+        // ECF
+        object? ecfSection = null;
+        if (child.EquityCurveFilter != null)
+        {
+            ecfSection = new { child.EquityCurveFilter.Version };
+            try
+            {
+                string ecfPath = Path.Combine(AppSettings.ConfigsDir, child.EquityCurveFilter.ConfigFile);
+                var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+                ecfLoader.LoadFromFile();
+                var ecfCfg = ecfLoader.GetConfiguration(child.EquityCurveFilter.Version);
+                if (ecfCfg != null)
+                    ecfSection = new { ecfCfg.Version, ecfCfg.DisplayName, ecfCfg.Enabled };
+            }
+            catch { }
+        }
+
+        childSections.Add(new
+        {
+            child.ChildId,
+            Strategy          = stratSection,
+            Query             = querySection,
+            EquityCurveFilter = ecfSection,
+            child.Signals
+        });
+    }
+
+    var preview = new
+    {
+        cfg.RunMode,
+        cfg.Consensus,
+        MainTrader   = new { cfg.MainTrader.TradeParams, cfg.MainTrader.Signals, EquityCurveFilter = mainEcfSection },
+        ChildTraders = childSections,
+        cfg.Save
+    };
+
+    string json = JsonSerializer.Serialize(preview, jsonOpts);
+
+    string sep = new string('═', 66);
+    Console.WriteLine();
+    Console.WriteLine("══ MultipleTrader — Run Preview ════════════════════════════════════");
+    foreach (string rawLine in json.Split('\n'))
+    {
+        string line     = rawLine.TrimEnd('\r');
+        int    colonIdx = line.IndexOf("\": ");
+        if (colonIdx >= 0)
+        {
+            string valuePart = line.Substring(colonIdx + 3).TrimEnd(',').Trim();
+            if (valuePart == "true" || valuePart == "false")
+            {
+                Console.Write(line.Substring(0, colonIdx + 3));
+                Console.ForegroundColor = valuePart == "true" ? ConsoleColor.Green : ConsoleColor.Red;
+                Console.Write(line.Substring(colonIdx + 3));
+                Console.ResetColor();
+                Console.WriteLine();
+                continue;
+            }
+        }
+        Console.WriteLine(line);
+    }
+    Console.WriteLine(sep);
+    Console.WriteLine("  [ENTER]  Run");
+    Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [R]      Reload AppConfig");
+    Console.WriteLine("  [T]      Pause/Resume Timer");
+    Console.WriteLine("  [B]      Back");
+    Console.WriteLine();
+}
+
 async Task handleSingleTrader()
 {
     reloadAppConfig();
@@ -1359,7 +1504,13 @@ async Task handleSingleTrader()
 
         // ENTER → çalıştır
         await runSingleTraderAlgoTrade();
-        return;
+
+        // Run tamamlandı — tekrar çalıştır veya ana menüye dön
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Run again   [ESC] Back to Main Menu");
+        Console.WriteLine();
+        if (ReadMenuInput() == null) return; // ESC → ana menü
+        // ENTER / herhangi tuş → döngü devam eder (config özeti tekrar gösterilir)
     }
 }
 
@@ -1385,9 +1536,33 @@ async Task handleMultipleTrader()
             continue;
         }
 
+        // ENTER → önizleme göster
+        showMultipleTraderRunPreview();
+        var confirm = MenuInput("");
+
+        if (confirm == null || confirm.Equals("b", StringComparison.OrdinalIgnoreCase)) continue;
+
+        if (confirm.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (confirm.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
         selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
         await runMultipleTraderAlgoTrade();
-        return;
+
+        // Run tamamlandı — tekrar çalıştır veya ana menüye dön
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Run again   [ESC] Back to Main Menu");
+        Console.WriteLine();
+        if (ReadMenuInput() == null) return; // ESC → ana menü
+        // ENTER / herhangi tuş → döngü devam eder (config özeti tekrar gösterilir)
     }
 }
 
@@ -1432,7 +1607,13 @@ async Task handleSingleTraderOpt()
         }
 
         await runSingleTraderOptimization();
-        return;
+
+        // Run tamamlandı — tekrar çalıştır veya ana menüye dön
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Run again   [ESC] Back to Main Menu");
+        Console.WriteLine();
+        if (ReadMenuInput() == null) return; // ESC → ana menü
+        // ENTER / herhangi tuş → döngü devam eder (config özeti tekrar gösterilir)
     }
 }
 
