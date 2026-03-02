@@ -301,6 +301,61 @@ public class PythonPlotter : IDisposable
         }
     }
 
+    /// <summary>
+    /// MultipleTrader koşum sonuçlarını Python'a aktarıp görselleştirir.
+    /// mainTrader ve tüm child trader verileri PyList olarak gönderilir.
+    /// Pencere kapanana dek bloklar.
+    /// </summary>
+    public void PlotMultipleTraderData(MultipleTrader multipleTrader)
+    {
+        EnsureInitialized();
+
+        if (multipleTrader == null)
+            throw new ArgumentNullException(nameof(multipleTrader));
+
+        var mainTrader = multipleTrader.GetMainTrader()
+            ?? throw new ArgumentException("multipleTrader.GetMainTrader() null döndü.", nameof(multipleTrader));
+
+        using (Py.GIL())
+        {
+            var pyTraderList = new PyList();
+
+            // mainTrader
+            ExtractTraderData(mainTrader, mainTrader.lists
+                ?? throw new ArgumentException("mainTrader.lists is null"));
+            var mainData = BuildPyTradeData();
+            var mainCloses = mainTrader.GetClosePrices();
+            SetPyIndicators(mainData, new Dictionary<string, double[]?>
+            {
+                ["ma5"]   = _indicators?.MA.SMA(mainCloses, 5),
+                ["ma20"]  = _indicators?.MA.SMA(mainCloses, 20),
+                ["ma50"]  = _indicators?.MA.SMA(mainCloses, 50),
+                ["ma200"] = _indicators?.MA.SMA(mainCloses, 200),
+            });
+            pyTraderList.Append(mainData);
+
+            // child traders
+            foreach (var child in multipleTrader.Traders)
+            {
+                if (child?.lists == null) continue;
+
+                ExtractTraderData(child, child.lists);
+                var childData = BuildPyTradeData();
+                var childCloses = child.GetClosePrices();
+                SetPyIndicators(childData, new Dictionary<string, double[]?>
+                {
+                    ["ma5"]   = _indicators?.MA.SMA(childCloses, 5),
+                    ["ma20"]  = _indicators?.MA.SMA(childCloses, 20),
+                    ["ma50"]  = _indicators?.MA.SMA(childCloses, 50),
+                    ["ma200"] = _indicators?.MA.SMA(childCloses, 200),
+                });
+                pyTraderList.Append(childData);
+            }
+
+            CallPlotMultipleTraderData(pyTraderList);
+        }
+    }
+
     private void ExtractTraderData(SingleTrader trader, Lists lists)
     {
         _dateTimes               = trader.Data.Select(d => d.DateTime).ToList();
@@ -506,6 +561,45 @@ public class PythonPlotter : IDisposable
         }
 
         return success;
+    }
+
+    /// <summary>
+    /// mainTrader + child trader listesini Python'a gönderir.
+    /// Python tarafında main.print_multiple_trader_data(trader_list) çağrılır.
+    /// GIL çağrı öncesinde edinilmiş olmalıdır.
+    /// </summary>
+    private void CallPlotMultipleTraderData(PyList traderList)
+    {
+        try
+        {
+            dynamic sys_module = Py.Import("sys");
+            dynamic old_stdout = sys_module.stdout;
+
+            try
+            {
+                dynamic io = Py.Import("io");
+                sys_module.stdout = io.StringIO();
+
+                dynamic mainModule = Py.Import("main");
+                mainModule.print_multiple_trader_data(traderList);
+
+                string pythonOutput = sys_module.stdout.getvalue().ToString();
+                if (!string.IsNullOrEmpty(pythonOutput))
+                {
+                    _logger?.WriteRaw("=== PYTHON OUTPUT ===");
+                    _logger?.WriteRaw(pythonOutput);
+                    _logger?.WriteRaw("=== END PYTHON OUTPUT ===");
+                }
+            }
+            finally
+            {
+                sys_module.stdout = old_stdout;
+            }
+        }
+        catch (PythonException pyEx)
+        {
+            throw new Exception($"Python MultipleTrader plotting error: {pyEx.Message}\n{pyEx.StackTrace}", pyEx);
+        }
     }
 
     #endregion

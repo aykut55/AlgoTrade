@@ -832,14 +832,14 @@ async Task runMultipleTraderAlgoTrade()
 
         var mainTrader = algoTrader.MultipleTrader.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
-        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)   // Multipltrader calıstırıyorum, algoTrader.SingleTraderRunMode kullanılamsı anlamlı mı, değilse algoTrader.SingleTraderRunMode = assign yapılmalı 
+        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
         {
             LogManager.LogRaw("");
 
-            if (algoTrader.SetupPython())   // TODO Daha önceden pytho setup yapılmıs olabilir. Bence bunu bir flagle kontrol etmek lazım.
-                await algoTrader.PlotSingleTraderData(mainTrader);
+            if (algoTrader.SetupPython())
+                await algoTrader.PlotMultipleTraderData(algoTrader.MultipleTrader);
             else
-                LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+                LogManager.LogError("Python setup failed. PlotMultipleTraderData skipped.");
         }
 
         await writeTask;

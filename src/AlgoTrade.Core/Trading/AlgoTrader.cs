@@ -2078,6 +2078,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     {
         try
         {
+            // Zaten kuruluysa tekrar başlatma
+            if (_pythonPlotter != null && _pythonPlotter.IsInitialized)
+            {
+                Log("Python zaten kurulu, tekrar başlatma atlandı.");
+                return true;
+            }
+
             var envDll = Environment.GetEnvironmentVariable("PYTHONNET_PYDLL");
             if (!string.IsNullOrWhiteSpace(envDll) && File.Exists(envDll))
             {
@@ -2154,6 +2161,17 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             throw new InvalidOperationException("Python ortamı hazır değil. Önce SetupPython() çağırın.");
 
         await Task.Run(() => _pythonPlotter.PlotSingleTraderData(singleTrader));
+    }
+
+    public async Task PlotMultipleTraderData(MultipleTrader? multipleTrader)
+    {
+        if (multipleTrader == null)
+            throw new ArgumentNullException(nameof(multipleTrader));
+
+        if (_pythonPlotter == null || !_pythonPlotter.IsInitialized)
+            throw new InvalidOperationException("Python ortamı hazır değil. Önce SetupPython() çağırın.");
+
+        await Task.Run(() => _pythonPlotter.PlotMultipleTraderData(multipleTrader));
     }
 
     public void Dispose()
