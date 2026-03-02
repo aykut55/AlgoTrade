@@ -1275,8 +1275,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             singleTrader.Finalize();
 
             // Pipe ile (default)
-            var header = singleTrader.GetStatisticsHeaderRow();
-            var data   = singleTrader.GetStatisticsDataRow();
+            var header = singleTrader.GetStatisticsHeaderRow(); // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
+            var data   = singleTrader.GetStatisticsDataRow();   // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
 
             // Noktalı virgülle (CSV için)
             var csvHeader = singleTrader.GetStatisticsHeaderRow(";");
@@ -1953,6 +1953,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 Log($"  NetProfit: {bestResult.NetProfit:F2}");
                 Log($"  WinRate: {bestResult.WinRate:F2}%");
                 Log($"  ProfitFactor: {bestResult.ProfitFactor:F2}");
+                // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
             }
 
             _timer!.StopTimer("0");

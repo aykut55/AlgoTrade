@@ -370,7 +370,7 @@ public class SingleTraderOptimizer : IDisposable
             LogManager.LogRaw($"{progressLine}");
 
             // Append to files
-            AppendSingleOptSummaryToFiles(optResult, currentCombination);
+            AppendSingleOptSummaryToFiles(optResult, currentCombination);    // TODO : ScoreFiyatNet, ScoreFiyat ler eklenecek
 
             // ************************************************************************************************************
             // ************************************************************************************************************

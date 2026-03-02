@@ -235,6 +235,9 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double ProfitFactorNet { get; set; }  // Commission-adjusted profit factor
         public double ProfitFactorSistem { get; set; }
         public double KarliIslemOrani { get; set; }
+        public double ScoreFiyatNet { get; set; }   // TODO : Bunu tüm log dosyalarına ekle
+        public double ScoreFiyat { get; set; }      // TODO : Bunu tüm log dosyalarına ekle
+        public double ScorePuan { get; set; }       // TODO : Bunu tüm log dosyalarına ekle
 
         #endregion
 
@@ -769,6 +772,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             //GetiriKzSistemYuzde    = 0.0;  // Silinecek
             //GetiriKzNetSistemYuzde = 0.0;  // Silinecek
 
+            ScoreFiyatNet = GetiriMaxDD     != 0 ? GetiriFiyatYuzdeNet / GetiriMaxDD     : 0;
+            ScoreFiyat    = GetiriMaxDD     != 0 ? GetiriFiyatYuzde    / GetiriMaxDD     : 0;
+            ScorePuan     = GetiriMaxDDPuan != 0 ? GetiriPuanYuzde     / GetiriMaxDDPuan : 0;
+
             //GetiriIstatistikleriHesapla();
 
             AssignToMap();
@@ -1087,6 +1094,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("ProfitFactor", ProfitFactor, "F2");
             Add("ProfitFactorNet", ProfitFactorNet, "F2");
             Add("ProfitFactorSistem", ProfitFactorSistem, "F2");
+            Add("ScoreFiyatNet", ScoreFiyatNet, "F2");
+            Add("ScoreFiyat", ScoreFiyat, "F2");
+            Add("ScorePuan", ScorePuan, "F2");
 
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
@@ -1384,6 +1394,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("ProfitFactor", ProfitFactor, "F2");
             Add("ProfitFactorPuan", ProfitFactorPuan, "F2");
             Add("ProfitFactorNet", ProfitFactorNet, "F2");
+            Add("ScoreFiyatNet", ScoreFiyatNet, "F2");
+            Add("ScoreFiyat", ScoreFiyat, "F2");
+            Add("ScorePuan", ScorePuan, "F2");
 
             StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
 
@@ -1937,6 +1950,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             foreach (var name in names)
                 sb.Append($" | {name.PadLeft(8)}");
             sb.Append($" | {"[cur/tot]".PadLeft(11)}");
+            sb.Append($" | {"Net Score".PadLeft(11)}");
             sb.Append($" | {"Net Return %".PadLeft(12)}");
             sb.Append($" | {"Gross Return %".PadLeft(14)}");
             sb.Append($" | {"Score Return %".PadLeft(14)}");
@@ -1967,6 +1981,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                 sb.Append($" | {(kvp.Value?.ToString() ?? "").PadLeft(8)}");
 
             sb.Append($" | {$"[{current}/{total}]".PadLeft(11)}");
+            sb.Append($" | {ScoreFiyatNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(11)}");
             sb.Append($" | {GetiriFiyatYuzdeNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(12)}");    // "Net Return %"   = 12
             sb.Append($" | {GetiriFiyatYuzde.ToString("F2", CultureInfo.InvariantCulture).PadLeft(14)}");       // "Gross Return %" = 14
             sb.Append($" | {GetiriPuanYuzde.ToString("F2", CultureInfo.InvariantCulture).PadLeft(14)}");        // "Score Return %" = 14

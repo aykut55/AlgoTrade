@@ -207,6 +207,10 @@
             {"field": "ProfitFactorPuan",               "header": "ProfitFactorPuan",               "width": 16, "enabled": true},
             {"field": "ProfitFactor",                   "header": "ProfitFactor",                   "width": 12, "enabled": true},
             {"field": "ProfitFactorNet",                "header": "ProfitFactorNet",                "width": 15, "enabled": true},
+            
+            {"field": "ScoreFiyatNet",               	"header": "ScoreFiyatNet",                  "width": 13, "enabled": true},
+            {"field": "ScoreFiyat",                   	"header": "ScoreFiyat",                     "width": 13, "enabled": true},
+            {"field": "ScorePuan",                  	"header": "ScorePuan",                	    "width": 13, "enabled": true},
 
             {"field": "MinBakiyeFiyat",                 "header": "MinBakiyeFiyat",                 "width": 14, "enabled": true},
             {"field": "MaxBakiyeFiyat",                 "header": "MaxBakiyeFiyat",                 "width": 14, "enabled": true},
@@ -510,6 +514,10 @@
             {"field": "ProfitFactorPuan",               "header": "ProfitFactorPuan",               "width": 16, "enabled": true},
             {"field": "ProfitFactor",                   "header": "ProfitFactor",                   "width": 12, "enabled": true},
             {"field": "ProfitFactorNet",                "header": "ProfitFactorNet",                "width": 15, "enabled": true},
+            
+            {"field": "ScoreFiyatNet",               	"header": "ScoreFiyatNet",                  "width": 13, "enabled": true},
+            {"field": "ScoreFiyat",                   	"header": "ScoreFiyat",                     "width": 13, "enabled": true},
+            {"field": "ScorePuan",                  	"header": "ScorePuan",                	    "width": 13, "enabled": true},
 
             {"field": "MinBakiyePuan",                  "header": "MinBakiyePuan",                  "width": 13, "enabled": true},
             {"field": "MaxBakiyePuan",                  "header": "MaxBakiyePuan",                  "width": 13, "enabled": true},

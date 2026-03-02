@@ -753,7 +753,7 @@ public class StatisticsExporter
         void AddSection(StringBuilder sb, string title, params (string Label, string Key)[] rows)
         {
             var boxWidth = reportBoxWidth;
-            const int labelWidth = 24;
+            const int labelWidth = 30;
             var valueWidth = boxWidth - labelWidth - 6; // "| " + " : " + " |"
 
             var headerDashCount = Math.Max(0, boxWidth - title.Length - 3); // "┌─ " + title + " ─┐"
@@ -934,6 +934,12 @@ public class StatisticsExporter
             ("Profit Factor", "ProfitFactor"),
             ("Profit Factor (Net)", "ProfitFactorNet"),
             ("Profit Factor (System)", "ProfitFactorSistem")
+        );
+
+        AddSection(sb, "SCORE",
+            ("Score (Net Return / MaxDD)", "ScoreFiyatNet"),
+            ("Score (Gross Return / MaxDD)", "ScoreFiyat"),
+            ("Score (Score Return / MaxDD)", "ScorePuan")
         );
 
         AddSection(sb, "SIGNALS & EXECUTION STATUS",
