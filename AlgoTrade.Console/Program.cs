@@ -1711,3 +1711,50 @@ catch (Exception ex)
     Console.ReadKey();
 }
 
+/*
+ * TODO : OPT En iyi hangi parametre setini seçmeliyim'in cevaplarını bulmak için kullanılabilecek yöntemler
+ * 
+2️⃣ Risk-adjusted skor üret
+
+Mesela:
+
+Score = NetReturn / MaxDD
+
+Bu daha mantıklı seçim yaptırır.
+ * 
+ * 
+4800 kombinasyon bitince:
+
+Heatmap çıkar (period x percent)
+
+NetReturn ısı haritası
+
+MaxDD ısı haritası
+
+PFNet ısı haritası
+
+Ve şu soruyu sor:
+
+En stabil bölge neresi?
+
+Tek bir parametre değil,
+bir parametre bandı aramalısın.
+ * 
+ * 
+ * 
+4800 sonuç bitince şunları yap:
+
+NetReturn heatmap
+
+MaxDD heatmap
+
+NetReturn/MaxDD skoru
+
+En iyi %10’luk parametrelerin kümelenmesi
+
+Eğer en iyi %10 aynı bölgede toplanıyorsa → sistem sağlıklı
+
+Eğer dağınıksa → overfit
+ * 
+ * 
+*/ 
