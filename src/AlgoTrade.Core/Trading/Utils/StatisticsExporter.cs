@@ -1293,6 +1293,17 @@ public class StatisticsExporter
         {
             var node = SingleTraderOptimization;
             if (node == null) return new List<ColumnConfig>();
+
+            // Yeni yapı: "v1" lookup, sonra profile ("Full") lookup
+            var versionCols = node.GetColumnsByVersion("v1")
+                           ?? node.GetColumnsByVersion(profile);
+            if (versionCols != null && versionCols.Count > 0)
+            {
+                foreach (var c in versionCols) { if (c.width <= 0) c.width = 10; }
+                return versionCols.FindAll(c => c.enabled);
+            }
+
+            // Geriye dönük uyum: Full/Minimal profile → listOutputs
             var chosen = string.Equals(profile, "Minimal", StringComparison.OrdinalIgnoreCase)
                 ? node.Minimal : node.Full;
             chosen ??= node.Full ?? node.Minimal;
@@ -1515,6 +1526,17 @@ public class StatisticsExporter
         public string? description { get; set; }
         public TraderListProfile? Full    { get; set; }
         public TraderListProfile? Minimal { get; set; }
+
+        // Yeni yapı: "v1", "v2" vb. version key'leri
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? Versions { get; set; }
+
+        public List<ColumnConfig>? GetColumnsByVersion(string version)
+        {
+            if (Versions != null && Versions.TryGetValue(version, out var el))
+                return el.Deserialize<VersionedColumnsNode>()?.columns;
+            return null;
+        }
     }
 
     private sealed class ListOutputs
