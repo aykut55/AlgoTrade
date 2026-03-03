@@ -591,6 +591,8 @@ public class SingleTraderOptimizer : IDisposable
         if (writeHeader)
         {
             sw.WriteLine($"OPTIMIZATION RESULTS - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            if (Data.Count > 0)
+                sw.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
             sw.WriteLine("".PadRight(1360, '='));
 
             var headerParts = new List<string>();
@@ -765,6 +767,8 @@ public class SingleTraderOptimizer : IDisposable
         var paramWidths = first.Parameters.Keys.ToDictionary(k => k, k => Math.Max(k.Length, 10) + 1);
 
         sw.WriteLine($"OPTIMIZATION RESULTS (sorted by {SortField}) - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        if (Data.Count > 0)
+            sw.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
         sw.WriteLine("".PadRight(1360, '='));
 
         var headerParts = new List<string> { "CombNo".PadLeft(8) };

@@ -407,6 +407,7 @@ public class MultipleTrader
             // Title
             writer.WriteLine($"MULTIPLE TRADER BAR-BY-BAR DATA");
             writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            writer.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
             writer.WriteLine("".PadRight(300, '='));
 
             // Header

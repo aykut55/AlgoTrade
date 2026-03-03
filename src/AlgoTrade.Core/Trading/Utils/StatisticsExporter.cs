@@ -198,6 +198,7 @@ public class StatisticsExporter
         using StreamWriter writer = CreateSharedWriter(filePath);
         writer.WriteLine($"BAR-BY-BAR TRADING DATA (ALL) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        writer.WriteLine($"BarSayisi: {trader.Data.Count}  |  {trader.Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {trader.Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
         writer.WriteLine("".PadRight(850, '='));
 
         var headerCells = new List<string>(columns.Count);
@@ -276,6 +277,7 @@ public class StatisticsExporter
         using StreamWriter writer = CreateSharedWriter(filePath);
         writer.WriteLine($"SINGLE TRADER PERFORMANS (PROFILE: {profile}) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        writer.WriteLine($"BarSayisi: {trader.Data.Count}  |  {trader.Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {trader.Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
         writer.WriteLine("".PadRight(200, '='));
 
         var colWidths = new int[columns.Count];
