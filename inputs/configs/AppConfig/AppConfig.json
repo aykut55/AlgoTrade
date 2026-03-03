@@ -92,6 +92,11 @@
       "MinimalStatsTxtFormattedFileName": "SingleTraderStatisticsMinimalFormatted.txt",
       "PerformansTxtFileName": "SingleTraderPerformans.txt",
       "PerformansCsvFileName": "SingleTraderPerformans.csv"
+    },
+    "Export": {
+      "ExportEnabled": true,
+      "ConfigFile": "StatisticsExporterConfig.json",
+      "Version": "v1"
     }
   },
 
@@ -108,6 +113,11 @@
       "WriteChildTradersDataToFiles": true,
       // FilePrefix: MainTrader → {FilePrefix}_Main_{FileName}  |  Child → {FilePrefix}_Child{i}_{FileName}
       "FilePrefix": "MultipleTrader"
+    },
+    "Export": {
+      "ExportEnabled": true,
+      "ConfigFile": "StatisticsExporterConfig.json",
+      "Version": "v1"
     },
 
     "Consensus": {
@@ -182,6 +192,11 @@
         "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
         "PerformansTxtFileName": "Performans.txt",
         "PerformansCsvFileName": "Performans.csv"
+      },
+      "Export": {
+        "ExportEnabled": true,
+        "ConfigFile": "StatisticsExporterConfig.json",
+        "Version": "v1"
       }
     },
 
@@ -247,6 +262,11 @@
           "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
           "PerformansTxtFileName": "Performans.txt",
           "PerformansCsvFileName": "Performans.csv"
+        },
+        "Export": {
+          "ExportEnabled": true,
+          "ConfigFile": "StatisticsExporterConfig.json",
+          "Version": "v1"
         }
       },
       {
@@ -310,6 +330,11 @@
           "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
           "PerformansTxtFileName": "Performans.txt",
           "PerformansCsvFileName": "Performans.csv"
+        },
+        "Export": {
+          "ExportEnabled": true,
+          "ConfigFile": "StatisticsExporterConfig.json",
+          "Version": "v1"
         }
       }
     ]
@@ -367,6 +392,11 @@
       "AppendEnabled": true,
       "FileFlushIntervalMs": -1
     },
+    "Export": {
+      "ExportEnabled": true,
+      "ConfigFile": "StatisticsExporterConfig.json",
+      "Version": "v1"
+    },
     "Sort": {
       "SortField": "GetiriFiyatNet",
       "SortedCsvFileName": "singleTraderOptLog_sorted.csv",
@@ -405,6 +435,11 @@
         "MinimalStatsTxtFormattedFileName": "SingleTraderOptStatisticsMinimalFormatted.txt",
         "PerformansTxtFileName": "SingleTraderOptPerformans.txt",
         "PerformansCsvFileName": "SingleTraderOptPerformans.csv"
+      },
+      "Export": {
+        "ExportEnabled": true,
+        "ConfigFile": "StatisticsExporterConfig.json",
+        "Version": "v1"
       }
     }
   }
