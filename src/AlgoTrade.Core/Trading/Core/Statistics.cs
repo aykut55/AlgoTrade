@@ -1236,14 +1236,14 @@ namespace AlgoTrade.Core.Trading.Statistics
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveListsToTxt(filePath);
         }
 
-        public void SaveListsToTxtFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json")
+        public void SaveListsToTxtFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json", string version = "v1")
         {
-            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveListsToTxtFromConfig(filePath, configPath);
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveListsToTxtFromConfig(filePath, configPath, version);
         }
 
-        public void SaveListsToCsvFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json")
+        public void SaveListsToCsvFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json", string version = "v1")
         {
-            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveListsToCsvFromConfig(filePath, configPath);
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveListsToCsvFromConfig(filePath, configPath, version);
         }
 
         // Save bar-by-bar lists to CSV file (semicolon separated) - ALL COLUMNS

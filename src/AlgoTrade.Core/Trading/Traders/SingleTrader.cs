@@ -2561,14 +2561,14 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             Log($"\n\tSaving performans to {PerformansCsvFileName}...");
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
-                .SavePerformansToCsvFromConfig(Path.Combine(outputDir, PerformansCsvFileName), configPath, "Full");
+                .SavePerformansToCsvFromConfig(Path.Combine(outputDir, PerformansCsvFileName), configPath);
         }
 
         if (this.SavePerformansTxtEnabled)
         {
             Log($"\n\tSaving performans to {PerformansTxtFileName}...");
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
-                .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), configPath, "Full");
+                .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), configPath);
         }
 
         // ********************************************************************************************************
