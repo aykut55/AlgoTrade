@@ -1018,7 +1018,7 @@ void showModeConfigSummary(string title)
         Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
 
         Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  [ENTER]  Run                                                    ║");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
         Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
         Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
         Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
