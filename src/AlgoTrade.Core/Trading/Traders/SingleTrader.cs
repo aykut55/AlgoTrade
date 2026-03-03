@@ -1508,6 +1508,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         int i = barIndex;
 
+        this.flags.BakiyeGuncelle = false;
         if (this.ExecutionStepNumber == 0)
         {
 
