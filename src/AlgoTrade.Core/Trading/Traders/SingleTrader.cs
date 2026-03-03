@@ -282,6 +282,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
     public bool SavePerformansTxtEnabled { get; set; } = true;
     public bool SavePerformansCsvEnabled { get; set; } = true;
+
+    // Export (StatisticsExporterConfig.json versiyonlu çıktı)
+    public bool   ExportEnabled    { get; set; } = false;
+    public string ExportConfigFile { get; set; } = "StatisticsExporterConfig.json";
+    public string ExportVersion    { get; set; } = "v1";
     #endregion
 
     public bool is_son_yon_f()
@@ -2607,6 +2612,21 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             Log($"\n\tSaving statistics to {MinimalStatsTxtFormattedFileName}...");
             statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, MinimalStatsTxtFormattedFileName));
+        }
+
+        // Export (versiyonlu sütun tanımlarıyla çıktı)
+        if (this.ExportEnabled && !string.IsNullOrWhiteSpace(ExportConfigFile))
+        {
+            string exportConfigPath = Path.IsPathRooted(ExportConfigFile)
+                ? ExportConfigFile
+                : Path.Combine(inputsDir, ExportConfigFile);
+
+            Log($"\n\tExport: SaveListsToTxt (version={ExportVersion}) → {FullListsTxtFileName}...");
+            statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), exportConfigPath, ExportVersion);
+
+            Log($"\n\tExport: SavePerformansToTxt (version={ExportVersion}) → {PerformansTxtFileName}...");
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
+                .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), exportConfigPath, ExportVersion);
         }
 
     }
