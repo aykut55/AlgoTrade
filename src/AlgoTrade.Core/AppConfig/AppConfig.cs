@@ -55,6 +55,21 @@ public class ReadDataConfig
 }
 
 // =============================================================================
+// Export config
+// =============================================================================
+
+/// <summary>
+/// Trader çıktılarını StatisticsExporterConfig.json'daki sütun tanımlarıyla dosyaya yazar.
+/// Version → StatisticsExporterConfig.json içindeki versiyon anahtarı (örn. "v1", "v2").
+/// </summary>
+public class TraderExportConfig
+{
+    public bool   ExportEnabled { get; set; } = false;
+    public string ConfigFile    { get; set; } = "StatisticsExporterConfig.json";
+    public string Version       { get; set; } = "v1";
+}
+
+// =============================================================================
 // Reference types  (config dosyalarına referans)
 // =============================================================================
 
@@ -208,6 +223,7 @@ public class SingleTraderConfig
     public TraderPlotConfig         Plot         { get; set; } = new();
     public TraderOptimizationConfig Optimization { get; set; } = new();
     public TraderSaveConfig         Save         { get; set; } = new();
+    public TraderExportConfig?      Export       { get; set; }
 }
 
 // =============================================================================
@@ -266,6 +282,7 @@ public class MainTraderConfig
     public TraderPlotConfig         Plot              { get; set; } = new();
     public TraderOptimizationConfig Optimization      { get; set; } = new();
     public TraderSaveConfig         Save              { get; set; } = new();
+    public TraderExportConfig?      Export            { get; set; }
 }
 
 /// <summary>
@@ -282,6 +299,7 @@ public class ChildTraderEntry
     public TraderPlotConfig         Plot              { get; set; } = new();
     public TraderOptimizationConfig Optimization      { get; set; } = new();
     public TraderSaveConfig         Save              { get; set; } = new();
+    public TraderExportConfig?      Export            { get; set; }
 }
 
 public class MultipleTraderConfig
@@ -291,6 +309,9 @@ public class MultipleTraderConfig
 
     /// <summary>MultipleTrader nesnesinin liste/kayıt ayarları.</summary>
     public MultipleTraderSaveConfig Save   { get; set; } = new();
+
+    /// <summary>MultipleTrader nesnesinin export ayarları.</summary>
+    public TraderExportConfig?      Export { get; set; }
 
     /// <summary>BuildConsensusSignal() davranışını belirler.</summary>
     public ConsensusConfig    Consensus    { get; set; } = new();
@@ -318,6 +339,7 @@ public class SingleTraderOptConfig
     public EcfRef?                     EquityCurveFilter { get; set; }
     public TraderSignalsConfig         Signals           { get; set; } = new();
     public SingleTraderOptSaveConfig   Save              { get; set; } = new();
+    public TraderExportConfig?         Export            { get; set; }
     public SingleTraderOptSortConfig   Sort              { get; set; } = new();
     public SingleTraderOptTraderConfig SingleTrader      { get; set; } = new();
 }
@@ -354,4 +376,5 @@ public class SingleTraderOptTraderConfig
     public TraderPlotConfig         Plot         { get; set; } = new();
     public TraderOptimizationConfig Optimization { get; set; } = new();
     public TraderSaveConfig         Save         { get; set; } = new();
+    public TraderExportConfig?      Export       { get; set; }
 }

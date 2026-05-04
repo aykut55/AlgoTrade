@@ -107,6 +107,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTraderSignalsConfig?       _singleTraderOptSignalsConfig    = null;
     private SingleTraderOptLogConfig?   _singleTraderOptLogConfig      = null;
     private SingleTraderOptSortOutputConfig?  _singleTraderOptSortConfig     = null;
+    private SingleTraderExportConfig?   _singleTraderExportConfig      = null;
 
     // Python görselleştirme
     private PythonPlotter? _pythonPlotter;
@@ -863,6 +864,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         _singleTraderPlotConfig = config;
     }
 
+    public void SetSingleTraderExportConfig(SingleTraderExportConfig config)
+    {
+        _singleTraderExportConfig = config;
+    }
+
     public void SetSingleTraderOptimizationConfig(SingleTraderOptimizationConfig config)
     {
         _singleTraderOptimizationConfig = config;
@@ -952,6 +958,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         if (_singleTraderPlotConfig is { } pl)
         {
             trader.PlotEnabled = pl.PlotEnabled;
+        }
+
+        if (_singleTraderExportConfig is { } ex)
+        {
+            trader.ExportEnabled    = ex.ExportEnabled;
+            trader.ExportConfigFile = ex.ExportConfigFile;
+            trader.ExportVersion    = ex.ExportVersion;
         }
     }
 
@@ -1519,6 +1532,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) childTrader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
                 if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            childTrader.PerformansTxtFileName            = sv.PerformansTxtFileName;
                 if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            childTrader.PerformansCsvFileName            = sv.PerformansCsvFileName;
+            }
+
+            if (config.Export is { } ex)
+            {
+                childTrader.ExportEnabled    = ex.ExportEnabled;
+                childTrader.ExportConfigFile = ex.ExportConfigFile;
+                childTrader.ExportVersion    = ex.ExportVersion;
             }
 
             // Configure multiple trader mode flag
@@ -2341,6 +2361,13 @@ public class SingleTraderOptimizationConfig
     public bool OptimizationEnabled { get; set; } = false;
 }
 
+public class SingleTraderExportConfig
+{
+    public bool   ExportEnabled    { get; set; } = false;
+    public string ExportConfigFile { get; set; } = "StatisticsExporterConfig.json";
+    public string ExportVersion    { get; set; } = "v1";
+}
+
 public class SingleTraderOptRangeConfig
 {
     public int OptimizationFrom { get; set; } = -1;
@@ -2409,6 +2436,12 @@ public class ChildTraderConfigEntry
     /// null → createChildTraders() içinde OnApplyUserFlags2 sonucu korunur.
     /// </summary>
     public SingleTraderSaveConfig? Save { get; set; }
+
+    /// <summary>
+    /// Bu child trader için export ayarları (versiyonlu sütun tanımları).
+    /// null → ExportEnabled=false (export yapılmaz).
+    /// </summary>
+    public SingleTraderExportConfig? Export { get; set; }
 
     public ChildTraderConfigEntry(int childId, int strategyId, int? queryId = null, int? ecfConfigId = null)
     {

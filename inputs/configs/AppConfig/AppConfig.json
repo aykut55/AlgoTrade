@@ -52,9 +52,9 @@
       "AlEnabled": true,
       "SatEnabled": true,
       "FlatOlEnabled": true,
-      "PasGecEnabled": true,
-      "KarAlEnabled": true,
-      "ZararKesEnabled": true,
+      "PasGecEnabled": false,
+      "KarAlEnabled": false,
+      "ZararKesEnabled": false,
       "GunSonuPozKapatEnabled": false,
       "TimeFilteringEnabled": false,
       "StartDateTime": "2025.05.25 09:35:00",
@@ -92,6 +92,11 @@
       "MinimalStatsTxtFormattedFileName": "SingleTraderStatisticsMinimalFormatted.txt",
       "PerformansTxtFileName": "SingleTraderPerformans.txt",
       "PerformansCsvFileName": "SingleTraderPerformans.csv"
+    },
+    "Export": {
+      "ExportEnabled": true,
+      "ConfigFile": "StatisticsExporterConfig.json",
+      "Version": "v1"
     }
   },
 
@@ -108,6 +113,11 @@
       "WriteChildTradersDataToFiles": true,
       // FilePrefix: MainTrader → {FilePrefix}_Main_{FileName}  |  Child → {FilePrefix}_Child{i}_{FileName}
       "FilePrefix": "MultipleTrader"
+    },
+    "Export": {
+      "ExportEnabled": true,
+      "ConfigFile": "StatisticsExporterConfig.json",
+      "Version": "v1"
     },
 
     "Consensus": {
@@ -142,9 +152,9 @@
         "AlEnabled": true,
         "SatEnabled": true,
         "FlatOlEnabled": true,
-        "PasGecEnabled": true,
-        "KarAlEnabled": true,
-        "ZararKesEnabled": true,
+        "PasGecEnabled": false,
+        "KarAlEnabled": false,
+        "ZararKesEnabled": false,
         "GunSonuPozKapatEnabled": false,
         "TimeFilteringEnabled": false,
         "StartDateTime": "2025.05.25 09:35:00",
@@ -182,6 +192,11 @@
         "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
         "PerformansTxtFileName": "Performans.txt",
         "PerformansCsvFileName": "Performans.csv"
+      },
+      "Export": {
+        "ExportEnabled": true,
+        "ConfigFile": "StatisticsExporterConfig.json",
+        "Version": "v1"
       }
     },
 
@@ -207,9 +222,9 @@
           "AlEnabled": true,
           "SatEnabled": true,
           "FlatOlEnabled": true,
-          "PasGecEnabled": true,
-          "KarAlEnabled": true,
-          "ZararKesEnabled": true,
+          "PasGecEnabled": false,
+          "KarAlEnabled": false,
+          "ZararKesEnabled": false,
           "GunSonuPozKapatEnabled": false,
           "TimeFilteringEnabled": false,
           "StartDateTime": "2025.05.25 09:35:00",
@@ -247,6 +262,11 @@
           "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
           "PerformansTxtFileName": "Performans.txt",
           "PerformansCsvFileName": "Performans.csv"
+        },
+        "Export": {
+          "ExportEnabled": true,
+          "ConfigFile": "StatisticsExporterConfig.json",
+          "Version": "v1"
         }
       },
       {
@@ -270,9 +290,9 @@
           "AlEnabled": true,
           "SatEnabled": true,
           "FlatOlEnabled": true,
-          "PasGecEnabled": true,
-          "KarAlEnabled": true,
-          "ZararKesEnabled": true,
+          "PasGecEnabled": false,
+          "KarAlEnabled": false,
+          "ZararKesEnabled": false,
           "GunSonuPozKapatEnabled": false,
           "TimeFilteringEnabled": false,
           "StartDateTime": "2025.05.25 09:35:00",
@@ -310,6 +330,11 @@
           "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
           "PerformansTxtFileName": "Performans.txt",
           "PerformansCsvFileName": "Performans.csv"
+        },
+        "Export": {
+          "ExportEnabled": true,
+          "ConfigFile": "StatisticsExporterConfig.json",
+          "Version": "v1"
         }
       }
     ]
@@ -349,9 +374,9 @@
       "AlEnabled": true,
       "SatEnabled": true,
       "FlatOlEnabled": true,
-      "PasGecEnabled": true,
-      "KarAlEnabled": true,
-      "ZararKesEnabled": true,
+      "PasGecEnabled": false,
+      "KarAlEnabled": false,
+      "ZararKesEnabled": false,
       "GunSonuPozKapatEnabled": false,
       "TimeFilteringEnabled": false,
       "StartDateTime": "2025.05.25 09:35:00",
@@ -366,6 +391,11 @@
       "StatisticsExporterConfigFile": "StatisticsExporterConfig.json",
       "AppendEnabled": true,
       "FileFlushIntervalMs": -1
+    },
+    "Export": {
+      "ExportEnabled": true,
+      "ConfigFile": "StatisticsExporterConfig.json",
+      "Version": "v1"
     },
     "Sort": {
       "SortField": "GetiriFiyatNet",
@@ -405,6 +435,11 @@
         "MinimalStatsTxtFormattedFileName": "SingleTraderOptStatisticsMinimalFormatted.txt",
         "PerformansTxtFileName": "SingleTraderOptPerformans.txt",
         "PerformansCsvFileName": "SingleTraderOptPerformans.csv"
+      },
+      "Export": {
+        "ExportEnabled": true,
+        "ConfigFile": "StatisticsExporterConfig.json",
+        "Version": "v1"
       }
     }
   },

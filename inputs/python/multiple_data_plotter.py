@@ -14,6 +14,10 @@ _TRADER_COLORS = [
     (1.0, 0.2, 0.8, 1.0),   # child 7    — pembe
 ]
 
+# Panel 4 (Return) ve Panel 5 (Return %) panellerinde child trader verilerini göster.
+# False ise sadece mainTrader çizilir; True ise tüm child'lar da overlay olarak eklenir.
+ShowChildsData = False
+
 # SingleTrader ile aynı panel sırası:
 #   0 — OHLC
 #   1 — Signals
@@ -172,6 +176,7 @@ class MultipleDataPlotter:
         # ------------------------------------------------------------------
         # Panel 4: Return  (getiri_fiyat_list + getiri_fiyat_net_list — overlay)
         # Her trader için 2 çizgi: gross (açık renk) + net (tam renk)
+        # ShowChildsData=False ise sadece mainTrader çizilir.
         # ------------------------------------------------------------------
         p4 = plotter.AddPanel(4)
         p4.setTitle("Return")
@@ -180,8 +185,9 @@ class MultipleDataPlotter:
         p4.setInfoPanelPosition(100, 2)
         p4.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
+        _p4_traders = self._traders if ShowChildsData else self._traders[:1]
         data_id = 0
-        for i, td in enumerate(self._traders):
+        for i, td in enumerate(_p4_traders):
             label  = "Main" if i == 0 else f"Child {i}"
             color  = _TRADER_COLORS[i % len(_TRADER_COLORS)]
             dim    = tuple(c * 0.5 for c in color[:3]) + (0.7,)   # soluk = gross
@@ -197,6 +203,7 @@ class MultipleDataPlotter:
 
         # ------------------------------------------------------------------
         # Panel 5: Return %  (getiri_fiyat_yuzde_list + getiri_fiyat_net_yuzde_list)
+        # ShowChildsData=False ise sadece mainTrader çizilir.
         # ------------------------------------------------------------------
         p5 = plotter.AddPanel(5)
         p5.setTitle("Return %")
@@ -205,8 +212,9 @@ class MultipleDataPlotter:
         p5.setInfoPanelPosition(100, 2)
         p5.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
+        _p5_traders = self._traders if ShowChildsData else self._traders[:1]
         data_id = 0
-        for i, td in enumerate(self._traders):
+        for i, td in enumerate(_p5_traders):
             label = "Main" if i == 0 else f"Child {i}"
             color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
             dim   = tuple(c * 0.5 for c in color[:3]) + (0.7,)

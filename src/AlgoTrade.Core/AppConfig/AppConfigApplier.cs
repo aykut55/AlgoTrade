@@ -113,6 +113,17 @@ public static class AppConfigApplier
         {
             PlotEnabled = cfg.Plot.PlotEnabled,
         });
+
+        // Export
+        if (cfg.Export is not null)
+        {
+            algoTrader.SetSingleTraderExportConfig(new SingleTraderExportConfig
+            {
+                ExportEnabled    = cfg.Export.ExportEnabled,
+                ExportConfigFile = Path.Combine(configsDir, cfg.Export.ConfigFile),
+                ExportVersion    = cfg.Export.Version,
+            });
+        }
     }
 
     /// <summary>
@@ -176,6 +187,17 @@ public static class AppConfigApplier
         {
             PlotEnabled = cfg.MainTrader.Plot.PlotEnabled,
         });
+
+        // Export — MainTrader
+        if (cfg.MainTrader.Export is not null)
+        {
+            algoTrader.SetSingleTraderExportConfig(new SingleTraderExportConfig
+            {
+                ExportEnabled    = cfg.MainTrader.Export.ExportEnabled,
+                ExportConfigFile = Path.Combine(configsDir, cfg.MainTrader.Export.ConfigFile),
+                ExportVersion    = cfg.MainTrader.Export.Version,
+            });
+        }
 
         // FilePrefix — MainTrader: {prefix}_Main_{file}, Child: {prefix}_Child{i}_{file}
         string filePrefix = cfg.Save.FilePrefix;
@@ -365,6 +387,17 @@ public static class AppConfigApplier
                 PerformansTxtFileName               = $"{cp}_{sv.PerformansTxtFileName}",
                 PerformansCsvFileName               = $"{cp}_{sv.PerformansCsvFileName}",
             };
+
+            // Export — per-child
+            if (child.Export is not null)
+            {
+                entry.Export = new SingleTraderExportConfig
+                {
+                    ExportEnabled    = child.Export.ExportEnabled,
+                    ExportConfigFile = Path.Combine(configsDir, child.Export.ConfigFile),
+                    ExportVersion    = child.Export.Version,
+                };
+            }
         });
     }
 
@@ -484,6 +517,17 @@ public static class AppConfigApplier
             PerformansTxtFileName               = cfg.SingleTrader.Save.PerformansTxtFileName,
             PerformansCsvFileName               = cfg.SingleTrader.Save.PerformansCsvFileName,
         });
+
+        // Best trader — Export
+        if (cfg.SingleTrader.Export is not null)
+        {
+            algoTrader.SetSingleTraderExportConfig(new SingleTraderExportConfig
+            {
+                ExportEnabled    = cfg.SingleTrader.Export.ExportEnabled,
+                ExportConfigFile = Path.Combine(configsDir, cfg.SingleTrader.Export.ConfigFile),
+                ExportVersion    = cfg.SingleTrader.Export.Version,
+            });
+        }
     }
 
     // =========================================================================
