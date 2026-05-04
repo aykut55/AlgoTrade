@@ -1,6 +1,6 @@
 {
   "AppSettings": {
-    "StockDataFile": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv",
+    "StockDataFile": "C:\\data\\csvFiles\\CRP\\05\\BTCUSDT_BNC.csv",
     "AutoRunMode": "None",
     "MenuTimeoutSeconds": 5
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
@@ -39,13 +39,13 @@
       "Version": "v1"
     },
     "TradeParams": {
-      "MarketType": "ViopEndex",
+      "MarketType": "FxCrypto",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 20.0,
-      "KaymaMiktari": 0.5,
+      "KomisyonCarpan": 0.0,
+      "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
     "Signals": {
@@ -129,13 +129,13 @@
         "Version": "v1"
       },
       "TradeParams": {
-        "MarketType": "ViopEndex",
+        "MarketType": "FxCrypto",
         "IlkBakiye": 100000.0,
         "KontratSayisi": 1,
         "LotSayisi": 0.01,
         "HisseSayisi": 1000.0,
-        "KomisyonCarpan": 20.0,
-        "KaymaMiktari": 0.5,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
         "PyramidingEnabled": false
       },
       "Signals": {
@@ -331,13 +331,13 @@
       "OptimizationTo": -1
     },
     "TradeParams": {
-      "MarketType": "ViopEndex",
+      "MarketType": "FxCrypto",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 20.0,
-      "KaymaMiktari": 0.5,
+      "KomisyonCarpan": 0.0,
+      "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
     "EquityCurveFilter": {
@@ -405,6 +405,177 @@
         "MinimalStatsTxtFormattedFileName": "SingleTraderOptStatisticsMinimalFormatted.txt",
         "PerformansTxtFileName": "SingleTraderOptPerformans.txt",
         "PerformansCsvFileName": "SingleTraderOptPerformans.csv"
+      }
+    }
+  },
+  
+  "Markets": {
+    "BistEndex": {
+      "TradeParams": {
+        "MarketType": "BistEndex", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "BistHisse": {
+      "TradeParams": {
+        "MarketType": "BistHisse", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "BistParite": {
+      "TradeParams": {
+        "MarketType": "BistParite", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "BistMetal": {
+      "TradeParams": {
+        "MarketType": "BistMetal", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopEndex": {
+      "TradeParams": {
+        "MarketType": "ViopEndex", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopHisse": {
+      "TradeParams": {
+        "MarketType": "ViopHisse", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopParite": {
+      "TradeParams": {
+        "MarketType": "ViopParite", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopMetal": {
+      "TradeParams": {
+        "MarketType": "ViopMetal", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxEndex": {
+      "TradeParams": {
+        "MarketType": "FxEndex", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxHisse": {
+      "TradeParams": {
+        "MarketType": "FxHisse", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxParite": {
+      "TradeParams": {
+        "MarketType": "FxParite", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxMetal": {
+      "TradeParams": {
+        "MarketType": "FxMetal", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxCrypto": {
+      "TradeParams": {
+        "MarketType": "FxCrypto", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
+      }
+    },
+    "Crypto": {
+      "TradeParams": {
+        "MarketType": "Crypto", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 0.0,
+        "KaymaMiktari": 0.0,
+        "PyramidingEnabled": false
       }
     }
   }

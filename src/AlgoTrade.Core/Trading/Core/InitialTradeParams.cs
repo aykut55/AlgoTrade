@@ -340,7 +340,7 @@ namespace AlgoTrade.Core.Trading.Core
             if (MicroLotSizeEnabled)
             {
                 VarlikAdedSayisiMicro = LotSayisi * VarlikAdedCarpani;
-                KomisyonVarlikAdedSayisiMicro = LotSayisi * VarlikAdedCarpani;
+                KomisyonVarlikAdedSayisiMicro = LotSayisi;          // eskisi KomisyonVarlikAdedSayisiMicro = LotSayisi * VarlikAdedCarpani;
             }
             else
             {
@@ -357,7 +357,7 @@ namespace AlgoTrade.Core.Trading.Core
                 else // Forex, Crypto
                 {
                     VarlikAdedSayisi = LotSayisi * VarlikAdedCarpani;
-                    KomisyonVarlikAdedSayisi = LotSayisi * VarlikAdedCarpani;
+                    KomisyonVarlikAdedSayisi = LotSayisi;       // eskisi KomisyonVarlikAdedSayisi = LotSayisi * VarlikAdedCarpani;
                 }
             }
             return this;

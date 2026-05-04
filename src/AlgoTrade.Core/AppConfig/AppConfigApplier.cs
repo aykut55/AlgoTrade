@@ -531,6 +531,9 @@ public static class AppConfigApplier
         p.SetKomisyonParams(komisyonCarpan: cfg.KomisyonCarpan);
         p.SetKaymaParams(kaymaMiktari: cfg.KaymaMiktari);
 
+        // MicroLot için VarlikAdedSayisiMicro / KomisyonVarlikAdedSayisiMicro hesapla
+        p.CalculateVarlikAdedSayisi();
+
         return p;
     }
 }
