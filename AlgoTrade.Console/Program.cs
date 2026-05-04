@@ -21,6 +21,19 @@ using System.Text.Json.Serialization;
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding  = Encoding.UTF8;
 
+// Sayı formatı: ondalık ayraç '.', grup ayraç ','. Tarih/diğer culture ayarları korunur.
+{
+    var ci = new System.Globalization.CultureInfo(System.Globalization.CultureInfo.CurrentCulture.Name);
+    ci.NumberFormat.NumberDecimalSeparator   = ".";
+    ci.NumberFormat.NumberGroupSeparator     = ",";
+    ci.NumberFormat.PercentDecimalSeparator  = ".";
+    ci.NumberFormat.PercentGroupSeparator    = ",";
+    ci.NumberFormat.CurrencyDecimalSeparator = ".";
+    ci.NumberFormat.CurrencyGroupSeparator   = ",";
+    System.Globalization.CultureInfo.DefaultThreadCurrentCulture = ci;
+    System.Threading.Thread.CurrentThread.CurrentCulture          = ci;
+}
+
 // =============================================================================
 // Global State
 // =============================================================================
