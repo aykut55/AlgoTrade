@@ -93,9 +93,11 @@ public static class AppConfigLoader
                 KarAlEnabled           = true,
                 ZararKesEnabled        = true,
                 GunSonuPozKapatEnabled = false,
-                TimeFilteringEnabled   = false,
-                StartDateTime          = "2025.05.25 09:35:00",
-                StopDateTime           = "2025.06.02 17:55:00"
+                TimeFilteringEnabled      = false,
+                StartDateTime             = "2025.05.25 09:35:00",
+                StopDateTime              = "2025.06.02 17:55:00",
+                TradeStartBarIndexEnabled = false,
+                TradeStartBarIndex        = 0
             },
             Save = new TraderSaveConfig
             {

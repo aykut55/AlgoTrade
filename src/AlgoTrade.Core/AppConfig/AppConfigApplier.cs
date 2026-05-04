@@ -67,9 +67,11 @@ public static class AppConfigApplier
             KarAlEnabled           = cfg.Signals.KarAlEnabled,
             ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
             GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
-            TimeFilteringEnabled   = cfg.Signals.TimeFilteringEnabled,
-            StartDateTime          = cfg.Signals.StartDateTime,
-            StopDateTime           = cfg.Signals.StopDateTime,
+            TimeFilteringEnabled      = cfg.Signals.TimeFilteringEnabled,
+            StartDateTime             = cfg.Signals.StartDateTime,
+            StopDateTime              = cfg.Signals.StopDateTime,
+            TradeStartBarIndexEnabled = cfg.Signals.TradeStartBarIndexEnabled,
+            TradeStartBarIndex        = cfg.Signals.TradeStartBarIndex,
         });
 
         // Optimization
@@ -171,9 +173,11 @@ public static class AppConfigApplier
             KarAlEnabled           = cfg.MainTrader.Signals.KarAlEnabled,
             ZararKesEnabled        = cfg.MainTrader.Signals.ZararKesEnabled,
             GunSonuPozKapatEnabled = cfg.MainTrader.Signals.GunSonuPozKapatEnabled,
-            TimeFilteringEnabled   = cfg.MainTrader.Signals.TimeFilteringEnabled,
-            StartDateTime          = cfg.MainTrader.Signals.StartDateTime,
-            StopDateTime           = cfg.MainTrader.Signals.StopDateTime,
+            TimeFilteringEnabled      = cfg.MainTrader.Signals.TimeFilteringEnabled,
+            StartDateTime             = cfg.MainTrader.Signals.StartDateTime,
+            StopDateTime              = cfg.MainTrader.Signals.StopDateTime,
+            TradeStartBarIndexEnabled = cfg.MainTrader.Signals.TradeStartBarIndexEnabled,
+            TradeStartBarIndex        = cfg.MainTrader.Signals.TradeStartBarIndex,
         });
 
         // Optimization
@@ -351,9 +355,11 @@ public static class AppConfigApplier
                 KarAlEnabled           = cs.KarAlEnabled,
                 ZararKesEnabled        = cs.ZararKesEnabled,
                 GunSonuPozKapatEnabled = cs.GunSonuPozKapatEnabled,
-                TimeFilteringEnabled   = cs.TimeFilteringEnabled,
-                StartDateTime          = cs.StartDateTime,
-                StopDateTime           = cs.StopDateTime,
+                TimeFilteringEnabled      = cs.TimeFilteringEnabled,
+                StartDateTime             = cs.StartDateTime,
+                StopDateTime              = cs.StopDateTime,
+                TradeStartBarIndexEnabled = cs.TradeStartBarIndexEnabled,
+                TradeStartBarIndex        = cs.TradeStartBarIndex,
             };
 
             // Save — per-child, dosya adlarına {filePrefix}_Child{i}_ ön eki eklenir
@@ -450,9 +456,11 @@ public static class AppConfigApplier
             KarAlEnabled           = cfg.Signals.KarAlEnabled,
             ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
             GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
-            TimeFilteringEnabled   = cfg.Signals.TimeFilteringEnabled,
-            StartDateTime          = cfg.Signals.StartDateTime,
-            StopDateTime           = cfg.Signals.StopDateTime,
+            TimeFilteringEnabled      = cfg.Signals.TimeFilteringEnabled,
+            StartDateTime             = cfg.Signals.StartDateTime,
+            StopDateTime              = cfg.Signals.StopDateTime,
+            TradeStartBarIndexEnabled = cfg.Signals.TradeStartBarIndexEnabled,
+            TradeStartBarIndex        = cfg.Signals.TradeStartBarIndex,
         });
 
         // Optimizer log

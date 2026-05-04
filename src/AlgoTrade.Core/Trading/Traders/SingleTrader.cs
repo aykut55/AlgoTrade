@@ -2458,6 +2458,15 @@ public class SingleTrader : MarketDataProvider, IDisposable
             return;
         }
 
+        // ---- Öncelik 3b: TradeStartBarIndex → hard block (warmup süresince tüm sinyalleri öldür) ----
+        bool warmupBlocked = this.signals.TradeStartBarIndexEnabled && i < this.signals.TradeStartBarIndex;
+        if (warmupBlocked)
+        {
+            this.signals.None = this.signals.Al = this.signals.Sat = this.signals.FlatOl = this.signals.KarAl = this.signals.ZararKes = this.signals.PasGec = false;
+            this.signals.None = true;
+            return;
+        }
+
         // ---- Öncelik 4: EquityCurve → soft block (sadece giriş sinyallerini iptal et) ----
         bool equityBlocked = this.signals.EquityCurveFilteringEnabled && !this.signals.IsEquityCurveTradeEnabled;
         if (equityBlocked)
@@ -2470,7 +2479,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
         // ---- IsTradeEnabled birleşik hesaplama (Option C) ----
         bool filter1 = (!this.signals.TimeFilteringEnabled || this.signals.IsTimingFiltersTradeEnabled);
         bool filter2 = (!this.signals.EquityCurveFilteringEnabled || this.signals.IsEquityCurveTradeEnabled);
-        this.signals.IsTradeEnabled = filter1 && filter2;
+        bool filter3 = (!this.signals.TradeStartBarIndexEnabled || i >= this.signals.TradeStartBarIndex);
+        this.signals.IsTradeEnabled = filter1 && filter2 && filter3;
     }
     public SingleTrader ConfigureUserFlagsOnce()
     {

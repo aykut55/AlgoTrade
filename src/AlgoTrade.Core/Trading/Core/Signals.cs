@@ -155,7 +155,10 @@ namespace AlgoTrade.Core.Trading.Core
 
         public bool TimeFilteringEnabled { get; set; }
 
-        public bool EquityCurveFilteringEnabled { get; set; }           // ajax_bak 
+        public bool TradeStartBarIndexEnabled { get; set; }
+        public int  TradeStartBarIndex        { get; set; }
+
+        public bool EquityCurveFilteringEnabled { get; set; }           // ajax_bak
 
         public bool IsTradeEnabled { get; set; }
 
@@ -200,6 +203,8 @@ namespace AlgoTrade.Core.Trading.Core
             GunSonuPozKapatEnabled = false;
             GunSonuPozKapatildi = false;
             TimeFilteringEnabled = false;
+            TradeStartBarIndexEnabled = false;
+            TradeStartBarIndex = 0;
             EquityCurveFilteringEnabled = false;
             IsTradeEnabled = false;
             IsPozKapatEnabled = false;

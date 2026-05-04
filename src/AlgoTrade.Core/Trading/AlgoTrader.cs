@@ -208,7 +208,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.KarAlEnabled                = true;
             trader.signals.ZararKesEnabled             = true;
             trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir :
+            trader.signals.TradeStartBarIndexEnabled   = false;
+            trader.signals.TradeStartBarIndex          = 0;
             trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -234,7 +236,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.KarAlEnabled                = true;
             trader.signals.ZararKesEnabled             = true;
             trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir :
+            trader.signals.TradeStartBarIndexEnabled   = false;
+            trader.signals.TradeStartBarIndex          = 0;
             trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -260,7 +264,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.KarAlEnabled                = true;
             trader.signals.ZararKesEnabled             = true;
             trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir :
+            trader.signals.TradeStartBarIndexEnabled   = false;
+            trader.signals.TradeStartBarIndex          = 0;
             trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -286,7 +292,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.KarAlEnabled                = true;
             trader.signals.ZararKesEnabled             = true;
             trader.signals.GunSonuPozKapatEnabled      = false;     // DEFAULT = False, Ek maliyet getirir : BackTest icin anlamli 
-            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir : 
+            trader.signals.TimeFilteringEnabled        = false;     // DEFAULT = False, Ek maliyet getirir :
+            trader.signals.TradeStartBarIndexEnabled   = false;
+            trader.signals.TradeStartBarIndex          = 0;
             trader.signals.EquityCurveFilteringEnabled = false;     // Her zaman false olarak ilklenecek, asıl degeri dosyadan okununca geliyor
 
             var dateTimes           = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
@@ -907,6 +915,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.ZararKesEnabled        = s.ZararKesEnabled;
             trader.signals.GunSonuPozKapatEnabled = s.GunSonuPozKapatEnabled;
             trader.signals.TimeFilteringEnabled   = s.TimeFilteringEnabled;
+            trader.signals.TradeStartBarIndexEnabled = s.TradeStartBarIndexEnabled;
+            trader.signals.TradeStartBarIndex        = s.TradeStartBarIndex;
             trader.signals.EquityCurveFilteringEnabled = false; // asıl değer ECF config'den gelir
 
             trader.StartDateTimeStr = s.StartDateTime;
@@ -1485,6 +1495,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 childTrader.signals.ZararKesEnabled        = s.ZararKesEnabled;
                 childTrader.signals.GunSonuPozKapatEnabled = s.GunSonuPozKapatEnabled;
                 childTrader.signals.TimeFilteringEnabled   = s.TimeFilteringEnabled;
+                childTrader.signals.TradeStartBarIndexEnabled = s.TradeStartBarIndexEnabled;
+                childTrader.signals.TradeStartBarIndex        = s.TradeStartBarIndex;
                 childTrader.signals.EquityCurveFilteringEnabled = false;
                 childTrader.StartDateTimeStr = s.StartDateTime;
                 childTrader.StopDateTimeStr  = s.StopDateTime;
@@ -2303,9 +2315,11 @@ public class SingleTraderSignalsConfig
     public bool   KarAlEnabled           { get; set; } = true;
     public bool   ZararKesEnabled        { get; set; } = true;
     public bool   GunSonuPozKapatEnabled { get; set; } = false;
-    public bool   TimeFilteringEnabled   { get; set; } = false;
-    public string StartDateTime          { get; set; } = "2025.05.25 09:35:00";
-    public string StopDateTime           { get; set; } = "2025.06.02 17:55:00";
+    public bool   TimeFilteringEnabled       { get; set; } = false;
+    public string StartDateTime              { get; set; } = "2025.05.25 09:35:00";
+    public string StopDateTime               { get; set; } = "2025.06.02 17:55:00";
+    public bool   TradeStartBarIndexEnabled  { get; set; } = false;
+    public int    TradeStartBarIndex         { get; set; } = 0;
 }
 
 /// <summary>MultipleTrader nesnesinin kayıt ayarları (composite liste dosyaları).</summary>

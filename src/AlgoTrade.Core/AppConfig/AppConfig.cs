@@ -157,9 +157,11 @@ public class TraderSignalsConfig
     public bool   KarAlEnabled           { get; set; } = true;
     public bool   ZararKesEnabled        { get; set; } = true;
     public bool   GunSonuPozKapatEnabled { get; set; } = false;
-    public bool   TimeFilteringEnabled   { get; set; } = false;
-    public string StartDateTime          { get; set; } = "2025.05.25 09:35:00";
-    public string StopDateTime           { get; set; } = "2025.06.02 17:55:00";
+    public bool   TimeFilteringEnabled       { get; set; } = false;
+    public string StartDateTime              { get; set; } = "2025.05.25 09:35:00";
+    public string StopDateTime               { get; set; } = "2025.06.02 17:55:00";
+    public bool   TradeStartBarIndexEnabled  { get; set; } = false;
+    public int    TradeStartBarIndex         { get; set; } = 0;
 }
 
 /// <summary>SingleTrader kayıt bayrakları (OnApplyUserFlags2 karşılığı).</summary>
