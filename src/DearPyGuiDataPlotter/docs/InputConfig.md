@@ -4,9 +4,14 @@
 oradan hangi `.npz` bundle + `.view.json` view description'in yuklenecegini cozer (bkz.
 `loadInputConfig`, `resolveBundlePath`, `resolveViewPath`).
 
-Ornek/sablon icin bkz. `inputs/input.example.json`. Gercek `inputs/input.json` calisma zamaninda
-(`runtimeCommandManager.py` tarafindan `load_bundle` komutunda) otomatik uretilir, bu yuzden repoya
-commit edilmez (bkz. .gitignore).
+`inputs/input.json`, `inputs/latest_bundle.npz` ve `inputs/latest_bundle.view.json` BILEREK repoya
+commitli - `runMe.bat`'in C#'siz, tamamen standalone acilista da gercek veriyle calismasi icin
+(C#'siz akista `[9]`/`load_bundle` komutu hic gelmeyecegi icin baska turlu bos panel layout ile acilirdi).
+
+C# calisip `load_bundle` komutu gonderdiginde `runtimeCommandManager.py` bu dosyalarin uzerine
+yazar (bkz. `_handleLoadBundle`) - bu YENIDEN OLUSTURULAN hali tekrar commit'lemek (ya da
+commit'lememek) kullanicinin tercihine birakilmistir. `full_pipeline_bundle.*` gibi diger
+alternatif bundle'lar ve `runtime_commands/` (IPC kuyrugu) hala runtime verisi olarak ignore'da.
 
 ## Alanlar
 

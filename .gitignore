@@ -86,8 +86,11 @@ desktop.ini
 
 # DearPyGuiDataPlotter / DearImGuiBundleDataPlotter alt-projeleri
 src/DearImGuiBundleDataPlotter/*.ini
-# runtime'da uretilen bundle/veri dosyalari (kaynak kod degil)
-src/DearPyGuiDataPlotter/inputs/*.npz
-src/DearPyGuiDataPlotter/inputs/*.view.json
-src/DearPyGuiDataPlotter/inputs/input.json
+# input.json / latest_bundle.npz / latest_bundle.view.json BILEREK commitli -
+# runMe.bat'in C#'siz standalone acilista da gercek veriyle gelmesi icin
+# (bkz. docs/InputConfig.md). Ustune yazilirsa tekrar commit'lemek
+# kullanicinin sorumlulugunda. full_pipeline_bundle.* gibi diger
+# alternatif bundle'lar ve IPC kuyrugu hala runtime verisi, ignore'da kalir.
+src/DearPyGuiDataPlotter/inputs/full_pipeline_bundle.npz
+src/DearPyGuiDataPlotter/inputs/full_pipeline_bundle.view.json
 src/DearPyGuiDataPlotter/inputs/runtime_commands/
