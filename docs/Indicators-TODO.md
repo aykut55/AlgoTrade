@@ -215,6 +215,64 @@ None currently.
 
 ---
 
+## 📋 COMPLETED - EXTENDED INDICATORS (previously undocumented) ✅
+
+Bu 12 indikator daha once bu TODO listesinde yoktu ama kodda tam implement edilmis halde bulundu
+(docs/Indicators-README.md ve bu dosya guncellenirken tespit edildi).
+
+### Trend Indicators (TrendIndicators.cs)
+- [x] **AlphaTrend** - ATR + MFI/RSI tabanli trend takip indikatoru ✅
+  - `AlphaTrend(int atrPeriod = 14, double coefficient = 1.0, int momentumPeriod = 14, bool useMFI = true)`
+  - Returns: AlphaTrendResult (AlphaTrend, AtrPeriod, Coefficient, MomentumPeriod)
+
+- [x] **OTT** - Optimized Trend Tracker ✅
+  - `OTT(int period = 2, double percent = 1.4, MAMethod maMethod = VIDYA)`
+  - Returns: OTTResult (OTT, MA, Support, Period, Percent)
+
+- [x] **PTT** - (Periodic/Pivot Trend Tracker, bant tabanli) ✅
+  - `PTT(int fasterPeriod = 5, int period = 5, int maPeriod = 2, int slowerPeriod = 10, double stdDev = 2.0)`
+  - Returns: PTTResult (Upper, Lower, FasterPeriod, Period, MAPeriod, SlowerPeriod)
+
+- [x] **HOTTLOTT** - High OTT / Low OTT bandi ✅
+  - `HOTTLOTT(int period = 2, double percent = 1.4, MAMethod maMethod = VIDYA)`
+  - Returns: HOTTLOTTResult (HOTT, LOTT, HOTTMA, LOTTMA, Period, Percent)
+
+- [x] **PMax** - ATR bantli trend/stop indikatoru ✅
+  - `PMax(int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, MAMethod maMethod = EMA)`
+  - Returns: PMaxResult (PMax, PMaxMA, Direction, AtrPeriod, Multiplier, MAPeriod)
+
+- [x] **MavilimW** - Cift katmanli agirlikli MA trend cizgisi ✅
+  - `MavilimW(int param1 = 3, int param2 = 5)`
+  - Returns: MavilimWResult (MavilimW, Trendline, Param1, Param2)
+
+### Momentum Indicators (MomentumIndicators.cs)
+- [x] **OTTO** - Cift VIDYA (fast/slow) + duzeltme sabiti ile al/sat sinyali ✅
+  - `OTTO(int fastPeriod = 10, int slowPeriod = 25, double correctionConstant = 2.0)`
+  - Returns: OTTOResult (OTTO, FastVIDYA, SlowVIDYA, BuySignals, SellSignals, FastPeriod, SlowPeriod, CorrectionConstant)
+
+- [x] **StochasticOTT** - Stochastic + OTT birlesimi ✅
+  - `StochasticOTT(int kPeriod = 14, int smoothKPeriod = 500, int smoothDPeriod = 200, int ottPeriod = 2, double ottPercent = 1.4)`
+  - Returns: StochasticOTTResult (K, D, OTT, Support, KPeriod, SmoothKPeriod, SmoothDPeriod, OTTPeriod, OTTPercent)
+
+### Support/Resistance (SupportResistanceIndicators.cs)
+- [x] **Camarilla Pivot Points** ✅
+  - `CamarillaPivotPoints(bool useDaily = true)`
+  - Returns: CamarillaPivotPointsResult (Pivot, R1-R4, S1-S4)
+
+- [x] **CPR Pivot Points** - Central Pivot Range ✅
+  - `CPRPivotPoints(bool useDaily = true)`
+  - Returns: CPRPivotPointsResult (Pivot, TC, BC, R1-R3, S1-S3, CPRWidth)
+
+- [x] **Classic Extended Pivot Points** ✅
+  - `ClassicExtendedPivotPoints(bool useDaily = true)`
+  - Returns: ExtendedPivotPointsResult (Pivot, R1-R5, S1-S5)
+
+- [x] **Mid Pivot Points** ✅
+  - `MidPivotPoints(bool useDaily = true)`
+  - Returns: ExtendedPivotPointsResult (Pivot, R1-R5, S1-S5 - orta nokta varyanti)
+
+---
+
 ## 📋 COMPLETED - ADVANCED (70+ MAs) ✅
 
 ### Exotic Moving Averages - ALL IMPLEMENTED
@@ -384,12 +442,13 @@ All 70+ Moving Average types from Python IndicatorManager.py have been successfu
 - **High Priority** - RSI, MACD, Stochastic, SuperTrend, MOST, ATR, Bollinger Bands (7 indicators)
 - **Medium Priority** - OBV, VWAP, MFI, CMF, CCI, Williams %R, ROC, Keltner Channel, Donchian Channel (9 indicators)
 - **Low Priority** - ADX, Parabolic SAR, Aroon, Vortex, Ichimoku Cloud, HH/LL, Swing Points, ZigZag, Fractals, Pivot Points, Fibonacci Retracement (11 indicators)
+- **Extended (previously undocumented)** - AlphaTrend, OTT, PTT, HOTTLOTT, PMax, MavilimW, OTTO, StochasticOTT, Camarilla Pivot Points, CPR Pivot Points, Classic Extended Pivot Points, Mid Pivot Points (12 indicators)
 
-**Total Implemented:** 70+ MAs + 27 indicators = **97+ technical indicators**
+**Total Implemented:** 70+ MAs + 39 indicators = **109+ technical indicators**
 
 ---
 
-**Last Updated:** 2025-01-11
+**Last Updated:** 2026-08-17
 **Status:** All prioritized indicators completed ✅
 
 ---

@@ -32,17 +32,16 @@ Yeni oturumda Claude'a "D:\Aykut\Projects\AlgoTrade\MIGRATION_GUIDE.md dosyasini
 - **Eski**: `...\AlgoTradeWithOptimizationSupportWinFormsApp\src\Trading\AlgoTrader.cs` (satir 1020-1278)
 - **Yeni**: `D:\Aykut\Projects\AlgoTrade\src\AlgoTrade.Core\Trading\AlgoTrader.cs` (satir 141-310)
 
-### Kalan Farkliliklar (BEKLIYOR)
+### Kalan Farkliliklar (TAMAMLANDI)
 
 #### 2. Strategy Configuration (StrategyFactory)
 - **Eski**: `StrategyFactoryMethod` null kontrolu, default `SimpleMAStrategy` olusturma,
   `SetStrategyFactory`, `strategy.OnInit()`, `singleTrader.SetStrategy(strategy)` akisi var (satir 1049-1110)
-- **Yeni**: Bu kisim tamamen YOK. Strateji siniflari ve factory pattern henuz yeni projeye tasinmadi.
-- **Durum**: BEKLIYOR
-- **Yapilacak**: Yeni projeye IStrategy interface'i, StrategyFactory mekanizmasi ve en az bir
-  ornek strateji (SimpleMAStrategy vb.) tasinacak. AlgoTrader'a `SetStrategyFactory()` ve
-  `StrategyFactoryMethod` eklenecek. SingleTrader'a `SetStrategy()` cagrisi eklenecek.
-  Console menusune strateji secimi eklenebilir.
+- **Yeni**: `src/AlgoTrade.Core/Trading/Strategy/IStrategy.cs`, `BaseStrategy.cs` ve
+  `Strategies/StrategyRegistry.cs` ile tasindi. Alti somut strateji mevcut: `SimpleMAStrategy`,
+  `SimpleRSIStrategy`, `SimpleSuperTrendStrategy`, `SimpleMFIStrategy`, `SimpleMostStrategy`,
+  `SimpleDIStrategy`.
+- **Durum**: TAMAM
 
 #### 5. Symbol/System/Strategy attributes
 - **Eski**: `SymbolName`, `SymbolPeriod`, `SystemId`, `SystemName`, `StrategyId`, `StrategyName`
