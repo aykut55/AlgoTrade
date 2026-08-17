@@ -3,6 +3,7 @@ using AlgoTrade.Core.AppConfig;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Logging.Sinks;
 using AlgoTrade.Core.Python;
+using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 using AlgoTrade.Core.Scripting;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
@@ -44,6 +45,7 @@ List<StockData>?    stockDataList                   = null;
 StockDataReader?    stockDataReader                 = null;
 ConcurrentDictionary<string, string>? stockMetaData = null;
 AlgoTrader?         algoTrader                      = null;
+DearPyGuiDataPlotter? dearPyGuiTestPlotter           = null; // TODO: demo/test - bkz. docs/yapilacak.md
 TimeManager         timer                           = TimeManager.GetInstance();
 LogManager          logger                          = LogManager.GetInstance();
 TraderRunMode       selectedRunMode                 = TraderRunMode.TradeOnly;
@@ -797,6 +799,29 @@ async Task runSingleTraderAlgoTrade()
                 await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
             else
                 LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+
+            // TODO: DearPyGuiDataPlotter converter/switch TESTİ - bkz. docs/yapilacak.md.
+            // Gerçek PlotBackend switch'i entegre olunca bu blok kaldırılıp yukarıdaki
+            // pythonnet/imgui_bundle çağrısıyla aynı yerde düzgünce (switch ile) sarılacak.
+            // Şimdilik pythonnet akışına dokunmadan, AYNI SingleTrader'dan npz bundle
+            // üretip DearPyGuiDataPlotter'da da açıyor (converter'ı gerçek veriyle test etmek için).
+            try
+            {
+                var bundleConverter = new TradeDataBundleConverter();
+                string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+                var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(
+                    algoTrader.SingleTrader, bundleOutDir);
+
+                dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                dearPyGuiTestPlotter.SetLogger(logger);
+                dearPyGuiTestPlotter.StartPlotter();
+                dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError($"[DearPyGuiDataPlotter] Converter test hatası: {ex.Message}", ex);
+            }
         }
 
         await writeTask;
@@ -1813,12 +1838,72 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [8]  Run Script                                                 ║");
     Console.WriteLine("║                                                                    ║");
+    // TODO: Demo/test bölümü - gerçek switch entegre olunca silinecek (bkz. handleDearPyGuiPlotterTest()).
+    Console.WriteLine("╠═══ DearPyGuiDataPlotter (Test) ════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [9]  DearPyGuiDataPlotter (Start/Stop Test)                     ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0]  Exit                                                       ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╚════════════════════════════════════════════════════════════════════╝");
     Console.WriteLine();
+}
+
+// TODO: Bu fonksiyon + ana menüdeki [9] seçeneği (case "9" ve showMainMenu()
+// içindeki "DearPyGuiDataPlotter (Test)" bölümü) sadece DearPyGuiDataPlotter
+// process başlatma/StopPlotter/LoadBundle akışını doğrulamak için eklenmiş
+// DEMO/TEST amaçlı koddur. Gerçek switch (PlotBackend seçimi) mevcut
+// PlotSingleTraderData/PlotMultipleTraderData akışına taşındığında bu demo
+// kod ve menü seçeneği silinecek.
+void handleDearPyGuiPlotterTest()
+{
+    LogManager.LogRaw("");
+    LogManager.LogRaw("[DearPyGuiDataPlotter] Process başlatılıyor...", ConsoleColor.Cyan);
+
+    using var plotter = new DearPyGuiDataPlotter();
+    plotter.SetLogger(logger);
+
+    try
+    {
+        plotter.StartPlotter();
+        LogManager.LogRaw($"[DearPyGuiDataPlotter] Başlatıldı. IsRunning={plotter.IsRunning}", ConsoleColor.Green);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"[DearPyGuiDataPlotter] Başlatma hatası: {ex.Message}");
+        return;
+    }
+
+    // Test amaçlı örnek bundle: src/DearPyGuiDataPlotter/inputs/full_pipeline_bundle.npz
+    string testBundlePath = Path.Combine(plotter.ProjectDir, "inputs", "full_pipeline_bundle.npz");
+    string testViewPath   = Path.Combine(plotter.ProjectDir, "inputs", "full_pipeline_bundle.view.json");
+
+    if (File.Exists(testBundlePath))
+    {
+        plotter.LoadBundle(testBundlePath, File.Exists(testViewPath) ? testViewPath : null);
+        LogManager.LogRaw($"[DearPyGuiDataPlotter] load_bundle komutu gönderildi: {Path.GetFileName(testBundlePath)}", ConsoleColor.Green);
+    }
+    else
+    {
+        LogManager.LogRaw($"[DearPyGuiDataPlotter] Test bundle bulunamadı, load_bundle atlandı: {testBundlePath}", ConsoleColor.DarkYellow);
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("  [ENTER] Panel 0'ı temizle (clear_panel testi)   [ESC] Kapat ve ana menüye dön");
+    if (ReadMenuInput() != null)
+    {
+        plotter.ClearPanel(0);
+        LogManager.LogRaw("[DearPyGuiDataPlotter] clear_panel komutu gönderildi: panelId=0", ConsoleColor.Green);
+
+        Console.WriteLine();
+        Console.WriteLine("  [ENTER] Plotter'ı kapat ve ana menüye dön");
+        ReadMenuInput();
+    }
+
+    plotter.StopPlotter();
+    LogManager.LogRaw("[DearPyGuiDataPlotter] Process durduruldu.", ConsoleColor.Yellow);
 }
 
 // =============================================================================
@@ -1911,6 +1996,7 @@ async Task main()
             case "6": if (handleReadData()) await handleMultipleTrader();   break;
             case "7": if (handleReadData()) await handleSingleTraderOpt();  break;
             case "8": await runFullScript();                                break;
+            case "9": handleDearPyGuiPlotterTest();                         break; // TODO: demo/test, silinecek
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }

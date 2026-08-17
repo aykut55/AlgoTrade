@@ -1,0 +1,2302 @@
+import math
+import time
+
+import numpy as np
+import dearpygui.dearpygui as dpg
+
+from .panel import Panel
+from .poolDataManager import clonePanelData
+
+
+class PanelManager:
+    COLLAPSED_PANEL_HEIGHT = 30  # collapseAllPanels'in kuculttugu sabit yukseklik (bkz. expandAllPanels)
+    LOD_ACTIVATION_THRESHOLD = 6000  # bu sayidan AZ toplam bar'i olan seriler HIC decimate edilmez (kucuk veri setlerinde davranis AYNEN eskisi gibi kalir)
+    LOD_MAX_POINTS = 3000  # LOD aktifken bir seriye cizilecek MAKSIMUM nokta sayisi (bkz. PanelData.getLodSlice)
+    OVERVIEW_LOD_MAX_POINTS = 800  # RangeSliderBar'daki overview 'golge' silüeti icin (bkz. getOverviewSeries) - 110px yukseklikte kucuk bir plot, ana grafiklerden COK daha az nokta yeterli
+    LOD_RANGE_CHANGE_RATIO = 0.08  # gorunur aralik onceki LOD guncellemesine gore span'in bu ORANINDAN fazla kayarsa/degisirse yeniden decimate edilir (bkz. _lodRangeChanged) - HER piksel/frame'de degil, "hysteresis" ile
+
+    def __init__(self):
+        self._panels = {}
+        self._nextId = 0
+        self._panelOrder = []  # GORUNUM sirasi (Panel Order kontrolleriyle degistirilebilir; olusturulma sirasindan bagimsiz, bkz. swapPanelUp/Down/resetPanelOrder)
+        self._container = None  # panellerin cizilecegi DPG container tag'i (bkz. setContainer)
+        self._showCaptions = True  # plot basligi (add_plot label) gorunur mu - bkz. setShowCaptions
+        self._infoPanelYWithCaptions = 40  # hover_text_{id}'nin sabit y konumu (caption/baslik VARKEN)
+        self._infoPanelYNoCaptions = 25  # ayni, caption/baslik YOKKEN (bkz. setShowCaptions)
+        self._mousePosYWithCaptions = 40  # mouse_pos_text_{id}'nin sabit y konumu (caption/baslik VARKEN - title bar'in ALTINA, ustune binmesin diye; info paneldeki Index satiriyla AYNI y (bkz. _infoPanelYWithCaptions))
+        self._mousePosYNoCaptions = 13  # ayni, caption/baslik YOKKEN (plotun tam tepesi bos oldugu icin)
+        self._infoPanelBaseX = 20  # hover_text_{id}'nin sol taban x konumu - Y ekseni etiket genisligi (bkz. _estimateYAxisLabelWidth) buna eklenir
+        self._drawnPanelIds = set()  # drawPanel ile UI'si kurulmus panel id'leri (bkz. sync)
+        self._lastRenderPrint = 0.0  # render() heartbeat print throttle (bkz. render)
+        self._xAxisMode = "bar"  # "bar" (varsayilan, ham bar no) | "datetime" (bkz. setXAxisMode)
+        self._dateTimeFormat = None  # datetime modunda strftime deseni (None -> isIntraday'e gore otomatik, bkz. setXAxisMode)
+        self._lastAxisTicksSignature = {}  # {panelId: hesaplanan ticks tuple'i} - gereksiz set_axis_ticks cagrisini (flicker sebebi) onlemek icin
+        self._minTickStep = 7  # datetime modunda etiketler en az kac barda bir ("5-10 barda bir", ortasi)
+        self._maxTicksOnScreen = 40  # ust sinir (guvenlik/performans) - genelde asil sinirlayici _maxTicksForWidth
+        self._axisCharPxWidth = 9  # datetime etiketindeki karakter basina kabaca piksel genislik tahmini
+        self._axisTickPadding = 24  # iki etiket arasi minimum bosluk (piksel) - DPG'nin kendi fontunu olcemedigimiz icin guvenli/muhafazakar tahmin
+        self._dayChangeFormat = "%d.%m.%Y\n%H:%M:%S"  # saat-bazli (tarihsiz) formatlarda gun degisen bar'a ozel format (bkz. _buildDatetimeTicks)
+        self._dayBoundaryScanCap = 5000  # gun degisimi taramasi (O(bar)) bu barsInRange'i asarsa YAPILMAZ - performans/guvenlik
+        self._dayChangeMarkersEnabled = False  # gun degisimini x eksende AYRICA isaretleme (kod hazir, gorunumu karistirdigi icin simdilik KAPALI - bkz. _buildDatetimeTicks)
+        self._debugAxisTicks = False  # True ise DPG'ye gonderilen (label, bar_no) tick'leri konsola basar (bkz. setDebugAxisTicks) - ekrandaki ile karsilastirip dogrulamak icin
+        self._infoPanelMode = "always"  # hidden | hover | active | always (bkz. setInfoPanelMode)
+        self._infoActivePanelId = None  # "active" modunda hangi panelin hover_text'i gosterilecek (bkz. setActiveInfoPanel)
+        self._infoLastIndex = {}  # {panelId: son cozulen index} - mouse panelden cikinca son degeri korur
+        self._infoSharedIndex = None  # "always"/"active" modunda TUM panellerin ortak gosterecegi index (bir plot'un uzerine gelince paylasilir)
+        self._crossHairMode = "all"  # hidden | single | all - varsayilan "all": infoPanel gibi TUM panellerde surekli (bkz. setCrossHairMode)
+        self._crossHairPersist = True  # varsayilan True: mouse plot'tan cikinca crosshair SON pozisyonda kalir, gizlenmez - infoPanel'in "always" modu gibi surekli gorunur (bkz. setCrossHairPersist)
+        self._crossHairLastPos = None  # (kaynakPanelId, x, y) - persist ve "all" modunun paylastigi son bilinen konum
+        self._activeUpdateMode = "click"  # hover | click - "aktif panel" hangi etkilesimle degisecek (bkz. setActiveUpdateMode).
+        # GUI'deki "active_update_mode_combo"nun default_value'su "Click" - DPG
+        # default_value verilince callback'i TETIKLEMEDIGI icin buradaki
+        # baslangic degeri combo'nun gorsel varsayilaniyla EL ILE ayni tutulmali,
+        # yoksa kullanici hicbir sey degistirmeden Click gorunurken model hala
+        # "hover" kalip mouse gezintisiyle aktif panel degismeye devam ediyordu.
+        self._activePanelId = None  # su an "aktif" sayilan panelin id'si (bkz. updateActivePanel/_onPlotClicked)
+        self._interactionManager = None  # bkz. setInteractionManager (guiManager tarafindan baglanir)
+        self._poolDropHandler = None
+        self._lastReadPlotParams = None  # Read Params (src) ile yakalanan son kaynak plot/eksen durumu
+        self._defaultViewMode = "FitToScreen (Ultra)"  # guiManager'daki "top_view_mode_combo"nun gorsel varsayilaniyla AYNI olmali
+        self._defaultViewN = 1000
+        self._defaultViewN2 = 2000
+        self._fitToScreenBarWidth = {"normal": 4.0, "wide": 2.5, "ultra": 1.5}
+        self._lastDrawnDataCount = {}  # {panelId: onceki drawPanelData'daki dataCount} - bkz. _maybeApplyDefaultViewOnLoad
+        self._lodLastRange = {}  # {panelId: (xMin,xMax) en son LOD guncellemesindeki gorunur aralik} - bkz. updateLod/_lodRangeChanged
+
+    def setInteractionManager(self, interactionManager):
+        self._interactionManager = interactionManager
+
+    def setPoolDropHandler(self, handler):
+        self._poolDropHandler = handler
+
+    def createPanel(self, name, caption="", parent="", alignment=None):
+        """Otomatik id ile YALNIZCA bir Panel olusturur, DONDURUR - panelManager'a
+        EKLEMEZ (kayit icin addPanel(panel) gerekir; iki adim ayri tutuluyor)."""
+        panelId = self._nextId
+        self._nextId += 1
+        return Panel(panelId, name, caption, parent, alignment)
+
+    def addPanel(self, panel):
+        """Bir paneli (createPanel'den gelen ya da dogrudan Panel(...) ile
+        kurulmus) panelManager'a kaydeder. Ileride id catismasini onlemek
+        icin _nextId'i panel.id'nin onune gecirir. panel._manager'i buraya
+        baglar ki panel.draw()/drawData()/sync()/render() calisabilsin.
+        _panelOrder'in sonuna eklenir (gorunum sirasi = ekleme sirasi,
+        Panel Order kontrolleriyle sonradan degistirilebilir)."""
+        self._panels[panel.id] = panel
+        panel._manager = self
+        if panel.id >= self._nextId:
+            self._nextId = panel.id + 1
+        if panel.id not in self._panelOrder:
+            self._panelOrder.append(panel.id)
+        return panel
+
+    def getPanel(self, panelId):
+        return self._panels.get(panelId)
+
+    def getPanelId(self, name):
+        """Panel ismiyle arayip id dondurur (yoksa None). Panel objesi zaten
+        elindeyse buna gerek yok, dogrudan panel.id kullan.
+        Ornek: pm.getPanelId("OHLC")."""
+        panel = self.findPanel(name)
+        return panel.id if panel else None
+
+    def findPanel(self, key):
+        """Esnek panel arama: int ise id ile, str ise isim ile. Bulamazsa None."""
+        if isinstance(key, str):
+            return next((p for p in self._panels.values() if p.name == key), None)
+        return self._panels.get(key)
+
+    def deletePanel(self, panelId):
+        """Bir paneli modelden ve cizili UI'dan siler."""
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return
+        panel.deleteAllData()
+        self._deletePanelUi(panelId)
+        del self._panels[panelId]
+        if panelId in self._panelOrder:
+            self._panelOrder.remove(panelId)
+        if self._interactionManager is not None:
+            self._interactionManager.unregisterPanel(panelId)
+        self._lastDrawnDataCount.pop(panelId, None)
+        if self._activePanelId == panelId:
+            self._activePanelId = None
+
+    def removePanel(self, panelId):
+        """deletePanel ile ayni (isim tercihi icin ikinci ad)."""
+        self.deletePanel(panelId)
+
+    def getAllPanels(self):
+        return list(self._panels.values())
+
+    def iterateAllPanels(self):
+        for panel in self._panels.values():
+            yield panel
+
+    def deleteAllPanels(self):
+        """Modeldeki ve cizili UI'daki TUM panelleri temizler."""
+        for panelId, panel in list(self._panels.items()):
+            panel.deleteAllData()
+            self._deletePanelUi(panelId)
+        if self._interactionManager is not None:
+            for panelId in self._panels.keys():
+                self._interactionManager.unregisterPanel(panelId)
+        self._panels.clear()
+        self._panelOrder.clear()
+        self._nextId = 0
+        # _nextId sifirlandigi icin bir sonraki run AYNI panelId'leri yeniden
+        # kullanacak - bu dict temizlenmezse eski (sifir olmayan) dataCount
+        # gorulup _maybeApplyDefaultViewOnLoad "fresh load" degil sanip
+        # varsayilan View/Range modunu (FitToScreen) UYGULAMIYORDU, script
+        # ikinci kez calistirilinca plot Full Data ile aciliyordu.
+        self._lastDrawnDataCount.clear()
+        # Ayni sebep: _activePanelId de temizlenmezse eski (silinen) panelin
+        # id'si hafizada kalir - script yeni panelleri AYNI id'lerle (_nextId
+        # sifirlandigi icin) yeniden olusturunca getActivePanelId() gercekte
+        # HENUZ hover/click olmamis olsa bile o eski id'yi "aktif" gibi
+        # dondurup Active Panel combosunu YANLIS/ERKEN doldurmaya devam
+        # ediyordu.
+        self._activePanelId = None
+        # Ayni sebep: LOD onbellegi de temizlenmezse yeni Run AYNI panelId'leri
+        # yeniden kullandiginda eski calismadan kalma bir gorunur-araliktan
+        # (xMin,xMax) karsilastirma yapilir - stale kalirsa ilk zoom/pan'a
+        # kadar gereksiz/eksik bir LOD durumunda kalinabilirdi.
+        self._lodLastRange.clear()
+
+    def _deletePanelUi(self, panelId):
+        tag = f"panel_{panelId}"
+        if dpg.does_item_exist(tag):
+            dpg.delete_item(tag)
+        self._drawnPanelIds.discard(panelId)
+
+    # -------------------------------------------------------- panel sirasi
+    def getPanelOrder(self):
+        """Panellerin GUNCEL gorunum sirasini (id listesi) dondurur."""
+        return list(self._panelOrder)
+
+    def swapPanelUp(self, panelId):
+        """panelId'yi gorunum sirasinda bir yukari (bir onceki index'e) tasir."""
+        if panelId not in self._panelOrder:
+            return
+        idx = self._panelOrder.index(panelId)
+        if idx > 0:
+            self._panelOrder[idx], self._panelOrder[idx - 1] = \
+                self._panelOrder[idx - 1], self._panelOrder[idx]
+
+    def swapPanelDown(self, panelId):
+        """panelId'yi gorunum sirasinda bir asagi tasir."""
+        if panelId not in self._panelOrder:
+            return
+        idx = self._panelOrder.index(panelId)
+        if idx < len(self._panelOrder) - 1:
+            self._panelOrder[idx], self._panelOrder[idx + 1] = \
+                self._panelOrder[idx + 1], self._panelOrder[idx]
+
+    def applyPanelOrder(self):
+        """_panelOrder'daki sirayla panel_{id} child_window'larini
+        setContainer ile verilen container icinde yeniden diziyor
+        (dpg.move_item varsayilan olarak container'in EN SONUNA tasir;
+        sirayla tekrarlaninca istenen sira olusur). Container/en az 2
+        panel yoksa no-op."""
+        if not self._container or len(self._panelOrder) < 2:
+            return
+        for panelId in self._panelOrder:
+            tag = f"panel_{panelId}"
+            if dpg.does_item_exist(tag):
+                dpg.move_item(tag, parent=self._container)
+
+    def resetPanelOrder(self):
+        """Gorunum sirasini panellerin OLUSTURULMA (ekleme) sirasina
+        dondurup uygular."""
+        self._panelOrder = list(self._panels.keys())
+        self.applyPanelOrder()
+
+    # ----------------------------------------------------------------- cizim
+    def setContainer(self, tag):
+        """Panellerin cizilecegi DPG container'inin tag'ini ayarlar (or.
+        guiManager'daki 'centerPanel')."""
+        self._container = tag
+
+    def setShowCaptions(self, visible: bool):
+        """Plot basligini (add_plot label'i) tum panellerde acar/kapatir.
+        Hem SU AN cizili panellere (dpg.configure_item ile no_title guncellenir)
+        hem BUNDAN SONRA _buildPanelUi ile olusturulacak panellere (yeni bundle
+        yuklendiginde vb.) uygulanir - kalici bir tercih olarak saklanir."""
+        self._showCaptions = bool(visible)
+        infoPanelY = self._infoPanelYWithCaptions if self._showCaptions else self._infoPanelYNoCaptions
+        for panelId in self._panels:
+            plotTag = f"plot_{panelId}"
+            spacerTag = f"caption_spacer_{panelId}"
+            textTag = f"hover_text_{panelId}"
+            if dpg.does_item_exist(plotTag):
+                dpg.configure_item(plotTag, no_title=not self._showCaptions)
+            if dpg.does_item_exist(spacerTag):
+                dpg.configure_item(spacerTag, show=not self._showCaptions)
+            if dpg.does_item_exist(textTag):
+                dpg.set_item_pos(textTag, (80, infoPanelY))
+
+    def getContainer(self):
+        return self._container
+
+    def addPoolItemToPanel(self, panelId, poolItem):
+        """PoolItem.data'yi hedef panele bagimsiz PanelData clone'u olarak ekler."""
+        panel = self._panels.get(panelId)
+        if panel is None or poolItem is None or poolItem.data is None:
+            return None
+
+        dataId = self._nextDataId(panel)
+        name = self._uniqueDataName(panel, poolItem.label or poolItem.data.name)
+        data = clonePanelData(poolItem.data, dataId=dataId, name=name)
+        data.setParent(panel)
+        data.setVisible(True)
+        panel.dataList.append(data)
+
+        if dpg.does_item_exist(f"plot_{panelId}"):
+            self.drawPanelData(panelId)
+        return data
+
+    def _nextDataId(self, panel):
+        used = [int(d.id) for d in panel.dataList if isinstance(d.id, int)]
+        return (max(used) + 1) if used else 1
+
+    def _uniqueDataName(self, panel, baseName):
+        baseName = baseName or "Pool Data"
+        names = {d.name for d in panel.dataList}
+        if baseName not in names:
+            return baseName
+        index = 2
+        while f"{baseName} ({index})" in names:
+            index += 1
+        return f"{baseName} ({index})"
+
+    def _onPoolItemDroppedOnPlot(self, panelId, appData):
+        if self._poolDropHandler is None:
+            return
+        poolItemId = self._extractPoolItemId(appData)
+        if poolItemId:
+            self._poolDropHandler(panelId, poolItemId)
+
+    def _extractPoolItemId(self, appData):
+        if isinstance(appData, str):
+            return appData
+        if isinstance(appData, dict):
+            for key in ("drop_data", "drag_data", "payload", "data"):
+                value = appData.get(key)
+                if value:
+                    return value
+        if isinstance(appData, (list, tuple)) and appData:
+            for value in appData:
+                itemId = self._extractPoolItemId(value)
+                if itemId:
+                    return itemId
+        return None
+
+    def _poolDropCallback(self, panelId):
+        def callback(sender=None, appData=None, userData=None):
+            self._onPoolItemDroppedOnPlot(panelId, appData)
+        return callback
+
+    def drawPanel(self, panelId):
+        """Tek bir paneli (id ile) cizer - (bos) plot UI'sini kurar. Veriyi
+        CIZMEZ (bkz. drawPanelData). Toplu cizim icin script kendi dongusunu
+        kurar: `for p in pm.iterateAllPanels(): pm.drawPanel(p.id)`
+        (bilerek 'drawPanels' gibi coklu-eylem metodu YOK - API tekil
+        eylemlerden olusuyor, coklu islemi script kendisi orgutler)."""
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return
+        self._buildPanelUi(panel)
+        self._drawnPanelIds.add(panelId)
+        if self._interactionManager is not None:
+            self._interactionManager.registerPanel(
+                panelId, f"plot_{panelId}", f"x_axis_{panelId}", f"y_axis_{panelId}")
+
+    def drawPanelData(self, panelId):
+        """Panelin dataList'indeki (candle/bar/line) serilerini + levels
+        (hline/vline) cizgilerini plot'a basar. Tekrar cagrilabilir (once
+        y_axis'in tum eski cizimlerini siler). drawPanel'den SONRA cagrilmali
+        (once kabuk kurulmali: panel_{id}/y_axis_{id} var olmali).
+
+        BUYUK (fullCount > LOD_ACTIVATION_THRESHOLD) seriler ham TAM veriyle
+        DEGIL, ilk cizimde panelin TUM veri araligina gore decimate edilmis
+        (bkz. PanelData.getLodSlice) bir ozetle cizilir - 2M+ bar'lik bir
+        seride 2M noktayi DPG/ImPlot'a HER cizimde yollamak (Python->C
+        marshalling + GPU vertex sayisi) ciddi yavaslik yaratiyordu. Bu ilk
+        cizim sadece bir 'genel gorunum' - kullanici zoom/pan yaptikca
+        updateLod() (her frame render()'dan cagrilir) GERCEK gorunur araliga
+        gore yeniden decimate edip GUNCELLER (silip yeniden olusturmadan,
+        bkz. _drawOrUpdateSeries). Kucuk veri setlerinde (esigin altinda)
+        davranis AYNEN eskisi gibi - decimation hic devreye girmez."""
+        panel = self._panels.get(panelId)
+        yTag = f"y_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(yTag):
+            return
+        dpg.delete_item(yTag, children_only=True)
+        dataRange = self._fullXRangeForPanel(panel)
+        xMin, xMax = dataRange if dataRange is not None else (0.0, 0.0)
+        for d in panel.dataList:
+            if not d.isVisible:
+                continue
+            self._drawOrUpdateSeries(panelId, d, xMin, xMax, yTag=yTag)
+        self._drawLevels(panelId, panel)
+        self._applyAxisPadding(panelId, panel)
+        self.updateXAxisTicks(panelId)
+        self._maybeApplyDefaultViewOnLoad(panelId)
+        # Taze cizim - onceki LOD imzasi artik GECERSIZ, bir sonraki
+        # updateLod() cagrisi (guncel gorunur araliga gore, _maybeApplyDefault
+        # ViewOnLoad'un uyguladigi olasi yeni View/Range dahil) YENIDEN
+        # decimate etsin diye onbellekten dusuruluyor.
+        self._lodLastRange.pop(panelId, None)
+
+    def _seriesTag(self, panelId, d):
+        if d.dataType == "candle":
+            return f"candle_{panelId}_{d.id}"
+        if d.dataType in ("bar", "volume"):
+            return f"bar_{panelId}_{d.id}"
+        return f"line_{panelId}_{d.id}"
+
+    def _drawOrUpdateSeries(self, panelId, d, xMin, xMax, yTag=None):
+        """Bir PanelData serisini (candle/bar/line) [xMin,xMax] bar-araligina
+        gore GEREKIRSE LOD-decimate ederek cizer (item YOKSA, yTag verilmis
+        olmali) veya GUNCELLER (item VARSA dpg.set_value ile - silip yeniden
+        OLUSTURMAZ, boylece z-order/tema/handler kaybi olmaz). fullCount
+        LOD_ACTIVATION_THRESHOLD'un altindaysa decimation hic YAPILMAZ
+        (kucuk veri setlerinde eski davranis aynen korunur, TAM veri
+        kullanilir)."""
+        tag = self._seriesTag(panelId, d)
+        exists = dpg.does_item_exist(tag)
+        if not exists and yTag is None:
+            return
+
+        useLod = d.fullCount > self.LOD_ACTIVATION_THRESHOLD
+        slice_ = d.getLodSlice(xMin, xMax, self.LOD_MAX_POINTS) if useLod else None
+
+        if d.dataType == "candle" and d.open and d.high and d.low and d.close:
+            if slice_ is not None:
+                xs, opens, closes = slice_["xs"], slice_["opens"], slice_["closes"]
+                lows, highs = slice_["lows"], slice_["highs"]
+            else:
+                xs = d.xs if d.xs else list(range(len(d.open)))
+                opens, closes, lows, highs = d.open, d.close, d.low, d.high
+            if exists:
+                dpg.set_value(tag, [xs, opens, closes, lows, highs])
+            else:
+                dpg.add_candle_series(xs, opens, closes, lows, highs, label=d.name,
+                                      tag=tag, parent=yTag, tooltip=False)
+        elif d.dataType in ("bar", "volume") and d.volume:
+            if slice_ is not None:
+                xs, ys = slice_["xs"], slice_["ys"]
+            else:
+                xs = d.xs if d.xs else list(range(len(d.volume)))
+                ys = d.volume
+            if exists:
+                dpg.set_value(tag, [xs, ys])
+            else:
+                dpg.add_bar_series(xs, ys, label=f"{d.name} Vol", tag=tag, parent=yTag)
+        else:
+            if slice_ is not None:
+                xs, ys = slice_["xs"], slice_["ys"]
+            else:
+                xs, ys = d.xs, d.ys
+            if exists:
+                dpg.set_value(tag, [xs, ys])
+            else:
+                dpg.add_line_series(xs, ys, label=d.name, tag=tag, parent=yTag)
+                if d.color:
+                    self._applySeriesColorTheme(tag, d.color)
+
+    def _applySeriesColorTheme(self, tag, color):
+        """d.color set edilmis bir "line" serisine sabit renk temasi baglar
+        (orn. view.json'daki seriesSpec["color"] -> Panel.addData(color=...)
+        -> PanelData.color). Yalnizca item OLUSTURULURKEN (yeniden
+        yaratilmadan) bir kere cagrilir - set_value ile guncellenen
+        item'larda tema zaten kalici oldugu icin tekrar baglamaya gerek yok."""
+        themeTag = f"{tag}_color_theme"
+        if dpg.does_item_exist(themeTag):
+            dpg.delete_item(themeTag)
+        with dpg.theme(tag=themeTag):
+            with dpg.theme_component(dpg.mvLineSeries):
+                dpg.add_theme_color(dpg.mvPlotCol_Line, color, category=dpg.mvThemeCat_Plots)
+        dpg.bind_item_theme(tag, themeTag)
+
+    def _lodRangeChanged(self, prev, current):
+        """Gorunur X araligi bir onceki LOD guncellemesine gore YETERINCE
+        (span'in LOD_RANGE_CHANGE_RATIO'sundan fazla) kaydi/degisti mi?
+        Tam esitlik DEGIL, hysteresis kullanilir - yoksa surekli zoom/pan
+        sirasinda HER frame yeniden decimate+set_value cagirmak (buyuk
+        serilerde yine de pahali) 'kekemelige' yol acardi (Auto Sync X/Y ve
+        RangeSliderBar'daki liveOnly desenleriyle AYNI felsefe: gereksiz
+        DPG cagrisini asgariye indirmek)."""
+        prevMin, prevMax = prev
+        curMin, curMax = current
+        prevSpan = max(prevMax - prevMin, 1e-9)
+        if abs(curMin - prevMin) > prevSpan * self.LOD_RANGE_CHANGE_RATIO:
+            return True
+        if abs(curMax - prevMax) > prevSpan * self.LOD_RANGE_CHANGE_RATIO:
+            return True
+        return False
+
+    def updateLod(self):
+        """Her frame render()'dan cagrilir - BUYUK (fullCount >
+        LOD_ACTIVATION_THRESHOLD) en az bir gorunur serisi olan panellerde,
+        gorunur X araligi ONCEKI LOD guncellemesinden beri YETERINCE
+        degistiyse (bkz. _lodRangeChanged) TUM serilerini GUNCEL gorunur
+        araliga gore yeniden decimate edip dpg.set_value ile gunceller.
+        Kucuk veri setlerinde (hasLargeData=False) bu metod PRATIKTE hicbir
+        sey yapmaz - tarama ucuz (panel/seri sayisi kadar, veri boyutuyla
+        ILGISIZ), asil pahali is (decimation) sadece gerektiginde calisir."""
+        for panelId, panel in list(self._panels.items()):
+            if not panel.getVisible():
+                continue
+            hasLargeData = any(d.isVisible and d.fullCount > self.LOD_ACTIVATION_THRESHOLD
+                              for d in panel.dataList)
+            if not hasLargeData:
+                continue
+            xTag = f"x_axis_{panelId}"
+            limits = self._axisLimits(xTag)
+            if limits is None:
+                continue
+            last = self._lodLastRange.get(panelId)
+            if last is not None and not self._lodRangeChanged(last, limits):
+                continue
+            self._lodLastRange[panelId] = limits
+            xMin, xMax = limits
+            for d in panel.dataList:
+                if not d.isVisible:
+                    continue
+                self._drawOrUpdateSeries(panelId, d, xMin, xMax)
+
+    def _getFixedYRange(self, panel):
+        """panel.ySyncMode=='fixedRange' + panel.yFixedRange set edilmisse (bkz.
+        Panel.setYSync / view.json'daki 'yFixedRange') o araligi dondurur,
+        yoksa None - orn. Signals paneli verisi -1..1 olsa bile Y eksenini
+        her zaman -2..2 gostermek icin (rahat gorunsun diye) kullanilir."""
+        if panel.ySyncMode == "fixedRange" and panel.yFixedRange:
+            return panel.yFixedRange
+        return None
+
+    def _applyAxisPadding(self, panelId, panel,
+                         xMarginRatio=0.02, yMarginRatio=0.08):
+        """Panelin GORUNUR TUM datalarindan x/y eksen limitlerini hesaplayip
+        (min-max araligina bir pay ekleyerek) dpg.set_axis_limits ile
+        uygular - boylece ilk/son bar ya da en yuksek/dusuk deger plot
+        cercevesine YAPISMAZ (panellerin kendi aralarinda birakilan bosluk
+        gibi, verinin de kenarlardan biraz payi olsun istendi). Gorunur
+        data yoksa (hepsi silinmis/gizlenmis) kilit kaldirilir
+        (set_axis_limits_auto) ki eksen eski/bayat bir araliga KILITLI
+        KALMASIN.
+
+        NOT: dpg.set_axis_limits çağrısı DPG'de ekseni pan/zoom'a KAPALI hale
+        getirip o araliga KILITLER (set_axis_limits_auto cagrilana kadar).
+        Sadece bir kerelik "guzel cerceveleme" istedigimiz icin (kilitli
+        kalsin istemiyoruz), limit BIR FRAME uygulanip dpg.split_frame() ile
+        beklenir, sonra set_axis_limits_auto ile kilit hemen kaldirilir -
+        kullanici o andan itibaren serbestce zoom/pan yapabilir. Bir sonraki
+        drawPanelData (veri degisikligi/hide-show/order) cagrisinda görünüm
+        yeniden bu dolgulu hale doner."""
+        xTag = f"x_axis_{panelId}"
+        yTag = f"y_axis_{panelId}"
+        if not dpg.does_item_exist(xTag) or not dpg.does_item_exist(yTag):
+            return
+
+        xMin = xMax = yMin = yMax = None
+        for d in panel.dataList:
+            if not d.isVisible:
+                continue
+            xs = d.xs if d.xs else (list(range(len(d.open))) if d.open else None)
+            if xs:
+                xMin = xs[0] if xMin is None else min(xMin, xs[0])
+                xMax = xs[-1] if xMax is None else max(xMax, xs[-1])
+            if d.dataCount:
+                yMin = d.minY if yMin is None else min(yMin, d.minY)
+                yMax = d.maxY if yMax is None else max(yMax, d.maxY)
+
+        appliedX = False
+        if xMin is None or xMax is None:
+            dpg.set_axis_limits_auto(xTag)
+        else:
+            xPad = max(1.0, (xMax - xMin) * xMarginRatio)
+            dpg.set_axis_limits(xTag, xMin - xPad, xMax + xPad)
+            appliedX = True
+
+        appliedY = False
+        fixedY = self._getFixedYRange(panel)
+        if fixedY is not None:
+            dpg.set_axis_limits(yTag, fixedY[0], fixedY[1])
+            appliedY = True
+        elif yMin is None or yMax is None:
+            dpg.set_axis_limits_auto(yTag)
+        else:
+            yRange = yMax - yMin
+            yPad = yRange * yMarginRatio if yRange > 0 else max(1.0, abs(yMax) * yMarginRatio)
+            dpg.set_axis_limits(yTag, yMin - yPad, yMax + yPad)
+            appliedY = True
+
+        if appliedX or appliedY:
+            dpg.split_frame()
+            if appliedX:
+                dpg.set_axis_limits_auto(xTag)
+            if appliedY:
+                dpg.set_axis_limits_auto(yTag)
+
+    def _drawLevels(self, panelId, panel):
+        """panel.levels'daki yatay/dikey seviye cizgilerini inf_line_series
+        ile cizer (legend'da gorunur sonsuz cizgi). y_axis'e baglidir, o
+        yuzden drawPanelData'nin y_axis temizligiyle birlikte yeniden cizilir."""
+        yTag = f"y_axis_{panelId}"
+        if not dpg.does_item_exist(yTag):
+            return
+        for i, lvl in enumerate(panel.levels):
+            tag = f"level_{panelId}_{i}"
+            v = lvl["value"]
+            label = lvl["label"] or (str(int(v)) if v == int(v) else str(v))
+            series = dpg.add_inf_line_series(
+                [v], horizontal=(not lvl["vertical"]), label=label,
+                tag=tag, parent=yTag)
+            color = lvl.get("color")
+            if color:
+                themeTag = f"{tag}_theme"
+                if dpg.does_item_exist(themeTag):
+                    dpg.delete_item(themeTag)
+                with dpg.theme(tag=themeTag):
+                    with dpg.theme_component(dpg.mvInfLineSeries):
+                        dpg.add_theme_color(dpg.mvPlotCol_Line, color, category=dpg.mvThemeCat_Plots)
+                        if lvl.get("thickness"):
+                            dpg.add_theme_style(dpg.mvPlotStyleVar_LineWeight,
+                                                float(lvl["thickness"]), category=dpg.mvThemeCat_Plots)
+                dpg.bind_item_theme(series, themeTag)
+
+    # ---------------------------------------------------------- y adjust
+    def adjustYAxis(self, panelId=None, yMarginRatio=0.08, xLimits=None):
+        """Verilen panelin mevcut gorunur X araligindaki visible datalarina gore
+        Y eksen limitini gunceller. X eksenine dokunmaz."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        yTag = f"y_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(yTag):
+            return False
+
+        fixedY = self._getFixedYRange(panel)
+        if fixedY is not None:
+            dpg.set_axis_limits(yTag, fixedY[0], fixedY[1])
+            if dpg.is_dearpygui_running():
+                dpg.split_frame()
+                if dpg.does_item_exist(yTag):
+                    dpg.set_axis_limits_auto(yTag)
+            return True
+
+        yRange = self._visibleYRangeForPanel(panelId, xLimits=xLimits)
+        if yRange is None:
+            dpg.fit_axis_data(yTag)
+            return True
+
+        yMin, yMax = yRange
+        ySpan = yMax - yMin
+        yPad = ySpan * yMarginRatio if ySpan > 0 else max(1.0, abs(yMax) * yMarginRatio)
+        dpg.set_axis_limits(yTag, yMin - yPad, yMax + yPad)
+        if dpg.is_dearpygui_running():
+            dpg.split_frame()
+            if dpg.does_item_exist(yTag):
+                dpg.set_axis_limits_auto(yTag)
+        return True
+
+    def adjustAllYAxes(self, yMarginRatio=0.08):
+        """Tum gorunur panellerde adjustYAxis uygular. Donen deger: basarili
+        adjust edilen panel sayisi."""
+        count = 0
+        for panel in self._panels.values():
+            if not panel.getVisible():
+                continue
+            if self.adjustYAxis(panel.id, yMarginRatio=yMarginRatio):
+                count += 1
+        return count
+
+    def resetPanelView(self, panelId=None, xMarginRatio=0.02, yMarginRatio=0.08):
+        """Paneli full-data + padding gorunumune resetler."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        xTag = f"x_axis_{panelId}"
+        yTag = f"y_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(xTag) or not dpg.does_item_exist(yTag):
+            return False
+
+        self._applyAxisPadding(panelId, panel,
+                               xMarginRatio=xMarginRatio,
+                               yMarginRatio=yMarginRatio)
+        return True
+
+    def resetAllPanelViews(self, xMarginRatio=0.02, yMarginRatio=0.08):
+        """Tum gorunur panelleri full-data gorunumune resetler."""
+        count = 0
+        for panel in self._panels.values():
+            if not panel.getVisible():
+                continue
+            if self.resetPanelView(panel.id, xMarginRatio=xMarginRatio,
+                                   yMarginRatio=yMarginRatio):
+                count += 1
+        return count
+
+    # ---------------------------------------------------------- pan
+    def panPanel(self, panelId=None, direction="left", mode="VisibleScreenWidth", step=100):
+        """Verilen/aktif panelin X eksenini kaydirir. direction: 'start'|'left'|
+        'right'|'end'. mode: 'VisibleScreenWidth' (o an gorunen genislik kadar
+        kaydir) | '1 Bar'/'10 Bar'/'100 Bar'/'1000 Bar' (sabit bar adedi) |
+        'UserDefined' (step parametresi kadar). 'start'/'end' mevcut gorunur
+        genisligi koruyarak GORUNUR verinin en basina/sonuna atlar. Basarili
+        olursa (yeniXMin, yeniXMax) doner, aksi halde None."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        xTag = f"x_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(xTag):
+            return None
+
+        limits = self._axisLimits(xTag)
+        if limits is None:
+            return None
+        xMin, xMax = limits
+        span = xMax - xMin
+
+        if direction in ("start", "end"):
+            dataRange = self._fullXRangeForPanel(panel)
+            if dataRange is None:
+                return None
+            dataMin, dataMax = dataRange
+            if direction == "start":
+                newMin, newMax = dataMin, dataMin + span
+            else:
+                newMin, newMax = dataMax - span, dataMax
+        else:
+            delta = self._panStepDelta(mode, step, span)
+            if direction == "left":
+                newMin, newMax = xMin - delta, xMax - delta
+            else:  # "right"
+                newMin, newMax = xMin + delta, xMax + delta
+            # Limit kontrolu: verinin disina tasarsa (start/end'in aksine sol/sag
+            # hicbir sinira gore hesaplanmiyordu) genisligi koruyarak en yakin
+            # sinira yaslar - yoksa bos bir bolgeye kayip Y ekseni (adjustYAxis)
+            # gorunur veri bulamadigi icin fit_axis_data'ya duserdi.
+            dataRange = self._fullXRangeForPanel(panel)
+            if dataRange is not None:
+                dataMin, dataMax = dataRange
+                if newMin < dataMin:
+                    newMin, newMax = dataMin, dataMin + span
+                elif newMax > dataMax:
+                    newMin, newMax = dataMax - span, dataMax
+
+        dpg.set_axis_limits(xTag, newMin, newMax)
+        dpg.split_frame()
+        dpg.set_axis_limits_auto(xTag)
+        return newMin, newMax
+
+    def zoomPanel(self, panelId=None, axes="x", direction="in", ratio=0.30):
+        """Verilen/aktif panelin gorunur eksen limitlerini merkezden zoom'lar.
+
+        axes: 'x' | 'y' | 'xy'
+        direction: 'in' | 'out'
+        ratio: 0.20 -> %20, 0.30 -> %30 gibi dusunulur.
+        Basarili olursa {"x": (min, max), "y": (min, max)} seklinde doner.
+        """
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return None
+
+        axes = (axes or "x").lower()
+        direction = (direction or "in").lower()
+        try:
+            ratio = float(ratio)
+        except (TypeError, ValueError):
+            ratio = 0.30
+        ratio = max(0.01, min(5.0, ratio))
+
+        scale = 1.0 / (1.0 + ratio) if direction == "in" else (1.0 + ratio)
+        result = {}
+
+        if "x" in axes:
+            xResult = self._zoomAxisLimits(f"x_axis_{panelId}", scale,
+                                           clampRange=self._fullXRangeForPanel(panel))
+            if xResult is not None:
+                result["x"] = xResult
+
+        if "y" in axes:
+            yResult = self._zoomAxisLimits(f"y_axis_{panelId}", scale)
+            if yResult is not None:
+                result["y"] = yResult
+
+        if not result:
+            return None
+
+        dpg.split_frame()
+        if "x" in result:
+            dpg.set_axis_limits_auto(f"x_axis_{panelId}")
+        if "y" in result:
+            dpg.set_axis_limits_auto(f"y_axis_{panelId}")
+        return result
+
+    def _zoomAxisLimits(self, axisTag, scale, clampRange=None):
+        if not dpg.does_item_exist(axisTag):
+            return None
+        limits = self._axisLimits(axisTag)
+        if limits is None:
+            return None
+        axisMin, axisMax = limits
+        span = axisMax - axisMin
+        if span <= 0:
+            return None
+
+        center = (axisMin + axisMax) / 2.0
+        newSpan = max(span * scale, 1e-9)
+        newMin = center - newSpan / 2.0
+        newMax = center + newSpan / 2.0
+
+        if clampRange is not None:
+            dataMin, dataMax = clampRange
+            dataSpan = dataMax - dataMin
+            if dataSpan > 0:
+                if newSpan >= dataSpan:
+                    newMin, newMax = dataMin, dataMax
+                elif newMin < dataMin:
+                    newMin, newMax = dataMin, dataMin + newSpan
+                elif newMax > dataMax:
+                    newMin, newMax = dataMax - newSpan, dataMax
+
+        dpg.set_axis_limits(axisTag, newMin, newMax)
+        return newMin, newMax
+
+    def setPanelAxisLimits(self, panelId=None, xLimits=None, yLimits=None):
+        """Verilen/aktif panelin X/Y eksen limitlerini dogrudan uygular.
+
+        Zoom reset gibi kontrollu geri-donuslerde kullanilir. Basarili eksenler
+        icin {"x": (...), "y": (...)} dondurur.
+        """
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return None
+
+        result = {}
+        if xLimits is not None:
+            xTag = f"x_axis_{panelId}"
+            if dpg.does_item_exist(xTag):
+                dpg.set_axis_limits(xTag, xLimits[0], xLimits[1])
+                result["x"] = (xLimits[0], xLimits[1])
+
+        if yLimits is not None:
+            yTag = f"y_axis_{panelId}"
+            if dpg.does_item_exist(yTag):
+                dpg.set_axis_limits(yTag, yLimits[0], yLimits[1])
+                result["y"] = (yLimits[0], yLimits[1])
+
+        if not result:
+            return None
+
+        dpg.split_frame()
+        if "x" in result:
+            dpg.set_axis_limits_auto(f"x_axis_{panelId}")
+        if "y" in result:
+            dpg.set_axis_limits_auto(f"y_axis_{panelId}")
+        return result
+
+    def panToFraction(self, panelId=None, fraction=0.0, liveOnly=False):
+        """RangeSliderBar'in scroll bar'i suruklenince cagrilir - syncScrollToView'in
+        TERSI: GORUNUR genisligi (span) koruyarak penceresini 0..1 arasindaki
+        fraction'a gore TOPLAM veri araliginda konumlandirir (0=en bas, 1=en son).
+        Basarili olursa (yeniXMin, yeniXMax) doner, aksi halde None.
+
+        liveOnly=True: SADECE dpg.set_axis_limits cagrilir, split_frame/
+        set_axis_limits_auto ATLANIR - scroll bar suruklenirken (saniyede onlarca
+        kez tetiklenen) her tikte split_frame() (bir render frame'ini SENKRON
+        bekliyor) cagirmak "dalga dalga" bir kekemelige yol aciyordu. Drag
+        bitince RangeSliderBar bir kere unlockXAxis() cagirip kilidi kaldirir
+        (bkz. rangeSliderBar._syncScrollToActivePanel)."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        xTag = f"x_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(xTag):
+            return None
+
+        limits = self._axisLimits(xTag)
+        dataRange = self._fullXRangeForPanel(panel)
+        if limits is None or dataRange is None:
+            return None
+        xMin, xMax = limits
+        dataMin, dataMax = dataRange
+        span = xMax - xMin
+        total = dataMax - dataMin
+        denom = max(total - span, 0.0)
+        fraction = max(0.0, min(1.0, fraction))
+        newMin = dataMin + fraction * denom
+        newMax = newMin + span
+
+        dpg.set_axis_limits(xTag, newMin, newMax)
+        if not liveOnly:
+            dpg.split_frame()
+            dpg.set_axis_limits_auto(xTag)
+        return newMin, newMax
+
+    def zoomToFractionRange(self, panelId=None, startFraction=0.0, endFraction=1.0, liveOnly=False):
+        """RangeSliderBar'daki Start/End marker'lari suruklenince cagrilir -
+        panToFraction'in aksine GENISLIGI (span) DEGISTIRIR: TOPLAM veri
+        araliginin [startFraction, endFraction] (0..1) diliminin dogrudan
+        yeni x eksen limiti olmasini saglar (zoom). liveOnly=True aninda
+        panToFraction ile ayni sebeple (marker suruklenirken saniyede onlarca
+        kez tetiklenir) split_frame/set_axis_limits_auto ATLANIR - drag
+        bitince RangeSliderBar bir kere unlockXAxis() cagirir (bkz.
+        rangeSliderBar._syncSliderToActivePanel)."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        xTag = f"x_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(xTag):
+            return None
+
+        dataRange = self._fullXRangeForPanel(panel)
+        if dataRange is None:
+            return None
+        dataMin, dataMax = dataRange
+        total = dataMax - dataMin
+        startFraction = max(0.0, min(1.0, startFraction))
+        endFraction = max(0.0, min(1.0, endFraction))
+        if endFraction <= startFraction:
+            endFraction = min(1.0, startFraction + 0.001)
+
+        newMin = dataMin + startFraction * total
+        newMax = dataMin + endFraction * total
+
+        dpg.set_axis_limits(xTag, newMin, newMax)
+        if not liveOnly:
+            dpg.split_frame()
+            dpg.set_axis_limits_auto(xTag)
+        return newMin, newMax
+
+    def unlockXAxis(self, panelId=None):
+        """panToFraction(liveOnly=True) ile drag sirasinda KILITLI birakilan
+        x eksenini serbest birakir (bkz. rangeSliderBar._syncScrollToActivePanel -
+        scroll bar suruklemesi bitince bir kere cagrilir)."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        xTag = f"x_axis_{panelId}"
+        if dpg.does_item_exist(xTag):
+            dpg.set_axis_limits_auto(xTag)
+
+    def setFitToScreenBarWidth(self, normal=None, wide=None, ultra=None):
+        """FitToScreen modlarinin px/bar katsayilarini config'ten set eder."""
+        for key, value in (("normal", normal), ("wide", wide), ("ultra", ultra)):
+            if value is None:
+                continue
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0:
+                self._fitToScreenBarWidth[key] = parsed
+
+    # ------------------------------------------------------- view/range
+    def applyViewMode(self, panelId=None, mode="FitToScreen (Ultra)", n=1000, n2=2000):
+        """guiManager'daki "View / Range" Apply butonunun gercek mantigi
+        (Ref1'deki apply_view_mode ile ayni fikir). mode:
+          - 'FitToScreen (Normal/Wide/Ultra)': plot'un piksel genisligine ve
+            sabit bir bar-genisligine (Ultra en ince/en genis-araligi-gosteren)
+            gore kac bar sigacagini hesaplayip verinin SONUNU gosterir.
+          - 'Full Data': tum veri.
+          - 'Last N Data' / 'First N Data': son/ilk n bar.
+          - 'Range': n=baslangic bar index'i, n2=gorunur bar sayisi.
+        Basarili olursa (xMin, xMax) doner (Y ekseni de adjustYAxis ile
+        hemen fit'lenir), veri/panel yoksa None."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        xTag = f"x_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(xTag):
+            return None
+        barCount = self.getPanelDataCount(panelId)
+        if barCount <= 0:
+            return None
+        dataRange = self._fullXRangeForPanel(panel)
+        if dataRange is None:
+            return None
+        dataMin, dataMax = dataRange
+
+        if mode.startswith("FitToScreen"):
+            if "Wide" in mode:
+                barWidth = self._fitToScreenBarWidth["wide"]
+            elif "Ultra" in mode:
+                barWidth = self._fitToScreenBarWidth["ultra"]
+            else:
+                barWidth = self._fitToScreenBarWidth["normal"]
+            plotWidth = self._plotPixelWidth(panelId)
+            visible = int(plotWidth / barWidth) if barWidth > 0 else barCount
+            visible = max(100, min(visible, barCount))
+            offset = max(0, barCount - visible)
+        elif mode == "Full Data":
+            offset = 0
+            visible = barCount
+        elif mode == "Last N Data":
+            visible = max(1, min(int(n), barCount))
+            offset = max(0, barCount - visible)
+        elif mode == "First N Data":
+            visible = max(1, min(int(n), barCount))
+            offset = 0
+        elif mode == "Range":
+            offset = max(0, min(int(n), barCount - 1))
+            visible = max(1, min(int(n2), barCount - offset))
+        else:
+            return None
+
+        span = max(1, visible)
+        pad = max(1.0, span * 0.015)
+        xMin = dataMin + offset - pad
+        xMax = dataMin + offset + visible - 1 + pad
+
+        dpg.set_axis_limits(xTag, xMin, xMax)
+        dpg.split_frame()
+        dpg.set_axis_limits_auto(xTag)
+        self.adjustYAxis(panelId, xLimits=(xMin, xMax))
+        return xMin, xMax
+
+    def applyViewModeToAllPanels(self, mode="FitToScreen (Ultra)", n=1000, n2=2000):
+        """Tum GORUNUR panellere applyViewMode uygular ("Reset All" butonu -
+        adjustAllYAxes ile ayni desen). Donen deger: basarili uygulanan panel
+        sayisi."""
+        count = 0
+        for panel in self._panels.values():
+            if not panel.getVisible():
+                continue
+            if self.applyViewMode(panel.id, mode, n=n, n2=n2) is not None:
+                count += 1
+        return count
+
+    def _plotPixelWidth(self, panelId):
+        """FitToScreen hesabi icin plot'un ekrandaki piksel genisligi. Plot
+        henuz cizilmemis/olculemiyorsa makul bir varsayilana (800) duser."""
+        plotTag = f"plot_{panelId}"
+        if dpg.does_item_exist(plotTag):
+            try:
+                w = dpg.get_item_rect_size(plotTag)[0]
+                if w > 0:
+                    return float(w)
+            except Exception:
+                pass
+        return 800.0
+
+    def setDefaultViewMode(self, mode, n=1000, n2=2000):
+        """guiManager'daki View/Range Apply butonu basarili oldugunda cagirilir -
+        kullanicinin SON sectigi mod/N/N2'yi 'standing default' olarak hafizaya
+        alir. Bu default, YENI veri yuklenen bir panelde (bkz.
+        _maybeApplyDefaultViewOnLoad) otomatik uygulanir - boylece "Load Data"
+        sonrasi panel her zaman TUM veriyi degil, kullanicinin son sectigi
+        View/Range gorunumunu (baslangicta FitToScreen (Ultra)) gosterir."""
+        self._defaultViewMode = mode
+        self._defaultViewN = n
+        self._defaultViewN2 = n2
+
+    def _maybeApplyDefaultViewOnLoad(self, panelId):
+        """drawPanelData HER veri degisiminde (add/hide/show/reorder) cagrilir,
+        ama biz SADECE panel bos->dolu (fresh veri yuklemesi) gecisinde
+        'standing default' View/Range modunu (bkz. setDefaultViewMode)
+        uygulamak istiyoruz - _applyAxisPadding'in HER cagirildiginda uyguladigi
+        'tum veri + pay' gorunumunu ilk yuklemede GOSTERMEK ISTEMIYORUZ. Hide/
+        show/reorder gibi diger tetikleyicilerde kullanicinin mevcut pan/zoom
+        konumu KORUNUR - burasi bir daha tetiklenmez (dataCount zaten >0'dan
+        >0'a gectigi icin 'fresh load' sayilmaz)."""
+        count = self.getPanelDataCount(panelId)
+        hadData = self._lastDrawnDataCount.get(panelId, 0) > 0
+        self._lastDrawnDataCount[panelId] = count
+        if hadData or count <= 0:
+            return
+        self.applyViewMode(panelId, self._defaultViewMode,
+                          n=self._defaultViewN, n2=self._defaultViewN2)
+
+    def _panStepDelta(self, mode, step, span):
+        if mode == "VisibleScreenWidth":
+            return span
+        if mode == "UserDefined":
+            return step
+        # "1 Bar" / "10 Bar" / "100 Bar" / "1000 Bar"
+        try:
+            return float(mode.split()[0])
+        except (ValueError, IndexError):
+            return span
+
+    def _fullXRangeForPanel(self, panel):
+        xMin = xMax = None
+        for d in panel.dataList:
+            if not d.isVisible:
+                continue
+            xs = d.xs if d.xs else (list(range(len(d.open))) if d.open else None)
+            if xs:
+                xMin = xs[0] if xMin is None else min(xMin, xs[0])
+                xMax = xs[-1] if xMax is None else max(xMax, xs[-1])
+        if xMin is None or xMax is None:
+            return None
+        return xMin, xMax
+
+    def readPanelPlotParams(self, panelId=None, plotId=None):
+        """Aktif/kaynak panelin plot eksen parametrelerini okur ve hafizada tutar."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        plotTag = plotId or f"plot_{panelId}"
+        xTag = f"x_axis_{panelId}"
+        yTag = f"y_axis_{panelId}"
+        if panel is None or not dpg.does_item_exist(plotTag):
+            return None
+
+        params = {
+            "panelId": panelId,
+            "plotId": plotTag,
+            "xAxis": xTag,
+            "yAxis": yTag,
+            "xAxisLimits": self._axisLimits(xTag),
+            "yAxisLimits": self._axisLimits(yTag),
+            "frame": dpg.get_frame_count(),
+        }
+        self._lastReadPlotParams = params
+        return params
+
+    def getLastReadPlotParams(self):
+        return self._lastReadPlotParams
+
+    def isPanelReadyForSourceParams(self, panelId):
+        """Panel GUI tarafinda cizilip gorunur hale geldiyse True doner."""
+        panel = self._panels.get(panelId)
+        plotTag = f"plot_{panelId}"
+        xTag = f"x_axis_{panelId}"
+        yTag = f"y_axis_{panelId}"
+        if panel is None or not panel.getVisible():
+            return False
+        if not (dpg.does_item_exist(plotTag)
+                and dpg.does_item_exist(xTag)
+                and dpg.does_item_exist(yTag)):
+            return False
+        try:
+            return dpg.is_item_visible(plotTag)
+        except (KeyError, SystemError, Exception):
+            return False
+
+    def applySourceParamsToPanel(self, panelId, params=None, yMarginRatio=0.08):
+        """Kaynak plot parametrelerini hedef panele uygular.
+
+        X araligi kaynakla aynilanir; Y ise hedef panelin o X araliginda
+        gorunen kendi datalarina gore yeniden fit edilir.
+        """
+        params = params or self._lastReadPlotParams
+        panel = self._panels.get(panelId)
+        if panel is None or params is None:
+            return False
+        if panelId == params.get("panelId"):
+            return True
+        if not self.isPanelReadyForSourceParams(panelId):
+            return False
+
+        xLimits = params.get("xAxisLimits")
+        xTag = f"x_axis_{panelId}"
+        appliedX = False
+        if xLimits is not None:
+            dpg.set_axis_limits(xTag, xLimits[0], xLimits[1])
+            appliedX = True
+        self.adjustYAxis(panelId, yMarginRatio=yMarginRatio, xLimits=xLimits)
+        if appliedX:
+            dpg.split_frame()
+            dpg.set_axis_limits_auto(xTag)
+        return True
+
+    def applySourceXAxisToPanel(self, panelId, params=None):
+        """Kaynak plot'un X araligini hedef panele uygular; Y eksenine dokunmaz."""
+        params = params or self._lastReadPlotParams
+        panel = self._panels.get(panelId)
+        if panel is None or params is None:
+            return False
+        if panelId == params.get("panelId"):
+            return True
+        if not self.isPanelReadyForSourceParams(panelId):
+            return False
+
+        xLimits = params.get("xAxisLimits")
+        if xLimits is None:
+            return False
+
+        xTag = f"x_axis_{panelId}"
+        dpg.set_axis_limits(xTag, xLimits[0], xLimits[1])
+        dpg.split_frame()
+        dpg.set_axis_limits_auto(xTag)
+        return True
+
+    def _visibleYRangeForPanel(self, panelId, xLimits=None):
+        panel = self._panels.get(panelId)
+        xLimits = xLimits or self._axisLimits(f"x_axis_{panelId}")
+        if panel is None or xLimits is None:
+            return None
+        xMin, xMax = xLimits
+        yMin = yMax = None
+        for data in panel.dataList:
+            if not data.isVisible:
+                continue
+            dataRange = self._visibleYRangeForData(data, xMin, xMax)
+            if dataRange is None:
+                continue
+            lo, hi = dataRange
+            yMin = lo if yMin is None else min(yMin, lo)
+            yMax = hi if yMax is None else max(yMax, hi)
+        if yMin is None or yMax is None:
+            return None
+        return yMin, yMax
+
+    def _visibleYRangeForData(self, data, xMin, xMax):
+        """[xMin,xMax] GORUNUR araligindaki bir serinin (yMin,yMax) araligini
+        dondurur - adjustYAxis/_applyAxisPadding HER zoom/pan'de cagirir.
+
+        Numpy _full* snapshot'lari (bkz. PanelData.setFullData - Panel.addData/
+        setCandleData HER ZAMAN cagirir, o yuzden normalde YOKLUK olmaz)
+        varsa np.searchsorted (fullXs'in MONOTONIK ARTAN oldugu varsayimiyla,
+        bkz. PanelData.getLodSlice'daki AYNI not) ile O(log n + gorunur
+        dilim) surede hesaplanir - ONCEDEN saf Python for donguyle TUM
+        diziyi (2M+ bar'da HER cagrida 2M iterasyon) tariyordu, bu 2M-bar'lik
+        veride en buyuk yavaslik kaynaklarindan biriydi. _full* YOKSA (cok
+        nadir/edge-case) eski yavas ama genel yonteme (_visibleYRangeForDataSlow)
+        duser."""
+        fullXs = data._fullXs
+        if fullXs is None or len(fullXs) == 0:
+            return self._visibleYRangeForDataSlow(data, xMin, xMax)
+
+        if data.dataType == "candle" and data._fullLow is not None and data._fullHigh is not None:
+            lows, highs = data._fullLow, data._fullHigh
+        elif data.dataType in ("bar", "volume") and data._fullVolume is not None:
+            highs = data._fullVolume
+            lows = np.zeros_like(highs)
+        else:
+            values = data._fullYs
+            if values is None:
+                return None
+            lows = highs = values
+
+        n = min(len(fullXs), len(lows), len(highs))
+        if n == 0:
+            return None
+        xsArr = fullXs[:n]
+        startIdx = max(0, int(np.searchsorted(xsArr, xMin, side="left")))
+        endIdx = min(n, int(np.searchsorted(xsArr, xMax, side="right")))
+        if endIdx <= startIdx:
+            return None
+
+        lowsSlice = lows[startIdx:endIdx]
+        highsSlice = highs[startIdx:endIdx]
+        finiteMask = np.isfinite(lowsSlice) & np.isfinite(highsSlice)
+        if not finiteMask.any():
+            return None
+        return float(lowsSlice[finiteMask].min()), float(highsSlice[finiteMask].max())
+
+    def _visibleYRangeForDataSlow(self, data, xMin, xMax):
+        """_visibleYRangeForData'nin _full* numpy snapshot'i OLMAYAN (cok
+        nadir/edge-case) veri icin dustugu, saf Python liste taramali eski
+        yontem - dogrulugu KANITLI, sadece BUYUK veride yavas oldugu icin
+        birincil yol degil."""
+        xs = data.xs
+        if data.dataType == "candle" and data.low and data.high:
+            lows, highs = data.low, data.high
+            if len(xs) == 0:
+                xs = range(len(lows))
+        elif data.dataType in ("bar", "volume") and data.volume:
+            highs = data.volume
+            lows = [0.0] * len(highs)
+            if len(xs) == 0:
+                xs = range(len(highs))
+        else:
+            values = data.ys
+            lows = highs = values
+            if len(xs) == 0:
+                xs = range(len(values))
+
+        yMin = yMax = None
+        for i in range(min(len(xs), len(lows), len(highs))):
+            x = xs[i]
+            if x < xMin or x > xMax:
+                continue
+            lo, hi = lows[i], highs[i]
+            if not self._isFiniteNumber(lo) or not self._isFiniteNumber(hi):
+                continue
+            yMin = lo if yMin is None else min(yMin, lo)
+            yMax = hi if yMax is None else max(yMax, hi)
+        if yMin is None or yMax is None:
+            return None
+        return yMin, yMax
+
+    def _axisLimits(self, axis):
+        if not dpg.does_item_exist(axis):
+            return None
+        try:
+            limits = dpg.get_axis_limits(axis)
+        except (KeyError, SystemError, Exception):
+            return None
+        if limits is None or len(limits) < 2:
+            return None
+        return float(limits[0]), float(limits[1])
+
+    def _isFiniteNumber(self, value):
+        try:
+            return math.isfinite(float(value))
+        except (TypeError, ValueError):
+            return False
+
+    # ---------------------------------------------------------- x ekseni
+    def setXAxisMode(self, mode, dateTimeFormat=None):
+        """X ekseninde bar numarasi (varsayilan) yerine tarih/saat gostermek
+        icin. mode: 'bar' (x_axis'in kendi sayisal tick'leri) | 'datetime'
+        (PanelData.timestamps + isIntraday'den, GORUNUR ARALIGA (zoom/pan)
+        gore uretilen seyrek etiketler, bkz. _buildDatetimeTicks). Cagirinca
+        TUM cizili panellerin x eksenini aninda gunceller; datetime modundayken
+        render() de her frame gorunur araligi izleyip tick'leri tazeler (bkz.
+        render/_lastAxisTicksSignature) - boylece zoom/pan yaptikca bar modunda
+        oldugu gibi tick'ler guncel kalir.
+
+        dateTimeFormat: datetime modunda kullanilacak strftime deseni, or:
+          "%d.%m.%Y %H:%M:%S"  -> tarih + saat (tek satir)
+          "%d.%m.%Y\\n%H:%M:%S" -> tarih + saat (iki satir)
+          "%H:%M:%S"            -> yalnizca saat
+          "%d.%m.%Y"            -> yalnizca tarih
+          "auto"                -> isIntraday'e gore YALNIZCA saat (intraday,
+                                    saniyesiz "%H:%M") veya YALNIZCA tarih
+                                    (gunluk/haftalik/aylik)
+        None (varsayilan) birakilirsa her panelin PanelData.isIntraday'ine
+        gore otomatik secilir (intraday: tarih+saat iki satir, degilse
+        sadece tarih) - "auto"'dan farki, intraday'de tarihi de gostermesi."""
+        if mode not in ("bar", "datetime"):
+            raise ValueError("xAxisMode 'bar' ya da 'datetime' olmali")
+        self._xAxisMode = mode
+        self._dateTimeFormat = dateTimeFormat
+        self._lastAxisTicksSignature.clear()
+        self.updateXAxisTicks()
+
+    def setDebugAxisTicks(self, enabled: bool):
+        """True ise datetime modunda DPG'ye gonderilen HER tick listesini
+        (panel, gorunur bar araligi, (label, bar_no) ciftleri) konsola basar
+        - ekranda gorunen ile karsilastirip hesaplanan tarihin dogru bar'a
+        mi denk geldigini dogrulamak icin (bkz. updateXAxisTicks)."""
+        self._debugAxisTicks = bool(enabled)
+
+    def getXAxisMode(self):
+        return self._xAxisMode
+
+    def getXAxisDateTimeFormat(self):
+        return self._dateTimeFormat
+
+    def updateXAxisTicks(self, panelId=None):
+        """x_axis_{id} tick etiketlerini guncel moda (bkz. setXAxisMode) gore
+        yeniden kurar. panelId verilmezse TUM cizili panelleri gunceller.
+        Hesaplanan ticks ICERIGI bir onceki cagridakiyle AYNIYSA set_axis_ticks
+        hic CAGRILMAZ (bkz. _lastAxisTicksSignature) - flicker'in asil sebebi
+        her frame ayni/neredeyse-ayni tick'leri tekrar tekrar DPG'ye basmakti."""
+        panelIds = [panelId] if panelId is not None else list(self._panels)
+        for pid in panelIds:
+            axis = f"x_axis_{pid}"
+            if not dpg.does_item_exist(axis):
+                continue
+            if self._xAxisMode == "bar":
+                # Guard YOK (bilerek): setXAxisMode her mod degisiminde
+                # _lastAxisTicksSignature'i temizliyor, bu yuzden "onceden
+                # set edilmis mi" bilgisi kayboluyor - guard olsaydi eski
+                # datetime tick'leri eksende donuk kalabilirdi. reset_axis_ticks
+                # ucuz/idempotent, bar modunda zaten her frame CAGRILMIYOR
+                # (render() sadece datetime modunda updateXAxisTicks cagirir).
+                dpg.reset_axis_ticks(axis)
+                self._lastAxisTicksSignature[pid] = None
+                continue
+            panel = self._panels.get(pid)
+            if panel is None:
+                continue
+            data = self._pickTimestampData(panel)
+            if data is None or not data.timestamps:
+                dpg.reset_axis_ticks(axis)
+                continue
+            n = len(data.timestamps)
+            lo, hi = self._xAxisLimits(pid, n)
+            ticks = tuple(self._buildDatetimeTicks(pid, data, lo, hi, n))
+            if self._lastAxisTicksSignature.get(pid) == ticks:
+                continue
+            self._lastAxisTicksSignature[pid] = ticks
+            if ticks:
+                if self._debugAxisTicks:
+                    print(f"[xAxisTicks] panel={pid} lo={lo:.1f} hi={hi:.1f} ticks={ticks}")
+                dpg.set_axis_ticks(axis, ticks)
+            else:
+                dpg.reset_axis_ticks(axis)
+
+    def _pickTimestampData(self, panel):
+        """Panelin dataList'inde timestamps'i dolu olan ILK PanelData'yi
+        bulur (datetime tick'leri onun timestamps/isIntraday'inden uretilir
+        - panel icindeki tum seriler ayni x eksenini paylasiyor)."""
+        for d in panel.dataList:
+            if d.timestamps:
+                return d
+        return None
+
+    def _xAxisLimits(self, panelId, n):
+        """x_axis_{panelId}'in SU AN GORUNEN (zoom/pan sonrasi) bar araligini
+        dondurur (0..n-1'e kirpilmis). Eksen henuz cizilmediyse/limit
+        alinamiyorsa tam araliga (0, n-1) duser."""
+        axis = f"x_axis_{panelId}"
+        if dpg.does_item_exist(axis):
+            try:
+                limits = dpg.get_axis_limits(axis)
+                if limits:
+                    lo, hi = limits
+                    return max(0, lo), min(n - 1, hi)
+            except Exception:
+                pass
+        return 0, n - 1
+
+    def _buildDatetimeTicks(self, panelId, data, xMin, xMax, n):
+        """[xMin, xMax] GORUNUR bar araligi icin SABIT bir bar-adiminda
+        (bkz. _chooseTickStep) etiket yerlestirir: i % step == 0 olan MUTLAK
+        bar index'leri isaretlenir. 'N tick'i araliga esit yay' yontemi
+        (interpolasyon) zoom sirasinda xMin/xMax'in her karede az miktarda
+        kaymasiyla FARKLI bar'lari secip duruyordu - hem flicker hem de
+        label overlap'ine sebep oluyordu. Mutlak index'e sabit adimla
+        hizalanan bu yontemde pan/zoom sirasinda ayni step suruyorsa
+        ISARETLI bar'lar SABIT kalir, sadece pencereye girip/cikan uclar
+        degisir. isIntraday=True ise 'gun.ay.yil\\nsaat:dakika:saniye',
+        degilse sadece 'gun.ay.yil' formati kullanilir (Ref3'teki gosterimin
+        karsiligi)."""
+        left = max(0, int(xMin))
+        right = min(n - 1, int(xMax) + 1)
+        if left > right or left >= n:
+            return []
+        if self._dateTimeFormat is None:
+            fmt = "%d.%m.%Y %H:%M:%S" if data.isIntraday else "%d.%m.%Y"
+        elif self._dateTimeFormat == "auto":
+            fmt = "%H:%M" if data.isIntraday else "%d.%m.%Y"
+        else:
+            fmt = self._dateTimeFormat
+        step = self._chooseTickStep(panelId, right - left + 1, data, fmt)
+        start = (left // step) * step
+        if start < left:
+            start += step
+        indices = set(range(start, right + 1, step))
+
+        # Gun degisimi: fmt'de tarih bilgisi YOKSA (or. "auto"/intraday ->
+        # sadece saat) hangi gunde oldugumuzu kaybederiz - bir onceki bar'dan
+        # FARKLI tarihli bar'lari (gunun ilk bar'i) yakalayan kod hazir
+        # (bkz. _dayBoundaryIndices) ama x eksenindeki gosterimi simdilik
+        # KAPALI (_dayChangeMarkersEnabled=False) - gorunumu karistirdigi
+        # icin kullanici isteyince acilacak, bu arada altyapi duruyor.
+        dayIndices = set()
+        if self._dayChangeMarkersEnabled and data.isIntraday and not self._fmtHasDateToken(fmt):
+            dayIndices = self._dayBoundaryIndices(data, left, right, n)
+            if len(dayIndices) > 20:
+                dayIndices = set()
+            indices |= dayIndices
+
+        ticks = []
+        for i in sorted(indices):
+            if i >= n:
+                continue
+            ts = data.timestamps[i]
+            if not hasattr(ts, "strftime"):
+                continue
+            curFmt = self._dayChangeFormat if i in dayIndices else fmt
+            ticks.append((ts.strftime(curFmt), float(i)))
+        return ticks
+
+    def _fmtHasDateToken(self, fmt):
+        """fmt strftime deseninde TARIH bileseni (gun/ay/yil vb.) var mi?
+        Yoksa (or. '%H:%M:%S') gun degisimini ayrica isaretlemek gerekir
+        (bkz. _buildDatetimeTicks)."""
+        return any(tok in fmt for tok in ("%d", "%m", "%Y", "%y", "%j", "%b", "%B", "%a", "%A", "%x"))
+
+    def _dayBoundaryIndices(self, data, left, right, n):
+        """[left, right] icinde bir ONCEKI bar'dan FARKLI tarihli (gunun ilk
+        bar'i olan) index'leri dondurur. Performans icin barsInRange
+        _dayBoundaryScanCap'i asarsa taranmaz (bos set doner) - asiri
+        zoom-out'ta her frame O(bar) tarama yapilmasin diye."""
+        if right - left + 1 > self._dayBoundaryScanCap or right <= left:
+            return set()
+        boundaries = set()
+        prevDate = None
+        for i in range(max(0, left), min(n, right + 1)):
+            ts = data.timestamps[i]
+            if not hasattr(ts, "date"):
+                continue
+            d = ts.date()
+            if prevDate is not None and d != prevDate:
+                boundaries.add(i)
+            prevDate = d
+        return boundaries
+
+    def _chooseTickStep(self, panelId, barsInRange, data, fmt):
+        """Etiketler MUTLAK bar index'ine sabit bir adimla yerlestirilir
+        (i % step == 0). Adim, bar modunda DPG'nin kendi sayisal tick'lerinin
+        NEDEN guzel davrandigini taklit etmek icin plot'un GERCEK piksel
+        genisligine ve etiketin tahmini piksel genisligine gore secilir
+        (bkz. _maxTicksForWidth) - boylece eksen 'bogulmuyor'. Varsayilan
+        alt sinir _minTickStep (~7, kullanicinin istedigi '5-10 barda bir')
+        - genis plot + kisa etiket kombinasyonunda daha sik etiket YERINE
+        bu tabanda kalinir; dar plot/uzun etiket kombinasyonunda step
+        ikiye katlanarak buyur."""
+        step = self._minTickStep
+        maxTicks = self._maxTicksForWidth(panelId, data, fmt)
+        while barsInRange / step > maxTicks:
+            step *= 2
+        return step
+
+    def _maxTicksForWidth(self, panelId, data, fmt):
+        """Plot'un gercek piksel genisligine (bkz. _plotWidthPx) ve etiketin
+        tahmini piksel genisligine (bkz. _estimateLabelPixelWidth) gore
+        ekrana sigacak MAKSIMUM tick sayisini hesaplar - _maxTicksOnScreen
+        ile de guvenlik/performans amacli ustten sinirlanir."""
+        plotWidth = self._plotWidthPx(panelId)
+        labelWidth = self._estimateLabelPixelWidth(data, fmt)
+        fit = int(plotWidth / labelWidth)
+        return max(3, min(self._maxTicksOnScreen, fit))
+
+    def _plotWidthPx(self, panelId):
+        """plot_{panelId}'in SU ANKI piksel genisligi. Henuz cizilmediyse/
+        olculemiyorsa (or. setXAxisMode ilk kez script icinde, frame henuz
+        render edilmeden cagrildiysa) makul bir varsayilana duser - bir
+        sonraki frame'de render() zaten dogru genislikle yeniden hesaplar."""
+        tag = f"plot_{panelId}"
+        if dpg.does_item_exist(tag):
+            try:
+                size = dpg.get_item_rect_size(tag)
+                if size and size[0] > 0:
+                    return size[0]
+            except Exception:
+                pass
+        return 900
+
+    def _estimateLabelPixelWidth(self, data, fmt):
+        """Bir tick etiketinin kabaca kac piksel genislik kaplayacagini
+        tahmin eder: gercek bir timestamp'i fmt ile strftime'layip (coklu
+        satirsa) EN UZUN satirin karakter sayisini piksel/karakter tahminiyle
+        (_axisCharPxWidth) carpar + iki etiket arasi bosluk payi
+        (_axisTickPadding) ekler. DPG'nin gercek font metriklerini
+        olcemiyoruz (kolay erisilebilir bir API yok) - bilerek muhafazakar
+        (fazla tahmin eden) bir deger kullaniyoruz ki overlap yerine
+        gerekirse gereginden az tick gostersin."""
+        sample = data.timestamps[0] if data.timestamps else None
+        text = sample.strftime(fmt) if hasattr(sample, "strftime") else fmt
+        longest = max((len(line) for line in text.split("\n")), default=len(text))
+        return longest * self._axisCharPxWidth + self._axisTickPadding
+
+    def _estimateYAxisLabelWidth(self, panel):
+        """Y ekseni tick etiketlerinin (sayisal deger) kapladigi genislik
+        tahmini - fiyat gibi buyuk sayilar (orn. 64000) Signals gibi kucuk
+        sayilardan (-2, 2) cok daha genis oldugu icin hover_text_{id}'nin
+        sabit x konumu OHLC gibi panellerde sol kenara cok yakin
+        dusuyordu. ONCEKI surum sadece ".0f" (tam sayi) formatliyordu -
+        Return % gibi dar araligi (orn. -1.395..-1.36) OLAN ama KUCUK
+        buyuklukte panellerde DPG tick'leri ondalikli gosteriyor (span dar
+        oldugu icin ayirt edilebilmesi icin), ".0f" bunu "-1" gibi 2
+        karaktere dusurup TAHMINI cok kucuk (dolayisiyla konumu cok sola)
+        yapiyordu. Bu yuzden ondalik basamak sayisi ARALIGA (span) gore
+        secilir - span ne kadar darsa o kadar cok ondalik gerekir."""
+        yMin = yMax = None
+        for d in panel.dataList:
+            if not d.isVisible or not d.dataCount:
+                continue
+            yMin = d.minY if yMin is None else min(yMin, d.minY)
+            yMax = d.maxY if yMax is None else max(yMax, d.maxY)
+        if yMin is None or yMax is None:
+            return 0
+        span = abs(yMax - yMin)
+        if span < 0.1:
+            decimals = 3
+        elif span < 10:
+            decimals = 2
+        elif span < 1000:
+            decimals = 1
+        else:
+            decimals = 0
+        longest = max(len(f"{yMin:.{decimals}f}"), len(f"{yMax:.{decimals}f}"))
+        return longest * self._axisCharPxWidth + self._axisTickPadding
+
+    def _buildPanelUi(self, panel, width=None, height=None):
+        """Panelin plot UI'sini (child_window + plot + legend + eksenler +
+        info-panel hover_text + ham mouse-pos metni + crosshair) olusturur.
+        Zaten varsa no-op. Veri CIZMEZ. Tag semasi Ref3 ile ayni: panel_{id} /
+        plot_{id} / x_axis_{id} / y_axis_{id} / hover_text_{id} /
+        mouse_pos_text_{id} / crosshair_v_{id} / crosshair_h_{id}."""
+        tag = f"panel_{panel.id}"
+        if dpg.does_item_exist(tag):
+            return
+        w = width if width is not None else panel.width
+        h = height if height is not None else panel.height
+
+        if self._container and dpg.does_item_exist(self._container):
+            dpg.push_container_stack(self._container)
+            dpg.add_child_window(tag=tag, width=w, height=h, no_scrollbar=True,
+                                 payload_type="pool_item",
+                                 drop_callback=self._poolDropCallback(panel.id))
+            dpg.pop_container_stack()
+        else:
+            dpg.add_child_window(tag=tag, width=w, height=h, no_scrollbar=True,
+                                 payload_type="pool_item",
+                                 drop_callback=self._poolDropCallback(panel.id))
+
+        # caption_spacer: no_title=True iken (bkz. setShowCaptions) plot
+        # child_window'un TEPESINE yapisiyordu - kucuk bir bosluk birakip
+        # legend/mouse-pos-overlay'in ust kenara tam yapismamasini sagliyor.
+        # Caption GORUNURKEN gereksiz (baslik satiri zaten pay birakiyor),
+        # o yuzden baslangicta show=not self._showCaptions.
+        dpg.add_spacer(height=15, tag=f"caption_spacer_{panel.id}", parent=tag,
+                       show=not self._showCaptions)
+
+        # no_mouse_pos: DPG'nin sag-alt ham (x,y) okumasini gizler - onun
+        # yerine hover_text_{id} (updateInfoOverlays) + mouse_pos_text_{id}
+        # (updateMousePosOverlays, plotun sag-ust kosesinde sabit) kullanilir.
+        plotTag = dpg.add_plot(label=panel.caption, height=-1, width=-1, parent=tag,
+                               tag=f"plot_{panel.id}", no_mouse_pos=True,
+                               no_title=not self._showCaptions,
+                               payload_type="pool_item",
+                               drop_callback=self._poolDropCallback(panel.id))
+        dpg.add_plot_legend(parent=plotTag, location=dpg.mvPlot_Location_SouthEast)
+        dpg.add_plot_axis(dpg.mvXAxis, label="", tag=f"x_axis_{panel.id}", parent=plotTag,
+                          payload_type="pool_item",
+                          drop_callback=self._poolDropCallback(panel.id))
+        dpg.add_plot_axis(dpg.mvYAxis, label=panel.getYLabel(), tag=f"y_axis_{panel.id}", parent=plotTag,
+                          payload_type="pool_item",
+                          drop_callback=self._poolDropCallback(panel.id))
+        infoPanelY = self._infoPanelYWithCaptions if self._showCaptions else self._infoPanelYNoCaptions
+        dpg.add_text("", tag=f"hover_text_{panel.id}", parent=tag,
+                    pos=(self._infoPanelBaseX, infoPanelY), color=(210, 210, 220, 255), show=False)
+        mousePosY = self._mousePosYWithCaptions if self._showCaptions else self._mousePosYNoCaptions
+        dpg.add_text("", tag=f"mouse_pos_text_{panel.id}", parent=tag,
+                    pos=(0, mousePosY), color=(210, 210, 220, 255), show=False)
+        # Crosshair (dikey+yatay drag_line, Ref3'teki plot_controller.py'deki
+        # register_plot ile ayni stil): no_inputs -> kullanici suruklemez,
+        # sadece imlec konumunu gostermek icin kullanilir. Cizim/gosterme
+        # panel_id BAZINDA updateCrossHairOverlays()'te yapilir.
+        dpg.add_drag_line(tag=f"crosshair_v_{panel.id}", parent=plotTag,
+                          default_value=0.0, color=(255, 255, 0, 160),
+                          thickness=1, vertical=True, no_inputs=True,
+                          no_fit=True, show=False)
+        dpg.add_drag_line(tag=f"crosshair_h_{panel.id}", parent=plotTag,
+                          default_value=0.0, color=(255, 255, 0, 160),
+                          thickness=1, vertical=False, no_inputs=True,
+                          no_fit=True, show=False)
+
+        # DPG'nin yerlesik cift-tikla-fit'i (fit_button, varsayilan sol tik)
+        # TIGHT (payisiz) bir sinira resetliyor - bizim _applyAxisPadding
+        # dolgusunu ezip gecirdigi icin cift tiklamayi yakalayip PADDING'i
+        # geri uyguluyoruz (bkz. _onPlotDoubleClicked). Ayni registry'ye tek
+        # tiklama handler'i da eklendi - "click" modunda aktif paneli secer
+        # (bkz. _onPlotClicked/setActiveUpdateMode).
+        registryTag = f"plot_dclick_registry_{panel.id}"
+        if dpg.does_item_exist(registryTag):
+            dpg.delete_item(registryTag)
+        with dpg.item_handler_registry(tag=registryTag):
+            dpg.add_item_double_clicked_handler(callback=self._onPlotDoubleClicked,
+                                               user_data=panel.id)
+            dpg.add_item_clicked_handler(callback=self._onPlotClicked,
+                                        user_data=panel.id)
+        dpg.bind_item_handler_registry(plotTag, registryTag)
+
+    def _onPlotDoubleClicked(self, sender=None, appData=None, userData=None):
+        """DPG'nin cift-tikla-fit'i (native, tight/payisiz) bu FRAME icinde
+        uygulanir; biz bir frame BEKLEYIP (split_frame) ustune kendi
+        dolgulu (_applyAxisPadding) araligimizi yeniden yaziyoruz - boylece
+        kullanici cift tikladiginda hala "full data + pay" gorunumu alir,
+        cipliak/payisiz fit degil."""
+        panelId = userData
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return
+        dpg.split_frame()
+        self._applyAxisPadding(panelId, panel)
+
+    def hidePanel(self, panelId):
+        """Paneli gizler (model: panel.visible=False + varsa UI'da show=False)."""
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return
+        panel.setVisible(False)
+        tag = f"panel_{panel.id}"
+        if dpg.does_item_exist(tag):
+            dpg.configure_item(tag, show=False)
+
+    def showPanel(self, panelId):
+        """Paneli gosterir (model: panel.visible=True + varsa UI'da show=True)."""
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return
+        panel.setVisible(True)
+        tag = f"panel_{panel.id}"
+        if dpg.does_item_exist(tag):
+            dpg.configure_item(tag, show=True)
+
+    def hideAllPanels(self):
+        for panelId in self._panels:
+            self.hidePanel(panelId)
+
+    def showAllPanels(self):
+        for panelId in self._panels:
+            self.showPanel(panelId)
+
+    def collapseAllPanels(self):
+        """GORUNUR tum panelleri ince bir baslik seridine kuculttur.
+        panel.height DEGISMEZ (model dokunulmaz) - sadece cizili
+        panel_{id} child_window'unun DPG yuksekligi degisir, bu yuzden
+        expandAllPanels eski haline geri getirebilir."""
+        for panelId, panel in self._panels.items():
+            tag = f"panel_{panelId}"
+            if dpg.does_item_exist(tag) and dpg.is_item_shown(tag):
+                dpg.set_item_height(tag, self.COLLAPSED_PANEL_HEIGHT)
+
+    def expandAllPanels(self):
+        """GORUNUR tum panelleri panel.height'a (height<=0 ise 300'e)
+        geri genisletir (bkz. collapseAllPanels)."""
+        for panelId, panel in self._panels.items():
+            tag = f"panel_{panelId}"
+            if dpg.does_item_exist(tag) and dpg.is_item_shown(tag):
+                h = panel.height if panel.height and panel.height > 0 else 300
+                dpg.set_item_height(tag, h)
+
+    # --------------------------------------------------------- info paneli
+    def setInfoPanelMode(self, mode: str):
+        """Info panelinin (hover_text_{id}) ne zaman gosterilecegini belirler:
+          hidden -> hicbir panelde gosterilmez
+          hover  -> yalniz o an mouse'un ustunde oldugu plot'ta gosterilir
+          active -> yalniz setActiveInfoPanel ile secilen panelde gosterilir
+          always -> (varsayilan) TUM panellerde sabit gosterilir
+        Ref3'teki set_info_panel_mode ile ayni."""
+        mode = str(mode or "").lower()
+        if mode not in ("hidden", "hover", "active", "always"):
+            raise ValueError("info panel mode must be one of: hidden, hover, active, always")
+        self._infoPanelMode = mode
+
+    def getInfoPanelMode(self):
+        return self._infoPanelMode
+
+    def setInfoPanelsVisible(self, visible: bool):
+        """Kisayol: visible=True -> mode 'always', visible=False -> mode 'hover'."""
+        self.setInfoPanelMode("always" if visible else "hover")
+
+    def setActiveInfoPanel(self, panelId):
+        """mode='active' iken hangi panelin info panelinin gosterilecegini secer."""
+        self._infoActivePanelId = panelId
+
+    def setInfoSharedIndex(self, index):
+        """mode='always'/'active' iken TUM panellerin ortak gosterecegi bar
+        index'ini elle ayarlar (bir plot'un uzerine gelince zaten otomatik
+        guncellenir, bu manuel/script kontrolu icindir)."""
+        if index is None:
+            return
+        self._infoSharedIndex = int(index)
+
+    def updateInfoOverlays(self):
+        """Info panellerini (hover_text_{id}) secili moda gore gunceller.
+        render() tarafindan her frame cagrilir - Ref3'teki update_info_overlays
+        ile ayni. Mouse'un ustunde oldugu plot varsa oradaki bar index'i
+        _infoSharedIndex'e yazilir (boylece always/active modunda TUM
+        panellerdeki readout ayni bar'i gosterir - cross-plot senkron)."""
+        hoveredPanelId, hoveredIndex = self._currentHoverInfoIndex()
+        if hoveredIndex is not None:
+            self._infoSharedIndex = hoveredIndex
+
+        for panelId, panel in self._panels.items():
+            plotTag = f"plot_{panelId}"
+            textTag = f"hover_text_{panelId}"
+            if not dpg.does_item_exist(plotTag) or not dpg.does_item_exist(textTag):
+                continue
+            if not self._shouldShowInfoPanel(panelId, plotTag, hoveredPanelId):
+                dpg.hide_item(textTag)
+                continue
+
+            d = self._pickInfoSourceData(panel)
+            if d is None:
+                dpg.hide_item(textTag)
+                continue
+
+            idx = self._resolveInfoIndex(panelId, d, hoveredPanelId, hoveredIndex)
+            label = self._buildHoverLabel(panel, d, idx)
+            if not label:
+                dpg.hide_item(textTag)
+                continue
+            dpg.set_value(textTag, label)
+            infoPanelY = self._infoPanelYWithCaptions if self._showCaptions else self._infoPanelYNoCaptions
+            infoPanelX = max(80, self._infoPanelBaseX + self._estimateYAxisLabelWidth(panel))
+            dpg.set_item_pos(textTag, (infoPanelX, infoPanelY))
+            dpg.show_item(textTag)
+
+    def updateMousePosOverlays(self):
+        """Mouse hangi plot'un uzerindeyse oradaki bar index'i TUM panellere
+        yayilir (info panel'in - updateInfoOverlays - kullandigi AYNI
+        _currentHoverInfoIndex/_infoSharedIndex/_resolveInfoIndex paylasim
+        mekanizmasi) - her panel kendi verisinden o index'teki Y degerini
+        okuyup sag-ust kosede 'X: <bar>  Y: <deger>' seklinde gosterir
+        (bkz. src/panels.jpg referansi). Koseye sabit kalmasi icin panelin
+        GERCEK genisligi (yeniden boyutlanabilir oldugu icin) her frame
+        okunup metnin x konumu ona gore hesaplanir (sag kenardan
+        RIGHT_MARGIN kadar icerde)."""
+        RIGHT_MARGIN = 40  # saga tam yapismasin diye (biraz sola cekildi)
+        hoveredPanelId, hoveredIndex = self._currentHoverInfoIndex()
+        if hoveredIndex is not None:
+            self._infoSharedIndex = hoveredIndex
+
+        for panelId, panel in self._panels.items():
+            plotTag = f"plot_{panelId}"
+            textTag = f"mouse_pos_text_{panelId}"
+            if not dpg.does_item_exist(plotTag) or not dpg.does_item_exist(textTag):
+                continue
+
+            d = self._pickInfoSourceData(panel)
+            if d is None:
+                dpg.hide_item(textTag)
+                continue
+
+            idx = self._resolveInfoIndex(panelId, d, hoveredPanelId, hoveredIndex)
+            yValue = self._valueAtIndex(d, idx)
+            if yValue is None:
+                dpg.hide_item(textTag)
+                continue
+
+            dpg.set_value(textTag, f"X: {idx}  Y: {yValue:.2f}")
+            panelTag = f"panel_{panelId}"
+            if dpg.does_item_exist(panelTag):
+                panelWidth = dpg.get_item_rect_size(panelTag)[0]
+                textWidth = dpg.get_item_rect_size(textTag)[0] or 120
+                mousePosY = self._mousePosYWithCaptions if self._showCaptions else self._mousePosYNoCaptions
+                if panelWidth:
+                    dpg.set_item_pos(textTag, (max(4, panelWidth - textWidth - RIGHT_MARGIN), mousePosY))
+            dpg.show_item(textTag)
+
+    def _valueAtIndex(self, d, idx):
+        """d (PanelData) icin idx bar'indaki 'temsili' Y degerini dondurur:
+        candle icin close, digerleri icin ys - bulunamazsa None (bkz.
+        updateMousePosOverlays, _buildHoverLabel'daki num()/yVal() ile ayni
+        veri kaynagi tercihi)."""
+        if d is None or idx is None:
+            return None
+        if d.dataType == "candle":
+            fullSrc, plainSrc = getattr(d, "_fullClose", None), getattr(d, "close", None)
+        else:
+            fullSrc, plainSrc = getattr(d, "_fullYs", None), getattr(d, "ys", None)
+        # DIKKAT: "fullSrc or plainSrc" YAZMA - _full* alanlari numpy array
+        # olabilir, numpy array'in "or" ile truth-value testi ValueError atar
+        # ("ambiguous truth value"). Bu yuzden ACIKCA "is not None" kontrolu.
+        src = fullSrc if fullSrc is not None else plainSrc
+        if src is None or idx < 0 or idx >= len(src):
+            return None
+        try:
+            return float(src[idx])
+        except (TypeError, ValueError):
+            return None
+
+    def setCrossHairMode(self, mode: str):
+        """Crosshair'in kapsamini belirler:
+          hidden -> hicbir panelde gosterilmez
+          single -> SADECE mouse'un ustunde oldugu panelde tam
+                    (dikey+yatay) crosshair gosterilir
+          all    -> (varsayilan) mouse'un ustunde oldugu panelde tam crosshair, TUM
+                    DIGER panellerde ise SADECE dikey cizgi (ayni x/bar) -
+                    "ben hangi paneldeysem digerlerine de gorunsun".
+                    Yatay (y) cizgi digerlerinde YOK: paneller (OHLC/RSI/
+                    MACD gibi) farkli y-olcekleri kullandigi icin ayni y
+                    degeri baska panelde anlamsiz olurdu (Ref3'teki
+                    plot_controller.py'nin CROSSHAIR_ALL'i da boyle calisir)."""
+        mode = str(mode or "").lower()
+        if mode not in ("hidden", "single", "all"):
+            raise ValueError("crosshair mode must be one of: hidden, single, all")
+        self._crossHairMode = mode
+
+    def getCrossHairMode(self):
+        return self._crossHairMode
+
+    def setCrossHairPersist(self, persist: bool):
+        """True (varsayilan) ise mouse hicbir plot'un ustunde degilken
+        crosshair SON bilinen pozisyonda kalir, gizlenmez - infoPanel'in
+        "always" modu gibi surekli gorunur. False ise mouse plot'tan
+        cikar cikmaz crosshair gizlenir."""
+        self._crossHairPersist = bool(persist)
+
+    def getCrossHairPersist(self):
+        return self._crossHairPersist
+
+    def getCrossHairLastPos(self):
+        return self._crossHairLastPos
+
+    def updateCrossHairOverlays(self):
+        """Crosshair'i _crossHairMode/_crossHairPersist bayraklarina gore
+        gunceller - render() tarafindan her frame cagrilir.
+
+        Akis: once mouse'un ustunde oldugu panel + (x,y)'i bul. Bulunduysa
+        _crossHairLastPos'a yaz (mode/persist ne olursa olsun GUNCEL tutulur).
+        Bulunamadiysa (mouse hicbir plotta degil) persist KAPALIYSA son
+        pozisyon unutulur (crosshair gizlenir); ACIKSA son pozisyon
+        KORUNUR (crosshair oldugu yerde kalir).
+
+        Sonra o son pozisyona gore her panel: mode='hidden' -> hep gizli;
+        panel.getCrossHairVisible()==False -> o panel hep gizli (panel
+        bazinda opt-out); mode='single' -> SADECE kaynak panelde tam
+        crosshair; mode='all' -> kaynak panelde tam, digerlerinde sadece
+        dikey (ayni x/bar, bkz. setCrossHairMode)."""
+        if self._crossHairMode == "hidden":
+            self._hideAllCrossHairs()
+            return
+
+        hoveredPanelId, mx, my = self._currentHoverMousePos()
+        if hoveredPanelId is not None:
+            self._crossHairLastPos = (hoveredPanelId, mx, my)
+        elif not self._crossHairPersist:
+            self._crossHairLastPos = None
+
+        pos = self._crossHairLastPos
+        if pos is None:
+            self._hideAllCrossHairs()
+            return
+        sourcePanelId, x, y = pos
+
+        for panelId, panel in self._panels.items():
+            vTag = f"crosshair_v_{panelId}"
+            hTag = f"crosshair_h_{panelId}"
+            if not panel.getCrossHairVisible():
+                self._hideCrossHairTags(vTag, hTag)
+                continue
+            if panelId == sourcePanelId:
+                self._showCrossHairTags(vTag, hTag, x, y)
+            elif self._crossHairMode == "all":
+                self._showCrossHairTags(vTag, hTag, x, y=None)
+            else:
+                self._hideCrossHairTags(vTag, hTag)
+
+    def _currentHoverMousePos(self):
+        """Mouse'un ustunde oldugu (varsa) ilk plot'u ve HAM (x,y) plot-
+        koordinatini dondurur. Hicbir plot hover degilse (None, None, None)."""
+        for panelId in self._panels:
+            plotTag = f"plot_{panelId}"
+            if not dpg.does_item_exist(plotTag) or not dpg.is_item_hovered(plotTag):
+                continue
+            try:
+                mx, my = dpg.get_plot_mouse_pos()
+                return panelId, mx, my
+            except Exception:
+                return panelId, None, None
+        return None, None, None
+
+    def _showCrossHairTags(self, vTag, hTag, x, y=None):
+        """Dikey cizgiyi x'e, (y verilmisse) yatay cizgiyi y'ye ayarlayip
+        gosterir. y=None ise yatay cizgi GIZLI kalir (bkz. updateCrossHairOverlays
+        'all' modundaki digerlerinde-sadece-dikey davranisi)."""
+        if dpg.does_item_exist(vTag):
+            dpg.set_value(vTag, x)
+            dpg.show_item(vTag)
+        if dpg.does_item_exist(hTag):
+            if y is None:
+                dpg.hide_item(hTag)
+            else:
+                dpg.set_value(hTag, y)
+                dpg.show_item(hTag)
+
+    def _hideCrossHairTags(self, vTag, hTag):
+        if dpg.does_item_exist(vTag):
+            dpg.hide_item(vTag)
+        if dpg.does_item_exist(hTag):
+            dpg.hide_item(hTag)
+
+    def _hideAllCrossHairs(self):
+        for panelId in self._panels:
+            self._hideCrossHairTags(f"crosshair_v_{panelId}", f"crosshair_h_{panelId}")
+
+    # ----------------------------------------------------------- aktif panel
+    def setActiveUpdateMode(self, mode: str):
+        """"Aktif panel" (getActivePanelId) hangi etkilesimle guncellenecek:
+          hover -> mouse hangi plot'un uzerindeyse o AN aktif olur (mouse
+                   ayrilinca SON aktif panel korunur, "None"e dusmez)
+          click -> SADECE kullanici bir plot'a tikladiginda degisir (hover
+                   etkisiz)."""
+        mode = str(mode or "").lower()
+        if mode not in ("hover", "click"):
+            raise ValueError("active update mode must be 'hover' or 'click'")
+        self._activeUpdateMode = mode
+
+    def getActiveUpdateMode(self):
+        return self._activeUpdateMode
+
+    def getActivePanelId(self):
+        """Henuz hicbir hover/click ile bir panel aktif olmadiysa (_activePanelId
+        hala None) ve en az bir panel varsa, panel siralamasindaki ILK paneli
+        varsayilan olarak dondurur - boylece combo/gosterge "None" yerine
+        bastan itibaren bir panel secili gorunur. _activePanelId'in kendisi
+        DEGISTIRILMEZ (gercek bir hover/click olana kadar hala None) - bu
+        SADECE okurken uygulanan bir fallback."""
+        if self._activePanelId is None and self._panelOrder:
+            return self._panelOrder[0]
+        return self._activePanelId
+
+    def getFullXRange(self, panelId=None):
+        """Verilen/aktif panelin GORUNUR serilerindeki toplam (dataMin, dataMax)
+        araligini dondurur (RangeSliderBar'in scroll bar konumunu orantilamak
+        icin, bkz. rangeSliderBar.syncScrollToView). Veri yoksa None."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return None
+        return self._fullXRangeForPanel(panel)
+
+    def getXAxisLimits(self, panelId=None):
+        """Verilen/aktif panelin x eksenindeki GUNCEL (zoom/pan sonrasi) limitlerini
+        dondurur - readPanelPlotParams'in aksine _lastReadPlotParams'a YAZMAZ (Read/
+        Apply Params akisini bozmayan yan-etkisiz bir okuma)."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        return self._axisLimits(f"x_axis_{panelId}")
+
+    def getYAxisLimits(self, panelId=None):
+        """Verilen/aktif panelin y eksenindeki GUNCEL limitlerini dondurur."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        return self._axisLimits(f"y_axis_{panelId}")
+
+    def getPanelDataCount(self, panelId=None):
+        """Verilen/aktif panelin GORUNUR serilerindeki EN BUYUK dataCount'u
+        dondurur (RangeSliderBar scroll bar'ini bu sayiya gore olceklendirir).
+        Panel yok/veri yoksa 0."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return 0
+        count = 0
+        for d in panel.dataList:
+            if not d.isVisible:
+                continue
+            count = max(count, d.dataCount)
+        return count
+
+    def getOverviewSeries(self, panelId=None):
+        """RangeSliderBar'daki overview plot'un arka planina 'golge' silüet
+        olarak cizilecek TAM veri serisini (xs, ys) dondurur - panel yok/veri
+        yoksa None. Panelin 'ana' serisini _pickInfoSourceData ile AYNI
+        sezgiyle secer (once timestamp'i olan gorunur seri, yoksa gorunur ilk
+        seri) - candle serilerinde ys zaten Close fiyatlaridir (bkz.
+        makeCandlePanelData: panelData.ys = closes), line serilerinde ys
+        kendi degeridir, o yuzden dataType farki gozetmeden hep ys kullanilir.
+        Full-data snapshot varsa (_fullXs/_fullYs, bkz. PanelData.setFullData)
+        onu, yoksa canli xs/ys listelerini kullanir.
+
+        BUYUK (fullCount > LOD_ACTIVATION_THRESHOLD) serilerde TAM veri
+        DEGIL, PanelData.getLodXY ile OVERVIEW_LOD_MAX_POINTS'e decimate
+        edilmis bir ozet dondurulur - overview 110px yukseklikte kucuk bir
+        plot, 2M+ nokta gondermenin (hem hesaplama hem DPG'ye marshalling)
+        hicbir gorsel faydasi yok, sadece yavaslik/donma yaratirdi (ana
+        panel serilerindeki AYNI LOD mantigi, bkz. drawPanelData/updateLod)."""
+        panelId = self.getActivePanelId() if panelId is None else panelId
+        panel = self._panels.get(panelId)
+        if panel is None:
+            return None
+        data = self._pickInfoSourceData(panel)
+        if data is None:
+            return None
+        if data.fullCount > self.LOD_ACTIVATION_THRESHOLD:
+            dataRange = self._fullXRangeForPanel(panel)
+            if dataRange is not None:
+                sliceXY = data.getLodXY(dataRange[0], dataRange[1], self.OVERVIEW_LOD_MAX_POINTS)
+                if sliceXY is not None:
+                    return sliceXY
+        xs = data._fullXs if data._fullXs is not None else data.xs
+        ys = data._fullYs if data._fullYs is not None else data.ys
+        if xs is None or ys is None or len(xs) == 0 or len(ys) == 0:
+            return None
+        return xs, ys
+
+    def updateActivePanel(self):
+        """render() tarafindan her frame cagrilir. Sadece 'hover' modunda is
+        yapar - mouse'un ustunde oldugu plot'u bulup _activePanelId'i onunla
+        gunceller (bulunamazsa - mouse hicbir plotta degil - SON deger
+        korunur). 'click' modunda hicbir sey yapmaz, degisiklik SADECE
+        _onPlotClicked'tan (kullanici tiklayinca) gelir."""
+        if self._activeUpdateMode != "hover":
+            return
+        for panelId in self._panels:
+            plotTag = f"plot_{panelId}"
+            if dpg.does_item_exist(plotTag) and dpg.is_item_hovered(plotTag):
+                self._activePanelId = panelId
+                return
+        panelId = self._panelIdUnderMouseByRect()
+        if panelId is not None:
+            self._activePanelId = panelId
+
+    def _onPlotClicked(self, sender=None, appData=None, userData=None):
+        """_buildPanelUi'da her panelin plot'una baglanan tiklama handler'i.
+        SADECE 'click' modundayken _activePanelId'i degistirir (hover
+        modundayken tiklamanin bir etkisi yok - updateActivePanel zaten
+        surekli gunceller)."""
+        if self._activeUpdateMode == "click":
+            self._activePanelId = userData
+
+    def _panelIdUnderMouseByRect(self):
+        """is_item_hovered kacirdiginda plot rect'i ile aktif paneli bulur."""
+        try:
+            mouseX, mouseY = dpg.get_mouse_pos(local=False)
+        except (KeyError, SystemError, Exception):
+            return None
+        for panelId in reversed(list(self._panels.keys())):
+            plotTag = f"plot_{panelId}"
+            if not dpg.does_item_exist(plotTag):
+                continue
+            try:
+                minX, minY = dpg.get_item_rect_min(plotTag)
+                maxX, maxY = dpg.get_item_rect_max(plotTag)
+            except (KeyError, SystemError, Exception):
+                continue
+            if minX <= mouseX <= maxX and minY <= mouseY <= maxY:
+                return panelId
+        return None
+
+    def _currentHoverInfoIndex(self):
+        """Mouse'un ustunde oldugu (varsa) ilk plot'u ve o plot'taki bar
+        index'ini dondurur. Hicbir plot hover degilse (None, None)."""
+        for panelId in self._panels:
+            plotTag = f"plot_{panelId}"
+            if not dpg.does_item_exist(plotTag) or not dpg.is_item_hovered(plotTag):
+                continue
+            try:
+                mx, _ = dpg.get_plot_mouse_pos()
+                return panelId, int(round(mx))
+            except Exception:
+                return panelId, None
+        return None, None
+
+    def _shouldShowInfoPanel(self, panelId, plotTag, hoveredPanelId=None):
+        """panel.getInfoPanelVisible()==False ise global _infoPanelMode ne
+        olursa olsun gosterilmez (panel bazinda programatik kapatma).
+        (Panelin TUM data'si silinmis/gizlenmisse info panel zaten
+        _pickInfoSourceData None dondugu icin updateInfoOverlays'de ayrica
+        gizlenir - burada tekrar kontrol etmeye gerek yok.)"""
+        panel = self._panels.get(panelId)
+        if panel is not None and not panel.getInfoPanelVisible():
+            return False
+        mode = self._infoPanelMode
+        if mode == "hidden":
+            return False
+        if mode == "always":
+            return True
+        if mode == "active":
+            return panelId == self._infoActivePanelId
+        return panelId == hoveredPanelId or dpg.is_item_hovered(plotTag)
+
+    def _resolveInfoIndex(self, panelId, data, hoveredPanelId=None, hoveredIndex=None):
+        idx = hoveredIndex
+        if idx is None and self._infoPanelMode in ("always", "active"):
+            idx = self._infoSharedIndex
+        if idx is not None:
+            idx = self._clampInfoIndex(data, idx)
+            self._infoLastIndex[panelId] = idx
+            return idx
+        if panelId in self._infoLastIndex:
+            return self._infoLastIndex[panelId]
+        return max(0, self._infoDataLen(data) - 1)
+
+    def _clampInfoIndex(self, data, idx):
+        dataLen = self._infoDataLen(data)
+        if dataLen <= 0:
+            return 0
+        return max(0, min(dataLen - 1, int(idx)))
+
+    def _pickInfoSourceData(self, panel):
+        """Info panelinde gosterilecek 'ana' PanelData'yi secer: once
+        timestamp'i olan gorunur bir seri, yoksa gorunur ILK seri."""
+        for cand in panel.dataList:
+            if cand.isVisible and cand.timestamps:
+                return cand
+        for cand in panel.dataList:
+            if cand.isVisible:
+                return cand
+        return None
+
+    def _infoDataLen(self, d):
+        if d is None:
+            return 0
+        candidates = (
+            getattr(d, "_fullXs", None),
+            getattr(d, "_fullYs", None),
+            getattr(d, "_fullClose", None),
+            getattr(d, "timestamps", None),
+            getattr(d, "xs", None),
+            getattr(d, "ys", None),
+            getattr(d, "close", None),
+        )
+        for seq in candidates:
+            if seq is not None and len(seq) > 0:
+                return len(seq)
+        return 0
+
+    def _buildHoverLabel(self, panel=None, d=None, idx=None):
+        """Secili PanelData (d) + bar index'ine (idx) gore hover_text_{id}
+        icin cok satirli bir readout metni kurar.
+
+        panel.getInfoFields() ile ozel bir alan listesi verilmisse ONU
+        kullanir (index/date/time + OHLC/volume/size + dataList'teki isimle
+        eslesen herhangi bir seri); verilmemisse (None = auto-detect)
+        index/date/(intraday ise time) + OHLC/volume/size/diff/change +
+        TUM gorunur line serilerini otomatik listeler. Ref3'teki
+        _build_hover_label ile ayni."""
+        dataLen = self._infoDataLen(d)
+        valid = d is not None and idx is not None and 0 <= idx < dataLen
+        hasTimestamp = valid and bool(getattr(d, "timestamps", None)) and idx < len(d.timestamps)
+        isIntraday = getattr(d, "isIntraday", True) if d is not None else True
+
+        def attr(name):
+            return getattr(d, name, None) if d is not None else None
+
+        def val(seqName, fullName, fmt):
+            seq = attr(seqName)
+            fullArr = attr(fullName) if fullName else None
+            src = fullArr if fullArr is not None else seq
+            if not valid or src is None or idx >= len(src):
+                return "..."
+            v = src[idx]
+            try:
+                if fmt == "d":
+                    return format(int(v), fmt)
+                return format(float(v), fmt)
+            except (TypeError, ValueError):
+                return "..."
+
+        def num(seqName, fullName):
+            seq = attr(seqName)
+            fullArr = attr(fullName) if fullName else None
+            src = fullArr if fullArr is not None else seq
+            if not valid or src is None or idx >= len(src):
+                return None
+            try:
+                return float(src[idx])
+            except (TypeError, ValueError):
+                return None
+
+        def diffVal():
+            o = num("open", "_fullOpen")
+            c = num("close", "_fullClose")
+            if o is None or c is None:
+                return "..."
+            return f"{c - o:.2f}"
+
+        def changeVal():
+            o = num("open", "_fullOpen")
+            c = num("close", "_fullClose")
+            if o is None or c is None:
+                return "..."
+            pct = ((c - o) / o * 100.0) if o else 0.0
+            return f"{pct:.2f}%"
+
+        def yVal(series):
+            fullYs = getattr(series, "_fullYs", None)
+            ys = getattr(series, "ys", None)
+            src = fullYs if fullYs is not None else ys
+            if not valid or src is None or idx >= len(src):
+                return "..."
+            try:
+                return f"{float(src[idx]):.2f}"
+            except (TypeError, ValueError):
+                return "..."
+
+        idxStr = str(idx) if valid else "..."
+        dateStr = "..."
+        timeStr = "..."
+        if hasTimestamp:
+            ts = d.timestamps[idx]
+            if hasattr(ts, "strftime"):
+                dateStr = ts.strftime("%d.%m.%Y")
+                timeStr = ts.strftime("%H:%M")
+            else:
+                dateStr = str(ts)
+
+        infoFields = panel.getInfoFields() if panel is not None else None
+        if infoFields is not None:
+            fieldMap = {
+                "open": ("Open", ".2f", "open", "_fullOpen"),
+                "high": ("High", ".2f", "high", "_fullHigh"),
+                "low": ("Low", ".2f", "low", "_fullLow"),
+                "close": ("Close", ".2f", "close", "_fullClose"),
+                "volume": ("Volume", ".0f", "volume", "_fullVolume"),
+                "size": ("Size", "d", "size", None),
+            }
+            rows = []
+            for field in infoFields:
+                if field == "index":
+                    rows.append(("Index", idxStr))
+                elif field == "date":
+                    rows.append(("Date", dateStr))
+                elif field == "time":
+                    if isIntraday:
+                        rows.append(("Time", timeStr))
+                elif field in fieldMap:
+                    label, fmt, seqName, fullName = fieldMap[field]
+                    rows.append((label, val(seqName, fullName, fmt)))
+                elif panel is not None:
+                    for series in panel.dataList:
+                        if series.name == field and series.isVisible:
+                            rows.append((field, yVal(series)))
+                            break
+        else:
+            rows = [("Index", idxStr), ("Date", dateStr)]
+            if isIntraday:
+                rows.append(("Time", timeStr))
+            rows.append(None)
+
+            hasOhlc = d is not None and bool(getattr(d, "open", None))
+            if hasOhlc:
+                rows += [
+                    ("Open", val("open", "_fullOpen", ".2f")),
+                    ("High", val("high", "_fullHigh", ".2f")),
+                    ("Low", val("low", "_fullLow", ".2f")),
+                    ("Close", val("close", "_fullClose", ".2f")),
+                    ("Volume", val("volume", "_fullVolume", ".0f")),
+                    ("Size", val("size", None, "d")),
+                    None,
+                    ("Diff", diffVal()),
+                    ("Change", changeVal()),
+                    None,
+                ]
+                if panel is not None:
+                    for series in panel.dataList:
+                        if series.isVisible and series.dataType == "line":
+                            rows.append((series.name, yVal(series)))
+            elif panel is not None:
+                for series in panel.dataList:
+                    if series.isVisible:
+                        rows.append((series.name, yVal(series)))
+
+        realRows = [r for r in rows if r is not None]
+        if not realRows:
+            return ""
+        nameW = max(len(name) for name, _ in realRows)
+        valW = max(len(str(value)) for _, value in realRows)
+        sepLine = "-" * (nameW + 3 + valW + 1)
+        return "\n".join(
+            sepLine if row is None else f"{row[0]:<{nameW}} : {row[1]}"
+            for row in rows
+        )
+
+    # ------------------------------------------------------------- periyodik
+    def sync(self):
+        """Model <-> UI senkronu: daha once drawPanel ile cizilmis ama artik
+        modelde (self._panels) olmayan (deletePanel/deleteAllPanels ile
+        silinmis) panellerin DPG item'ini (panel_{id}) temizler."""
+        orphanIds = self._drawnPanelIds - self._panels.keys()
+        for panelId in orphanIds:
+            tag = f"panel_{panelId}"
+            if dpg.does_item_exist(tag):
+                dpg.delete_item(tag)
+            self._drawnPanelIds.discard(panelId)
+
+    def render(self):
+        """Periyodik cagrilmasi beklenen metod (or. her frame / bir timer'dan).
+        Su an icinde sync() calisiyor + saniyede bir heartbeat print'i var
+        (render'in gercekten periyodik tetiklendigini dogrulamak icin).
+        datetime x-ekseni modundayken her frame updateXAxisTicks() da
+        cagrilir - zoom/pan ile gorunur bar araligi degistikce tick'ler
+        bar modundaki gibi dinamik guncellenir (degisiklik yoksa
+        _lastAxisTicksSignature sayesinde gercek DPG cagrisi yapilmaz).
+        updateInfoOverlays() da her frame cagrilir - hover_text_{id}
+        readout'lari mouse/mod degisikligine gore guncel kalir.
+        updateMousePosOverlays() ham (x,y) mouse-pos metnini gunceller.
+        updateCrossHairOverlays() panel basina crosshair'i gunceller.
+        updateActivePanel() 'hover' modundaysa aktif paneli gunceller.
+        updateLod() buyuk (2M+ bar gibi) serilerde gorunur araliga gore
+        decimate edilmis veriyi gunceller (bkz. orada)."""
+        self.sync()
+        if self._xAxisMode == "datetime":
+            self.updateXAxisTicks()
+        self.updateInfoOverlays()
+        self.updateMousePosOverlays()
+        self.updateCrossHairOverlays()
+        self.updateActivePanel()
+        self.updateLod()
+        now = time.time()
+        if now - self._lastRenderPrint >= 1.0:
+            self._lastRenderPrint = now
+            # print(f"[PanelManager.render] tick @ {now:.1f}  panels={len(self._panels)}")

@@ -12,6 +12,7 @@ public static class AppSettings
     public static string ConfigsDir       => Path.Combine(InputsDir, "configs");
     public static string ScriptsDir       => Path.Combine(InputsDir, "scripts");
     public static string PythonScriptsDir => Path.Combine(InputsDir, "python");
+    public static string DearPyGuiDataPlotterDir => Path.Combine(_baseDir, "src", "DearPyGuiDataPlotter");
     public static string OutputsDir       => Path.Combine(_baseDir, "outputs");
     public static string LogsDir          => Path.Combine(OutputsDir, "logs");
     public static string OptLogsDir       => Path.Combine(OutputsDir, "opt");

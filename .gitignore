@@ -79,4 +79,15 @@ Thumbs.db
 desktop.ini
 
 # Python venv
-inputs/python/.venv/
+**/.venv/
+
+# Python cache
+**/__pycache__/
+
+# DearPyGuiDataPlotter / DearImGuiBundleDataPlotter alt-projeleri
+src/DearImGuiBundleDataPlotter/*.ini
+# runtime'da uretilen bundle/veri dosyalari (kaynak kod degil)
+src/DearPyGuiDataPlotter/inputs/*.npz
+src/DearPyGuiDataPlotter/inputs/*.view.json
+src/DearPyGuiDataPlotter/inputs/input.json
+src/DearPyGuiDataPlotter/inputs/runtime_commands/

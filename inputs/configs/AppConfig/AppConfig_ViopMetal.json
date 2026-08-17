@@ -1,0 +1,595 @@
+{
+  "AppSettings": {
+    "StockDataFile":  "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv",
+    "StockDataFile_VIP-X030-T_1": "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv",
+    "StockDataFile_VIP-X030-T_5": "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv",
+    "StockDataFile_BTCUSDT": "C:\\data\\csvFiles\\CRP\\05\\BTCUSDT_BNC.csv",
+    "AutoRunMode": "None",
+    "MenuTimeoutSeconds": 5
+	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
+	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
+  },
+
+  "ReadData": {
+    "FilterMode": "All",
+    "N1": 100000,
+    "N2": 100000,
+    "Dt1": "2020.01.01 00:00:00",
+    "Dt2": "2025.12.31 23:59:59"
+	// FilterMode : All | LastN | FirstN | IndexRange | AfterDateTime | BeforeDateTime | DateTimeRange	
+	// N1 : LastN/FirstN → kaç bar | IndexRange → başlangıç index'i (0 tabanlı)
+	// N2 : IndexRange   → bitiş index'i (dahil)
+	// Format: yyyy.MM.dd HH:mm:ss
+	// Dt1 : AfterDateTime / DateTimeRange → başlangıç tarihi
+	// Dt2 : BeforeDateTime / DateTimeRange → bitiş tarihi
+  },
+
+  "SingleTrader": {
+    "RunMode": "TradeOnly",
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "Query": {
+      "ConfigFile": "QueryConfig.txt",
+      "Name": "SimpleQuery1",
+      "Version": "v1"
+    },
+    "EquityCurveFilter": {
+      "ConfigFile": "EquityCurveFilterConfig.txt",
+      "Name": "",
+      "Version": "v1"
+    },
+    "TradeParams": {
+      "MarketType": "ViopMetal",
+      "IlkBakiye": 100000.0,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000.0,
+      "KomisyonCarpan": 20.0,
+      "KaymaMiktari": 0.5,
+      "PyramidingEnabled": false
+    },
+    "Signals": {
+      "AlEnabled": true,
+      "SatEnabled": true,
+      "FlatOlEnabled": true,
+      "PasGecEnabled": true,
+      "KarAlEnabled": true,
+      "ZararKesEnabled": true,
+      "GunSonuPozKapatEnabled": false,
+      "TimeFilteringEnabled": false,
+      "StartDateTime": "2025.05.25 09:35:00",
+      "StopDateTime": "2025.06.02 17:55:00",
+      "TradeStartBarIndexEnabled": false,
+      "TradeStartBarIndex": 0
+    },
+    "Plot": {
+      "PlotEnabled": true,
+    },
+    "Optimization": {
+      "OptimizationEnabled": false,
+    },
+    "Save": {
+      "SaveStatisticsToFile": true,
+      "SaveFullStatsTxtEnabled": true,
+      "SaveFullStatsCsvEnabled": true,
+      "SaveMinimalStatsTxtEnabled": true,
+      "SaveMinimalStatsCsvEnabled": true,
+      "SaveFullListsTxtEnabled": true,
+      "SaveFullListsCsvEnabled": true,
+      "SaveMinimalListsTxtEnabled": true,
+      "SaveMinimalListsCsvEnabled": true,
+      "SaveFullStatsTxtFormattedEnabled": true,
+      "SaveMinimalStatsTxtFormattedEnabled": true,
+      "SavePerformansTxtEnabled": true,
+      "SavePerformansCsvEnabled": true,
+      "FullStatsTxtFileName": "SingleTraderStatistics.txt",
+      "FullStatsCsvFileName": "SingleTraderStatistics.csv",
+      "MinimalStatsTxtFileName": "SingleTraderStatisticsMinimal.txt",
+      "MinimalStatsCsvFileName": "SingleTraderStatisticsMinimal.csv",
+      "FullListsTxtFileName": "SingleTraderLists.txt",
+      "FullListsCsvFileName": "SingleTraderLists.csv",
+      "MinimalListsTxtFileName": "SingleTraderListsMinimal.txt",
+      "MinimalListsCsvFileName": "SingleTraderListsMinimal.csv",
+      "FullStatsTxtFormattedFileName": "SingleTraderStatisticsFormatted.txt",
+      "MinimalStatsTxtFormattedFileName": "SingleTraderStatisticsMinimalFormatted.txt",
+      "PerformansTxtFileName": "SingleTraderPerformans.txt",
+      "PerformansCsvFileName": "SingleTraderPerformans.csv"
+    }
+  },
+
+  "MultipleTrader": {
+    "RunMode": "TradeOnly",
+
+    "Save": {
+      "SaveStatisticsToFile": true,
+      "SaveMultipleTraderListsTxtEnabled": true,
+      "SaveMultipleTraderListsCsvEnabled": true,
+      "MultipleTraderListsTxtFileName": "MultipleTraderLists.txt",
+      "MultipleTraderListsCsvFileName": "MultipleTraderLists.csv",
+      // WriteChildTradersDataToFiles: true → child trader istatistikleri de dosyaya yazılır
+      "WriteChildTradersDataToFiles": true,
+      // FilePrefix: MainTrader → {FilePrefix}_Main_{FileName}  |  Child → {FilePrefix}_Child{i}_{FileName}
+      "FilePrefix": "MultipleTrader"
+    },
+
+    "Consensus": {
+      // Mode     : Net | Majority | All | Any
+      //   Net      → buyCount - sellCount > 0  → Buy; < 0 → Sell; = 0 → Flat  (varsayılan)
+      //   Majority → buyCount > N/2 → Buy; sellCount > N/2 → Sell; aksi → Flat
+      //   All      → tüm child aynı yönde → o yön; aksi → Flat
+      //   Any      → en az 1 Buy → Buy; en az 1 Sell → Sell; ikisi de varsa → Flat
+      // MinNetCount: Net modunda minimum net fark eşiği (varsayılan: 1)
+      //   Örn. MinNetCount=2 → buyCount - sellCount >= 2 ise Buy
+      "Mode": "Net",
+      "MinNetCount": 1
+    },
+
+    "MainTrader": {
+      "EquityCurveFilter": {
+        "ConfigFile": "EquityCurveFilterConfig.txt",
+        "Name": "",
+        "Version": "v1"
+      },
+      "TradeParams": {
+        "MarketType": "ViopMetal",
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      },
+      "Signals": {
+        "AlEnabled": true,
+        "SatEnabled": true,
+        "FlatOlEnabled": true,
+        "PasGecEnabled": true,
+        "KarAlEnabled": true,
+        "ZararKesEnabled": true,
+        "GunSonuPozKapatEnabled": false,
+        "TimeFilteringEnabled": false,
+        "StartDateTime": "2025.05.25 09:35:00",
+        "StopDateTime": "2025.06.02 17:55:00",
+        "TradeStartBarIndexEnabled": false,
+        "TradeStartBarIndex": 0
+      },
+      "Plot": {
+        "PlotEnabled": true
+      },
+      "Optimization": {
+        "OptimizationEnabled": false
+      },
+      "Save": {
+        "SaveStatisticsToFile": true,
+        "SaveFullStatsTxtEnabled": true,
+        "SaveFullStatsCsvEnabled": true,
+        "SaveMinimalStatsTxtEnabled": true,
+        "SaveMinimalStatsCsvEnabled": true,
+        "SaveFullListsTxtEnabled": false,
+        "SaveFullListsCsvEnabled": false,
+        "SaveMinimalListsTxtEnabled": false,
+        "SaveMinimalListsCsvEnabled": false,
+        "SaveFullStatsTxtFormattedEnabled": true,
+        "SaveMinimalStatsTxtFormattedEnabled": true,
+        "SavePerformansTxtEnabled": true,
+        "SavePerformansCsvEnabled": true,
+        "FullStatsTxtFileName": "Statistics.txt",
+        "FullStatsCsvFileName": "Statistics.csv",
+        "MinimalStatsTxtFileName": "StatisticsMinimal.txt",
+        "MinimalStatsCsvFileName": "StatisticsMinimal.csv",
+        "FullListsTxtFileName": "Lists.txt",
+        "FullListsCsvFileName": "Lists.csv",
+        "MinimalListsTxtFileName": "ListsMinimal.txt",
+        "MinimalListsCsvFileName": "ListsMinimal.csv",
+        "FullStatsTxtFormattedFileName": "StatisticsFormatted.txt",
+        "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
+        "PerformansTxtFileName": "Performans.txt",
+        "PerformansCsvFileName": "Performans.csv"
+      }
+    },
+
+    "ChildTraders": [
+      {
+        "ChildId": 0,
+        "Strategy": {
+          "ConfigFile": "StrategyConfig.txt",
+          "Name": "SimpleMostStrategy",
+          "Version": "v1"
+        },
+        "Query": {
+          "ConfigFile": "QueryConfig.txt",
+          "Name": "SimpleQuery1",
+          "Version": "v1"
+        },
+        "EquityCurveFilter": {
+          "ConfigFile": "EquityCurveFilterConfig.txt",
+          "Name": "",
+          "Version": "v1"
+        },
+        "Signals": {
+          "AlEnabled": true,
+          "SatEnabled": true,
+          "FlatOlEnabled": true,
+          "PasGecEnabled": true,
+          "KarAlEnabled": true,
+          "ZararKesEnabled": true,
+          "GunSonuPozKapatEnabled": false,
+          "TimeFilteringEnabled": false,
+          "StartDateTime": "2025.05.25 09:35:00",
+          "StopDateTime": "2025.06.02 17:55:00",
+          "TradeStartBarIndexEnabled": false,
+          "TradeStartBarIndex": 0
+        },
+        "Plot": {
+          "PlotEnabled": false
+        },
+        "Optimization": {
+          "OptimizationEnabled": false
+        },
+        "Save": {
+          "SaveStatisticsToFile": true,
+          "SaveFullStatsTxtEnabled": true,
+          "SaveFullStatsCsvEnabled": true,
+          "SaveMinimalStatsTxtEnabled": true,
+          "SaveMinimalStatsCsvEnabled": true,
+          "SaveFullListsTxtEnabled": false,
+          "SaveFullListsCsvEnabled": false,
+          "SaveMinimalListsTxtEnabled": false,
+          "SaveMinimalListsCsvEnabled": false,
+          "SaveFullStatsTxtFormattedEnabled": true,
+          "SaveMinimalStatsTxtFormattedEnabled": true,
+          "SavePerformansTxtEnabled": true,
+          "SavePerformansCsvEnabled": true,
+          "FullStatsTxtFileName": "Statistics.txt",
+          "FullStatsCsvFileName": "Statistics.csv",
+          "MinimalStatsTxtFileName": "StatisticsMinimal.txt",
+          "MinimalStatsCsvFileName": "StatisticsMinimal.csv",
+          "FullListsTxtFileName": "Lists.txt",
+          "FullListsCsvFileName": "Lists.csv",
+          "MinimalListsTxtFileName": "ListsMinimal.txt",
+          "MinimalListsCsvFileName": "ListsMinimal.csv",
+          "FullStatsTxtFormattedFileName": "StatisticsFormatted.txt",
+          "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
+          "PerformansTxtFileName": "Performans.txt",
+          "PerformansCsvFileName": "Performans.csv"
+        }
+      },
+      {
+        "ChildId": 1,
+        "Strategy": {
+          "ConfigFile": "StrategyConfig.txt",
+          "Name": "SimpleMostStrategy",
+          "Version": "v2"
+        },
+        "Query": {
+          "ConfigFile": "QueryConfig.txt",
+          "Name": "SimpleQuery1",
+          "Version": "v1"
+        },
+        "EquityCurveFilter": {
+          "ConfigFile": "EquityCurveFilterConfig.txt",
+          "Name": "",
+          "Version": "v1"
+        },
+        "Signals": {
+          "AlEnabled": true,
+          "SatEnabled": true,
+          "FlatOlEnabled": true,
+          "PasGecEnabled": true,
+          "KarAlEnabled": true,
+          "ZararKesEnabled": true,
+          "GunSonuPozKapatEnabled": false,
+          "TimeFilteringEnabled": false,
+          "StartDateTime": "2025.05.25 09:35:00",
+          "StopDateTime": "2025.06.02 17:55:00",
+          "TradeStartBarIndexEnabled": false,
+          "TradeStartBarIndex": 0
+        },
+        "Plot": {
+          "PlotEnabled": false
+        },
+        "Optimization": {
+          "OptimizationEnabled": false
+        },
+        "Save": {
+          "SaveStatisticsToFile": true,
+          "SaveFullStatsTxtEnabled": true,
+          "SaveFullStatsCsvEnabled": true,
+          "SaveMinimalStatsTxtEnabled": true,
+          "SaveMinimalStatsCsvEnabled": true,
+          "SaveFullListsTxtEnabled": false,
+          "SaveFullListsCsvEnabled": false,
+          "SaveMinimalListsTxtEnabled": false,
+          "SaveMinimalListsCsvEnabled": false,
+          "SaveFullStatsTxtFormattedEnabled": true,
+          "SaveMinimalStatsTxtFormattedEnabled": true,
+          "SavePerformansTxtEnabled": true,
+          "SavePerformansCsvEnabled": true,
+          "FullStatsTxtFileName": "Statistics.txt",
+          "FullStatsCsvFileName": "Statistics.csv",
+          "MinimalStatsTxtFileName": "StatisticsMinimal.txt",
+          "MinimalStatsCsvFileName": "StatisticsMinimal.csv",
+          "FullListsTxtFileName": "Lists.txt",
+          "FullListsCsvFileName": "Lists.csv",
+          "MinimalListsTxtFileName": "ListsMinimal.txt",
+          "MinimalListsCsvFileName": "ListsMinimal.csv",
+          "FullStatsTxtFormattedFileName": "StatisticsFormatted.txt",
+          "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
+          "PerformansTxtFileName": "Performans.txt",
+          "PerformansCsvFileName": "Performans.csv"
+        }
+      }
+    ]
+  },
+
+  "SingleTraderOptimizer": {
+    "Optimization": {
+      "ConfigFile": "OptimizationConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "Range": {
+      "OptimizationFrom": -1,
+      "OptimizationTo": -1
+    },
+    "TradeParams": {
+      "MarketType": "ViopMetal",
+      "IlkBakiye": 100000.0,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000.0,
+      "KomisyonCarpan": 20.0,
+      "KaymaMiktari": 0.5,
+      "PyramidingEnabled": false
+    },
+    "EquityCurveFilter": {
+      "ConfigFile": "EquityCurveFilterConfig.txt",
+      "Name": "",
+      "Version": "v1"
+    },
+    "Signals": {
+      "AlEnabled": true,
+      "SatEnabled": true,
+      "FlatOlEnabled": true,
+      "PasGecEnabled": true,
+      "KarAlEnabled": true,
+      "ZararKesEnabled": true,
+      "GunSonuPozKapatEnabled": false,
+      "TimeFilteringEnabled": false,
+      "StartDateTime": "2025.05.25 09:35:00",
+      "StopDateTime": "2025.06.02 17:55:00",
+      "TradeStartBarIndexEnabled": false,
+      "TradeStartBarIndex": 0
+    },
+    "Save": {
+      "CsvFileLoggingEnabled": true,
+      "TxtFileLoggingEnabled": true,
+      "StatisticsExporterConfigFileEnabled": true,
+      "CsvFileName": "singleTraderOptLog.csv",
+      "TxtFileName": "singleTraderOptLog.txt",
+      "StatisticsExporterConfigFile": "StatisticsExporterConfig.json",
+      "AppendEnabled": true,
+      "FileFlushIntervalMs": -1
+    },
+    "Sort": {
+      "SortField": "GetiriFiyatNet",
+      "SortedCsvFileName": "singleTraderOptLog_sorted.csv",
+      "SortedTxtFileName": "singleTraderOptLog_sorted.txt"
+    },
+    "SingleTrader": {
+      "Plot": {
+        "PlotEnabled": false
+      },
+      "Optimization": {
+        "OptimizationEnabled": true,
+      },
+      "Save": {
+        "SaveStatisticsToFile": false,
+        "SaveFullStatsTxtEnabled": true,
+        "SaveFullStatsCsvEnabled": true,
+        "SaveMinimalStatsTxtEnabled": true,
+        "SaveMinimalStatsCsvEnabled": true,
+        "SaveFullListsTxtEnabled": true,
+        "SaveFullListsCsvEnabled": true,
+        "SaveMinimalListsTxtEnabled": true,
+        "SaveMinimalListsCsvEnabled": true,
+        "SaveFullStatsTxtFormattedEnabled": true,
+        "SaveMinimalStatsTxtFormattedEnabled": true,
+        "SavePerformansTxtEnabled": true,
+        "SavePerformansCsvEnabled": true,
+        "FullStatsTxtFileName": "SingleTraderOptStatistics.txt",
+        "FullStatsCsvFileName": "SingleTraderOptStatistics.csv",
+        "MinimalStatsTxtFileName": "SingleTraderOptStatisticsMinimal.txt",
+        "MinimalStatsCsvFileName": "SingleTraderOptStatisticsMinimal.csv",
+        "FullListsTxtFileName": "SingleTraderOptLists.txt",
+        "FullListsCsvFileName": "SingleTraderOptLists.csv",
+        "MinimalListsTxtFileName": "SingleTraderOptListsMinimal.txt",
+        "MinimalListsCsvFileName": "SingleTraderOptListsMinimal.csv",
+        "FullStatsTxtFormattedFileName": "SingleTraderOptStatisticsFormatted.txt",
+        "MinimalStatsTxtFormattedFileName": "SingleTraderOptStatisticsMinimalFormatted.txt",
+        "PerformansTxtFileName": "SingleTraderOptPerformans.txt",
+        "PerformansCsvFileName": "SingleTraderOptPerformans.csv"
+      }
+    }
+  },
+  
+  "Markets": {
+    "BistEndex": {
+      "TradeParams": {
+        "MarketType": "BistEndex", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "BistHisse": {
+      "TradeParams": {
+        "MarketType": "BistHisse", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "BistParite": {
+      "TradeParams": {
+        "MarketType": "BistParite", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "BistMetal": {
+      "TradeParams": {
+        "MarketType": "BistMetal", "HisseSayisi": 1000.0,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopEndex": {
+      "TradeParams": {
+        "MarketType": "ViopEndex", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopHisse": {
+      "TradeParams": {
+        "MarketType": "ViopHisse", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopParite": {
+      "TradeParams": {
+        "MarketType": "ViopParite", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "ViopMetal": {
+      "TradeParams": {
+        "MarketType": "ViopMetal", "KontratSayisi": 1,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxEndex": {
+      "TradeParams": {
+        "MarketType": "FxEndex", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxHisse": {
+      "TradeParams": {
+        "MarketType": "FxHisse", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxParite": {
+      "TradeParams": {
+        "MarketType": "FxParite", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxMetal": {
+      "TradeParams": {
+        "MarketType": "FxMetal", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "FxCrypto": {
+      "TradeParams": {
+        "MarketType": "FxCrypto", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    },
+    "Crypto": {
+      "TradeParams": {
+        "MarketType": "Crypto", "LotSayisi": 0.01,
+        "IlkBakiye": 100000.0,
+        "KontratSayisi": 1,
+        "LotSayisi": 0.01,
+        "HisseSayisi": 1000.0,
+        "KomisyonCarpan": 20.0,
+        "KaymaMiktari": 0.5,
+        "PyramidingEnabled": false
+      }
+    }
+  }
+}

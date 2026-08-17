@@ -1,0 +1,107 @@
+Ref3 (DearPyGuiDataPlotter3) PanelManager metodlari
+Kaynak: src/plotting/panel_manager.py
+
+[ ] private  L25   __init__(self)
+[ ] public   L50   set_plot_controller(self, plot_controller)
+[ ] public   L53   set_lod_controller(self, lod_controller)
+[ ] public   L56   set_panel_visible_callback(self, callback)
+[ ] public   L59   set_panel_active_callback(self, callback)
+[ ] public   L62   set_render_cache_enabled(self, enabled)
+[ ] public   L65   set_render_cache_target(self, target)
+[ ] public   L68   set_render_window_provider(self, callback)
+[ ] public   L71   set_x_axis_mode(self, mode)
+[ ] public   L78   get_x_axis_mode(self)
+[ ] public   L81   show_x_as_datetime(self, enabled)
+[ ] public   L84   set_x_tick_label_scope(self, scope)
+[ ] public   L91   set_info_panel_mode(self, mode)
+[ ] public   L97   get_info_panel_mode(self)
+[ ] public   L100  set_info_panels_visible(self, visible)
+[ ] public   L103  set_active_info_panel(self, panel_id)
+[ ] public   L106  set_info_shared_index(self, index)
+[ ] public   L114  set_parent_size(self, width, height)
+[ ] private  L189  _on_panel_visible(self, sender, app_data, user_data)
+[ ] private  L193  _on_panel_active(self, sender, app_data, user_data)
+[ ] public   L210  delete_data(self, panel_id, data_id)
+        Bir panelden tek bir datayi siler: hem modelden (panel.data_list) hem de
+[ ] public   L223  set_panel(self, panel)
+        Verisi disarida (panel.data_list) doldurulmus bir Panel objesini alir.
+[ ] public   L239  add_data(self, panel_id, data_id, name, xs, ys, data_type, draw)
+        Panele data ekler.
+[ ] public   L256  get_data(self, panel_id, data_id)
+        panel_id'li paneldeki data_id'li PanelData'yi dondurur (yoksa None).
+[ ] public   L261  delete_all_data(self, panel_id)
+        panel_id'li paneldeki TUM datayi siler (model + cizili seriler).
+[ ] public   L270  set_candle_data(self, panel_id, source, opens=..., highs=..., lows=..., closes=..., volumes=..., sizes=..., dateTime=..., name=..., data_id=..., intraday=...)
+        Verilen panelin CANDLE datasini ESNEK sekilde ayarlar + cizer.
+[ ] public   L346  update_render_cache(self, x_min, x_max, force)
+[ ] private  L369  _set_render_value(self, panel_id, d, x_min, x_max)
+[ ] private  L391  _render_line_values(self, panel_id, xs, ys, x_min, x_max)
+[ ] private  L400  _render_candle_values(self, panel_id, xs, opens, closes, lows, highs, x_min, x_max)
+[ ] private  L411  _render_window(self)
+[ ] private  L421  _render_target(self, panel_id)
+[ ] public   L432  add_hline(self, panel_id, y, color, thickness, label)
+        Panele yatay seviye cizgisi ekler (MODEL). Cizim redraw_panel_data /
+[ ] public   L438  add_vline(self, panel_id, x, color, thickness, label)
+        Panele dikey seviye cizgisi ekler (MODEL). Cizim redraw'da drag_line ile.
+[ ] public   L478  update_x_axis_ticks(self, panel_id)
+[ ] private  L516  _x_tick_label_panel_id(self)
+[ ] private  L525  _build_datetime_ticks(self, panel_id, panel)
+[ ] private  L539  _build_intraday_datetime_ticks(self, x_tag, timestamps, x_min, x_max)
+[ ] private  L560  _build_daily_datetime_ticks(self, x_tag, timestamps, x_min, x_max)
+[ ] private  L573  _even_tick_indices(self, left, right, n, target_ticks)
+[ ] private  L586  _target_datetime_tick_count(self, bars_in_range, x_tag)
+[ ] private  L595  _x_axis_limits(self, panel_id, n)
+[ ] public   L636  iterate_panel_data(self, panel_id)
+[ ] public   L651  redraw_all(self)
+        TUM panellerin serilerini (data_list) yeniden cizer. Toplu ekleme
+[ ] public   L657  update_info_overlays(self)
+        Info panellerini secili moda gore gunceller.
+[ ] private  L692  _current_hover_info_index(self)
+[ ] private  L704  _should_show_info_panel(self, panel_id, plot_tag, hovered_panel_id)
+[ ] private  L714  _resolve_info_index(self, panel_id, data, hovered_panel_id, hovered_index)
+[ ] private  L726  _clamp_info_index(self, data, idx)
+[ ] private  L732  _pick_info_source_data(self, panel)
+[ ] private  L741  _build_hover_label(self, panel, d, idx)
+[ ] private  L878  _info_data_len(self, d)
+[x] public   L895  sync(self)  -> sync() (FARKLI ANLAMDA - asagiya bak)
+
+============================================================
+TAMAMLANANLAR (src/plotting/panelManager.py) - sirayla asagi eklenir
+============================================================
+- createPanel(name, caption="", parent="", alignment=None)
+    Otomatik id ile Panel olusturur, DONDURUR - panelManager'a EKLEMEZ.
+- deleteAllPanels()
+- getAllPanels()
+- addPanel(panel)
+- getPanel(panelId)
+- getPanelId(panelOrName)
+    Ref3'te yok, yeni eklendi. Panel objesi -> panel.id; str (isim) -> findPanel ile arar.
+- findPanel(key)
+- deletePanel(panelId) / removePanel(panelId)
+- iterateAllPanels()
+    Ref3'te yok, yeni eklendi (getAllPanels'in generator/yield versiyonu).
+- setContainer(tag) / getContainer()
+- drawPanel(panelId)
+    Ref3'te 'draw_panels()' (coklu) idi; bizde YOK - API tekil eylemlerden
+    olusuyor, coklu islemi script kendisi orgutler:
+    for p in pm.iterateAllPanels(): pm.drawPanel(p.id)
+- _buildPanelUi(panel, width=None, height=None)  [private]
+    Tag semasi Ref3 ile ayni: panel_{id} / plot_{id} / x_axis_{id} / y_axis_{id}.
+    Legend + x/y axis kurar; lod_annot/hover_text/plot_controller/panel_visible
+    callback'leri HENUZ YOK (o controller'lar henuz portlanmadi).
+- hidePanel(panelId) / showPanel(panelId) / hideAllPanels() / showAllPanels()
+    Model (panel.visible) + varsa DPG UI'nin show= durumunu birlikte gunceller.
+- sync()
+    Ref3'teki 'redraw' anlaminda DEGIL: drawPanel ile cizilmis ama modelden
+    silinmis (deletePanel/deleteAllPanels) "yetim" panellerin DPG item'ini temizler.
+- render()
+    Ref3'te yok, yeni eklendi. Periyodik giris noktasi (gm._onRenderTick her
+    frame cagirir): sync() + saniyede bir heartbeat print.
+- drawPanelData(panelId) (Ref3'teki redraw_panel_data karsiligi, isim degisti)
+    candle/bar/line serilerini + levels'i (hline/vline) gercekten plot'a basar.
+    Tekrar cagrilabilir (y_axis'i temizleyip yeniden cizer). Zaman ekseni
+    tick'leri/LOD/render-cache YOK - ham veriyle cizer. drawPanel'den SONRA
+    cagrilmali (kabuk once kurulmali).
+- _drawLevels(panelId, panel)  [private] (Ref3'teki _draw_levels karsiligi)
+    panel.levels'daki hline/vline'lari inf_line_series ile (renk/kalinlik
+    theme'iyle) cizer; drawPanelData tarafindan cagrilir.
