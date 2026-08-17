@@ -1,1 +1,2 @@
-imgui-bundle>=1.5.0
+imgui-bundle==1.92.5
+numpy>=1.26.0
