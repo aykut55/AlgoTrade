@@ -1094,7 +1094,14 @@ class PanelManager:
             appliedX = True
         self.adjustYAxis(panelId, yMarginRatio=yMarginRatio, xLimits=xLimits)
         if appliedX:
-            dpg.split_frame()
+            # split_frame() ayni frame icinde (orn. load_bundle'in _resetUi()
+            # cagirdigi split_frame ile ic ice) "no active rendering loop"
+            # atabiliyor - bu durumda pending sync bir sonraki frame'de zaten
+            # tekrar denenecegi icin sessizce False donup vazgeciyoruz.
+            try:
+                dpg.split_frame()
+            except Exception:
+                return False
             dpg.set_axis_limits_auto(xTag)
         return True
 
@@ -1115,7 +1122,13 @@ class PanelManager:
 
         xTag = f"x_axis_{panelId}"
         dpg.set_axis_limits(xTag, xLimits[0], xLimits[1])
-        dpg.split_frame()
+        # bkz. applySourceParamsToPanel'deki ayni try/except: load_bundle'in
+        # _resetUi() split_frame'iyle ayni frame'e denk gelirse "no active
+        # rendering loop" atabiliyor - pending kalip sonraki frame'de tekrar dener.
+        try:
+            dpg.split_frame()
+        except Exception:
+            return False
         dpg.set_axis_limits_auto(xTag)
         return True
 
