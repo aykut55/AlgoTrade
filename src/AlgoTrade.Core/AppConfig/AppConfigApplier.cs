@@ -637,6 +637,51 @@ public static class AppConfigApplier
         return options;
     }
 
+    /// <summary>
+    /// SymbolTimeframeScanConfig'i, SymbolTimeframeScanner.Run()'a doğrudan verilebilecek bir
+    /// SymbolTimeframeScanOptions'a çevirir. BuildSymbolScanOptions/BuildTimeframeScanOptions ile
+    /// aynı desende — SymbolTimeframeScanner de bilinçli olarak AlgoTrader'a bağlı değil.
+    /// </summary>
+    public static SymbolTimeframeScanOptions BuildSymbolTimeframeScanOptions(SymbolTimeframeScanConfig cfg, string configsDir)
+    {
+        string stratPath = Path.Combine(configsDir, cfg.Strategy.ConfigFile);
+        var stratLoader  = new StrategyConfigLoader(stratPath);
+        stratLoader.LoadFromFile();
+        var stratCfg = stratLoader.GetConfiguration(cfg.Strategy.Name, cfg.Strategy.Version)
+            ?? throw new InvalidOperationException($"Strategy bulunamadı: {cfg.Strategy.Name} / {cfg.Strategy.Version}");
+
+        var options = new SymbolTimeframeScanOptions
+        {
+            BaseFolder             = cfg.BaseFolder,
+            AutoDiscover           = cfg.AutoDiscover,
+            ReferenceTimeframe     = cfg.ReferenceTimeframe,
+            SymbolList             = cfg.SymbolList,
+            Timeframes             = cfg.Timeframes,
+            StrategyName           = stratCfg.StrategyName,
+            StrategyParameters     = stratCfg.GetParameterValues(),
+            TradeParams            = BuildInitialTradeParams(cfg.TradeParams),
+            AlEnabled              = cfg.Signals.AlEnabled,
+            SatEnabled             = cfg.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
+            WriteFullStatsPerCell  = cfg.WriteFullStatsPerCell,
+            SortField              = cfg.Sort.SortField,
+            SortDescending         = cfg.Sort.SortDescending,
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
     // =========================================================================
     // TradeParamsConfig → InitialTradeParams dönüşümü
     // =========================================================================

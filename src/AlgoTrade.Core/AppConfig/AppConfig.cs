@@ -14,6 +14,7 @@ public class AppConfig
     public SymbolScanConfig      SymbolScan     { get; set; } = new();
     public TimeframeScanConfig   TimeframeScan  { get; set; } = new();
     public MultiStrategyTimeframeScanConfig MultiStrategyTimeframeScan { get; set; } = new();
+    public SymbolTimeframeScanConfig SymbolTimeframeScan { get; set; } = new();
 }
 
 // =============================================================================
@@ -523,4 +524,58 @@ public class MultiStrategyTimeframeScanSaveConfig
     public string TxtFileName       { get; set; } = "MultiStrategyTimeframeScanResults.txt";
     public string SortedCsvFileName { get; set; } = "MultiStrategyTimeframeScanResults_sorted.csv";
     public string SortedTxtFileName { get; set; } = "MultiStrategyTimeframeScanResults_sorted.txt";
+}
+
+// =============================================================================
+// SymbolTimeframeScan  (Tarama — Senaryo 6: çoklu sembol, tek strateji, çoklu zaman dilimi,
+// ikisi de TAMAMEN BAĞIMSIZ)
+// =============================================================================
+
+/// <summary>
+/// Tek bir stratejiyi hem sembol hem zaman dilimi ekseninde bağımsız çalıştırıp sonuçları tek
+/// bir özet tabloda (N sembol × M TF satır) toplar (bkz. docs/tarama-motoru-plan.md, "Senaryo 6").
+/// Hiçbir eksende konsensüs/bileşke yok — SymbolScanConfig/TimeframeScanConfig'in iç içe
+/// geçmiş hali.
+/// </summary>
+public class SymbolTimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>true: ReferenceTimeframe klasöründeki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=true iken sembol keşfi için taranacak TF klasör adı (örn. "05").</summary>
+    public string ReferenceTimeframe { get; set; } = "";
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Otomatik keşif yok, açık liste.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    public StrategyRef          Strategy    { get; set; } = new();
+    public TradeParamsConfig    TradeParams { get; set; } = new();
+    public TraderSignalsConfig  Signals     { get; set; } = new();
+    public ReadDataConfig       ReadData    { get; set; } = new();
+
+    /// <summary>true: her (sembol, TF) hücresi için ayrıca tam istatistik dosyaları da yazılır.</summary>
+    public bool WriteFullStatsPerCell { get; set; } = false;
+
+    public SymbolTimeframeScanSortConfig Sort { get; set; } = new();
+    public SymbolTimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class SymbolTimeframeScanSortConfig
+{
+    public string SortField      { get; set; } = "NetProfit";
+    public bool   SortDescending { get; set; } = true;
+}
+
+public class SymbolTimeframeScanSaveConfig
+{
+    public string CsvFileName       { get; set; } = "SymbolTimeframeScanResults.csv";
+    public string TxtFileName       { get; set; } = "SymbolTimeframeScanResults.txt";
+    public string SortedCsvFileName { get; set; } = "SymbolTimeframeScanResults_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "SymbolTimeframeScanResults_sorted.txt";
 }

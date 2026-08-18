@@ -296,9 +296,18 @@ edilecek).
 
 ---
 
-# Senaryo 6 (Çoklu Sembol, Tek Strateji, Çoklu TF) — SIRADA (henüz uygulanmadı)
+# Senaryo 6 (Çoklu Sembol, Tek Strateji, Çoklu TF) — TAMAMLANDI (2026-08-18)
 
-**Durum**: Tasarım taslağı, uygulama başlamadı. Bir sonraki oturumda buradan devam edilecek.
+## Doğrulama
+
+Scratch bir test projesiyle (`AppConfigApplier.BuildSymbolTimeframeScanOptions` +
+`SymbolTimeframeScanner.Run` doğrudan çağrılarak, Console'daki `runSymbolTimeframeScan()` ile
+birebir aynı yol) gerçek veride uçtan uca test edildi: `BaseFolder=CRP`, `AutoDiscover=true`,
+`ReferenceTimeframe=05`, `Timeframes=["05","15"]` → 2 sembol (BTCUSDT_BNC, ETHUSDT_BNC) × 2 TF =
+4 hücre, hepsi `Success=true`. CSV çıktısında gerçek işlem sayıları görüldü (örn. BTCUSDT_BNC/05:
+`IslemSayisi=29933`, `NetKarFiyat=-615039.29`) — A/C'de bulunan "sinyal bayrakları kapalı kalıp
+trader hiç işlem açmıyor" bug'ı burada da baştan doğru işlendiği için hiç oluşmadı. Sıralama
+(`GetBestResult`, `SortField=NetProfit`) doğru çalıştı (ETHUSDT_BNC/15 seçildi).
 
 ## Amaç
 
@@ -330,14 +339,65 @@ todo.md'deki düzeltmeyle tutarlı: "bileşke" sadece strateji ekseninde, B/4'te
   backtest) — ilk testte küçük bir alt küme (2 sembol × 2-3 TF) ile doğrulanmalı, tıpkı
   önceki senaryolarda yapıldığı gibi.
 
-## Yapılacaklar (bir sonraki oturum)
+## Dosyalar
 
-1. `SymbolTimeframeScanner.cs` yaz (yukarıdaki taslağa göre).
-2. `AppConfig.cs` + `AppConfig.json`'a config ekle.
-3. Küçük bir alt kümeyle (örn. 2 sembol × 2 TF) scratch test ile uçtan uca doğrula.
-4. Console'a `[13]` menü seçeneği + handler/runner ekle, gerçek Console üzerinden dene.
-5. `docs/tarama-motoru-plan.md` ve `docs/todo.md`'yi TAMAMLANDI olarak güncelle.
-6. Commit, sonra senaryo 7'ye geç.
+| Dosya | Değişiklik |
+|---|---|
+| `src/AlgoTrade.Core/Trading/Traders/SymbolTimeframeScanner.cs` | YENİ — `SymbolTimeframeScanner`, `SymbolTimeframeScanOptions`, `SymbolTimeframeScanResult`. `SymbolScanner`/`TimeframeScanner`'ın iç içe geçmiş hali (üçüncü kopya, aynı iskelet). |
+| `src/AlgoTrade.Core/AppConfig/AppConfig.cs` | `SymbolTimeframeScanConfig` (+ `Sort`/`Save` alt config'leri), root `AppConfig.SymbolTimeframeScan` alanı |
+| `src/AlgoTrade.Core/AppConfig/AppConfigApplier.cs` | `BuildSymbolTimeframeScanOptions(SymbolTimeframeScanConfig, configsDir)` — `BuildSymbolScanOptions`/`BuildTimeframeScanOptions` ile aynı desende |
+| `inputs/configs/AppConfig/AppConfig.json` | `SymbolTimeframeScan` bölümü eklendi (varsayılan: `CRP` base klasörü, AutoDiscover + `ReferenceTimeframe="05"`, `Timeframes=["05","15"]`, SimpleMostStrategy v1) |
+| `AlgoTrade.Console/Program.cs` | `[13] Tarama (Symbol-Timeframe Scan)` menü seçeneği, `handleSymbolTimeframeScan()`, `runSymbolTimeframeScan()`, `showModeConfigSummary("SymbolTimeframeScan")` |
+
+## Yan Not — `AlgoTrader.ProgressLoggingEnabled` (2026-08-18, Senaryo 6 sırasında eklendi)
+
+Bu senaryonun kapsamında değil ama aynı oturumda kullanıcı sorusu üzerine eklendi: `[12]`
+(`MultiStrategyTimeframeScanner`, senaryo 4) her TF için taze bir `AlgoTrader` kurup
+`RunMultipleTraderWithProgressAsync()` çağırdığında, `AlgoTrader.OnSingleTraderProgress`
+(satır ~172) her TF'de tekrar tekrar `"\r\tProgress : x/y (%)"` basıyordu — `[10]/[11]`
+(`SymbolScanner`/`TimeframeScanner`) AlgoTrader'ı hiç kullanmadığı için bu progress onlarda hiç
+görünmüyordu, kullanıcı bu tutarsızlığı fark etti. `OnSingleTraderProgress` **paylaşılan** bir
+callback (`RunSingleTraderWithProgressAsync`/`RunMultipleTraderWithProgressAsync`'in ikisinde de
+`SetCallbacks(...)` ile bağlanıyor, satır ~1182/~1477/~1679) — yani `[2]/[3]/[5]/[6]`'daki normal
+interaktif çalıştırmaları da etkiliyor, sadece `[12]`'ye özgü değil. Bu yüzden kodu doğrudan
+comment'lemek yerine `AlgoTrader.ProgressLoggingEnabled` bayrağı eklendi,
+`OnSingleTraderProgress` başına `if (!ProgressLoggingEnabled) return;` guard'ı kondu.
+
+**Varsayılan değer `false`** (kullanıcı kararı — ilk taslakta `true`/opt-out olarak eklenmişti,
+kullanıcı "varsayılan false olsun" dedi, yani artık opt-in): hiçbir `AlgoTrader` çalıştırması
+(interaktif `[2]/[3]/[5]/[6]` dahil) bu progress'i varsayılan olarak basmıyor. İsteyen bir
+çalıştırma kendi kurulumunda `algoTrader.ProgressLoggingEnabled = true;` ile açabilir.
+`runMultiStrategyTimeframeScan()`'in `ConfigureAlgoTrader` delegate'inde artık ayrıca bir şey
+set edilmiyor (varsayılan zaten kapalı) — sadece bunu açıklayan bir yorum satırı bırakıldı.
+
+### İkinci, ayrı bir gürültü kaynağı: `MultipleTrader` consensus debug log'u
+
+`ProgressLoggingEnabled` düzeltmesinden SONRA kullanıcı `[12]`'de hâlâ konsolun dolduğunu fark
+etti — ama bu farklı bir kaynaktan geliyordu: `MultipleTrader.BuildConsensusSignal()`
+(`MultipleTrader.cs:255`) her bar'da (sinyal Buy/Sell olduğunda) `LogManager.LogDebug($"...
+Buy=.. Sell=.. Flat=.. -> ...")` basıyor — consensus modları geliştirilirken (commit f93dfb6)
+eklenmiş, `LogSinks.All` hedefli (yani Console sink'ine de gidiyor), `ProgressLoggingEnabled`
+ile ilgisiz bir satır. Normal `[3]` MultipleTrader çalıştırmasında (tek dataset) sorun değil,
+ama `[12]` N TF'i art arda çalıştırdığı için konsolu dolduruyordu.
+
+**Çözüm**: Global olarak susturmak yerine (bu `[3]`'ü de etkilerdi), `runMultiStrategyTimeframeScan()`
+içinde sadece `await scanner.RunAsync(...)` çağrısını `LogManager.DisableConsoleSink()` /
+`finally { LogManager.EnableConsoleSink(); }` ile sarmaladık — scanner'ın kendi `[current/total]
+TF` progress satırı (`ConsoleLogger.Write`, sink sisteminden bağımsız, kendi `IsEnabled` bayrağı
+var) buna rağmen görünmeye devam ediyor, sadece RunAsync öncesi/sonrasındaki
+`LogManager.LogRaw(...)` özet/sonuç satırları etkilenmeyecek şekilde scope'landı.
+
+## Yapılacaklar (senaryo 6 bitince) — TAMAMLANDI, sırada senaryo 7
+
+1. ~~`SymbolTimeframeScanner.cs` yaz (yukarıdaki taslağa göre).~~ ✅
+2. ~~`AppConfig.cs` + `AppConfig.json`'a config ekle.~~ ✅
+3. ~~Küçük bir alt kümeyle (örn. 2 sembol × 2 TF) scratch test ile uçtan uca doğrula.~~ ✅
+4. ~~Console'a `[13]` menü seçeneği + handler/runner ekle.~~ ✅ (gerçek Console üzerinden interaktif
+   deneme yapılmadı — `Console.ReadKey(intercept:true)` piped/otomatik input ile test edilemiyor,
+   scratch test ile doğrulanan `AppConfigApplier`/`SymbolTimeframeScanner` yolu Console handler'ı
+   birebir kullanıyor)
+5. ~~`docs/tarama-motoru-plan.md` ve `docs/todo.md`'yi TAMAMLANDI olarak güncelle.~~ ✅
+6. Sırada: commit, sonra senaryo 7'ye geç.
 
 ---
 

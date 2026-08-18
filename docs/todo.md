@@ -43,13 +43,13 @@ etmeye gerek yok. Kod tabanına göre bunlar 3 bağımsız yapı taşının bile
 | 3 | Tek | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultipleTrader` + Net/Majority/All/Any consensus modları (yapı taşı **B**, 2026-08-18) |
 | 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ TAMAMLANDI — `MultiStrategyTimeframeScanner` + Console `[12] Tarama (Multi-Strategy Timeframe Scan)` (2026-08-18). Hem bileşke (mainTrader) hem her child'ın bağımsız sinyali (`ChildSignals`) raporlanıyor — bkz. `docs/tarama-motoru-plan.md` "✅ DÜZELTİLDİ" |
 | 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama (Symbol Scan)` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
-| 6 | Çoklu | Tek | Çoklu | ❌ Yok — `SymbolScanner` içinde her sembol için `TimeframeScanner`'ı da çalıştırmak gerekiyor (iç içe iki bağımsız tarama) |
+| 6 | Çoklu | Tek | Çoklu | ✅ TAMAMLANDI — `SymbolTimeframeScanner` + Console `[13] Tarama (Symbol-Timeframe Scan)` (2026-08-18). N sembol × M TF, ikisi de tamamen bağımsız (iç içe iki döngü, `SymbolScanner`/`TimeframeScanner`'ın üçüncü kopyası) |
 | 7 | Çoklu | Çoklu (bileşke) | Tek | ❌ Yok — **C**'nin `MultipleTrader` üzerinde çalışan bir varyantı gerekiyor (senaryo 4'teki `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı TF yerine sembol başına taze kurma" mantığı doğrudan uyarlanabilir) |
 | 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — 6 ve 7'nin bileşimi |
 
-**"Tek Sembol" sütunu (1/2/3/4) ve senaryo 5 tamamlandı** (bkz.
+**"Tek Sembol" sütunu (1/2/3/4), senaryo 5 ve senaryo 6 tamamlandı** (bkz.
 [docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari, kritik bir bug ve düzeltmesi,
-tasarım sapmaları ve doğrulama sonuçları dahil). Kalan: 6, 7, 8 — hepsi "Çoklu Sembol" sütununda.
+tasarım sapmaları ve doğrulama sonuçları dahil). Kalan: 7, 8.
 
 **Önemli düzeltme (A için)**: İlk analizde zaman dilimi ekseni için de `MultipleTrader`'daki
 gibi bir "konsensüs/bileşke" gerektiği varsayılmıştı (sürücü TF + zaman-hizalama). Kullanıcı bu
@@ -59,11 +59,11 @@ için kullanılmıştı. Bu yüzden A, `SymbolScanner`'a (C) yapısal olarak ner
 bir sınıf (`TimeframeScanner`) olarak kuruldu — konsensüs/zaman-hizalama yok.
 
 **Sonraki adımlar — sıra kesinleşti: 6 → 7 → 8** (kullanıcı git commit sırasının karışmasını
-istemediği için orijinal sıra korunuyor; A/B/C/4 tamamlandıktan sonra kalan,
+istemediği için orijinal sıra korunuyor; A/B/C/4/6 tamamlandıktan sonra kalan,
 `docs/tarama-motoru-plan.md`'deki "Kapsam Dışı" listeleriyle aynı):
-- **Sırada: Senaryo 6** (Çoklu Sembol, Tek Strateji, Çoklu TF) — tasarım taslağı
-  `docs/tarama-motoru-plan.md`'nin sonunda ("Senaryo 6 — SIRADA" bölümü), henüz uygulanmadı.
-- Senaryo 7 (Çoklu Sembol, Çoklu Strateji-bileşke, Tek TF) — senaryo 4'teki
+- **Senaryo 6 TAMAMLANDI** (Çoklu Sembol, Tek Strateji, Çoklu TF) — `SymbolTimeframeScanner` +
+  Console `[13]`, bkz. `docs/tarama-motoru-plan.md` "Senaryo 6" bölümü.
+- **Sırada: Senaryo 7** (Çoklu Sembol, Çoklu Strateji-bileşke, Tek TF) — senaryo 4'teki
   `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı taze taze kurup at" tekniği doğrudan
   uyarlanabilir, döngü değişkeni TF yerine sembol olur.
 - Senaryo 8 — 6 ve 7'nin bileşimi.

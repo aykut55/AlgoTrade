@@ -46,6 +46,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public bool QueryIsEnabled { get; private set; }
     public TraderRunMode SingleTraderRunMode { get; set; } = TraderRunMode.TradeAndQuery;
 
+    // Bar-bar "\r\tProgress : x/y (%)" konsol yazımı (OnSingleTraderProgress). Varsayılan false —
+    // isteyen çalıştırma (örn. Console [2]/[3]/[5]/[6]'daki normal interaktif SingleTrader/
+    // MultipleTrader) bunu kendi kurulumunda true'ya çekebilir. Tarama sınıfları (senaryo 4/7/8 —
+    // MultiStrategyTimeframeScanner vb.) N tane taze/throwaway AlgoTrader'ı arka arkaya çalıştırdığı
+    // için varsayılan kapalı kalması gürültüyü önlüyor.
+    public bool ProgressLoggingEnabled { get; set; } = false;
+
     // Equity Curve Filter
     public bool EquityCurveFilteringEnabled { get; set; } = false;
     public bool ThresholdTypeIsPercent { get; set; } = false;
@@ -172,6 +179,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private void OnSingleTraderProgress(SingleTrader trader, int currentBar, int totalBars, double percentage)
     {
         if (_logger == null) return;
+        if (!ProgressLoggingEnabled) return;
 
         /*
          * Cok yavasladigi icin kapatildi
