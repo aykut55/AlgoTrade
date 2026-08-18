@@ -441,58 +441,53 @@ aynı, "✅ DÜZELTİLDİ" notuyla tutarlı — bu sefer baştan doğru uyguland
 
 ---
 
-# Senaryo 8 (Çoklu Sembol, Çoklu Strateji-Bileşke, Çoklu TF) — SIRADA (henüz uygulanmadı)
+# Senaryo 8 (Çoklu Sembol, Çoklu Strateji-Bileşke, Çoklu TF) — TAMAMLANDI (2026-08-18)
 
-**Durum**: Tasarım taslağı, uygulama başlamadı. Senaryo 6 ve 7'den sonra sırada — ikisinin de
-bitmiş olması gerekiyor çünkü bu senaryo ikisinin tekniklerinin bileşimi.
+**Durum**: Matrisin son parçası — 8/8 tamamlandı. Senaryo 6 (nested-loop sembol × TF) ve
+senaryo 7'nin (throwaway AlgoTrader + MultipleTrader) doğrudan bileşimi, yeni bir teknik
+gerekmedi.
 
-## Amaç
+## Doğrulama
 
-Matrisin en genel hâli: N sembol × M zaman dilimi, her hücrede `MultipleTrader` consensus'u —
-hepsi birbirinden **tamamen bağımsız** (N×M ayrı backtest, hiçbir eksende TF/sembol konsensüsü
-yok, sadece her hücrenin kendi içinde strateji-ekseni consensus'u var).
+Scratch bir test projesiyle (gerçek `AppConfig.json`'daki `MultiStrategySymbolTimeframeScan`
+bölümü — `BaseFolder=CRP`, `AutoDiscover=true`, `ReferenceTimeframe=05`, `Timeframes=["05","15"]`,
+2 child `SimpleMostStrategy` v1/v2, `Consensus.Mode=Net`) gerçek veride uçtan uca test edildi:
+2 sembol (BTCUSDT_BNC, ETHUSDT_BNC) × 2 TF = 4 hücre, hepsi `Success=true`. Her hücrede hem
+bileşke (mainTrader) hem her child'ın bağımsız sinyali ayrı ayrı raporlandı (örn. BTCUSDT_BNC/15:
+bileşke `KZ=-0.54`, Child0 `KZ=2.22`, Child1 `KZ=-0.54` — birbirinden farklı, consensus'un
+gerçekten çalıştığı doğrulandı). CSV çıktısında `Symbol;Timeframe;...;Child0_SonYon;
+Child0_TaramaOzeti;Child1_SonYon;Child1_TaramaOzeti` formatı doğru (senaryo 6'nın iki-kimlik-
+kolonlu formatı + senaryo 4/7'nin child-kolon deseni birleşimi). Sıralama (`GetBestResult`,
+`SortField=NetProfit`) doğru çalıştı (ETHUSDT_BNC/15 seçildi).
 
-## Tasarım Taslağı — 6 ve 7'nin Bileşimi
+## Dosyalar
 
-Yeni bir teknik gerekmiyor — sadece iki mevcut desenin birleşimi:
+| Dosya | Değişiklik |
+|---|---|
+| `src/AlgoTrade.Core/Trading/Traders/MultiStrategySymbolTimeframeScanner.cs` | YENİ — `MultiStrategySymbolTimeframeScanner`, `MultiStrategySymbolTimeframeScannerOptions`. `SymbolTimeframeScanner`'ın (senaryo 6) nested-loop iskeleti + `MultiStrategySymbolScanner`/`MultiStrategyTimeframeScanner`'ın (senaryo 4/7) throwaway-AlgoTrader tekniğinin bileşimi |
+| `src/AlgoTrade.Core/Trading/Traders/SymbolTimeframeScanner.cs` | `SymbolTimeframeScanResult`'a `ChildSignals: List<ChildSignalInfo>` alanı eklendi (senaryo 7'de `ScanResult`'a eklenenle aynı amaç — reuse edebilmek için) |
+| `src/AlgoTrade.Core/AppConfig/AppConfig.cs` | `MultiStrategySymbolTimeframeScanConfig` (+ `Sort`/`Save`) — `MultipleTrader` alanı mevcut `MultipleTraderConfig` tipini birebir reuse ediyor |
+| `inputs/configs/AppConfig/AppConfig.json` | `MultiStrategySymbolTimeframeScan` bölümü — `MultipleTrader` alt bloğu mevcut bölümlerin bir kopyası, `BaseFolder=CRP`, `ReferenceTimeframe=05`, `Timeframes=["05","15"]` |
+| `AlgoTrade.Console/Program.cs` | `[15] Tarama (Multi-Strategy Symbol-Timeframe Scan)` menü seçeneği, `handleMultiStrategySymbolTimeframeScan()`, `runMultiStrategySymbolTimeframeScan()` — `[12]/[14]` ile aynı desen (`ConfigureAlgoTrader` + `ProgressLoggingEnabled=true` + `DisableConsoleSink`/`EnableConsoleSink` scope'laması `RunAsync` etrafında) |
 
-- **Senaryo 6'dan**: dış/iç içe döngü iskeleti (sembol × TF, `Path.Combine(BaseFolder, tf,
-  symbol + ".csv")` yol çözümlemesi, sembol keşfi — `AutoDiscover`/`SymbolList`).
-- **Senaryo 7'den** (= senaryo 4'ün tekniği): her hücre için taze bir `AlgoTrader` kurup
-  `ConfigureAlgoTrader` delegate'i ile `ApplyMultipleTrader(...)` çağırma, `GetMainTrader()`'dan
-  sonuç toplama.
+`AppConfigApplier.cs`'e yeni bir `Build*` metodu **eklenmedi** — `ConfigureAlgoTrader` delegate
+tasarımı sayesinde Console doğrudan mevcut `ApplyMultipleTrader`'ı çağırıyor.
 
-**Yeni sınıf**: `MultiStrategySymbolTimeframeScanner` (isim tartışmaya açık) —
-`SymbolTimeframeScanner`'ın (senaryo 6) nested-loop iskeletini alıp, her hücrede
-`RunSingleSymbolTimeframe()`'i (ham `SingleTrader` kuran) `MultiStrategySymbolScanner`'ın (senaryo
-7) "taze `AlgoTrader` + `ConfigureAlgoTrader` delegate + `RunMultipleTraderWithProgressAsync`"
-mantığıyla değiştirmek yeterli. Sonuç satırı: `Symbol;Timeframe;<stats>;...` (senaryo 6 ile aynı
-iki-kimlik-kolonlu format, kaynak `mainTrader` olması dışında).
+## Sonuç: Sembol × Strateji × Zaman Dilimi Matrisi TAMAMLANDI (8/8)
 
-**Config**: `AppConfig.cs`'e `MultiStrategySymbolTimeframeScanConfig` (`BaseFolder`,
-`AutoDiscover`/`SymbolList`, `Timeframes`, `MultipleTrader: MultipleTraderConfig`, `Sort`/`Save`).
-Console'a `[15]` menü seçeneği.
+| # | Sembol | Strateji | Zaman Dilimi | Durum |
+|---|--------|----------|---------------|-------|
+| 1 | Tek | Tek | Tek | ✅ `SingleTrader` |
+| 2 | Tek | Tek | Çoklu | ✅ `TimeframeScanner` — `[11]` |
+| 3 | Tek | Çoklu (bileşke) | Tek | ✅ `MultipleTrader` — `[3]` |
+| 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ `MultiStrategyTimeframeScanner` — `[12]` |
+| 5 | Çoklu | Tek | Tek | ✅ `SymbolScanner` — `[10]` |
+| 6 | Çoklu | Tek | Çoklu | ✅ `SymbolTimeframeScanner` — `[13]` |
+| 7 | Çoklu | Çoklu (bileşke) | Tek | ✅ `MultiStrategySymbolScanner` — `[14]` |
+| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ✅ `MultiStrategySymbolTimeframeScanner` — `[15]` |
 
-**Dikkat — N×M büyüklüğü artık iki kat daha kritik**: Her hücre bir `SingleTrader` değil, N
-child'lı bir `MultipleTrader` çalıştırıyor — 10 sembol × 9 TF × 2 child strateji gibi bir
-senaryoda toplam 180 alt-backtest'e denk gelir. İlk testte küçük bir alt küme (2 sembol × 2 TF)
-ile doğrulanmalı, gerçek kullanımda kullanıcıya çalışma süresi tahmini gösterilmesi düşünülebilir
-(fast-follow, v1'in parçası değil).
-
-**Child sinyallerini de raporla (senaryo 4'te DÜZELTİLEN desen, bkz. yukarıdaki "✅ DÜZELTİLDİ"
-bölümü)**: Sadece `GetMainTrader()` (bileşke) değil, her hücrede `algoTrader.MultipleTrader.
-Traders` (child'ların bağımsız sinyalleri) de harvest edilip `ChildSignals`'a eklenmeli — bu
-senaryo en genel/kapsamlı olan olduğu için bu desenin eksik uygulanması en çok burada fark
-edilir.
-
-## Yapılacaklar (senaryo 6 ve 7 bitince)
-
-1. `MultiStrategySymbolTimeframeScanner.cs` yaz — 6'nın nested-loop iskeleti + 7'nin
-   throwaway-AlgoTrader tekniği.
-2. `AppConfig.cs` + `AppConfig.json`'a config ekle.
-3. En küçük alt kümeyle (2 sembol × 2 TF) scratch test ile uçtan uca doğrula.
-4. Console'a `[15]` menü seçeneği + handler/runner ekle.
-5. Belgeleri güncelle, commit — matris tamamlanmış olur (8/8).
+Kalan iş **ayrı bir konu**: Sorgu Tarama Matrisi (bkz. bir sonraki bölüm) — bu matris sadece
+Strateji ekseninde, Sorgu ekseni hiç ele alınmadı.
 
 ---
 

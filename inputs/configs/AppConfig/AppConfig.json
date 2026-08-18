@@ -1211,5 +1211,237 @@
       "SortedCsvFileName": "MultiStrategySymbolScanResults_sorted.csv",
       "SortedTxtFileName": "MultiStrategySymbolScanResults_sorted.txt"
     }
+  },
+
+  "MultiStrategySymbolTimeframeScan": {
+    // Senaryo 8: N sembol x M zaman dilimi, her hucrede MultipleTrader consensus'u - hicbir
+    // eksende (sembol/TF) konsensus YOK, senaryo 6 + 7'nin bilesimi. AutoDiscover=true iken
+    // ReferenceTimeframe klasorundeki tum *.csv dosyalari sembol listesi olarak kullanilir,
+    // sonra her sembol TUM Timeframes klasorlerinde aranir. MultipleTrader blogu asagida, ana
+    // "MultipleTrader" bolumuyle ayni sema.
+    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "AutoDiscover": true,
+    "ReferenceTimeframe": "05",
+    "SymbolList": [],
+    "Timeframes": ["05", "15"],
+    "MultipleTrader": {
+      "RunMode": "TradeOnly",
+      "Save": {
+        "SaveStatisticsToFile": true,
+        "SaveMultipleTraderListsTxtEnabled": true,
+        "SaveMultipleTraderListsCsvEnabled": true,
+        "MultipleTraderListsTxtFileName": "MultipleTraderLists.txt",
+        "MultipleTraderListsCsvFileName": "MultipleTraderLists.csv",
+        "WriteChildTradersDataToFiles": true,
+        "FilePrefix": "MultipleTrader"
+      },
+      "Export": {
+        "ExportEnabled": true,
+        "ConfigFile": "StatisticsExporterConfig.json",
+        "Version": "v1"
+      },
+      "Consensus": {
+        "Mode": "Net",
+        "MinNetCount": 1
+      },
+      "MainTrader": {
+        "EquityCurveFilter": {
+          "ConfigFile": "EquityCurveFilterConfig.txt",
+          "Name": "",
+          "Version": "v1"
+        },
+        "TradeParams": {
+          "MarketType": "FxCrypto",
+          "IlkBakiye": 100000.0,
+          "KontratSayisi": 1,
+          "LotSayisi": 0.01,
+          "HisseSayisi": 1000.0,
+          "KomisyonCarpan": 0.0,
+          "KaymaMiktari": 0.0,
+          "PyramidingEnabled": false
+        },
+        "Signals": {
+          "AlEnabled": true,
+          "SatEnabled": true,
+          "FlatOlEnabled": true,
+          "PasGecEnabled": false,
+          "KarAlEnabled": false,
+          "ZararKesEnabled": false,
+          "GunSonuPozKapatEnabled": false,
+          "TimeFilteringEnabled": false,
+          "StartDateTime": "2025.05.25 09:35:00",
+          "StopDateTime": "2025.06.02 17:55:00",
+          "TradeStartBarIndexEnabled": false,
+          "TradeStartBarIndex": 0
+        },
+        "Plot": { "PlotEnabled": false },
+        "Optimization": { "OptimizationEnabled": false },
+        "Save": {
+          "SaveStatisticsToFile": true,
+          "SaveFullStatsTxtEnabled": true,
+          "SaveFullStatsCsvEnabled": true,
+          "SaveMinimalStatsTxtEnabled": true,
+          "SaveMinimalStatsCsvEnabled": true,
+          "SaveFullListsTxtEnabled": false,
+          "SaveFullListsCsvEnabled": false,
+          "SaveMinimalListsTxtEnabled": false,
+          "SaveMinimalListsCsvEnabled": false,
+          "SaveFullStatsTxtFormattedEnabled": true,
+          "SaveMinimalStatsTxtFormattedEnabled": true,
+          "SavePerformansTxtEnabled": true,
+          "SavePerformansCsvEnabled": true,
+          "FullStatsTxtFileName": "Statistics.txt",
+          "FullStatsCsvFileName": "Statistics.csv",
+          "MinimalStatsTxtFileName": "StatisticsMinimal.txt",
+          "MinimalStatsCsvFileName": "StatisticsMinimal.csv",
+          "FullListsTxtFileName": "Lists.txt",
+          "FullListsCsvFileName": "Lists.csv",
+          "MinimalListsTxtFileName": "ListsMinimal.txt",
+          "MinimalListsCsvFileName": "ListsMinimal.csv",
+          "FullStatsTxtFormattedFileName": "StatisticsFormatted.txt",
+          "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
+          "PerformansTxtFileName": "Performans.txt",
+          "PerformansCsvFileName": "Performans.csv"
+        },
+        "Export": {
+          "ExportEnabled": true,
+          "ConfigFile": "StatisticsExporterConfig.json",
+          "Version": "v1"
+        }
+      },
+      "ChildTraders": [
+        {
+          "ChildId": 0,
+          "Strategy": {
+            "ConfigFile": "StrategyConfig.txt",
+            "Name": "SimpleMostStrategy",
+            "Version": "v1"
+          },
+          "EquityCurveFilter": {
+            "ConfigFile": "EquityCurveFilterConfig.txt",
+            "Name": "",
+            "Version": "v1"
+          },
+          "Signals": {
+            "AlEnabled": true,
+            "SatEnabled": true,
+            "FlatOlEnabled": true,
+            "PasGecEnabled": false,
+            "KarAlEnabled": false,
+            "ZararKesEnabled": false,
+            "GunSonuPozKapatEnabled": false,
+            "TimeFilteringEnabled": false,
+            "StartDateTime": "2025.05.25 09:35:00",
+            "StopDateTime": "2025.06.02 17:55:00",
+            "TradeStartBarIndexEnabled": false,
+            "TradeStartBarIndex": 0
+          },
+          "Plot": { "PlotEnabled": false },
+          "Optimization": { "OptimizationEnabled": false },
+          "Save": {
+            "SaveStatisticsToFile": false,
+            "SaveFullStatsTxtEnabled": false,
+            "SaveFullStatsCsvEnabled": false,
+            "SaveMinimalStatsTxtEnabled": false,
+            "SaveMinimalStatsCsvEnabled": false,
+            "SaveFullListsTxtEnabled": false,
+            "SaveFullListsCsvEnabled": false,
+            "SaveMinimalListsTxtEnabled": false,
+            "SaveMinimalListsCsvEnabled": false,
+            "SaveFullStatsTxtFormattedEnabled": false,
+            "SaveMinimalStatsTxtFormattedEnabled": false,
+            "SavePerformansTxtEnabled": false,
+            "SavePerformansCsvEnabled": false,
+            "FullStatsTxtFileName": "Statistics.txt",
+            "FullStatsCsvFileName": "Statistics.csv",
+            "MinimalStatsTxtFileName": "StatisticsMinimal.txt",
+            "MinimalStatsCsvFileName": "StatisticsMinimal.csv",
+            "FullListsTxtFileName": "Lists.txt",
+            "FullListsCsvFileName": "Lists.csv",
+            "MinimalListsTxtFileName": "ListsMinimal.txt",
+            "MinimalListsCsvFileName": "ListsMinimal.csv",
+            "FullStatsTxtFormattedFileName": "StatisticsFormatted.txt",
+            "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
+            "PerformansTxtFileName": "Performans.txt",
+            "PerformansCsvFileName": "Performans.csv"
+          },
+          "Export": { "ExportEnabled": false, "ConfigFile": "StatisticsExporterConfig.json", "Version": "v1" }
+        },
+        {
+          "ChildId": 1,
+          "Strategy": {
+            "ConfigFile": "StrategyConfig.txt",
+            "Name": "SimpleMostStrategy",
+            "Version": "v2"
+          },
+          "EquityCurveFilter": {
+            "ConfigFile": "EquityCurveFilterConfig.txt",
+            "Name": "",
+            "Version": "v1"
+          },
+          "Signals": {
+            "AlEnabled": true,
+            "SatEnabled": true,
+            "FlatOlEnabled": true,
+            "PasGecEnabled": false,
+            "KarAlEnabled": false,
+            "ZararKesEnabled": false,
+            "GunSonuPozKapatEnabled": false,
+            "TimeFilteringEnabled": false,
+            "StartDateTime": "2025.05.25 09:35:00",
+            "StopDateTime": "2025.06.02 17:55:00",
+            "TradeStartBarIndexEnabled": false,
+            "TradeStartBarIndex": 0
+          },
+          "Plot": { "PlotEnabled": false },
+          "Optimization": { "OptimizationEnabled": false },
+          "Save": {
+            "SaveStatisticsToFile": false,
+            "SaveFullStatsTxtEnabled": false,
+            "SaveFullStatsCsvEnabled": false,
+            "SaveMinimalStatsTxtEnabled": false,
+            "SaveMinimalStatsCsvEnabled": false,
+            "SaveFullListsTxtEnabled": false,
+            "SaveFullListsCsvEnabled": false,
+            "SaveMinimalListsTxtEnabled": false,
+            "SaveMinimalListsCsvEnabled": false,
+            "SaveFullStatsTxtFormattedEnabled": false,
+            "SaveMinimalStatsTxtFormattedEnabled": false,
+            "SavePerformansTxtEnabled": false,
+            "SavePerformansCsvEnabled": false,
+            "FullStatsTxtFileName": "Statistics.txt",
+            "FullStatsCsvFileName": "Statistics.csv",
+            "MinimalStatsTxtFileName": "StatisticsMinimal.txt",
+            "MinimalStatsCsvFileName": "StatisticsMinimal.csv",
+            "FullListsTxtFileName": "Lists.txt",
+            "FullListsCsvFileName": "Lists.csv",
+            "MinimalListsTxtFileName": "ListsMinimal.txt",
+            "MinimalListsCsvFileName": "ListsMinimal.csv",
+            "FullStatsTxtFormattedFileName": "StatisticsFormatted.txt",
+            "MinimalStatsTxtFormattedFileName": "StatisticsMinimalFormatted.txt",
+            "PerformansTxtFileName": "Performans.txt",
+            "PerformansCsvFileName": "Performans.csv"
+          },
+          "Export": { "ExportEnabled": false, "ConfigFile": "StatisticsExporterConfig.json", "Version": "v1" }
+        }
+      ]
+    },
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Sort": {
+      "SortField": "NetProfit",
+      "SortDescending": true
+    },
+    "Save": {
+      "CsvFileName": "MultiStrategySymbolTimeframeScanResults.csv",
+      "TxtFileName": "MultiStrategySymbolTimeframeScanResults.txt",
+      "SortedCsvFileName": "MultiStrategySymbolTimeframeScanResults_sorted.csv",
+      "SortedTxtFileName": "MultiStrategySymbolTimeframeScanResults_sorted.txt"
+    }
   }
 }
