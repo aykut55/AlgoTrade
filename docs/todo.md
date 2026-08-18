@@ -41,7 +41,7 @@ etmeye gerek yok. Kod tabanına göre bunlar 3 bağımsız yapı taşının bile
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader` |
 | 2 | Tek | Tek | Çoklu | ✅ TAMAMLANDI — `TimeframeScanner` + Console `[11] Tarama (Timeframe Scan)` (yapı taşı **A**, 2026-08-18) |
 | 3 | Tek | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultipleTrader` + Net/Majority/All/Any consensus modları (yapı taşı **B**, 2026-08-18) |
-| 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ TAMAMLANDI — `MultiStrategyTimeframeScanner` + Console `[12] Tarama (Multi-Strategy Timeframe Scan)` (2026-08-18) |
+| 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ TAMAMLANDI — `MultiStrategyTimeframeScanner` + Console `[12] Tarama (Multi-Strategy Timeframe Scan)` (2026-08-18). Hem bileşke (mainTrader) hem her child'ın bağımsız sinyali (`ChildSignals`) raporlanıyor — bkz. `docs/tarama-motoru-plan.md` "✅ DÜZELTİLDİ" |
 | 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama (Symbol Scan)` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
 | 6 | Çoklu | Tek | Çoklu | ❌ Yok — `SymbolScanner` içinde her sembol için `TimeframeScanner`'ı da çalıştırmak gerekiyor (iç içe iki bağımsız tarama) |
 | 7 | Çoklu | Çoklu (bileşke) | Tek | ❌ Yok — **C**'nin `MultipleTrader` üzerinde çalışan bir varyantı gerekiyor (senaryo 4'teki `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı TF yerine sembol başına taze kurma" mantığı doğrudan uyarlanabilir) |
@@ -58,13 +58,48 @@ bağımsız** çalıştırıp sonuçlara ayrı ayrı bakmaktı. "Bileşke" kelim
 için kullanılmıştı. Bu yüzden A, `SymbolScanner`'a (C) yapısal olarak neredeyse özdeş bağımsız
 bir sınıf (`TimeframeScanner`) olarak kuruldu — konsensüs/zaman-hizalama yok.
 
-**Sonraki adımlar** (A/B/C/4 tamamlandıktan sonra kalan, `docs/tarama-motoru-plan.md`'deki
-"Kapsam Dışı" listeleriyle aynı):
-- Senaryo 6/7/8 — yukarıdaki tabloda açıklandığı gibi, `SymbolScanner`'ın içine `TimeframeScanner`
-  ve/veya `MultiStrategyTimeframeScanner`'ın sarılması (hâlâ konsensüs yok, sadece iç içe
-  bağımsız taramalar)
+**Sonraki adımlar — sıra kesinleşti: 6 → 7 → 8** (kullanıcı git commit sırasının karışmasını
+istemediği için orijinal sıra korunuyor; A/B/C/4 tamamlandıktan sonra kalan,
+`docs/tarama-motoru-plan.md`'deki "Kapsam Dışı" listeleriyle aynı):
+- **Sırada: Senaryo 6** (Çoklu Sembol, Tek Strateji, Çoklu TF) — tasarım taslağı
+  `docs/tarama-motoru-plan.md`'nin sonunda ("Senaryo 6 — SIRADA" bölümü), henüz uygulanmadı.
+- Senaryo 7 (Çoklu Sembol, Çoklu Strateji-bileşke, Tek TF) — senaryo 4'teki
+  `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı taze taze kurup at" tekniği doğrudan
+  uyarlanabilir, döngü değişkeni TF yerine sembol olur.
+- Senaryo 8 — 6 ve 7'nin bileşimi.
 - Zengin JSON preview ekranı (SingleTrader/MultipleTrader'daki gibi), Time filtering /
   TradeStartBarIndex desteği, buffered flush / partial-resume, otomatik TF keşfi
+
+**Not — bu matris sadece Strateji ekseninde**: 6/7/8 bitince "Sembol × Strateji × Zaman Dilimi"
+matrisi tamamlanmış olacak (8/8), ama proje ayrıca `IStrategy` ile birebir aynı desende bağımsız
+bir **Sorgu** alt sistemi barındırıyor (`IQuery`/`BaseQuery`/`QueryRegistry`,
+`SingleTrader.RunMode = QueryOnly`) — hiçbir tarama sınıfı bunu desteklemiyor. Bu, migration-
+guide.md madde 6 (zengin sorgu tipleri) ve madde 9'un (Sorgu + Toplu Sembol Uygulama) birebir
+tarif ettiği, **ayrı ve henüz başlanmamış** bir iş.
+
+### Sorgu Tarama Matrisi (Strateji matrisinin Sorgu karşılığı — 2026-08-18)
+
+Aynı 8 senaryo, "Strateji" yerine "Sorgu":
+
+| # | Sembol | Sorgu | Zaman Dilimi | Durum |
+|---|--------|-------|---------------|-------|
+| 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader.RunMode = QueryOnly` |
+| 2 | Tek | Tek | Çoklu | ❌ Yok — `TimeframeScanner`'ın QueryOnly-varyantı gerekiyor |
+| 3 | Tek | Çoklu | Tek | ❌ Yok — N sorguyu aynı sembol/TF'de çalıştırıp N ayrı sonuç kolonu raporlamak (bkz. aşağıdaki karar) |
+| 4 | Tek | Çoklu | Çoklu | ❌ Yok — 2 ve 3'ün bileşimi |
+| 5 | Çoklu | Tek | Tek | ❌ Yok — `SymbolScanner`'ın QueryOnly-varyantı, **madde 9'un birebir istediği şey** |
+| 6 | Çoklu | Tek | Çoklu | ❌ Yok — 2 ve 5'in bileşimi |
+| 7 | Çoklu | Çoklu | Tek | ❌ Yok — 3'ün çoklu sembol hali |
+| 8 | Çoklu | Çoklu | Çoklu | ❌ Yok — hepsinin bileşimi |
+
+**Karar (kullanıcı ile netleşti, 2026-08-18)**: "Çoklu Sorgu" (3/4/7/8) **hiçbir zaman
+birleştirilmiyor** — Strateji'deki "bileşke" (MultipleTrader, tek bir Al/Sat kararı) kavramının
+Sorgu karşılığı yok. N sorgu çalıştırılır, N sonuç **ayrı ayrı** raporlanır (ayrı kolonlar/
+satırlar), kullanıcı kendisi yorumlar. Bu, mimariyi ciddi şekilde basitleştiriyor: Strateji
+tarafındaki gibi yeni bir "MultipleQuery" consensus sınıfına gerek yok — mevcut tarama
+sınıflarının (`SymbolScanner`/`TimeframeScanner` vb.) her hücresinde tek sorgu yerine bir
+**sorgu listesi** çalıştırıp sonuçları ek kolonlar olarak eklemesi yeterli. Detay:
+`docs/tarama-motoru-plan.md`'nin sonunda "Sorgu Tarama Matrisi" bölümü.
 
 Kaynak: [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md), [docs/migration-guide.md](migration-guide.md)
 (madde 2, 4, 8), [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).

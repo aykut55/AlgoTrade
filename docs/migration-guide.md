@@ -318,8 +318,11 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       ConfigureStrategyFromConfig/Initialize/...) bile ortusmuyor gibi duruyor (dogrulanmali).
 
 - [ ] **Madde 5.3 — MultiTrader icin Scripting**
-      Birden fazla trader'in nasil birlestirilecegi (consensus kurallari) script uzerinden
-      tanimlanamiyor; `MultipleTrader.BuildConsensusSignal()` hardcoded "Net" modunda calisiyor.
+      Birden fazla trader'in nasil birlestirilecegi (consensus kurallari) hala script uzerinden
+      tanimlanamiyor — ama artik 4 hazir mod (Net/Majority/All/Any, AppConfig.json'dan secilebilir)
+      var (bkz. Madde 2 notu, TAMAMLANDI 2026-08-18). Kalan tek eksik: script'ten TAMAMEN OZEL
+      (bu 4 modun disinda) bir consensus kurali tanimlama imkani — dar bir eksik, genis kapsamli
+      degil.
 
 - [ ] **Madde 6 (genisletme) — Sorgu Yapabilme: zengin sorgu tipleri**
       Alt yapi (IQuery/BaseQuery/QueryRegistry/QueryConfigLoader) TAMAM ve calisiyor, ama somut
@@ -340,26 +343,35 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       `[10] Tarama` menu secenegi. AlgoTrader'dan bilincli olarak bagimsiz, tek strateji + tek
       sembol klasoru (AutoDiscover ya da acik liste) uzerinde calisir; SingleTrader-bazli, sonuc
       CSV/TXT'ye ozet satir olarak yaziliyor + SortField'e gore siralanan ayri bir dosya. Detay:
-      [docs/tarama-motoru-plan.md](tarama-motoru-plan.md). Kapsam disi (fast-follow):
-      MultipleTrader-bazli tarama (coklu strateji), coklu zaman dilimi (madde 2 ile birlesim).
+      [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).
+      **2026-08-18 devami**: Coklu zaman dilimi taramasi da tamamlandi — `TimeframeScanner` ([11],
+      tek sembol/tek strateji/coklu TF) ve `MultiStrategyTimeframeScanner` ([12], tek sembol/coklu
+      strateji-bileske/coklu TF). Kapsam disi (fast-follow, sirada — bkz. docs/todo.md "Tarama
+      Matrisi Analizi"): `SymbolScanner`'in `MultipleTrader` uzerinde calisan bir varyanti ve
+      sembol+TF'nin ic ice bagimsiz taranmasi (senaryo 6/7/8).
 
 - [ ] **Madde 9 — Sorgu + Toplu Sembol Uygulama**
-      Madde 6 (zengin sorgu tipleri) ve madde 8 (toplu sembol taramasi) tamamlanmadan bu madde
-      de yapilamaz — ikisine bagimli.
+      Madde 8 (toplu sembol taramasi) artik TAMAMLANDI, sadece madde 6 (zengin sorgu tipleri)
+      kaldi — bu madde artik tek bir bagimliliga bagli.
 
 - [ ] **Madde 10 — Farkli Stratejilerin Ayni Sembol Icin Karsilastirmasi**
       Hic implement edilmemis. `SingleTraderOptimizer` AYNI stratejinin farkli parametreleriyle
       tarama yapiyor (grid search) ama FARKLI stratejileri (orn. SimpleRSIStrategy vs
       SimpleMACDStrategy) ayni sembolde calistirip karsilastiran bir rapor/tablo mekanizmasi yok.
 
-### Sadece Belge Guncellemesi Gereken Maddeler (kod zaten tamam)
+### Tam Tamamlanmis Madde
 
-- [x→belge guncellensin] **Madde 2 — MultiTrader**: `MultipleTrader.cs` (618 satir) tam ve
-  calisir durumda implement edilmis (`Trading/Traders/MultipleTrader.cs`). Eksik olan tek sey:
-  Consensus modu su an hardcoded "Net" (buyCount-sellCount); `AppConfig.MultipleTraderConfig.
-  ConsensusConfig`'te tanimli Majority/All/Any modlari `BuildConsensusSignal()`'a henuz tam
-  baglanmamis. Bu belgenin "Yol Haritasi" bolumundeki madde 2 ifadesi ("ileride tasarlanabilir")
-  guncel degil.
+- [x] **Madde 2 — MultiTrader**: `MultipleTrader.cs` (618 satir) tam ve calisir durumda
+  implement edilmis (`Trading/Traders/MultipleTrader.cs`). **2026-08-18 guncellemesi**: Consensus
+  modu artik hardcoded "Net" degil — `BuildConsensusSignal()` `AppConfig.MultipleTraderConfig.
+  ConsensusConfig`'ten okunan Net/Majority/All/Any modlarinin hepsini destekliyor (`MinNetCount`
+  dahil). Bu belgenin "Yol Haritasi" bolumundeki madde 2 ifadesi ("ileride tasarlanabilir") artik
+  tamamen guncel degil — MultiTrader hem temel hem consensus-genisletmesi olarak tam.
+  **Ayrica**: Ayni sembolde tek strateji + coklu zaman dilimi (`TimeframeScanner`, [11]) ve coklu
+  strateji-bileske + coklu zaman dilimi (`MultiStrategyTimeframeScanner`, [12]) taramalari da
+  tamamlandi — bkz. [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).
+
+### Sadece Belge Guncellemesi Gereken Madde (kod calisiyor, kucuk bir tutarsizlik var)
 
 - [x→belge guncellensin] **Madde 4 — SingleTraderOptimization**: `SingleTraderOptimizer.cs`
   (934 satir) tam bir grid-search optimizasyon motoru olarak implement edilmis

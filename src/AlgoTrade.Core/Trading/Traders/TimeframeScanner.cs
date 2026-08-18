@@ -290,5 +290,21 @@ public class TimeframeScanResult
     public int SonSinyaldenBeriBarSayisi { get; set; }
     public string TaramaOzeti { get; set; } = "";
 
+    /// <summary>
+    /// MultipleTrader tabanlı taramalarda (örn. MultiStrategyTimeframeScanner) her child'ın
+    /// BAĞIMSIZ sinyali — SonYon/TaramaOzeti alanları mainTrader'ın (bileşke) sonucu, bu liste
+    /// ise "her strateji tek başına ne derdi" bilgisini taşır. SingleTrader tabanlı taramalarda
+    /// (TimeframeScanner) her zaman boş kalır.
+    /// </summary>
+    public List<ChildSignalInfo> ChildSignals { get; set; } = new();
+
     public double SortValue { get; set; }
+}
+
+/// <summary>Bir MultipleTrader child'ının bağımsız (bileşkeye girmeden önceki) sinyal durumu.</summary>
+public class ChildSignalInfo
+{
+    public int ChildId { get; set; }
+    public string SonYon { get; set; } = "F";
+    public string TaramaOzeti { get; set; } = "";
 }

@@ -158,10 +158,9 @@ ScanLogsDir` (`outputs/scan`) altına, farklı dosya adlarıyla (`TimeframeScanR
 - Zaman dilimleri arası konsensüs/bileşke (kullanıcı açıkça istemedi, ileride ayrı bir istek
   olarak gelebilir ama bu v1'in parçası değil)
 - Otomatik TF keşfi (kullanıcı açık liste istedi)
-- Senaryo 6 (Çoklu sembol, tek strateji, çoklu TF) — `SymbolScanner` içinde her sembol için
-  `TimeframeScanner`'ı da çalıştırmak (iç içe iki bağımsız tarama)
-- Senaryo 7 (Çoklu sembol, çoklu strateji-bileşke, tek TF)
-- Senaryo 8 — 4, 6, 7'nin bileşimi
+- Senaryo 6 (Çoklu sembol, tek strateji, çoklu TF) — tasarım taslağı aşağıda, "Senaryo 6" bölümü
+- Senaryo 7 (Çoklu sembol, çoklu strateji-bileşke, tek TF) — tasarım taslağı aşağıda, "Senaryo 7" bölümü
+- Senaryo 8 — 6 ve 7'nin bileşimi, tasarım taslağı aşağıda, "Senaryo 8" bölümü
 
 ---
 
@@ -246,8 +245,282 @@ genişletme desenine de uyuyor.
 `AppConfigApplier.cs`'e yeni bir `Build*` metodu **eklenmedi** — `ConfigureAlgoTrader` delegate
 tasarımı sayesinde Console doğrudan mevcut `ApplyMultipleTrader`'ı çağırıyor.
 
+## ✅ DÜZELTİLDİ — Bağımsız Child Sinyalleri (2026-08-18)
+
+Kullanıcı doğru bir şüpheyle sordu: her senaryoda hem bağımsız sinyaller hem (mümkünse) bileşke
+sinyali birlikte raporlanmalı mıydı? Kontrol edildi, **tutarsızdı**, senaryo 4 için düzeltildi.
+
+### Net Tablo — Hangi Senaryoda Bağımsız/Bileşke Var
+
+| # | Sembol | Strateji | Zaman Dilimi | Bağımsız sinyal | Bileşke sinyal |
+|---|--------|----------|---------------|:---:|:---:|
+| 1 | Tek | Tek | Tek | — (tek strateji, kavram yok) | — |
+| 2 | Tek | Tek | Çoklu | ✅ her TF bağımsız (tasarım gereği) | — (TF'ler hiç birleşmiyor) |
+| 3 | Tek | Çoklu | Tek | ✅ (child list dosyaları + debug log) | ✅ (mainTrader consensus) |
+| 4 | Tek | Çoklu | Çoklu | ✅ **DÜZELTİLDİ** (`TimeframeScanResult.ChildSignals`) | ✅ (her TF'nin kendi mainTrader'ı) |
+| 5 | Çoklu | Tek | Tek | ✅ her sembol bağımsız | — (tek strateji) |
+| 6 | Çoklu | Tek | Çoklu | ✅ (henüz yazılmadı; tek strateji → bileşke kavramı yok) | — |
+| 7 | Çoklu | Çoklu | Tek | ✅ (henüz yazılmadı — aşağıdaki desen doğrudan uygulanacak) | ✅ |
+| 8 | Çoklu | Çoklu | Çoklu | ✅ (henüz yazılmadı — aynı desen) | ✅ |
+
+"Bileşke" kavramı sadece **3/4/7/8**'de var (sadece onlarda "Çoklu Strateji" = `MultipleTrader`).
+
+### Ne Yapıldı (senaryo 4)
+
+- **Kaynak**: `Senaryo 3`'te (`MultipleTrader`, Console `[3]`) zaten ikisi de vardı —
+  `WriteMultipleTraderListsToFiles()` bar-bar hem mainTrader'ın (bileşke) hem her child'ın
+  (bağımsız) Yön/Seviye/Sinyal'ini yazıyor, `LogDebug` oy dağılımını gösteriyor. `Senaryo 4`
+  (`MultiStrategyTimeframeScanner`) ise sadece `GetMainTrader()`'ı okuyup child'ları hiç
+  raporlamıyordu — dosya çakışmasını önlemek için `SaveMultipleTraderListsTxtEnabled`/
+  `CsvEnabled` de kapatılmıştı.
+- **Düzeltme**: `TimeframeScanResult`'a `ChildSignals: List<ChildSignalInfo>` alanı eklendi
+  (`ChildId`/`SonYon`/`TaramaOzeti`). `MultiStrategyTimeframeScanner.RunSingleTimeframeAsync()`
+  artık `algoTrader.MultipleTrader.Traders`'ı da geziyor, her child'ı `result.ChildSignals`'a
+  ekliyor. CSV/TXT çıktısına `Child{Id}_SonYon;Child{Id}_TaramaOzeti` kolonları eklendi (child
+  sayısı kadar, header ilk başarılı TF'den dinamik kuruluyor — `TimeframeScanner`, senaryo 2,
+  hiç child üretmediği için bu alan orada her zaman boş kalıyor, format değişmedi). Console
+  özetine de `Bileşke: ...` / `Child{Id} (bağımsız): ...` satırları eklendi.
+- **Doğrulama**: BTCUSDT_BNC, TF=15/60, 2 child (`SimpleMostStrategy` v1/v2) ile gerçek veride
+  test edildi — her TF'de hem `Bileske=...` hem `Child0 (bagimsiz)=...`/`Child1 (bagimsiz)=...`
+  ayrı ayrı, doğru değerlerle görünüyor.
+
+**Senaryo 7/8 için**: Henüz yazılmadılar ama aynı deseni (child'ları harvest edip
+`ChildSignals`'a ekleme) baştan uygulayacak şekilde tasarım notlarına işlendi (bkz. ilgili
+bölümler) — artık bu eksiği miras almayacaklar.
+
 ## Sonraki Adım
 
-"Tek Sembol" sütunu (1/2/3/4) tamamlandı. Zaman kalırsa senaryo 6 (Çoklu sembol, tek strateji,
-çoklu TF — `SymbolScanner` içinde her sembol için `TimeframeScanner`'ı da çalıştırmak) ile
-devam edilecek.
+"Tek Sembol" sütunu (1/2/3/4) tamamlandı. **Sıra kesinleşti: 6 → 7 → 8** (kullanıcı git commit
+sırasının karışmasını istemedi, orijinal sıra korunuyor — bir sonraki oturumda evden devam
+edilecek).
+
+---
+
+# Senaryo 6 (Çoklu Sembol, Tek Strateji, Çoklu TF) — SIRADA (henüz uygulanmadı)
+
+**Durum**: Tasarım taslağı, uygulama başlamadı. Bir sonraki oturumda buradan devam edilecek.
+
+## Amaç
+
+Tek bir strateji, hem sembol hem zaman dilimi ekseninde **tamamen bağımsız** taransın — N sembol
+× M zaman dilimi = N×M ayrı backtest, hiçbir eksende konsensüs/bileşke yok (A'daki ve
+todo.md'deki düzeltmeyle tutarlı: "bileşke" sadece strateji ekseninde, B/4'te).
+
+## Tasarım Taslağı
+
+- **Yeni sınıf**: `SymbolTimeframeScanner` (isim tartışmaya açık) — `SymbolScanner`/
+  `TimeframeScanner` ile aynı aile, iç içe iki döngü. Per-item mantık (dosya oku →
+  `IndicatorManager` → `StrategyRegistry.CreateStrategy` → `SingleTrader` →
+  `ConfigureUserFlagsOnce()` + 7 bayrak → bar-bar `Run` → `Finalize` → sonuç topla → Dispose)
+  `TimeframeScanner.RunSingleTimeframe()`'in birebir aynısı — üçüncü kopya, aynı iskelet.
+- **Sembol listesi nasıl belirlenir**: `SymbolScanner`'daki gibi iki mod (`AutoDiscover` +
+  referans bir TF klasöründeki `*.csv` dosyalarını listele, ya da açık `SymbolList`) — hangisi
+  seçilirse seçilsin, sembol adları TÜM `Timeframes` klasörlerinde aranacak
+  (`Path.Combine(BaseFolder, tf, symbol + ".csv")`).
+- **Seçenekler**: `BaseFolder`, `AutoDiscover` + `ReferenceTimeframe` (sembol keşfi için hangi TF
+  klasörü taranacak, örn. `"05"`) veya `SymbolList`, `Timeframes: List<string>`, Strategy,
+  TradeParams, Signals (7 bayrak), ReadData filtresi, Sort — hepsi mevcut `SymbolScanOptions`/
+  `TimeframeScannerOptions` alanlarının bileşimi.
+- **Sonuç satırı**: `Symbol;Timeframe;<StatisticsDataRow kolonları>;SonYon;...;TaramaOzeti` — iki
+  kimlik kolonu (Symbol + Timeframe), N×M satır. Sıralama global `SortField`'e göre (gruplama
+  yok, v1 için basit tutulacak — kullanıcı Excel'de filtreleyebilir).
+- **Config**: `AppConfig.cs`'e `SymbolTimeframeScanConfig` (+ `Sort`/`Save`), `AppConfig.json`'a
+  `SymbolTimeframeScan` bölümü, Console'a muhtemelen `[13]` menü seçeneği.
+- **Dikkat**: N×M büyüklüğüne göre çalışma süresi çok uzayabilir (örn. 10 sembol × 9 TF = 90
+  backtest) — ilk testte küçük bir alt küme (2 sembol × 2-3 TF) ile doğrulanmalı, tıpkı
+  önceki senaryolarda yapıldığı gibi.
+
+## Yapılacaklar (bir sonraki oturum)
+
+1. `SymbolTimeframeScanner.cs` yaz (yukarıdaki taslağa göre).
+2. `AppConfig.cs` + `AppConfig.json`'a config ekle.
+3. Küçük bir alt kümeyle (örn. 2 sembol × 2 TF) scratch test ile uçtan uca doğrula.
+4. Console'a `[13]` menü seçeneği + handler/runner ekle, gerçek Console üzerinden dene.
+5. `docs/tarama-motoru-plan.md` ve `docs/todo.md`'yi TAMAMLANDI olarak güncelle.
+6. Commit, sonra senaryo 7'ye geç.
+
+---
+
+# Senaryo 7 (Çoklu Sembol, Çoklu Strateji-Bileşke, Tek TF) — SIRADA (henüz uygulanmadı)
+
+**Durum**: Tasarım taslağı, uygulama başlamadı. Senaryo 6'dan sonra sırada.
+
+## Amaç
+
+`MultipleTrader` consensus'unu (birden fazla stratejinin bileşkesi), **tek bir zaman diliminde**,
+birden fazla sembolde **bağımsız bağımsız** çalıştırmak — sembol ekseninde konsensüs yok, sadece
+her sembolün kendi içinde strateji-ekseni consensus'u var (tıpkı senaryo 4'ün TF ekseni yerine
+burada sembol ekseninde olması gibi).
+
+## Tasarım Taslağı — Senaryo 4'ün Doğrudan Uyarlanmışı
+
+Bu senaryo, senaryo 4'te (`MultiStrategyTimeframeScanner`) kurulan tekniğin **neredeyse birebir
+kopyası** — sadece dış döngü değişkeni TF yerine sembol:
+
+- **Yeni sınıf**: `MultiStrategySymbolScanner` (isim tartışmaya açık) — `MultiStrategyTimeframeScanner`
+  ile aynı iskelet: her sembol için taze bir `AlgoTrader` kurup (`SetData`/`RegisterLogger`/
+  `RegisterTimer`/`Reset`/`Initialize`), `Options.ConfigureAlgoTrader : Action<AlgoTrader>?`
+  delegate'i ile çağıran tarafın (Console) `AppConfigApplier.ApplyMultipleTrader(...)` çağırmasına
+  izin verip, `RunMultipleTraderWithProgressAsync()`'i çalıştırıyor, `GetMainTrader()`'dan sonucu
+  topluyor, `Dispose()` edip sıradaki sembole geçiyor. `AlgoTrader.createChildTraders()`'ı elle
+  tekrar yazmama gerekçesi (karmaşıklık + zaten test edilmiş olması) burada da aynen geçerli.
+- **Sembol listesi nasıl belirlenir**: `SymbolScanner`'daki gibi `DataFolder` (tek TF klasörü,
+  örn. `CRP\05`) + `AutoDiscover`/`SymbolList` — `SymbolScanner.ResolveSymbols()` mantığı
+  doğrudan reuse edilebilir.
+- **Sonuç tipi**: `SymbolScanner.cs`'teki `ScanResult` (Symbol-anahtarlı) reuse edilir — senaryo
+  4'ün `TimeframeScanResult`'ı (Timeframe-anahtarlı) reuse etmesiyle aynı mantık.
+- **Config**: `AppConfig.cs`'e `MultiStrategySymbolScanConfig` (`DataFolder`, `AutoDiscover`,
+  `SymbolList`, `MultipleTrader: MultipleTraderConfig` — mevcut tip birebir reuse, `Sort`/`Save`).
+  `AppConfig.json`'a yeni bölüm (mevcut `"MultipleTrader"` bölümünün bir kopyası + `DataFolder`/
+  `AutoDiscover`/`SymbolList`). Console'a `[14]` menü seçeneği (13 senaryo 6'da kullanılacak).
+- **Dikkat**: Senaryo 4'te olduğu gibi, her sembol çalıştırmasından sonra `MultipleTrader`'ın
+  kendi dosya yazımlarını (`SetMultipleTraderSaveConfig` ile `SaveMultipleTraderListsTxtEnabled`
+  vb. `false`) kapatmak gerekiyor — aksi halde her sembol aynı dosya adına yazıp bir öncekini
+  ezer.
+- **Child sinyallerini de raporla (senaryo 4'te DÜZELTİLEN desen, bkz. yukarıdaki "✅ DÜZELTİLDİ"
+  bölümü)**: `RunSingleTimeframeAsync()`'in bu senaryodaki karşılığı `algoTrader.MultipleTrader.
+  Traders`'ı gezip her child'ı `TimeframeScanResult.ChildSignals`'a eklemeli (aynı `ChildId`/
+  `SonYon`/`TaramaOzeti` alanları, `TimeframeScanResult` zaten reuse ediliyor) — senaryo 4'te
+  yapılan `Child{Id}_SonYon;Child{Id}_TaramaOzeti` kolon deseni birebir buraya da uygulanmalı.
+
+## Yapılacaklar (senaryo 6 bitince)
+
+1. `MultiStrategySymbolScanner.cs` yaz — `MultiStrategyTimeframeScanner.cs`'i taban al, TF yerine
+   sembol döngüsü.
+2. `AppConfig.cs` + `AppConfig.json`'a config ekle (mevcut `"MultipleTrader"` bölümünü kopyala).
+3. Küçük bir alt kümeyle (örn. 2-3 sembol) scratch test ile uçtan uca doğrula.
+4. Console'a `[14]` menü seçeneği + handler/runner ekle.
+5. Belgeleri güncelle, commit, senaryo 8'e geç.
+
+---
+
+# Senaryo 8 (Çoklu Sembol, Çoklu Strateji-Bileşke, Çoklu TF) — SIRADA (henüz uygulanmadı)
+
+**Durum**: Tasarım taslağı, uygulama başlamadı. Senaryo 6 ve 7'den sonra sırada — ikisinin de
+bitmiş olması gerekiyor çünkü bu senaryo ikisinin tekniklerinin bileşimi.
+
+## Amaç
+
+Matrisin en genel hâli: N sembol × M zaman dilimi, her hücrede `MultipleTrader` consensus'u —
+hepsi birbirinden **tamamen bağımsız** (N×M ayrı backtest, hiçbir eksende TF/sembol konsensüsü
+yok, sadece her hücrenin kendi içinde strateji-ekseni consensus'u var).
+
+## Tasarım Taslağı — 6 ve 7'nin Bileşimi
+
+Yeni bir teknik gerekmiyor — sadece iki mevcut desenin birleşimi:
+
+- **Senaryo 6'dan**: dış/iç içe döngü iskeleti (sembol × TF, `Path.Combine(BaseFolder, tf,
+  symbol + ".csv")` yol çözümlemesi, sembol keşfi — `AutoDiscover`/`SymbolList`).
+- **Senaryo 7'den** (= senaryo 4'ün tekniği): her hücre için taze bir `AlgoTrader` kurup
+  `ConfigureAlgoTrader` delegate'i ile `ApplyMultipleTrader(...)` çağırma, `GetMainTrader()`'dan
+  sonuç toplama.
+
+**Yeni sınıf**: `MultiStrategySymbolTimeframeScanner` (isim tartışmaya açık) —
+`SymbolTimeframeScanner`'ın (senaryo 6) nested-loop iskeletini alıp, her hücrede
+`RunSingleSymbolTimeframe()`'i (ham `SingleTrader` kuran) `MultiStrategySymbolScanner`'ın (senaryo
+7) "taze `AlgoTrader` + `ConfigureAlgoTrader` delegate + `RunMultipleTraderWithProgressAsync`"
+mantığıyla değiştirmek yeterli. Sonuç satırı: `Symbol;Timeframe;<stats>;...` (senaryo 6 ile aynı
+iki-kimlik-kolonlu format, kaynak `mainTrader` olması dışında).
+
+**Config**: `AppConfig.cs`'e `MultiStrategySymbolTimeframeScanConfig` (`BaseFolder`,
+`AutoDiscover`/`SymbolList`, `Timeframes`, `MultipleTrader: MultipleTraderConfig`, `Sort`/`Save`).
+Console'a `[15]` menü seçeneği.
+
+**Dikkat — N×M büyüklüğü artık iki kat daha kritik**: Her hücre bir `SingleTrader` değil, N
+child'lı bir `MultipleTrader` çalıştırıyor — 10 sembol × 9 TF × 2 child strateji gibi bir
+senaryoda toplam 180 alt-backtest'e denk gelir. İlk testte küçük bir alt küme (2 sembol × 2 TF)
+ile doğrulanmalı, gerçek kullanımda kullanıcıya çalışma süresi tahmini gösterilmesi düşünülebilir
+(fast-follow, v1'in parçası değil).
+
+**Child sinyallerini de raporla (senaryo 4'te DÜZELTİLEN desen, bkz. yukarıdaki "✅ DÜZELTİLDİ"
+bölümü)**: Sadece `GetMainTrader()` (bileşke) değil, her hücrede `algoTrader.MultipleTrader.
+Traders` (child'ların bağımsız sinyalleri) de harvest edilip `ChildSignals`'a eklenmeli — bu
+senaryo en genel/kapsamlı olan olduğu için bu desenin eksik uygulanması en çok burada fark
+edilir.
+
+## Yapılacaklar (senaryo 6 ve 7 bitince)
+
+1. `MultiStrategySymbolTimeframeScanner.cs` yaz — 6'nın nested-loop iskeleti + 7'nin
+   throwaway-AlgoTrader tekniği.
+2. `AppConfig.cs` + `AppConfig.json`'a config ekle.
+3. En küçük alt kümeyle (2 sembol × 2 TF) scratch test ile uçtan uca doğrula.
+4. Console'a `[15]` menü seçeneği + handler/runner ekle.
+5. Belgeleri güncelle, commit — matris tamamlanmış olur (8/8).
+
+---
+
+# Sorgu Tarama Matrisi (Strateji Değil, Sorgu Ekseni) — AYRI BİR İŞ, HENÜZ BAŞLANMADI
+
+**Kaynak**: Kullanıcı ile 2026-08-18'de netleşti — 6/7/8 bitince "Sembol × Strateji × Zaman Dilimi"
+matrisi (8/8) tamamlanmış olacak, ama bu **sadece strateji ekseninde**. Projede `IStrategy`/
+`BaseStrategy`/`StrategyRegistry` ile **birebir aynı desende** ayrı bir **Sorgu** alt sistemi var
+(`IQuery`/`BaseQuery`/`QueryRegistry`, `Trading/Query/` ve `Trading/Queries/`) — ve
+`SingleTrader.RunMode` zaten `TradeOnly | TradeAndQuery | QueryOnly` diye üç modu destekliyor.
+Ama bugüne kadar yazılan **hiçbir tarama sınıfı Query modunu desteklemiyor** — `SymbolScanner`,
+`TimeframeScanner`, `MultiStrategyTimeframeScanner` ve planlanan 6/7/8'in hepsi
+`trader.RunMode = TraderRunMode.TradeOnly` hardcoded. Yani "tarama matrisi" şu ana kadar sadece
+Strateji eksenini kapsıyor, Sorgu ekseni hiç ele alınmadı.
+
+## Migration-Guide.md ile İlişkisi
+
+- **Madde 6** (zengin sorgu tipleri) — alt yapı (`IQuery`/`BaseQuery`/`QueryRegistry`/
+  `QueryConfigLoader`) TAMAM ve çalışıyor, ama somut sorgu örneği sadece 1 tane: `SimpleQuery1`
+  (MA8/MA200 kesişimi + trader-state). Roadmap'te tarif edilen "fiyat-indikatör kesişimleri",
+  "indikatör-indikatör kesişimleri", "kullanıcı stratejisinden A/S/F bayrakları sorgusu" gibi
+  zengin sorgu tipleri henüz yazılmadı — **bu, sorgu taramasının ön koşulu**: tek bir sorgu
+  türüyle tarama yapmanın pratik değeri sınırlı.
+- **Madde 9** (Sorgu + Toplu Sembol Uygulama) — roadmap'te birebir şu şekilde tarif edilmiş:
+  *"Madde 6'daki sorgu yeteneği AlgoTrader üzerinden tüm sembollere uygulanabilir. Örnek: 'Hangi
+  sembollerde fiyat 20 MA'yi yukarı kırdı?' gibi sorgular tüm sembol havuzunda çalıştırılır ve
+  eşleşen semboller listelenir."* — bu **tam olarak** "Sembol × Sorgu" tarama matrisinin tanımı.
+
+## Tam Matris (8/8 — netleşti, 2026-08-18)
+
+Strateji tarafındaki matrisle aynı mantık, "Strateji"nin yerini "Sorgu" alıyor:
+
+| # | Sembol | Sorgu | Zaman Dilimi | Durum |
+|---|--------|-------|---------------|-------|
+| 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader.RunMode = QueryOnly` |
+| 2 | Tek | Tek | Çoklu | ❌ Yok — `TimeframeScanner`'ın QueryOnly-varyantı gerekiyor |
+| 3 | Tek | Çoklu | Tek | ❌ Yok — bkz. aşağıdaki karar |
+| 4 | Tek | Çoklu | Çoklu | ❌ Yok — 2 ve 3'ün bileşimi |
+| 5 | Çoklu | Tek | Tek | ❌ Yok — `SymbolScanner`'ın QueryOnly-varyantı, **madde 9'un birebir istediği şey** |
+| 6 | Çoklu | Tek | Çoklu | ❌ Yok — 2 ve 5'in bileşimi |
+| 7 | Çoklu | Çoklu | Tek | ❌ Yok — 3'ün çoklu sembol hali |
+| 8 | Çoklu | Çoklu | Çoklu | ❌ Yok — hepsinin bileşimi |
+
+## Karar: "Çoklu Sorgu" Ne Anlama Geliyor (kullanıcı ile netleşti, 2026-08-18)
+
+Strateji tarafında "bileşke" gerekliydi çünkü tek bir pozisyon kararı üretmen lazım (Al/Sat/Flat,
+tek yön) — `MultipleTrader` bu yüzden var. Sorgu ise salt okunur bir kontrol, pozisyon üretmiyor.
+**Karar: hiçbir zaman birleştirilmiyor.** N sorgu çalıştırılır, N sonuç **ayrı ayrı** raporlanır
+(ayrı kolonlar), kullanıcı kendisi yorumlar — AND/OR gibi bir birleştirme mantığı YOK.
+
+**Mimari sonucu — önemli basitleştirme**: Bu karar sayesinde Sorgu tarafında Strateji
+tarafındaki gibi yeni bir "MultipleQuery" consensus sınıfına (MultipleTrader'ın Sorgu karşılığı)
+**hiç gerek yok**. "Çoklu Sorgu", tek bir sorgu yerine bir **sorgu listesi** çalıştırıp
+sonuçları ek kolonlar olarak eklemekten ibaret — yani "Sembol" ve "Zaman Dilimi" eksenleri
+Strateji tarafındakiyle birebir aynı mimariyi (mevcut `SymbolScanner`/`TimeframeScanner`
+ailesi) kullanabilir, "Sorgu" ekseni sadece "tek mi çoklu mu" değil, "kaç tane sorgu kolonu
+ekleniyor" detayına indirgeniyor. Yani pratikte 8 senaryo değil, **2 gerçek eksen** (Sembol,
+Zaman Dilimi) + "kaç sorgu çalıştırılıyor" parametresi.
+
+## Neden Şimdi Değil
+
+1. **Madde 6 önce gerekiyor**: Zengin sorgu tipi olmadan (sadece `SimpleQuery1` varken) tarama
+   motoru yazmanın getirisi düşük.
+2. Strateji taraması (bu belgenin geri kalanı) zaten büyük bir iş, önce onu bitirmek (6→7→8)
+   önceliklendirildi.
+3. Mimari olarak muhtemelen **yeni sınıflar değil**, mevcut tarama sınıflarına (`SymbolScanner`
+   vb.) bir "Query modu" eklenmesi yeterli olabilir (`RunMode` parametrik hale getirilip
+   `QueryOnly` seçilebilir hale gelmesi, ve tek `QueryName` yerine bir `QueryNames: List<string>`
+   alınması) — ama bu tasarım kararı henüz verilmedi, ayrı bir plan-mode oturumu gerektirecek.
+
+## Yapılacaklar (6/7/8 bitince, ayrı bir oturumda)
+
+1. Önce Madde 6'yı ele al — en az 2-3 yeni somut sorgu türü yaz (örn. "fiyat-indikatör kesişimi",
+   "indikatör-indikatör kesişimi").
+2. Sorgu taraması için mimari kararı ver: mevcut tarama sınıflarını Query-mode destekleyecek
+   şekilde genişletmek mi (`RunMode` + `QueryNames: List<string>` parametrik hale getirmek), yoksa
+   paralel yeni sınıflar mı (`SymbolQueryScanner` vb.) — plan-mode ile kullanıcıyla netleştir.
+   "Çoklu sorgu" artık net (birleştirme yok, ayrı ayrı raporlama) — bu karar zaten verildi.

@@ -1106,7 +1106,11 @@ async Task runMultiStrategyTimeframeScan()
         foreach (var r in scanner.Results)
         {
             if (r.Success)
-                LogManager.LogRaw($"  {r.Timeframe,-8} {r.TaramaOzeti}");
+            {
+                LogManager.LogRaw($"  {r.Timeframe,-8} Bileşke: {r.TaramaOzeti}");
+                foreach (var child in r.ChildSignals)
+                    LogManager.LogRaw($"           Child{child.ChildId} (bağımsız): {child.TaramaOzeti}");
+            }
             else
                 LogManager.LogRaw($"  {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
         }

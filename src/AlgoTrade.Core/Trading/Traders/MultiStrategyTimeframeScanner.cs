@@ -84,14 +84,14 @@ public class MultiStrategyTimeframeScanner : IDisposable
 
             if (!headerWritten && _statsHeader != null)
             {
-                string header = $"Timeframe;{_statsHeader};SonYon;SonKarZararFiyat;SonKarZararYuzde;SonSinyaldenBeriBarSayisi;TaramaOzeti";
+                string header = $"Timeframe;{_statsHeader};SonYon;SonKarZararFiyat;SonKarZararYuzde;SonSinyaldenBeriBarSayisi;TaramaOzeti{BuildChildHeaderSuffix(result.ChildSignals)}";
                 csvWriter.WriteLine(header);
                 txtWriter.WriteLine(header);
                 headerWritten = true;
             }
 
             string row = result.Success
-                ? $"{result.Timeframe};{result.StatisticsDataRow};{result.SonYon};{result.SonKarZararFiyat.ToString("F2", CultureInfo.InvariantCulture)};{result.SonKarZararYuzde.ToString("F2", CultureInfo.InvariantCulture)};{result.SonSinyaldenBeriBarSayisi};{result.TaramaOzeti}"
+                ? $"{result.Timeframe};{result.StatisticsDataRow};{result.SonYon};{result.SonKarZararFiyat.ToString("F2", CultureInfo.InvariantCulture)};{result.SonKarZararYuzde.ToString("F2", CultureInfo.InvariantCulture)};{result.SonSinyaldenBeriBarSayisi};{result.TaramaOzeti}{BuildChildRowSuffix(result.ChildSignals)}"
                 : $"{result.Timeframe};HATA: {result.ErrorMessage}";
             csvWriter.WriteLine(row);
             txtWriter.WriteLine(row);
@@ -148,6 +148,19 @@ public class MultiStrategyTimeframeScanner : IDisposable
             result.SonSinyaldenBeriBarSayisi = mainTrader.SonSinyaldenBeriBarSayisi;
             result.TaramaOzeti = mainTrader.TaramaOzeti;
 
+            // Bileşkeye (mainTrader) ek olarak her child'ın BAĞIMSIZ sinyalini de topla —
+            // "her strateji tek başına ne derdi" bilgisi kaybolmasın diye (bkz.
+            // docs/tarama-motoru-plan.md "NOT — Bilinen Eksik").
+            foreach (var child in algoTrader.MultipleTrader!.Traders)
+            {
+                result.ChildSignals.Add(new ChildSignalInfo
+                {
+                    ChildId = child.Id,
+                    SonYon = child.SonYon,
+                    TaramaOzeti = child.TaramaOzeti,
+                });
+            }
+
             result.SortValue = (result.OptimizationSummary.TryGetValue(options.SortField, out var sortStr)
                 && double.TryParse(sortStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var sortVal))
                 ? sortVal
@@ -184,16 +197,34 @@ public class MultiStrategyTimeframeScanner : IDisposable
         using var csvWriter = new StreamWriter(new FileStream(sortedCsvPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
         using var txtWriter = new StreamWriter(new FileStream(sortedTxtPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
 
-        var header = $"Timeframe;{_statsHeader};SonYon;SonKarZararFiyat;SonKarZararYuzde;SonSinyaldenBeriBarSayisi;TaramaOzeti";
+        var header = $"Timeframe;{_statsHeader};SonYon;SonKarZararFiyat;SonKarZararYuzde;SonSinyaldenBeriBarSayisi;TaramaOzeti{BuildChildHeaderSuffix(sorted[0].ChildSignals)}";
         csvWriter.WriteLine(header);
         txtWriter.WriteLine(header);
 
         foreach (var r in sorted)
         {
-            string row = $"{r.Timeframe};{r.StatisticsDataRow};{r.SonYon};{r.SonKarZararFiyat.ToString("F2", CultureInfo.InvariantCulture)};{r.SonKarZararYuzde.ToString("F2", CultureInfo.InvariantCulture)};{r.SonSinyaldenBeriBarSayisi};{r.TaramaOzeti}";
+            string row = $"{r.Timeframe};{r.StatisticsDataRow};{r.SonYon};{r.SonKarZararFiyat.ToString("F2", CultureInfo.InvariantCulture)};{r.SonKarZararYuzde.ToString("F2", CultureInfo.InvariantCulture)};{r.SonSinyaldenBeriBarSayisi};{r.TaramaOzeti}{BuildChildRowSuffix(r.ChildSignals)}";
             csvWriter.WriteLine(row);
             txtWriter.WriteLine(row);
         }
+    }
+
+    /// <summary>Her child için "Child{id}_SonYon;Child{id}_TaramaOzeti" başlık kolonlarını üretir.</summary>
+    private static string BuildChildHeaderSuffix(List<ChildSignalInfo> children)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in children)
+            sb.Append($";Child{c.ChildId}_SonYon;Child{c.ChildId}_TaramaOzeti");
+        return sb.ToString();
+    }
+
+    /// <summary>Her child için "SonYon;TaramaOzeti" veri kolonlarını üretir (header ile aynı sırada).</summary>
+    private static string BuildChildRowSuffix(List<ChildSignalInfo> children)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var c in children)
+            sb.Append($";{c.SonYon};{c.TaramaOzeti}");
+        return sb.ToString();
     }
 
     /// <summary>SortField'e göre en iyi sonucu döner (Success=false olanlar hariç).</summary>
