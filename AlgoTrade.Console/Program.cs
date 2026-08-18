@@ -928,6 +928,63 @@ async Task runSingleTraderOptimization()
     }
 }
 
+async Task runSymbolScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running SymbolScan (Tarama)");
+
+        var cfg     = appConfig.SymbolScan;
+        var options = AppConfigApplier.BuildSymbolScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new SymbolScanner(logger);
+        scanner.OnProgress = (current, total, symbol) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {symbol}".PadRight(60));
+        };
+
+        string csvPath       = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath       = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+        string sortedCsvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.SortedCsvFileName);
+        string sortedTxtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.SortedTxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        scanner.WriteSortedResults(options, sortedCsvPath, sortedTxtPath);
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} sembol ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+                LogManager.LogRaw($"  {r.Symbol,-20} {r.TaramaOzeti}");
+            else
+                LogManager.LogRaw($"  {r.Symbol,-20} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        var best = scanner.GetBestResult(options);
+        if (best != null)
+        {
+            LogManager.LogRaw("");
+            LogManager.LogRaw($"En iyi ({cfg.Sort.SortField}): {best.Symbol}  ->  {best.TaramaOzeti}", ConsoleColor.Yellow);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar     : {csvPath}");
+        LogManager.LogRaw($"Sıralı sonuç : {sortedCsvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runSymbolScan: {ex.Message}", ex);
+    }
+}
+
 // =============================================================================
 // Mode Handlers  (Config özeti göster → [ENTER] çalıştır | [E] düzenle | [B] geri)
 // =============================================================================
@@ -1096,6 +1153,32 @@ void showModeConfigSummary(string title)
         Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
         Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
         Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "SymbolScan")
+    {
+        var cfg = appConfig.SymbolScan;
+
+        string sourceInfo = cfg.AutoDiscover
+            ? Trunc($"Auto-discover: {cfg.DataFolder}", 50)
+            : Trunc($"{cfg.SymbolList.Count} sembol (liste)  |  {cfg.DataFolder}", 50);
+        string stratInfo = Trunc($"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}", 50);
+        string sortInfo  = Trunc($"{cfg.Sort.SortField}  ({(cfg.Sort.SortDescending ? "desc" : "asc")})", 50);
+        string fullStats = cfg.WriteFullStatsPerSymbol ? "[Enabled]" : "[Disabled]";
+
+        Console.WriteLine($"║  Symbols    : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Strategy   : {stratInfo,-50}║");
+        Console.WriteLine($"║  Sort       : {sortInfo,-50}║");
+        Console.WriteLine($"║  FullStats  : {Trunc(fullStats, 50),-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
         Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
         Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
         Console.WriteLine();
@@ -1679,6 +1762,43 @@ async Task handleSingleTraderOpt()
     }
 }
 
+async Task handleSymbolScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("SymbolScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runSymbolScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
 // =============================================================================
 // Script Support
 // =============================================================================
@@ -1843,6 +1963,10 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [9]  DearPyGuiDataPlotter (Start/Stop Test)                     ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ Tarama ═════════════════════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [10]  Tarama (Symbol Scan)                                      ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0]  Exit                                                       ║");
@@ -1997,6 +2121,7 @@ async Task main()
             case "7": if (handleReadData()) await handleSingleTraderOpt();  break;
             case "8": await runFullScript();                                break;
             case "9": handleDearPyGuiPlotterTest();                         break; // TODO: demo/test, silinecek
+            case "10": await handleSymbolScan();                            break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }

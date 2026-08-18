@@ -1,3 +1,4 @@
+using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.EquityCurve;
@@ -543,6 +544,54 @@ public static class AppConfigApplier
                 ExportVersion    = cfg.SingleTrader.Export.Version,
             });
         }
+    }
+
+    // =========================================================================
+    // SymbolScan (Tarama)
+    // =========================================================================
+
+    /// <summary>
+    /// SymbolScanConfig'i, SymbolScanner.Run()'a doğrudan verilebilecek bir SymbolScanOptions'a
+    /// çevirir. SymbolScanner bilinçli olarak AlgoTrader'a bağlı değil (bkz.
+    /// docs/tarama-motoru-plan.md), o yüzden bu dönüşüm AlgoTrader üzerinden değil,
+    /// diğer Build* metodları gibi doğrudan yapılır.
+    /// </summary>
+    public static SymbolScanOptions BuildSymbolScanOptions(SymbolScanConfig cfg, string configsDir)
+    {
+        string stratPath = Path.Combine(configsDir, cfg.Strategy.ConfigFile);
+        var stratLoader  = new StrategyConfigLoader(stratPath);
+        stratLoader.LoadFromFile();
+        var stratCfg = stratLoader.GetConfiguration(cfg.Strategy.Name, cfg.Strategy.Version)
+            ?? throw new InvalidOperationException($"Strategy bulunamadı: {cfg.Strategy.Name} / {cfg.Strategy.Version}");
+
+        var options = new SymbolScanOptions
+        {
+            DataFolder             = cfg.DataFolder,
+            AutoDiscover           = cfg.AutoDiscover,
+            SymbolList             = cfg.SymbolList,
+            StrategyName           = stratCfg.StrategyName,
+            StrategyParameters     = stratCfg.GetParameterValues(),
+            TradeParams            = BuildInitialTradeParams(cfg.TradeParams),
+            AlEnabled              = cfg.Signals.AlEnabled,
+            SatEnabled             = cfg.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
+            WriteFullStatsPerSymbol = cfg.WriteFullStatsPerSymbol,
+            SortField              = cfg.Sort.SortField,
+            SortDescending         = cfg.Sort.SortDescending,
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
     }
 
     // =========================================================================

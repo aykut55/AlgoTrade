@@ -284,3 +284,90 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
   - Performans degerleri (KarZarar, MaxDD, ProfitFactor, Islem Sayisi vb.)
   - Karsilastirma tablosu / raporu
   Amac: Hangi stratejinin bu sembol icin en iyi calistigi gorulmek.
+
+---
+
+## TODO — Yol Haritasi Maddelerinin Gercek Durumu (2026-08-18 kod analizine gore)
+
+> Kaynak: [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) — tum proje (152 dosya) satir satir
+> okunarak cikarilan detayli analiz. Asagidaki liste, yukaridaki "Yol Haritasi" (madde 1-10)
+> maddelerinin kod tabaninda GERCEKTE hangi durumda oldugunu yansitir; bu belgenin eski hali
+> (madde 2 ve 4) "ileride yapilacak" diyordu ama kod bunlari cogunlukla tamamlamis. Sirasiyla
+> once TAMAMLANMASI GEREKENLER (yapilmamis/eksik), sonra sadece dokuman guncellemesi gereken
+> maddeler listelenmistir.
+
+### Yapilmamis / Eksik Maddeler (oncelik sirasiyla)
+
+- [ ] **Madde 3 — SingleTrader + Getiri Egrisi / KarZarar Egrisi (sanal islem konfirmasyonu)**
+      Hic implement edilmemis. Mevcut `ApplyEquityCurveFilter` (SingleTrader.cs) FARKLI bir
+      mekanizma — kendi equity curve'una bakip GIRIS sinyallerini iptal ediyor, ama "once sanal
+      emir uret, kar/zarar esigine gore GERCEK emir uret" mantigi (ConfirmationMode) yok.
+      Eski projede `ResetConfirmationMode()` bu amacla vardi, yeni projede bilincli olarak
+      KAPSAM DISI birakilmisti (bkz. yukarida "Reset()" bolumu, satir 103-108).
+
+- [ ] **Madde 5.1b — Scripting: Sandbox Mod**
+      `ScriptExecutor` (src/AlgoTrade.Core/Scripting/ScriptExecutor.cs) su an SADECE tam
+      erisimli modda calisiyor; script tum proje assembly'sine erisebiliyor. Kullaniciyi
+      DataReader/SingleTrader gibi ic kodlardan izole edip sadece fiyat+indikator veren bir
+      sandbox mod yok.
+
+- [ ] **Madde 5.1c (kismi) — Dinamik Strateji Yukleme: GUI tarafi**
+      Script dosyasindan (.csx, `#load` inliner ile) yukleme TAMAM. WinForms uzerinden GUI ile
+      strateji hazirlama YOK — `AlgoTrade.WinForms/MainForm.cs` 52 satirlik bir iskelet, Console
+      uygulamasinin kullandigi gercek `AlgoTrader` akisiyla (RegisterLogger/SetData/
+      ConfigureStrategyFromConfig/Initialize/...) bile ortusmuyor gibi duruyor (dogrulanmali).
+
+- [ ] **Madde 5.3 — MultiTrader icin Scripting**
+      Birden fazla trader'in nasil birlestirilecegi (consensus kurallari) script uzerinden
+      tanimlanamiyor; `MultipleTrader.BuildConsensusSignal()` hardcoded "Net" modunda calisiyor.
+
+- [ ] **Madde 6 (genisletme) — Sorgu Yapabilme: zengin sorgu tipleri**
+      Alt yapi (IQuery/BaseQuery/QueryRegistry/QueryConfigLoader) TAMAM ve calisiyor, ama somut
+      sorgu ornegi sadece 1 tane: `SimpleQuery1` (MA8/MA200 kesisimi + trader-state). Roadmap'te
+      tarif edilen "fiyat-indikator kesisimleri", "indikator-indikator kesisimleri" (genel
+      amacli), "kullanici stratejisinden A/S/F bayraklari sorgusu" gibi zengin sorgu tipleri
+      henuz yazilmadi.
+
+- [ ] **Madde 7 (kismi) — MultiTrader icin Performans Hesaplamasi**
+      SingleTrader tarafinda trade-bazli detayli performans raporu TAMAM (`Statistics.
+      PerformansRow` — Yon/Lot/Acilis-Kapanis Tarihi-Fiyati/KarZarar/Bakiye/MaxDD). MultipleTrader
+      tarafinda `WriteMultipleTraderListsToFiles()` sadece BAR-BAR rapor uretiyor (her bar icin
+      tum trader'larin Yon/Seviye/Sinyal'i), consensus trader'in (mainTrader) trade-bazli
+      performans raporu urup uretmedigi dogrulanmali.
+
+- [x] **Madde 8 — AlgoTrader ile Toplu Sembol Taramasi (Screening)** — TAMAMLANDI (2026-08-18)
+      `SymbolScanner` (bkz. `src/AlgoTrade.Core/Trading/Traders/SymbolScanner.cs`) + Console
+      `[10] Tarama` menu secenegi. AlgoTrader'dan bilincli olarak bagimsiz, tek strateji + tek
+      sembol klasoru (AutoDiscover ya da acik liste) uzerinde calisir; SingleTrader-bazli, sonuc
+      CSV/TXT'ye ozet satir olarak yaziliyor + SortField'e gore siralanan ayri bir dosya. Detay:
+      [docs/tarama-motoru-plan.md](tarama-motoru-plan.md). Kapsam disi (fast-follow):
+      MultipleTrader-bazli tarama (coklu strateji), coklu zaman dilimi (madde 2 ile birlesim).
+
+- [ ] **Madde 9 — Sorgu + Toplu Sembol Uygulama**
+      Madde 6 (zengin sorgu tipleri) ve madde 8 (toplu sembol taramasi) tamamlanmadan bu madde
+      de yapilamaz — ikisine bagimli.
+
+- [ ] **Madde 10 — Farkli Stratejilerin Ayni Sembol Icin Karsilastirmasi**
+      Hic implement edilmemis. `SingleTraderOptimizer` AYNI stratejinin farkli parametreleriyle
+      tarama yapiyor (grid search) ama FARKLI stratejileri (orn. SimpleRSIStrategy vs
+      SimpleMACDStrategy) ayni sembolde calistirip karsilastiran bir rapor/tablo mekanizmasi yok.
+
+### Sadece Belge Guncellemesi Gereken Maddeler (kod zaten tamam)
+
+- [x→belge guncellensin] **Madde 2 — MultiTrader**: `MultipleTrader.cs` (618 satir) tam ve
+  calisir durumda implement edilmis (`Trading/Traders/MultipleTrader.cs`). Eksik olan tek sey:
+  Consensus modu su an hardcoded "Net" (buyCount-sellCount); `AppConfig.MultipleTraderConfig.
+  ConsensusConfig`'te tanimli Majority/All/Any modlari `BuildConsensusSignal()`'a henuz tam
+  baglanmamis. Bu belgenin "Yol Haritasi" bolumundeki madde 2 ifadesi ("ileride tasarlanabilir")
+  guncel degil.
+
+- [x→belge guncellensin] **Madde 4 — SingleTraderOptimization**: `SingleTraderOptimizer.cs`
+  (934 satir) tam bir grid-search optimizasyon motoru olarak implement edilmis
+  (`GenerateParameterCombinations`, `PartialOpt` destegi, sirali CSV/TXT ciktilari).
+  `OptimizationConfigLoader` parametre araligi config'ini okuyor. Tek kucuk tutarsizlik:
+  `GetBestResult()` sadece NetProfit'e gore siraliyor, dosya ciktisi ise config'teki
+  `SortField`'e gore — bu ikisi farkli sonuc verebilir (bkz. PROJECT_ANALYSIS.md §8).
+
+### Ayrica Not (roadmap disi ama onemli)
+Pyramiding destegi (`InitialTradeParams.cs`) bu belgede hic gecmiyor ama tam implement edilmis —
+belgeye sonradan eklenmis bir ozellik olarak not dusulmeli.

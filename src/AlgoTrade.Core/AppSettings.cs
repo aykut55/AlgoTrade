@@ -16,6 +16,7 @@ public static class AppSettings
     public static string OutputsDir       => Path.Combine(_baseDir, "outputs");
     public static string LogsDir          => Path.Combine(OutputsDir, "logs");
     public static string OptLogsDir       => Path.Combine(OutputsDir, "opt");
+    public static string ScanLogsDir      => Path.Combine(OutputsDir, "scan");
 
     public static void EnsureDirectories()
     {
@@ -26,5 +27,6 @@ public static class AppSettings
         Directory.CreateDirectory(OutputsDir);
         Directory.CreateDirectory(LogsDir);
         Directory.CreateDirectory(OptLogsDir);
+        Directory.CreateDirectory(ScanLogsDir);
     }
 }

@@ -623,5 +623,47 @@
         "PyramidingEnabled": false
       }
     }
+  },
+
+  "SymbolScan": {
+    // AutoDiscover=true iken DataFolder icindeki tum *.csv dosyalari otomatik taranir.
+    // AutoDiscover=false iken SymbolList kullanilir (her eleman dosya adi koku, orn. "BTCUSDT_BNC").
+    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "AutoDiscover": true,
+    "SymbolList": [],
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "TradeParams": {
+      "MarketType": "FxCrypto",
+      "IlkBakiye": 100000.0,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000.0,
+      "KomisyonCarpan": 0.0,
+      "KaymaMiktari": 0.0,
+      "PyramidingEnabled": false
+    },
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    // true: her sembol icin ayrica tam istatistik dosyalari (Statistics/Lists/Performans) da yazilir.
+    "WriteFullStatsPerSymbol": false,
+    "Sort": {
+      "SortField": "NetProfit",
+      "SortDescending": true
+    },
+    "Save": {
+      "CsvFileName": "SymbolScanResults.csv",
+      "TxtFileName": "SymbolScanResults.txt",
+      "SortedCsvFileName": "SymbolScanResults_sorted.csv",
+      "SortedTxtFileName": "SymbolScanResults_sorted.txt"
+    }
   }
 }

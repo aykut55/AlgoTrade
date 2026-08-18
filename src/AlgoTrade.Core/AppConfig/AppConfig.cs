@@ -11,6 +11,7 @@ public class AppConfig
     public SingleTraderConfig    SingleTrader   { get; set; } = new();
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
     public SingleTraderOptConfig SingleTraderOptimizer { get; set; } = new();
+    public SymbolScanConfig      SymbolScan     { get; set; } = new();
 }
 
 // =============================================================================
@@ -379,4 +380,52 @@ public class SingleTraderOptTraderConfig
     public TraderOptimizationConfig Optimization { get; set; } = new();
     public TraderSaveConfig         Save         { get; set; } = new();
     public TraderExportConfig?      Export       { get; set; }
+}
+
+// =============================================================================
+// SymbolScan  (Tarama — roadmap madde 8: aynı strateji, birden fazla sembol)
+// =============================================================================
+
+/// <summary>
+/// Aynı stratejiyi birden fazla sembolde bağımsız olarak çalıştırıp sonuçları
+/// tek bir özet tabloda toplar (bkz. docs/tarama-motoru-plan.md).
+/// SingleTraderOptimizer'dan bağımsız bir motor (SymbolScanner) kullanır —
+/// veri (dosya) değiştiği için parametre-kombinasyonu değil sembol listesi üzerinde döner.
+/// </summary>
+public class SymbolScanConfig
+{
+    /// <summary>Taranacak sembol dosyalarının bulunduğu klasör (tam yol). Örn. C:\data\csvFiles\CRP\05</summary>
+    public string DataFolder { get; set; } = "";
+
+    /// <summary>true: DataFolder'daki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    public StrategyRef          Strategy    { get; set; } = new();
+    public TradeParamsConfig    TradeParams { get; set; } = new();
+    public TraderSignalsConfig  Signals     { get; set; } = new();
+    public ReadDataConfig       ReadData    { get; set; } = new();
+
+    /// <summary>true: her sembol için ayrıca tam istatistik dosyaları (Statistics/Lists/Performans) da yazılır.</summary>
+    public bool WriteFullStatsPerSymbol { get; set; } = false;
+
+    public SymbolScanSortConfig Sort { get; set; } = new();
+    public SymbolScanSaveConfig Save { get; set; } = new();
+}
+
+public class SymbolScanSortConfig
+{
+    /// <summary>Statistics.GetOptimizationSummary() içindeki bir alan adı (örn. NetProfit, ProfitFactor).</summary>
+    public string SortField      { get; set; } = "NetProfit";
+    public bool   SortDescending { get; set; } = true;
+}
+
+public class SymbolScanSaveConfig
+{
+    public string CsvFileName       { get; set; } = "SymbolScanResults.csv";
+    public string TxtFileName       { get; set; } = "SymbolScanResults.txt";
+    public string SortedCsvFileName { get; set; } = "SymbolScanResults_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "SymbolScanResults_sorted.txt";
 }
