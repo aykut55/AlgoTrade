@@ -112,6 +112,81 @@ kolonlar, `MultipleQuery`, tüm 8 sınıf) çalıştığı için yeni bir sorgu 
 eklendiğinde aynı tarama sınıfları üzerinden otomatik çalışır, ekstra iş gerekmez. Gerçek çeşitlilik
 (fiyat-indikatör kesişimi, indikatör-indikatör kesişimi vb.) ayrı, ileride istenirse ele alınacak.
 
+## Script Yeteneği (Scripting) — Durum Analizi (2026-08-18)
+
+Kullanıcı sorusu üzerine (`MultiTrader'da hiç script yeteneği yok mu?`) yapılan araştırma —
+Console menülerinden hangilerinin `ScriptExecutor`/`.csx` script çalıştırma ile ilişkisi var,
+hangilerinin yok, buraya kayıt altına alındı ki unutulmasın.
+
+### `ScriptExecutor` ne yapıyor (`src/AlgoTrade.Core/Scripting/ScriptExecutor.cs`)
+
+Roslyn (`Microsoft.CodeAnalysis.CSharp.Scripting`) tabanlı, **sandbox YOK** — script'e
+`AlgoTrade.Core.dll`'in **tamamı** referans olarak veriliyor (`Assembly.GetExecutingAssembly()`),
+yani script içinden projedeki herhangi bir public sınıfa (`SingleTrader`, `MultipleTrader`,
+`SingleTraderOptimizer`, hatta bugün yazdığımız tarama sınıfları) doğrudan erişilebilir/
+örneklenebilir. `ScriptGlobals` (`src/AlgoTrade.Core/Scripting/ScriptGlobals.cs`) script'e tek
+bir global nesne (`algoTrader`) veriyor; `algoTrader.SingleTrader`/`.MultipleTrader`/
+`.SingleTraderOptimizer` property'leri üzerinden üçüne de erişilebiliyor — ama hazır kolaylık
+metodları (`Trader`, `OnProgress`, `OnSignal`, `RunAll()`, `Setup()`) **sadece `SingleTrader`
+için** yazılmış.
+
+### `MultiTrader` script'lenebilir mi? — Evet (nesne düzeyinde), Hayır (consensus kuralı düzeyinde)
+
+- ✅ `inputs/scripts/ProgramsMultipleTrader.csx`, `runMultiTraderWithStrategies.csx`,
+  `mainScriptMultipleTrader.csx` gibi gerçek örnek script'ler `MultipleTrader` kurup
+  çalıştırıyor, sonuç okuyor — yani **MultipleTrader nesnesinin kendisi tam script'lenebilir**.
+- ❌ Ama `MultipleTrader.BuildConsensusSignal()` (`MultipleTrader.cs:191-271`) tamamen hardcoded
+  bir `switch` — sadece 4 sabit mod (Net/Majority/All/Any), `ConsensusMode` düz bir `string`
+  property (delegate/hook değil). **Script'ten özel/farklı bir birleştirme kuralı tanımlamanın
+  ilk sınıf (first-class) bir yolu yok** — migration-guide.md Madde 5.3'ün dediği tam olarak bu
+  (script'ten TAMAMEN ÖZEL bir consensus kuralı tanımlanamıyor), "MultiTrader'da hiç script yok"
+  değil.
+- Aynı durum `SingleTraderOptimizer` için de geçerli: nesne script'ten kurulup çalıştırılabiliyor
+  (`ProgramsSingleTraderOpt.csx`), ama grid-search algoritmasının kendisi (nested-loop parametre
+  taraması) script'ten değiştirilemiyor/hook'lanamıyor.
+
+### Console Menüleri — Hangisinde Script Yeteneği Var
+
+| Menü | Ne yapıyor | Script yeteneği | Not |
+|---|---|:---:|---|
+| `[1]` Read Data | Veri yükler | — | Scripting'le ilgisiz |
+| `[2]` SingleTrader | İnteraktif çalıştırma | — (dolaylı: `[8]`'den erişilebilir) | Kendisi script çalıştırmıyor |
+| `[3]` MultipleTrader | İnteraktif çalıştırma | — (dolaylı: `[8]`'den erişilebilir) | Kendisi script çalıştırmıyor |
+| `[4]` SingleTraderOptimizer | İnteraktif çalıştırma | — (dolaylı: `[8]`'den erişilebilir) | Kendisi script çalıştırmıyor |
+| `[5]-[7]` | Read Data + [2]/[3]/[4] kombinasyonu | — | Aynı, sadece veri yükleme eklenmiş |
+| `[8]` **Run Script** | `ScriptExecutor.ExecuteAsync(...)` | ✅ **ASIL SCRIPT GİRİŞ NOKTASI** | `algoTrader` global'i üzerinden SingleTrader/MultipleTrader/SingleTraderOptimizer'a erişebiliyor (ama sadece SingleTrader için hazır kolaylık metodları var) |
+| `[9]` DearPyGuiDataPlotter (Test) | Demo/test hook | — | `ScriptExecutor`'la hiç ilgisi yok, geçici test menüsü (silinecek, bkz. yapilacak.md) |
+| `[10]-[15]` Strateji Tarama (Symbol/Timeframe/Multi-Strategy Scan) | Kendi içinde tam C# akışı | — | `ScriptExecutor` hiç çağrılmıyor; teorik olarak aynı assembly'de oldukları için elle script yazılabilir ama hiçbir menü/örnek script bunu yapmıyor |
+| `[16]-[21]` Sorgu Tarama (Query Symbol/Timeframe/Multi-Query Scan) | Kendi içinde tam C# akışı | — | Aynı — scripting'le hiç bağlantısı yok |
+
+**Kullanıcının tahmini doğru**: `[9]`'dan itibaren (9, 10-15, 16-21) hiçbir menüde script
+yeteneği yok — hepsi kendi başına yeten, `ScriptExecutor`'ı hiç çağırmayan düz C# akışları.
+Script yeteneği fiilen sadece `[8]`'de var; `[2]/[3]/[4]` (ve `[5]-[7]`) kendileri script
+çalıştırmıyor ama ürettikleri `algoTrader` nesnesi `[8]`'den sonra script'e aktarılabiliyor
+(aynı oturumda, aynı `algoTrader` referansı).
+
+### Fast-follow fikri: `MultipleTrader` consensus'unu script'ten tanımlanabilir yapmak
+
+Şu an `BuildConsensusSignal()` (`MultipleTrader.cs:191-271`) `ConsensusMode` string'ine göre
+hardcoded bir `switch` (Net/Majority/All/Any) — script'in enjekte edebileceği bir "giriş kapısı"
+yok. Küçük, kontrollü bir değişiklikle script'lenebilir hale gelir:
+
+1. `MultipleTrader`'a bir delegate property eklenir:
+   `public Func<List<SingleTrader>, TradeSignals>? CustomConsensusFunc { get; set; }`
+2. `BuildConsensusSignal()`'ın başına: `if (CustomConsensusFunc != null) return CustomConsensusFunc(Traders);`
+   — doluysa hardcoded switch'i atlar.
+3. Script (`[8]` üzerinden) `algoTrader.MultipleTrader.CustomConsensusFunc = traders => { ... };`
+   atayarak child trader'ların (`traders[i].strategySignal`/`SonYon` vb.) sinyallerine bakıp
+   kendi kuralını dönebilir.
+
+**İleride bu implement edilmek istenirse kullanılacak prompt**: *"docs/todo.md'deki 'Fast-follow
+fikri: MultipleTrader consensus'unu script'ten tanımlanabilir yapmak' bölümünü oku ve uygula —
+MultipleTrader'a CustomConsensusFunc adında bir Func<List<SingleTrader>, TradeSignals>? property
+ekle, BuildConsensusSignal()'ın başına bu doluysa onu çağırıp hardcoded switch'i atlayan bir
+early-return ekle, sonra inputs/scripts/ altına script'ten CustomConsensusFunc atayan küçük bir
+örnek .csx yaz ve gerçek veride uçtan uca doğrula (örn. child'lardan biri Al diğeri Sat derken
+özel kuralın — mesela 'ilk child'ın dediği olsun' — doğru çalıştığını göster)."*
+
 ## Done
 
 - [x] [docs/roadmap.md](roadmap.md) güncellendi — Python entegrasyonu için 3 yaklaşımdan ikisinin (dosya+subprocess: `DearPyGuiDataPlotter`, pythonnet: `PythonPlotter.cs`) fiilen benimsendiği, REST/gRPC'nin kullanılmadığı belgeye yansıtıldı.
