@@ -187,6 +187,234 @@ early-return ekle, sonra inputs/scripts/ altına script'ten CustomConsensusFunc 
 örnek .csx yaz ve gerçek veride uçtan uca doğrula (örn. child'lardan biri Al diğeri Sat derken
 özel kuralın — mesela 'ilk child'ın dediği olsun' — doğru çalıştığını göster)."*
 
+## Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3) — Tasarım Fikri (2026-08-18)
+
+**Durum**: Tasarım fikri, uygulama başlamadı. Kullanıcı sorusu üzerine (`migration-guide.md`
+Madde 3, "hiç mi yapılmamış?") netleşti: **gerçekten hiç implement edilmemiş**, kod tabanında
+hiçbir iz yok (`ConfirmationMode`/`sanal`/`VirtualTrade` aramaları tamamen boş döndü).
+
+### Ne İşe Yarıyor (mevcut `ApplyEquityCurveFilter`'dan farkı)
+
+Mevcut `ApplyEquityCurveFilter` (`SingleTrader.cs:2271-2360`) **tek aşamalı** — trader'ın **zaten
+gerçekten açık olan** pozisyonunun canlı P&L'ine bakıp yeni giriş sinyallerini (Al/Sat) bastırıyor/
+izin veriyor. İstenen özellik **iki aşamalı**: strateji "AL" dediğinde önce gerçek emir açılmıyor,
+önce **sanal (virtual/paper)** bir pozisyon açılıp izleniyor; sanal pozisyon belirli bir eşiğe
+(kâr veya zarar) ulaşınca *o zaman* gerçek emir açılıyor. Ayrı bir sanal P&L state'i ve "gerçeğe
+terfi ettirme" mantığı gerekiyor — `KarZarar.cs` şu an sadece gerçek pozisyonu (`Signals.SonYon`/
+`SonFiyat`) takip ediyor, sanal moda hiç destek yok.
+
+### Eski Projedeki Emsal (`AlgoTradeWithOptimizationSupport`) — İncelendi, 2026-08-18
+
+**Referans kopyalar**: Eski proje diğer bilgisayarda mevcut olmayabileceği için, tek çalışan
+implementasyonun (`ConfirmingSingleTrader.cs`) tam kaynak kodu ve orijinal tasarım planı
+(`ConfirmationMode_Implementation_Plan.md`) `docs/reference/old-project-confirming/` altına
+kopyalandı (2026-08-18) — bkz. o klasördeki `README.md`.
+
+Kullanıcının isteğiyle eski proje (`D:\Aykut\Projects\AlgoTradeWithOptimizationSupport\
+AlgoTradeWithOptimizationSupportWinFormsApp`) incelendi — WinForms'ta soldan sağa 3 sekme var:
+"ConfirmingSingleTrader", "ConfirmingSingleTrader2", "ConfirmingMultipleTrader". **Önemli bulgu:
+üçü de aynı işi yapmıyor, hatta ikisi hiç çalışmıyor:**
+
+| Sekme | Çalıştırdığı backend | Konfirmasyon mantığı çalışıyor mu? |
+|---|---|:---:|
+| ConfirmingSingleTrader (1.) | düz `SingleTrader` | ❌ **ÖLÜ KOD** — mantık yazılmış ama çağrı noktası yorum satırı içinde bırakılmış |
+| ConfirmingSingleTrader2 (2.) | `ConfirmingSingleTrader` sınıfı | ✅ **TEK ÇALIŞAN implementasyon** |
+| ConfirmingMultipleTrader (3.) | düz `MultipleTrader` | ❌ **ÖLÜ KOD** — `buildConsensusSignal()`'da eşik/konfirmasyon mantığı hiç yok, düz oy çoğunluğu |
+
+**Tek çalışan mekanizma (`ConfirmingSingleTrader.cs`, `buildConsensusSignal()`) nasıl işliyor**:
+`MultipleTrader`'a yapısal olarak çok benzer (child `SingleTrader` listesi + ayrı bir `_mainTrader`)
+ama farkı: her child'ın **kendi gerçek/tam simüle edilmiş pozisyonunun** canlı P&L'ine
+(`trader.status.KarZararFiyat(Yuzde)`) bakıp, eşik geçilene kadar o child'ın sinyalini **Flat'e
+zorluyor** (bastırıyor, tersine çevirmiyor). Eşik geçilince (`_traderConfirmed[id]=true`) child'ın
+**olduğu gibi, değiştirilmeden** Al/Sat sinyali konsensüs oyuna dahil oluyor — onaylanmış durum,
+yön değişene kadar kalıcı. `_mainTrader` bu konsensüsü gerçek hesaba uygulayan tek trader.
+
+**En kritik bulgu — "zarar konfirmasyonu" belirsizliği çözüldü**: Kodda kâr ve zarar
+konfirmasyonu **mekanik olarak birebir aynı** — ikisi de sadece "kapıyı aç, child'ın zaten
+verdiği kararı olduğu gibi geçir" yapıyor. **Hiçbir ters yön (kontrarian) veya "stop-and-retry"
+mantığı yok** — `ConfirmationTrigger.cs`'deki yorum satırları ("ZararOnly = reversal beklentisi")
+sadece **hedef/niyet notu**, hiç implement edilmemiş. Yani eski projede "zarar konfirmasyonu"
+aslında "kâr konfirmasyonu"yla aynı davranışı üretiyor, sadece tetikleyen eşiğin işareti farklı.
+Yeni tasarımda bunu ya aynen taşımalıyız (basit ama az anlamlı) ya da gerçekten farklı bir
+davranış (örn. ters yön girişi) tanımlamalıyız — **hâlâ kullanıcıyla netleşmesi gereken bir karar**.
+
+**Diğer bulgular**:
+- İki farklı eşik işaret konvansiyonu aynı eski projede bile tutarsız: `ConfirmingSingleTrader`da
+  `ZararEsigi` negatif (örn. `-3000`, `<=` ile karşılaştırılıyor); ölü kod (`SingleTrader`
+  içindeki) `ZararKonfirmasyonEsigi` pozitif (örn. `5.0`, `<= -esik` ile karşılaştırılıyor). Yeni
+  tasarımda tek bir konvansiyon net seçilmeli.
+- `ConfirmingSingleTrader2` sekmesindeki "Confirmation Mode Enabled" checkbox'ı bile no-op —
+  `ConfirmingSingleTrader` sınıfının "kapalı" durumu hiç yok, konfirmasyon her zaman aktif.
+- Konfirmasyon, `SingleTrader.Run()`'ın İÇİNDE değil (ölü koddaki yaklaşım), child'ların
+  `Run(i)`'ı bittikten SONRA, `_mainTrader`'a sinyal verilmeden ÖNCE, ayrı bir `buildConsensusSignal()`
+  adımında oluyor — yani "wrapper/orchestrator" seviyesinde, tek bir trader'ın kendi içinde değil.
+  Bu, kullanıcının "AlgoTrader'dan bağımsız ayrı sınıf" önerisiyle de örtüşüyor.
+- **Ders çıkarılacak nokta**: eski projede 3 sekmeden 2'si UI'da eşik alanları gösterip
+  kullanıcıya "çalışıyor" izlenimi verirken aslında hiçbir etkisi olmayan ölü koda bağlıydı — bu
+  proje boyunca izlediğimiz "her yeni sınıfı gerçek veride scratch test ile uçtan uca doğrula"
+  disiplini (senaryo 6/7/8, sorgu tarama motorları) bu hatayı tam olarak önlemek için var; yeni
+  `Confirming*` sınıfları da aynı şekilde doğrulanmalı — UI'da bir checkbox/eşik alanı görünmesi
+  "çalışıyor" anlamına gelmiyor, gerçek P&L farkının eşik açık/kapalıyken farklı çıktığı
+  gösterilmeli.
+- Kaynak: `ConfirmationMode_Implementation_Plan.md` (eski proje kök dizininin bir üstünde,
+  `D:\Aykut\Projects\AlgoTradeWithOptimizationSupport\`) — orijinal tasarım niyetini anlatan bir
+  plan belgesi, ölü kod onunla birebir eşleşiyor ama hiç bitirilmemiş/bağlanmamış.
+
+### Mimari Fikir (kullanıcı önerisi + tamamlayıcı notlar)
+
+Kullanıcının önerisi: **`SymbolScanner` gibi `AlgoTrader`'dan bağımsız** bir sınıf ailesi olarak
+ele alınmalı, üç varyantı olmalı — `SingleTrader`, `MultipleTrader` ve `SingleTraderOptimizer`
+karşılıkları. Bu mantıklı bir yaklaşım ama gerekçesi `SymbolScanner`'dan farklı: `SymbolScanner`
+`AlgoTrader`'dan bağımsız çünkü **çoklu veri seti** (N sembol) üzerinde dönüyor, `AlgoTrader` tek
+veri seti varsayımıyla kurulu. Bu özellik ise tek bir veri seti üzerinde çalışıyor — bağımsızlık
+gerekçesi burada **`AlgoTrader`'ı (zaten karmaşık) 4. bir "mod" ile şişirmemek**, sinyal→emir
+dönüşümüne ekstra bir aşama ekleyen bu mantığı ayrı, kendi başına yeten bir katmanda tutmak
+(`MultipleQuery`'nin `MultipleTrader`'a bağlı olmaması gibi bir gerekçe — karmaşık iç mantığı
+kopyalamadan/bozmadan yeni bir davranış eklemek).
+
+### Karar: Kâr/Zarar Konfirmasyonu Ne Anlama Geliyor (kullanıcı ile netleşti, 2026-08-18)
+
+**Yön asla ters çevrilmiyor** — gerçek pozisyon her zaman stratejinin orijinal sinyal yönünde
+açılıyor (Long dediyse Long, Short dediyse Short). Fark sadece **hangi fiyattan/ne zaman**
+gerçek pozisyona geçildiği — iki farklı giriş-zamanlama felsefesi:
+
+- **Kâr konfirmasyonu** = momentum/trend teyidi. Sanal pozisyon lehe gidip eşiği geçerse, o anki
+  (artık lehte hareket etmiş) fiyattan gerçek pozisyon açılır — "sinyal doğru çıktı, gücünü
+  teyit ettim, şimdi trend'e katılıyorum."
+- **Zarar konfirmasyonu** = dip/geri çekilme teyidi. Sanal pozisyon aleyhe gidip eşiği geçerse, o
+  anki (artık düşmüş/aleyhte hareket etmiş) fiyattan gerçek pozisyon açılır — "önce bir geri
+  çekilme oldu mu bekledim, oldu, şimdi daha iyi bir fiyattan giriyorum."
+
+**Somut örnek** (Long sinyali, zarar eşiği 5 TL): Bar 100'de strateji "AL" dedi, fiyat 100 TL —
+gerçek pozisyon HEMEN açılmıyor, sadece "sanki 100 TL'den Long açmışım gibi" sanal bir kayıt
+tutuluyor. Fiyat düşüp bar 110'da 95 TL'ye inince (sanal zarar = 5 TL = eşik), **o an (bar 110,
+95 TL'den)** gerçek Long pozisyonu açılıyor — 100 yerine 95'ten girilmiş oluyor. Risk: fiyat hiç
+95'e inmeden yükselmeye başlarsa (eşik hiç geçilmezse) gerçek pozisyon hiç açılmayabilir, fırsat
+kaçar — bu, stratejinin bilinçli olarak göze aldığı bir risk.
+
+Bu, eski projedeki tek çalışan implementasyonun (yukarıdaki bölüme bkz.) yaptığı şeyle mekanik
+olarak aynı (ikisinde de yön aynı kalıyor) — ama orada bunun NEDEN böyle olduğu belirsizdi
+(muhtemelen bitirilmemiş); burada artık bilinçli bir tasarım kararı: iki farklı giriş-zamanlama
+stratejisi (trend-teyitli vs. dip-teyitli giriş), ters yön/kontrarian mantığı YOK.
+
+### Config Alanları (eski projeden — birebir taşınabilir)
+
+Eski projedeki 4 alan yeni tasarıma doğrudan uyuyor, sadece anlamları artık net:
+
+- **Kar Eşiği** (`KarEsigi`): Sanal pozisyonun ne kadar kâra geçtiğinde konfirme sayılacağı —
+  "trend teyidi" eşiği.
+- **Zarar Eşiği** (`ZararEsigi`): Sanal pozisyonun ne kadar zarara düştüğünde konfirme sayılacağı
+  — "dip teyidi" eşiği.
+- **Eşik Tipi** (Değer/Yüzde): İki eşiğin mutlak değer (puan/fiyat farkı) mi yoksa yüzde mi
+  olarak yorumlanacağı.
+- **Tetikleyici** (Both/KarOnly/ZararOnly): Hangi eşik(ler) aktif — `Both` ikisi de tetikleyebilir
+  (hangisi önce gelirse), `KarOnly` sadece kâr eşiği sayılır (zarar eşiği hiç kontrol edilmez),
+  `ZararOnly` sadece zarar eşiği sayılır (sadece dip bekler).
+
+### Davranış Detayları (kullanıcı ile netleşti, 2026-08-18)
+
+- **Konfirmasyon sonrası**: Gerçek pozisyon açıldıktan sonra kullanıcının zaten planladığı normal
+  trade yönetimine (kâr al/zarar kes/poz kapat, stratejinin kendi çıkış sinyalleri) devrediliyor
+  — konfirmasyon mekanizması sadece GİRİŞ anını geciktiriyor, çıkış tarafına hiç karışmıyor.
+- **Süresiz bekleme**: Sanal pozisyon hiçbir eşiğe ulaşmazsa **sonsuza kadar** bekler — bilinçli
+  olarak bir timeout/"N bar sonra vazgeç" mekanizması YOK (basitlik tercih edildi).
+- **Sinyal değişirse**: Sanal pozisyon beklerken (henüz eşik geçilmedi) strateji ters bir sinyal
+  verirse (örn. sanal Long beklerken strateji "SAT" derse), **yeni sinyal görmezden gelinir** —
+  sanal pozisyon kendi orijinal yönünde, kendi eşiğine ulaşana kadar aynen devam eder. (İlk
+  öneri "sinyal değişince sanal pozisyon iptal olup sıfırdan başlasın" idi, kullanıcı bunun işi
+  çok karıştıracağını belirtip reddetti — basit/sabit sanal pozisyon tercih edildi.)
+- **Aynı bar'da iki eşik birden geçilirse**: Nadir bir durum (büyük gap/sıçrama) — basit bir
+  varsayılan kabul edildi: kod içinde hangi kontrol önce yazılıyorsa o kazanır (örn. her zaman
+  önce kâr kontrolü). Kullanıcı bunu **ileride gözden geçirmek istiyor**, şimdilik bu kabul.
+- **Console entegrasyonu — karar verildi (2026-08-18)**: Mevcut `[2]/[3]/[4]` hiç değişmeyecek,
+  yeni `Confirming*` sınıfları için **yeni menü numaraları** eklenecek (örn. `[22]
+  ConfirmingSingleTrader`, `[23] ConfirmingMultipleTrader`, `[24] ConfirmingSingleTraderOptimizer`
+  — kesin numaralar implementasyon sırasında o anki son menü numarasına göre belirlenecek, şu an
+  `[21]`'e kadar dolu). Bu, projede tarama motorlarında izlenen desenle tutarlı — her yeni yetenek
+  kendi menü numarasını aldı, mevcut menüler hiç bozulmadı.
+- **Açık kalan soru — henüz cevaplanamadı (kullanıcı `ApplyEquityCurveFilter`'ı hatırlamadığı için,
+  2026-08-18)**: Mevcut `ApplyEquityCurveFilter` ile ilişkisi — aynı anda ikisi de aktif olabilir
+  mi (önce sanal-konfirmasyon, sonra gerçek pozisyon üstünde tekrar equity-curve-filtresi
+  çalışır), yoksa birbirini dışlayan iki ayrı mod mu? İki seçenek masada: (a) birbirini dışlayan
+  iki ayrı mod (daha basit, davranışı anlamak/debug etmek kolay) — (b) üst üste çalışabilir (daha
+  esnek ama iki mekanizma aynı bar'da etkileşebilir, anlaşılması zor).
+
+  **Hatırlatma — `ApplyEquityCurveFilter` ne yapıyor**: Trader'ın **zaten gerçek bir pozisyonu
+  açıkken** devreye giriyor — yani yeni "sanal konfirmasyon" mekanizmasından tamamen farklı bir
+  zaman diliminde çalışıyor. Yeni mekanizma **ilk gerçek girişi** geciktiriyor; bu filtre ise
+  pozisyon **zaten açıldıktan sonra** devreye giriyor, açık pozisyonun canlı kâr/zararına bakıp
+  eşik geçilmeden o pozisyona gelen **yeni** Al/Sat sinyallerini (örn. piramitleme/ek giriş)
+  bastırıyor — pozisyonu kapatmıyor, sadece ek girişi engelliyor. Yön değişince/flat'e düşünce
+  "konfirme" durumu sıfırlanıyor. Özetle: yeni mekanizma "ilk girişi ne zaman yapayım" sorusuna,
+  `ApplyEquityCurveFilter` ise "zaten açık pozisyona ek giriş sinyaline izin vereyim mi" sorusuna
+  cevap veriyor — iki farklı olay, teorik olarak çakışmadan birlikte de çalışabilirler.
+
+  **Kullanıcı notu**: Bu açıklamaya rağmen kullanıcı şu an net bir karar veremedi — özelliği
+  gerçekten test edip anladıktan sonra net cevap verebileceğini belirtti. Yani implementasyon
+  sırasında/sonrasında, gerçek kullanımla tekrar gündeme gelecek, şimdiden varsayılan bir
+  davranışa kilitlenmiyoruz.
+
+### Önerilen Sınıf İsimleri
+
+Eski projede tam bu kavram için **`ConfirmingSingleTrader`** adında bir sınıf vardı (bkz.
+migration-guide.md, `ConfirmingSingleTrader.buildConsensusSignal()` — o zamanki farklı bir
+kullanım için ama isim hazır ve isabetli duruyor). Bu adlandırmayı sürdürmeyi öneriyorum, projenin
+genel "İngilizce sınıf adı" konvansiyonuyla da tutarlı:
+
+- **`ConfirmingSingleTrader`** — tek strateji, virtual→real staging
+- **`ConfirmingMultipleTrader`** — MultipleTrader consensus'u, virtual→real staging
+- **`ConfirmingSingleTraderOptimizer`** — bkz. aşağıdaki "Optimizer Varyantları" bölümü (tanımı düzeltildi)
+- **`ConfirmingMultipleTraderOptimizer`** — aynı fikrin MultipleTrader karşılığı, bkz. aşağı
+
+Alternatif (daha açıklayıcı ama daha uzun): `EquityCurveConfirmingSingleTrader`/`...MultipleTrader`/
+`...SingleTraderOptimizer` — "hangi filtre/mekanizma" sorusuna daha net cevap veriyor ama isim
+uzunluğu artıyor. `Confirming*` daha kısa ve eski projeyle bir bağ kuruyor, onu tercih ederim.
+
+### Optimizer Varyantları — Eski Projede Emsal YOK, Tanım Düzeltmesi (2026-08-18)
+
+Kullanıcı hatırlıyordu ama eski projede araştırıldı, **bulunamadı**: `KarEsigi`/`ZararEsigi` eski
+projede sadece **tek sabit değer** olarak giriliyordu (düz `TextBox`, min/max/step yok);
+`SingleTraderOptimizer` sadece strateji parametrelerini (MA periyotları vb.) tarıyordu,
+`ConfirmingSingleTrader`'dan tamamen habersizdi. İkisi arasında hiçbir köprü yoktu — konfirmasyon
+eşiklerini tarayan bir optimizer eski projede **hiç yazılmamış**. Yani bu, eski projeden taşınacak
+bir şey değil, **sıfırdan yeni bir fikir**.
+
+**Tanım düzeltmesi**: `ConfirmingSingleTraderOptimizer`/`ConfirmingMultipleTraderOptimizer`,
+"strateji parametrelerini + konfirmasyon eşiklerini BİRLİKTE optimize eden" bir şey **değil** —
+asıl fikir, strateji parametreleri **sabit kalırken** sadece **Kar Eşiği/Zarar Eşiği** (giriş
+seviyesi) değerlerini grid-search ile taramak.
+
+**Açık karar (implementasyondan önce netleşmeli)** — strateji parametreleri de dahil edilsin mi:
+
+- **Sadece eşikler taransın, strateji parametreleri sabit (Claude'un önerisi)**: Küçük/hızlı arama
+  uzayı (birkaç sayısal eşik kombinasyonu), yorumlaması kolay ("bu strateji için hangi
+  konfirmasyon eşiği en iyi"), overfitting riski düşük.
+- **Strateji parametreleri de dahil edilsin**: Arama uzayı **çarpımsal** büyür (strateji
+  kombinasyonu × eşik kombinasyonu) — çok daha yavaş, `SingleTraderOptimizer`'da zaten bilinen
+  overfitting riskini katlıyor. Avantajı, teorik olarak strateji parametreleriyle eşiklerin
+  birbirini etkilediği "gerçek global optimum"u bulabilmek — ama bu avantajın artan risk/maliyeti
+  karşılayıp karşılamadığı belirsiz.
+
+Kullanıcı: "ileride bunun seçimi yapılacak" — şimdilik karar verilmedi, sadece iki seçenek not
+edildi. Claude'un varsayılan önerisi: sadece eşikleri tara (strateji parametreleri sabit),
+"strateji parametrelerini de dahil et" ileride opsiyonel/gelişmiş bir mod olarak eklenebilir.
+
+### Fast-Follow: Tarama (Scanner) Versiyonları (2026-08-18)
+
+`ConfirmingSingleTrader`/`ConfirmingMultipleTrader` (tıpkı `SingleTrader`/`MultipleTrader` gibi)
+**sadece tek bir veri seti** (tek sembol, tek TF) üzerinde çalışır — bu yüzden Strateji ve Sorgu
+eksenlerinde yaptığımız gibi, bir **Confirming tarama matrisi** de anlamlı olur:
+`ConfirmingSymbolScanner`, `ConfirmingTimeframeScanner`, `ConfirmingSymbolTimeframeScanner` (ve
+`ConfirmingMultipleTrader` tabanlı `MultiStrategy*` benzerleri) — bugüne kadar 16 kez kurduğumuz
+aynı iskelet (nested loop, AutoDiscover/SymbolList, dinamik CSV header) doğrudan reuse edilebilir,
+yeni bir mimari gerekmez.
+
+**Sıralama**: Önce temel `ConfirmingSingleTrader`/`ConfirmingMultipleTrader`/
+`ConfirmingSingleTraderOptimizer`/`ConfirmingMultipleTraderOptimizer` sınıfları gerçek veride
+yazılıp doğrulanmalı — tarama (scanner) versiyonları bunlardan SONRA, doğal bir fast-follow
+olarak gelmeli (tıpkı Strateji tarafında B/C'den sonra 4/6/7/8'in gelmesi gibi). Şimdiden
+planlamaya gerek yok, ama bu genişleme **kesinlikle gündemde**.
+
 ## Done
 
 - [x] [docs/roadmap.md](roadmap.md) güncellendi — Python entegrasyonu için 3 yaklaşımdan ikisinin (dosya+subprocess: `DearPyGuiDataPlotter`, pythonnet: `PythonPlotter.cs`) fiilen benimsendiği, REST/gRPC'nin kullanılmadığı belgeye yansıtıldı.
