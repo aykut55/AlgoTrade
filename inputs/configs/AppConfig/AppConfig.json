@@ -1443,5 +1443,151 @@
       "SortedCsvFileName": "MultiStrategySymbolTimeframeScanResults_sorted.csv",
       "SortedTxtFileName": "MultiStrategySymbolTimeframeScanResults_sorted.txt"
     }
+  },
+
+  "QuerySymbolScan": {
+    // Sorgu Tarama Matrisi - Senaryo 5: ayni sorguyu birden fazla sembolde BAGIMSIZ calistirir.
+    // SymbolScan'in Sorgu karsiligi - Strategy yerine Query, TradeParams/Signals yok, Sort yok
+    // (sorgu sonuclari bir performans degeri degil, kullanici kendisi yorumlar).
+    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "AutoDiscover": true,
+    "SymbolList": [],
+    "Query": {
+      "ConfigFile": "QueryConfig.txt",
+      "Name": "SimpleQuery1",
+      "Version": "v1"
+    },
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Save": {
+      "CsvFileName": "QuerySymbolScanResults.csv",
+      "TxtFileName": "QuerySymbolScanResults.txt"
+    }
+  },
+
+  "QueryTimeframeScan": {
+    // Sorgu Tarama Matrisi - Senaryo 2: ayni sorguyu ayni sembolde birden fazla zaman diliminde
+    // BAGIMSIZ calistirir. TimeframeScan'in Sorgu karsiligi.
+    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "Symbol": "BTCUSDT_BNC",
+    "Timeframes": ["05", "15"],
+    "Query": {
+      "ConfigFile": "QueryConfig.txt",
+      "Name": "SimpleQuery1",
+      "Version": "v1"
+    },
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Save": {
+      "CsvFileName": "QueryTimeframeScanResults.csv",
+      "TxtFileName": "QueryTimeframeScanResults.txt"
+    }
+  },
+
+  "MultiQueryTimeframeScan": {
+    // Sorgu Tarama Matrisi - Senaryo 4: birden fazla sorguyu (MultipleQuery, hicbiri
+    // birlestirilmez) ayni sembolde her zaman diliminde BAGIMSIZ calistirir.
+    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "Symbol": "BTCUSDT_BNC",
+    "Timeframes": ["05", "15"],
+    "Queries": [
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v2" }
+    ],
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Save": {
+      "CsvFileName": "MultiQueryTimeframeScanResults.csv",
+      "TxtFileName": "MultiQueryTimeframeScanResults.txt"
+    }
+  },
+
+  "QuerySymbolTimeframeScan": {
+    // Sorgu Tarama Matrisi - Senaryo 6: tek bir sorguyu N sembol x M zaman dilimi matrisinde,
+    // ikisi de TAMAMEN BAGIMSIZ calistirir.
+    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "AutoDiscover": true,
+    "ReferenceTimeframe": "05",
+    "SymbolList": [],
+    "Timeframes": ["05", "15"],
+    "Query": {
+      "ConfigFile": "QueryConfig.txt",
+      "Name": "SimpleQuery1",
+      "Version": "v1"
+    },
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Save": {
+      "CsvFileName": "QuerySymbolTimeframeScanResults.csv",
+      "TxtFileName": "QuerySymbolTimeframeScanResults.txt"
+    }
+  },
+
+  "MultiQuerySymbolScan": {
+    // Sorgu Tarama Matrisi - Senaryo 7: birden fazla sorguyu (MultipleQuery, hicbiri
+    // birlestirilmez) tek bir zaman diliminde birden fazla sembolde BAGIMSIZ calistirir.
+    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "AutoDiscover": true,
+    "SymbolList": [],
+    "Queries": [
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v2" }
+    ],
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Save": {
+      "CsvFileName": "MultiQuerySymbolScanResults.csv",
+      "TxtFileName": "MultiQuerySymbolScanResults.txt"
+    }
+  },
+
+  "MultiQuerySymbolTimeframeScan": {
+    // Sorgu Tarama Matrisi - Senaryo 8: matrisin en genel hali - N sembol x M zaman dilimi, her
+    // hucrede birden fazla sorgu (MultipleQuery, hicbiri birlestirilmez), hepsi BAGIMSIZ.
+    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "AutoDiscover": true,
+    "ReferenceTimeframe": "05",
+    "SymbolList": [],
+    "Timeframes": ["05", "15"],
+    "Queries": [
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v2" }
+    ],
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    "Save": {
+      "CsvFileName": "MultiQuerySymbolTimeframeScanResults.csv",
+      "TxtFileName": "MultiQuerySymbolTimeframeScanResults.txt"
+    }
   }
 }

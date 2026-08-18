@@ -1429,6 +1429,288 @@ async Task runMultiStrategySymbolTimeframeScan()
     }
 }
 
+async Task runQuerySymbolScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running QuerySymbolScan (Tarama)");
+
+        var cfg     = appConfig.QuerySymbolScan;
+        var options = AppConfigApplier.BuildQuerySymbolScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new QuerySymbolScanner(logger);
+        scanner.OnProgress = (current, total, symbol) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {symbol}".PadRight(60));
+        };
+
+        string csvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} sembol ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+                LogManager.LogRaw($"  {r.Symbol,-20} {r.SorguOzeti}");
+            else
+                LogManager.LogRaw($"  {r.Symbol,-20} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar : {csvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runQuerySymbolScan: {ex.Message}", ex);
+    }
+}
+
+async Task runQueryTimeframeScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running QueryTimeframeScan (Tarama)");
+
+        var cfg     = appConfig.QueryTimeframeScan;
+        var options = AppConfigApplier.BuildQueryTimeframeScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new QueryTimeframeScanner(logger);
+        scanner.OnProgress = (current, total, tf) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {tf}".PadRight(60));
+        };
+
+        string csvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} zaman dilimi ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+                LogManager.LogRaw($"  {r.Timeframe,-8} {r.SorguOzeti}");
+            else
+                LogManager.LogRaw($"  {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar : {csvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runQueryTimeframeScan: {ex.Message}", ex);
+    }
+}
+
+async Task runMultiQueryTimeframeScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running MultiQueryTimeframeScan (Tarama)");
+
+        var cfg     = appConfig.MultiQueryTimeframeScan;
+        var options = AppConfigApplier.BuildMultiQueryTimeframeScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new MultiQueryTimeframeScanner(logger);
+        scanner.OnProgress = (current, total, tf) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {tf}".PadRight(60));
+        };
+
+        string csvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} zaman dilimi ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+            {
+                LogManager.LogRaw($"  {r.Timeframe,-8}");
+                foreach (var q in r.QuerySignals)
+                    LogManager.LogRaw($"           Query{q.QueryId} ({q.QueryName}): {q.SorguOzeti}");
+            }
+            else
+                LogManager.LogRaw($"  {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar : {csvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runMultiQueryTimeframeScan: {ex.Message}", ex);
+    }
+}
+
+async Task runQuerySymbolTimeframeScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running QuerySymbolTimeframeScan (Tarama)");
+
+        var cfg     = appConfig.QuerySymbolTimeframeScan;
+        var options = AppConfigApplier.BuildQuerySymbolTimeframeScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new QuerySymbolTimeframeScanner(logger);
+        scanner.OnProgress = (current, total, cell) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {cell}".PadRight(60));
+        };
+
+        string csvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} hücre ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+                LogManager.LogRaw($"  {r.Symbol,-20} {r.Timeframe,-8} {r.SorguOzeti}");
+            else
+                LogManager.LogRaw($"  {r.Symbol,-20} {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar : {csvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runQuerySymbolTimeframeScan: {ex.Message}", ex);
+    }
+}
+
+async Task runMultiQuerySymbolScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running MultiQuerySymbolScan (Tarama)");
+
+        var cfg     = appConfig.MultiQuerySymbolScan;
+        var options = AppConfigApplier.BuildMultiQuerySymbolScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new MultiQuerySymbolScanner(logger);
+        scanner.OnProgress = (current, total, symbol) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {symbol}".PadRight(60));
+        };
+
+        string csvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} sembol ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+            {
+                LogManager.LogRaw($"  {r.Symbol,-20}");
+                foreach (var q in r.QuerySignals)
+                    LogManager.LogRaw($"           Query{q.QueryId} ({q.QueryName}): {q.SorguOzeti}");
+            }
+            else
+                LogManager.LogRaw($"  {r.Symbol,-20} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar : {csvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runMultiQuerySymbolScan: {ex.Message}", ex);
+    }
+}
+
+async Task runMultiQuerySymbolTimeframeScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running MultiQuerySymbolTimeframeScan (Tarama)");
+
+        var cfg     = appConfig.MultiQuerySymbolTimeframeScan;
+        var options = AppConfigApplier.BuildMultiQuerySymbolTimeframeScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new MultiQuerySymbolTimeframeScanner(logger);
+        scanner.OnProgress = (current, total, cell) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {cell}".PadRight(60));
+        };
+
+        string csvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} hücre ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+            {
+                LogManager.LogRaw($"  {r.Symbol,-20} {r.Timeframe,-8}");
+                foreach (var q in r.QuerySignals)
+                    LogManager.LogRaw($"           Query{q.QueryId} ({q.QueryName}): {q.SorguOzeti}");
+            }
+            else
+                LogManager.LogRaw($"  {r.Symbol,-20} {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar : {csvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runMultiQuerySymbolTimeframeScan: {ex.Message}", ex);
+    }
+}
+
 // =============================================================================
 // Mode Handlers  (Config özeti göster → [ENTER] çalıştır | [E] düzenle | [B] geri)
 // =============================================================================
@@ -1746,6 +2028,142 @@ void showModeConfigSummary(string title)
         Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
         Console.WriteLine($"║  MultiTrader: {childInfo,-50}║");
         Console.WriteLine($"║  Sort       : {sortInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "QuerySymbolScan")
+    {
+        var cfg = appConfig.QuerySymbolScan;
+
+        string sourceInfo = cfg.AutoDiscover
+            ? Trunc($"Auto-discover: {cfg.DataFolder}", 50)
+            : Trunc($"{cfg.SymbolList.Count} sembol (liste)  |  {cfg.DataFolder}", 50);
+        string queryInfo  = Trunc($"{cfg.Query.Name}  /  {cfg.Query.Version}", 50);
+
+        Console.WriteLine($"║  Symbols    : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Query      : {queryInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "QueryTimeframeScan")
+    {
+        var cfg = appConfig.QueryTimeframeScan;
+
+        string sourceInfo = Trunc($"{cfg.Symbol}  |  {cfg.BaseFolder}", 50);
+        string tfInfo     = Trunc(string.Join(", ", cfg.Timeframes), 50);
+        string queryInfo  = Trunc($"{cfg.Query.Name}  /  {cfg.Query.Version}", 50);
+
+        Console.WriteLine($"║  Symbol     : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
+        Console.WriteLine($"║  Query      : {queryInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "MultiQueryTimeframeScan")
+    {
+        var cfg = appConfig.MultiQueryTimeframeScan;
+
+        string sourceInfo = Trunc($"{cfg.Symbol}  |  {cfg.BaseFolder}", 50);
+        string tfInfo     = Trunc(string.Join(", ", cfg.Timeframes), 50);
+        string queriesInfo = Trunc($"{cfg.Queries.Count} sorgu (bağımsız)", 50);
+
+        Console.WriteLine($"║  Symbol     : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
+        Console.WriteLine($"║  Queries    : {queriesInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "QuerySymbolTimeframeScan")
+    {
+        var cfg = appConfig.QuerySymbolTimeframeScan;
+
+        string sourceInfo = cfg.AutoDiscover
+            ? Trunc($"Auto-discover ({cfg.ReferenceTimeframe}): {cfg.BaseFolder}", 50)
+            : Trunc($"{cfg.SymbolList.Count} sembol (liste)  |  {cfg.BaseFolder}", 50);
+        string tfInfo     = Trunc(string.Join(", ", cfg.Timeframes), 50);
+        string queryInfo  = Trunc($"{cfg.Query.Name}  /  {cfg.Query.Version}", 50);
+
+        Console.WriteLine($"║  Symbols    : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
+        Console.WriteLine($"║  Query      : {queryInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "MultiQuerySymbolScan")
+    {
+        var cfg = appConfig.MultiQuerySymbolScan;
+
+        string sourceInfo = cfg.AutoDiscover
+            ? Trunc($"Auto-discover: {cfg.DataFolder}", 50)
+            : Trunc($"{cfg.SymbolList.Count} sembol (liste)  |  {cfg.DataFolder}", 50);
+        string queriesInfo = Trunc($"{cfg.Queries.Count} sorgu (bağımsız)", 50);
+
+        Console.WriteLine($"║  Symbols    : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Queries    : {queriesInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "MultiQuerySymbolTimeframeScan")
+    {
+        var cfg = appConfig.MultiQuerySymbolTimeframeScan;
+
+        string sourceInfo = cfg.AutoDiscover
+            ? Trunc($"Auto-discover ({cfg.ReferenceTimeframe}): {cfg.BaseFolder}", 50)
+            : Trunc($"{cfg.SymbolList.Count} sembol (liste)  |  {cfg.BaseFolder}", 50);
+        string tfInfo      = Trunc(string.Join(", ", cfg.Timeframes), 50);
+        string queriesInfo = Trunc($"{cfg.Queries.Count} sorgu (bağımsız)", 50);
+
+        Console.WriteLine($"║  Symbols    : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
+        Console.WriteLine($"║  Queries    : {queriesInfo,-50}║");
 
         Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
         Console.WriteLine("║  [ENTER]  Run                                                   ║");
@@ -2556,6 +2974,228 @@ async Task handleMultiStrategySymbolTimeframeScan()
     }
 }
 
+async Task handleQuerySymbolScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("QuerySymbolScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runQuerySymbolScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
+async Task handleQueryTimeframeScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("QueryTimeframeScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runQueryTimeframeScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
+async Task handleMultiQueryTimeframeScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("MultiQueryTimeframeScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runMultiQueryTimeframeScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
+async Task handleQuerySymbolTimeframeScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("QuerySymbolTimeframeScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runQuerySymbolTimeframeScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
+async Task handleMultiQuerySymbolScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("MultiQuerySymbolScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runMultiQuerySymbolScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
+async Task handleMultiQuerySymbolTimeframeScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("MultiQuerySymbolTimeframeScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runMultiQuerySymbolTimeframeScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
 // =============================================================================
 // Script Support
 // =============================================================================
@@ -2729,6 +3369,15 @@ void showMainMenu()
     Console.WriteLine("║    [14]  Tarama (Multi-Strategy Symbol Scan)                       ║");
     Console.WriteLine("║    [15]  Tarama (Multi-Strategy Symbol-Timeframe Scan)             ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ Sorgu Tarama ═══════════════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [16]  Sorgu Tarama (Query Symbol Scan)                          ║");
+    Console.WriteLine("║    [17]  Sorgu Tarama (Query Timeframe Scan)                       ║");
+    Console.WriteLine("║    [18]  Sorgu Tarama (Multi-Query Timeframe Scan)                 ║");
+    Console.WriteLine("║    [19]  Sorgu Tarama (Query Symbol-Timeframe Scan)                ║");
+    Console.WriteLine("║    [20]  Sorgu Tarama (Multi-Query Symbol Scan)                    ║");
+    Console.WriteLine("║    [21]  Sorgu Tarama (Multi-Query Symbol-Timeframe Scan)          ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0]  Exit                                                       ║");
@@ -2889,6 +3538,12 @@ async Task main()
             case "13": await handleSymbolTimeframeScan();                    break;
             case "14": await handleMultiStrategySymbolScan();                break;
             case "15": await handleMultiStrategySymbolTimeframeScan();       break;
+            case "16": await handleQuerySymbolScan();                       break;
+            case "17": await handleQueryTimeframeScan();                    break;
+            case "18": await handleMultiQueryTimeframeScan();               break;
+            case "19": await handleQuerySymbolTimeframeScan();              break;
+            case "20": await handleMultiQuerySymbolScan();                  break;
+            case "21": await handleMultiQuerySymbolTimeframeScan();         break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }

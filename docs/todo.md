@@ -70,36 +70,39 @@ istemediği için orijinal sıra korunuyor; A/B/C/4/6 tamamlandıktan sonra kala
 - Zengin JSON preview ekranı (SingleTrader/MultipleTrader'daki gibi), Time filtering /
   TradeStartBarIndex desteği, buffered flush / partial-resume, otomatik TF keşfi
 
-**Not — bu matris sadece Strateji ekseninde**: 6/7/8 bitince "Sembol × Strateji × Zaman Dilimi"
-matrisi tamamlanmış olacak (8/8), ama proje ayrıca `IStrategy` ile birebir aynı desende bağımsız
-bir **Sorgu** alt sistemi barındırıyor (`IQuery`/`BaseQuery`/`QueryRegistry`,
-`SingleTrader.RunMode = QueryOnly`) — hiçbir tarama sınıfı bunu desteklemiyor. Bu, migration-
-guide.md madde 6 (zengin sorgu tipleri) ve madde 9'un (Sorgu + Toplu Sembol Uygulama) birebir
-tarif ettiği, **ayrı ve henüz başlanmamış** bir iş.
+**Not — Sorgu ekseni de tamamlandı (2026-08-18)**: 6/7/8 ile "Sembol × Strateji × Zaman Dilimi"
+matrisi (8/8) tamamlandıktan sonra, aynı oturumda "Sembol × Sorgu × Zaman Dilimi" matrisi de
+(8/8) tamamlandı — `IStrategy` ile birebir aynı desende bağımsız bir **Sorgu** alt sistemi
+(`IQuery`/`BaseQuery`/`QueryRegistry`, `SingleTrader.RunMode = QueryOnly`) zaten mevcuttu, artık
+tüm tarama sınıflarının bir Sorgu karşılığı da var. migration-guide.md madde 9'un (Sorgu + Toplu
+Sembol Uygulama) istediği şey `QuerySymbolScanner` (senaryo 5) ile karşılandı.
 
-### Sorgu Tarama Matrisi (Strateji matrisinin Sorgu karşılığı — 2026-08-18)
+### Sorgu Tarama Matrisi (Strateji matrisinin Sorgu karşılığı — TAMAMLANDI 2026-08-18)
 
-Aynı 8 senaryo, "Strateji" yerine "Sorgu":
+Aynı 8 senaryo, "Strateji" yerine "Sorgu" — kullanıcı kararınca (madde 6'yı atlayıp doğrudan
+tarama sınıflarına geçme, paralel 1-1 sınıf kopyası) hepsi yazıldı:
 
 | # | Sembol | Sorgu | Zaman Dilimi | Durum |
 |---|--------|-------|---------------|-------|
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader.RunMode = QueryOnly` |
-| 2 | Tek | Tek | Çoklu | ❌ Yok — `TimeframeScanner`'ın QueryOnly-varyantı gerekiyor |
-| 3 | Tek | Çoklu | Tek | ❌ Yok — N sorguyu aynı sembol/TF'de çalıştırıp N ayrı sonuç kolonu raporlamak (bkz. aşağıdaki karar) |
-| 4 | Tek | Çoklu | Çoklu | ❌ Yok — 2 ve 3'ün bileşimi |
-| 5 | Çoklu | Tek | Tek | ❌ Yok — `SymbolScanner`'ın QueryOnly-varyantı, **madde 9'un birebir istediği şey** |
-| 6 | Çoklu | Tek | Çoklu | ❌ Yok — 2 ve 5'in bileşimi |
-| 7 | Çoklu | Çoklu | Tek | ❌ Yok — 3'ün çoklu sembol hali |
-| 8 | Çoklu | Çoklu | Çoklu | ❌ Yok — hepsinin bileşimi |
+| 2 | Tek | Tek | Çoklu | ✅ `QueryTimeframeScanner` — Console `[17]` |
+| 3 | Tek | Çoklu | Tek | ✅ `MultipleQuery` (yeni primitive) |
+| 4 | Tek | Çoklu | Çoklu | ✅ `MultiQueryTimeframeScanner` — Console `[18]` |
+| 5 | Çoklu | Tek | Tek | ✅ `QuerySymbolScanner` — Console `[16]`, **madde 9'un birebir istediği şey** |
+| 6 | Çoklu | Tek | Çoklu | ✅ `QuerySymbolTimeframeScanner` — Console `[19]` |
+| 7 | Çoklu | Çoklu | Tek | ✅ `MultiQuerySymbolScanner` — Console `[20]` |
+| 8 | Çoklu | Çoklu | Çoklu | ✅ `MultiQuerySymbolTimeframeScanner` — Console `[21]` |
 
 **Karar (kullanıcı ile netleşti, 2026-08-18)**: "Çoklu Sorgu" (3/4/7/8) **hiçbir zaman
 birleştirilmiyor** — Strateji'deki "bileşke" (MultipleTrader, tek bir Al/Sat kararı) kavramının
-Sorgu karşılığı yok. N sorgu çalıştırılır, N sonuç **ayrı ayrı** raporlanır (ayrı kolonlar/
-satırlar), kullanıcı kendisi yorumlar. Bu, mimariyi ciddi şekilde basitleştiriyor: Strateji
-tarafındaki gibi yeni bir "MultipleQuery" consensus sınıfına gerek yok — mevcut tarama
-sınıflarının (`SymbolScanner`/`TimeframeScanner` vb.) her hücresinde tek sorgu yerine bir
-**sorgu listesi** çalıştırıp sonuçları ek kolonlar olarak eklemesi yeterli. Detay:
+Sorgu karşılığı yok. N sorgu çalıştırılır, N sonuç **ayrı ayrı** raporlanır (ayrı kolonlar),
+kullanıcı kendisi yorumlar. `MultipleQuery` bu yüzden bir "consensus" sınıfı değil — N bağımsız
+`SingleTrader` (QueryOnly) çalıştırıp sonuçları hiç birleştirmeden topluyor. Detay:
 `docs/tarama-motoru-plan.md`'nin sonunda "Sorgu Tarama Matrisi" bölümü.
+
+**Kapsam dışı (fast-follow)**: Madde 6 (zengin sorgu tipleri) hâlâ yazılmadı — hâlâ sadece
+`SimpleQuery1` var (v1/v2 parametre varyasyonuyla test edildi). Gerçek çeşitlilik (fiyat-
+indikatör kesişimi, indikatör-indikatör kesişimi vb.) ayrı, henüz başlanmamış bir iş.
 
 Kaynak: [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md), [docs/migration-guide.md](migration-guide.md)
 (madde 2, 4, 8), [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).

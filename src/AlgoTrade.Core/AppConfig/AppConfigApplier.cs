@@ -683,6 +683,232 @@ public static class AppConfigApplier
     }
 
     // =========================================================================
+    // QuerySymbolScan (Sorgu Tarama Matrisi — Senaryo 5)
+    // =========================================================================
+
+    /// <summary>
+    /// QuerySymbolScanConfig'i, QuerySymbolScanner.Run()'a doğrudan verilebilecek bir
+    /// QuerySymbolScanOptions'a çevirir. BuildSymbolScanOptions ile aynı desende — Strategy
+    /// yerine Query, TradeParams/Signals yok (QueryOnly modda ikisi de kullanılmıyor).
+    /// </summary>
+    public static QuerySymbolScanOptions BuildQuerySymbolScanOptions(QuerySymbolScanConfig cfg, string configsDir)
+    {
+        string queryPath   = Path.Combine(configsDir, cfg.Query.ConfigFile);
+        var    queryLoader = new QueryConfigLoader(queryPath);
+        queryLoader.LoadFromFile();
+        var queryCfg = queryLoader.GetConfiguration(cfg.Query.Name, cfg.Query.Version)
+            ?? throw new InvalidOperationException($"Query bulunamadı: {cfg.Query.Name} / {cfg.Query.Version}");
+
+        var options = new QuerySymbolScanOptions
+        {
+            DataFolder       = cfg.DataFolder,
+            AutoDiscover     = cfg.AutoDiscover,
+            SymbolList       = cfg.SymbolList,
+            QueryName        = queryCfg.QueryName,
+            QueryParameters  = queryCfg.GetParameterValues(),
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
+    // =========================================================================
+    // QueryTimeframeScan (Sorgu Tarama Matrisi — Senaryo 2)
+    // =========================================================================
+
+    /// <summary>
+    /// QueryTimeframeScanConfig'i, QueryTimeframeScanner.Run()'a doğrudan verilebilecek bir
+    /// QueryTimeframeScannerOptions'a çevirir. BuildQuerySymbolScanOptions ile aynı desende.
+    /// </summary>
+    public static QueryTimeframeScannerOptions BuildQueryTimeframeScanOptions(QueryTimeframeScanConfig cfg, string configsDir)
+    {
+        string queryPath   = Path.Combine(configsDir, cfg.Query.ConfigFile);
+        var    queryLoader = new QueryConfigLoader(queryPath);
+        queryLoader.LoadFromFile();
+        var queryCfg = queryLoader.GetConfiguration(cfg.Query.Name, cfg.Query.Version)
+            ?? throw new InvalidOperationException($"Query bulunamadı: {cfg.Query.Name} / {cfg.Query.Version}");
+
+        var options = new QueryTimeframeScannerOptions
+        {
+            BaseFolder      = cfg.BaseFolder,
+            Symbol          = cfg.Symbol,
+            Timeframes      = cfg.Timeframes,
+            QueryName       = queryCfg.QueryName,
+            QueryParameters = queryCfg.GetParameterValues(),
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
+    // =========================================================================
+    // MultiQueryTimeframeScan (Sorgu Tarama Matrisi — Senaryo 4)
+    // =========================================================================
+
+    /// <summary>
+    /// MultiQueryTimeframeScanConfig'i, MultiQueryTimeframeScanner.Run()'a doğrudan verilebilecek
+    /// bir MultiQueryTimeframeScannerOptions'a çevirir. cfg.Queries listesindeki her QueryRef,
+    /// kendi QueryConfig dosyasından yüklenip sırayla 0,1,2... QueryId ile bir QueryEntry'ye
+    /// dönüştürülür.
+    /// </summary>
+    public static MultiQueryTimeframeScannerOptions BuildMultiQueryTimeframeScanOptions(MultiQueryTimeframeScanConfig cfg, string configsDir)
+    {
+        var options = new MultiQueryTimeframeScannerOptions
+        {
+            BaseFolder = cfg.BaseFolder,
+            Symbol     = cfg.Symbol,
+            Timeframes = cfg.Timeframes,
+            Queries    = BuildQueryEntries(cfg.Queries, configsDir),
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
+    // =========================================================================
+    // QuerySymbolTimeframeScan (Sorgu Tarama Matrisi — Senaryo 6)
+    // =========================================================================
+
+    /// <summary>
+    /// QuerySymbolTimeframeScanConfig'i, QuerySymbolTimeframeScanner.Run()'a doğrudan
+    /// verilebilecek bir QuerySymbolTimeframeScannerOptions'a çevirir.
+    /// </summary>
+    public static QuerySymbolTimeframeScannerOptions BuildQuerySymbolTimeframeScanOptions(QuerySymbolTimeframeScanConfig cfg, string configsDir)
+    {
+        string queryPath   = Path.Combine(configsDir, cfg.Query.ConfigFile);
+        var    queryLoader = new QueryConfigLoader(queryPath);
+        queryLoader.LoadFromFile();
+        var queryCfg = queryLoader.GetConfiguration(cfg.Query.Name, cfg.Query.Version)
+            ?? throw new InvalidOperationException($"Query bulunamadı: {cfg.Query.Name} / {cfg.Query.Version}");
+
+        var options = new QuerySymbolTimeframeScannerOptions
+        {
+            BaseFolder          = cfg.BaseFolder,
+            AutoDiscover        = cfg.AutoDiscover,
+            ReferenceTimeframe  = cfg.ReferenceTimeframe,
+            SymbolList          = cfg.SymbolList,
+            Timeframes          = cfg.Timeframes,
+            QueryName           = queryCfg.QueryName,
+            QueryParameters     = queryCfg.GetParameterValues(),
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
+    // =========================================================================
+    // MultiQuerySymbolScan (Sorgu Tarama Matrisi — Senaryo 7)
+    // =========================================================================
+
+    /// <summary>
+    /// MultiQuerySymbolScanConfig'i, MultiQuerySymbolScanner.Run()'a doğrudan verilebilecek bir
+    /// MultiQuerySymbolScannerOptions'a çevirir. BuildMultiQueryTimeframeScanOptions ile aynı
+    /// desende — döngü değişkeni TF yerine sembol.
+    /// </summary>
+    public static MultiQuerySymbolScannerOptions BuildMultiQuerySymbolScanOptions(MultiQuerySymbolScanConfig cfg, string configsDir)
+    {
+        var options = new MultiQuerySymbolScannerOptions
+        {
+            DataFolder   = cfg.DataFolder,
+            AutoDiscover = cfg.AutoDiscover,
+            SymbolList   = cfg.SymbolList,
+            Queries      = BuildQueryEntries(cfg.Queries, configsDir),
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
+    // =========================================================================
+    // MultiQuerySymbolTimeframeScan (Sorgu Tarama Matrisi — Senaryo 8)
+    // =========================================================================
+
+    /// <summary>
+    /// MultiQuerySymbolTimeframeScanConfig'i, MultiQuerySymbolTimeframeScanner.Run()'a doğrudan
+    /// verilebilecek bir MultiQuerySymbolTimeframeScannerOptions'a çevirir.
+    /// </summary>
+    public static MultiQuerySymbolTimeframeScannerOptions BuildMultiQuerySymbolTimeframeScanOptions(MultiQuerySymbolTimeframeScanConfig cfg, string configsDir)
+    {
+        var options = new MultiQuerySymbolTimeframeScannerOptions
+        {
+            BaseFolder         = cfg.BaseFolder,
+            AutoDiscover       = cfg.AutoDiscover,
+            ReferenceTimeframe = cfg.ReferenceTimeframe,
+            SymbolList         = cfg.SymbolList,
+            Timeframes         = cfg.Timeframes,
+            Queries            = BuildQueryEntries(cfg.Queries, configsDir),
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
+    /// <summary>
+    /// Bir QueryRef listesini (AppConfig.json'daki "Queries" bloğu) sırayla 0,1,2... QueryId
+    /// atanmış QueryEntry listesine çevirir — MultiQueryTimeframeScan/MultiQuerySymbolScan/
+    /// MultiQuerySymbolTimeframeScan tarafından ortak kullanılır.
+    /// </summary>
+    private static List<QueryEntry> BuildQueryEntries(List<QueryRef> queryRefs, string configsDir)
+    {
+        var entries = new List<QueryEntry>();
+
+        for (int i = 0; i < queryRefs.Count; i++)
+        {
+            var qRef = queryRefs[i];
+            string queryPath   = Path.Combine(configsDir, qRef.ConfigFile);
+            var    queryLoader = new QueryConfigLoader(queryPath);
+            queryLoader.LoadFromFile();
+            var queryCfg = queryLoader.GetConfiguration(qRef.Name, qRef.Version)
+                ?? throw new InvalidOperationException($"Query bulunamadı: {qRef.Name} / {qRef.Version}");
+
+            entries.Add(new QueryEntry
+            {
+                QueryId         = i,
+                QueryName       = queryCfg.QueryName,
+                QueryParameters = queryCfg.GetParameterValues(),
+            });
+        }
+
+        return entries;
+    }
+
+    // =========================================================================
     // TradeParamsConfig → InitialTradeParams dönüşümü
     // =========================================================================
 

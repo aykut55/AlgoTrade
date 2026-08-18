@@ -516,20 +516,95 @@ Strateji eksenini kapsıyor, Sorgu ekseni hiç ele alınmadı.
   sembollerde fiyat 20 MA'yi yukarı kırdı?' gibi sorgular tüm sembol havuzunda çalıştırılır ve
   eşleşen semboller listelenir."* — bu **tam olarak** "Sembol × Sorgu" tarama matrisinin tanımı.
 
-## Tam Matris (8/8 — netleşti, 2026-08-18)
+## Tam Matris (8/8 — TAMAMLANDI, 2026-08-18)
 
-Strateji tarafındaki matrisle aynı mantık, "Strateji"nin yerini "Sorgu" alıyor:
+Strateji tarafındaki matrisle aynı mantık, "Strateji"nin yerini "Sorgu" alıyor. Kullanıcı, aşağıdaki
+"önemli basitleştirme"yi (3 sınıfa indirgeme) bilinçli olarak reddedip **1-1 analojiyi** tercih
+etti ("Strateji olanları Sorgu ile değiştirelim, paralel yeni sınıflar yazalım... 1-1 analojiyi
+takip etmek istiyorum") — bu yüzden Strateji tarafındaki 8 sınıfın hepsinin birebir bir Sorgu
+karşılığı yazıldı, aynı sırayla (B→C→A→4→6→7→8) uygulandı:
 
 | # | Sembol | Sorgu | Zaman Dilimi | Durum |
 |---|--------|-------|---------------|-------|
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader.RunMode = QueryOnly` |
-| 2 | Tek | Tek | Çoklu | ❌ Yok — `TimeframeScanner`'ın QueryOnly-varyantı gerekiyor |
-| 3 | Tek | Çoklu | Tek | ❌ Yok — bkz. aşağıdaki karar |
-| 4 | Tek | Çoklu | Çoklu | ❌ Yok — 2 ve 3'ün bileşimi |
-| 5 | Çoklu | Tek | Tek | ❌ Yok — `SymbolScanner`'ın QueryOnly-varyantı, **madde 9'un birebir istediği şey** |
-| 6 | Çoklu | Tek | Çoklu | ❌ Yok — 2 ve 5'in bileşimi |
-| 7 | Çoklu | Çoklu | Tek | ❌ Yok — 3'ün çoklu sembol hali |
-| 8 | Çoklu | Çoklu | Çoklu | ❌ Yok — hepsinin bileşimi |
+| 2 | Tek | Tek | Çoklu | ✅ `QueryTimeframeScanner` — Console `[17]` |
+| 3 | Tek | Çoklu | Tek | ✅ `MultipleQuery` (yeni primitive, Sorgu tarafının "Yapı Taşı B"si) |
+| 4 | Tek | Çoklu | Çoklu | ✅ `MultiQueryTimeframeScanner` — Console `[18]` |
+| 5 | Çoklu | Tek | Tek | ✅ `QuerySymbolScanner` — Console `[16]`, **madde 9'un birebir istediği şey** |
+| 6 | Çoklu | Tek | Çoklu | ✅ `QuerySymbolTimeframeScanner` — Console `[19]` |
+| 7 | Çoklu | Çoklu | Tek | ✅ `MultiQuerySymbolScanner` — Console `[20]` |
+| 8 | Çoklu | Çoklu | Çoklu | ✅ `MultiQuerySymbolTimeframeScanner` — Console `[21]` (matrisin en genel hâli) |
+
+## Uygulama Notları
+
+- **Neden `GetStatisticsHeaderRow`/`GetStatisticsDataRow` reuse edilmedi**: `QueryOnly` modda
+  `SingleTrader.Finalize()` istatistikleri hiç hesaplamıyor (`CalculateStatistics()`/
+  `CalculatePerformances()` sadece `TradeOnly`/`TradeAndQuery` dallarında çağrılıyor) — bu yüzden
+  Strateji tarafının CSV satırı (`GetStatisticsDataRow`) Query modda anlamsız (boş/sıfır) kalırdı.
+  Bunun yerine her Sorgu tarayıcısı satırı `trader.QueryColumnNames`/`trader.LastQueryResult`
+  (dinamik, sorguya göre değişen kolonlar) + `trader.SorguOzeti` (TaramaOzeti'nin karşılığı,
+  `Finalize()` içinde son bar için doldurulan özet string) üzerinden kuruyor.
+- **`MultipleQuery` neden `MultipleTrader`'a bağlı değil**: `MultipleTrader`'ın consensus/liste-
+  yazma mantığı tamamen trade-odaklı (hiç "Query" içermiyor) — `MultipleQuery` sıfırdan, çok daha
+  basit bir sınıf: N tane bağımsız `SingleTrader` (her biri `QueryOnly` + kendi `IQuery`'si) aynı
+  paylaşılan veri/indikatör setini kullanıyor, sonuçlar hiç birleştirilmeden toplanıyor.
+- **Bileşke (`MultiQuery*`) tarayıcılar neden throwaway `AlgoTrader` kullanmıyor**: `MultipleQuery`
+  `AlgoTrader.createChildTraders()` akışına (trade-odaklı, per-child Signals/Save/Export config'i
+  gerektiren) ihtiyaç duymuyor — bu yüzden Senaryo 4/7/8'in Strateji karşılıklarından farklı olarak
+  (onlar throwaway `AlgoTrader` + `ConfigureAlgoTrader` delegate kullanıyordu), Sorgu tarafının
+  `MultiQuery*` sınıfları `SymbolScanner`/`TimeframeScanner` gibi veriyi elle (`StockDataReader`/
+  `IndicatorManager`) okuyup `MultipleQuery`'yi doğrudan kuruyor — daha basit, AppConfig'e bağımlı
+  olmayan bir katman ayrımı korunuyor.
+- **CSV kolon deseni**: Tekli-sorgu tarayıcılar (`Query*Scanner`) sorgunun ham dinamik kolonlarını
+  (`QueryColumnNames`/`LastQueryResult`) + `SorguOzeti`'ni satıra yazıyor. Çoklu-sorgu tarayıcılar
+  (`MultiQuery*Scanner`) ise Strateji tarafındaki `Child{Id}_SonYon;Child{Id}_TaramaOzeti` deseniyle
+  tutarlı olacak şekilde her sorgu için tek bir özet kolonu (`Query{Id}_SorguOzeti`) ekliyor — N
+  sorgunun tamamen farklı kolon sayısı/isimleri olabileceği için (bkz. `SimpleQuery1`'in
+  `Trader?.Strategy` varlığına göre değişen `StrategySignal` kolonu) ham kolonları flat bir CSV'de
+  hizalamak yerine özet string tercih edildi.
+- **`Sort`/`SortField` yok**: Sorgu sonuçları bir performans değeri değil (bkz. "Karar: Çoklu Sorgu
+  Ne Anlama Geliyor") — kullanıcı kendisi yorumluyor, bu yüzden hiçbir Sorgu config'inde `Sort`
+  bloğu yok, `GetBestResult()` gibi bir metod da yok.
+- **`QueryConfig.txt`'e `SimpleQuery1|v2|Fast|...` eklendi** — `StrategyConfig.txt`'nin
+  `SimpleMostStrategy v1/v2` deseniyle tutarlı, "2 farklı sorgu" testi için (aynı sınıf, farklı MA
+  periyotları: v1=8/200, v2=5/50).
+
+## Doğrulama
+
+Her sınıf, gerçek veride (BTCUSDT_BNC/ETHUSDT_BNC, TF 05/15, `SimpleQuery1` v1/v2) scratch testle
+uçtan uca doğrulandı — `MultipleQuery` (2 bağımsız sorgu, farklı sonuçlar), `QuerySymbolScanner`/
+`QueryTimeframeScanner`/`QuerySymbolTimeframeScanner` (dinamik kolonlar, doğru `SorguOzeti`),
+`MultiQueryTimeframeScanner`/`MultiQuerySymbolScanner`/`MultiQuerySymbolTimeframeScanner`
+(`Query0_SorguOzeti;Query1_SorguOzeti` kolonları, iki sorgunun gerçekten farklı/bağımsız sonuç
+verdiği — örn. aynı hücrede `CrossSignal=1` vs `CrossSignal=-1` — doğrulandı, birleştirme
+olmadığının kanıtı). Tüm çözüm (`AlgoTrade.sln`) hatasız derleniyor.
+
+## Dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `src/AlgoTrade.Core/Trading/Traders/MultipleQuery.cs` | YENİ — Senaryo 3 |
+| `src/AlgoTrade.Core/Trading/Traders/QuerySymbolScanner.cs` | YENİ — Senaryo 5 |
+| `src/AlgoTrade.Core/Trading/Traders/QueryTimeframeScanner.cs` | YENİ — Senaryo 2 |
+| `src/AlgoTrade.Core/Trading/Traders/MultiQueryTimeframeScanner.cs` | YENİ — Senaryo 4 |
+| `src/AlgoTrade.Core/Trading/Traders/QuerySymbolTimeframeScanner.cs` | YENİ — Senaryo 6 |
+| `src/AlgoTrade.Core/Trading/Traders/MultiQuerySymbolScanner.cs` | YENİ — Senaryo 7 |
+| `src/AlgoTrade.Core/Trading/Traders/MultiQuerySymbolTimeframeScanner.cs` | YENİ — Senaryo 8 |
+| `src/AlgoTrade.Core/AppConfig/AppConfig.cs` | 7 yeni config sınıfı (+ `Sort` yok, `Save` var) — `QuerySymbolScanConfig`, `QueryTimeframeScanConfig`, `MultiQueryTimeframeScanConfig`, `QuerySymbolTimeframeScanConfig`, `MultiQuerySymbolScanConfig`, `MultiQuerySymbolTimeframeScanConfig` + root `AppConfig` alanları |
+| `src/AlgoTrade.Core/AppConfig/AppConfigApplier.cs` | 6 yeni `Build*Options` metodu + ortak `BuildQueryEntries(List<QueryRef>, configsDir)` helper'ı (Multi* sınıflar için) |
+| `inputs/configs/AppConfig/AppConfig.json` | 6 yeni bölüm (`QuerySymbolScan`, `QueryTimeframeScan`, `MultiQueryTimeframeScan`, `QuerySymbolTimeframeScan`, `MultiQuerySymbolScan`, `MultiQuerySymbolTimeframeScan`) |
+| `inputs/configs/QueryConfig.txt` | `SimpleQuery1|v2|Fast|...` satırı eklendi (2. sorgu testi için) |
+| `AlgoTrade.Console/Program.cs` | `[16]`-`[21]` menü seçenekleri (yeni "Sorgu Tarama" alt başlığı altında), 6 `handle*`/`run*` fonksiyon çifti, 6 `showModeConfigSummary` dalı |
+
+## Kapsam Dışı (fast-follow)
+
+- **Madde 6** (zengin sorgu tipleri) hâlâ yazılmadı — hâlâ sadece `SimpleQuery1` var (v1/v2
+  parametre varyasyonuyla test edildi). Kullanıcı bilinçli olarak Madde 6'yı atlayıp doğrudan
+  tarama sınıflarına geçmeyi seçti ("Dogrudan tarama sınıflarına geç" kararı, 2026-08-18) —
+  gerçek/zengin sorgu türleri (fiyat-indikatör kesişimi, indikatör-indikatör kesişimi vb.) hâlâ
+  ayrı, henüz başlanmamış bir iş.
+- Gerçek Console üzerinden interaktif deneme yapılmadı (Strateji tarafındaki senaryolarla aynı
+  sebep — `Console.ReadKey(intercept:true)` piped/otomatik input ile test edilemiyor).
 
 ## Karar: "Çoklu Sorgu" Ne Anlama Geliyor (kullanıcı ile netleşti, 2026-08-18)
 
@@ -547,22 +622,11 @@ ailesi) kullanabilir, "Sorgu" ekseni sadece "tek mi çoklu mu" değil, "kaç tan
 ekleniyor" detayına indirgeniyor. Yani pratikte 8 senaryo değil, **2 gerçek eksen** (Sembol,
 Zaman Dilimi) + "kaç sorgu çalıştırılıyor" parametresi.
 
-## Neden Şimdi Değil
+## Neden Başta Ertelendi, Sonra Neden Yine de Yapıldı
 
-1. **Madde 6 önce gerekiyor**: Zengin sorgu tipi olmadan (sadece `SimpleQuery1` varken) tarama
-   motoru yazmanın getirisi düşük.
-2. Strateji taraması (bu belgenin geri kalanı) zaten büyük bir iş, önce onu bitirmek (6→7→8)
-   önceliklendirildi.
-3. Mimari olarak muhtemelen **yeni sınıflar değil**, mevcut tarama sınıflarına (`SymbolScanner`
-   vb.) bir "Query modu" eklenmesi yeterli olabilir (`RunMode` parametrik hale getirilip
-   `QueryOnly` seçilebilir hale gelmesi, ve tek `QueryName` yerine bir `QueryNames: List<string>`
-   alınması) — ama bu tasarım kararı henüz verilmedi, ayrı bir plan-mode oturumu gerektirecek.
-
-## Yapılacaklar (6/7/8 bitince, ayrı bir oturumda)
-
-1. Önce Madde 6'yı ele al — en az 2-3 yeni somut sorgu türü yaz (örn. "fiyat-indikatör kesişimi",
-   "indikatör-indikatör kesişimi").
-2. Sorgu taraması için mimari kararı ver: mevcut tarama sınıflarını Query-mode destekleyecek
-   şekilde genişletmek mi (`RunMode` + `QueryNames: List<string>` parametrik hale getirmek), yoksa
-   paralel yeni sınıflar mı (`SymbolQueryScanner` vb.) — plan-mode ile kullanıcıyla netleştir.
-   "Çoklu sorgu" artık net (birleştirme yok, ayrı ayrı raporlama) — bu karar zaten verildi.
+Bu bölüm başta (6/7/8 ile aynı oturumda) "Madde 6 önce gerekiyor, mimari karar henüz verilmedi"
+gerekçesiyle ertelenmişti. 6/7/8 bitip commit'lendikten sonra aynı oturumda kullanıcı devam etmeye
+karar verdi: mimari karar plan-mode yerine doğrudan soru-cevapla netleşti (paralel yeni sınıflar,
+1-1 analoji, Madde 6 atlanıp doğrudan `SimpleQuery1` ile tarama sınıflarına geçildi) — yukarıdaki
+"Tam Matris" tablosunda görüldüğü gibi 8/8 tamamlandı. Madde 6 (zengin sorgu tipleri) hâlâ ayrı,
+gelecekte ele alınabilecek bir iş olarak kalıyor (bkz. "Kapsam Dışı").

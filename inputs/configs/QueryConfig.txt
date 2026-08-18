@@ -1,2 +1,3 @@
 # QueryName|Version|DisplayName|param1:type:value|param2:type:value|...
 SimpleQuery1|v1|Default|ma8Period:int:8|ma200Period:int:200|choice:int:0
+SimpleQuery1|v2|Fast|ma8Period:int:5|ma200Period:int:50|choice:int:0

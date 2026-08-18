@@ -17,6 +17,12 @@ public class AppConfig
     public SymbolTimeframeScanConfig SymbolTimeframeScan { get; set; } = new();
     public MultiStrategySymbolScanConfig MultiStrategySymbolScan { get; set; } = new();
     public MultiStrategySymbolTimeframeScanConfig MultiStrategySymbolTimeframeScan { get; set; } = new();
+    public QuerySymbolScanConfig QuerySymbolScan { get; set; } = new();
+    public QueryTimeframeScanConfig QueryTimeframeScan { get; set; } = new();
+    public MultiQueryTimeframeScanConfig MultiQueryTimeframeScan { get; set; } = new();
+    public QuerySymbolTimeframeScanConfig QuerySymbolTimeframeScan { get; set; } = new();
+    public MultiQuerySymbolScanConfig MultiQuerySymbolScan { get; set; } = new();
+    public MultiQuerySymbolTimeframeScanConfig MultiQuerySymbolTimeframeScan { get; set; } = new();
 }
 
 // =============================================================================
@@ -679,4 +685,216 @@ public class MultiStrategySymbolTimeframeScanSaveConfig
     public string TxtFileName       { get; set; } = "MultiStrategySymbolTimeframeScanResults.txt";
     public string SortedCsvFileName { get; set; } = "MultiStrategySymbolTimeframeScanResults_sorted.csv";
     public string SortedTxtFileName { get; set; } = "MultiStrategySymbolTimeframeScanResults_sorted.txt";
+}
+
+// =============================================================================
+// Sorgu Tarama Matrisi (Strateji matrisinin Sorgu karşılığı, bkz. docs/tarama-motoru-plan.md
+// "Sorgu Tarama Matrisi" bölümü) — Senaryo 5: QuerySymbolScan (çoklu sembol, tek sorgu, tek TF)
+// =============================================================================
+
+/// <summary>
+/// Aynı sorguyu birden fazla sembolde bağımsız çalıştırıp sonuçları tek bir özet tabloda toplar.
+/// SymbolScanConfig'in (Strateji tarafı) birebir Sorgu karşılığı — Strategy yerine Query,
+/// TradeParams/Signals yok (QueryOnly modda ikisi de kullanılmıyor). Sort/SortField YOK —
+/// sorgu sonuçları bir performans değeri değil (bkz. "Karar: Çoklu Sorgu Ne Anlama Geliyor").
+/// </summary>
+public class QuerySymbolScanConfig
+{
+    /// <summary>Taranacak sembol dosyalarının bulunduğu klasör (tam yol). Örn. C:\data\csvFiles\CRP\05</summary>
+    public string DataFolder { get; set; } = "";
+
+    /// <summary>true: DataFolder'daki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    public QueryRef        Query    { get; set; } = new();
+    public ReadDataConfig  ReadData { get; set; } = new();
+
+    public QuerySymbolScanSaveConfig Save { get; set; } = new();
+}
+
+public class QuerySymbolScanSaveConfig
+{
+    public string CsvFileName { get; set; } = "QuerySymbolScanResults.csv";
+    public string TxtFileName { get; set; } = "QuerySymbolScanResults.txt";
+}
+
+// =============================================================================
+// Sorgu Tarama Matrisi — Senaryo 2: QueryTimeframeScan (tek sembol, tek sorgu, çoklu TF)
+// =============================================================================
+
+/// <summary>
+/// Aynı sorguyu, aynı sembolün birden fazla zaman diliminde bağımsız çalıştırıp sonuçları tek
+/// bir özet tabloda toplar. TimeframeScanConfig'in (Strateji tarafı, Yapı Taşı A) birebir Sorgu
+/// karşılığı — QuerySymbolScanConfig ile aynı desende (Query, Sort yok).
+/// </summary>
+public class QueryTimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>Dosya adı köküyle birebir (örn. "BTCUSDT_BNC"). Her TF klasöründe aynı isimle aranır.</summary>
+    public string Symbol { get; set; } = "";
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Otomatik keşif yok, açık liste.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    public QueryRef        Query    { get; set; } = new();
+    public ReadDataConfig  ReadData { get; set; } = new();
+
+    public QueryTimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class QueryTimeframeScanSaveConfig
+{
+    public string CsvFileName { get; set; } = "QueryTimeframeScanResults.csv";
+    public string TxtFileName { get; set; } = "QueryTimeframeScanResults.txt";
+}
+
+// =============================================================================
+// Sorgu Tarama Matrisi — Senaryo 4: MultiQueryTimeframeScan (tek sembol, çoklu sorgu, çoklu TF)
+// =============================================================================
+
+/// <summary>
+/// Aynı sembolde birden fazla sorguyu (MultipleQuery — hiçbiri birleştirilmez) her zaman
+/// diliminde bağımsız çalıştırır. MultiStrategyTimeframeScanConfig'in (Strateji tarafı, Senaryo
+/// 4) birebir Sorgu karşılığı — MultipleTrader yerine bir sorgu listesi (Queries).
+/// </summary>
+public class MultiQueryTimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>Dosya adı köküyle birebir (örn. "BTCUSDT_BNC"). Her TF klasöründe aynı isimle aranır.</summary>
+    public string Symbol { get; set; } = "";
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Açık liste, otomatik keşif yok.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    /// <summary>Her TF'de bağımsız çalışacak sorgular — sırayla 0,1,2... QueryId atanır, hiçbiri birleştirilmez.</summary>
+    public List<QueryRef> Queries { get; set; } = new();
+
+    public ReadDataConfig ReadData { get; set; } = new();
+
+    public MultiQueryTimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class MultiQueryTimeframeScanSaveConfig
+{
+    public string CsvFileName { get; set; } = "MultiQueryTimeframeScanResults.csv";
+    public string TxtFileName { get; set; } = "MultiQueryTimeframeScanResults.txt";
+}
+
+// =============================================================================
+// Sorgu Tarama Matrisi — Senaryo 6: QuerySymbolTimeframeScan (çoklu sembol, tek sorgu, çoklu TF)
+// =============================================================================
+
+/// <summary>
+/// Tek bir sorguyu hem sembol hem zaman dilimi ekseninde bağımsız çalıştırır.
+/// SymbolTimeframeScanConfig'in (Strateji tarafı, Senaryo 6) birebir Sorgu karşılığı.
+/// </summary>
+public class QuerySymbolTimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>true: ReferenceTimeframe klasöründeki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=true iken sembol keşfi için taranacak TF klasör adı (örn. "05").</summary>
+    public string ReferenceTimeframe { get; set; } = "";
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Otomatik keşif yok, açık liste.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    public QueryRef        Query    { get; set; } = new();
+    public ReadDataConfig  ReadData { get; set; } = new();
+
+    public QuerySymbolTimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class QuerySymbolTimeframeScanSaveConfig
+{
+    public string CsvFileName { get; set; } = "QuerySymbolTimeframeScanResults.csv";
+    public string TxtFileName { get; set; } = "QuerySymbolTimeframeScanResults.txt";
+}
+
+// =============================================================================
+// Sorgu Tarama Matrisi — Senaryo 7: MultiQuerySymbolScan (çoklu sembol, çoklu sorgu, tek TF)
+// =============================================================================
+
+/// <summary>
+/// Aynı zaman diliminde birden fazla sorguyu (MultipleQuery — hiçbiri birleştirilmez) birden
+/// fazla sembolde bağımsız çalıştırır. MultiStrategySymbolScanConfig'in (Strateji tarafı,
+/// Senaryo 7) birebir Sorgu karşılığı.
+/// </summary>
+public class MultiQuerySymbolScanConfig
+{
+    /// <summary>Taranacak sembol dosyalarının bulunduğu klasör (tam yol). Örn. C:\data\csvFiles\CRP\05</summary>
+    public string DataFolder { get; set; } = "";
+
+    /// <summary>true: DataFolder'daki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    /// <summary>Her sembolde bağımsız çalışacak sorgular — sırayla 0,1,2... QueryId atanır, hiçbiri birleştirilmez.</summary>
+    public List<QueryRef> Queries { get; set; } = new();
+
+    public ReadDataConfig ReadData { get; set; } = new();
+
+    public MultiQuerySymbolScanSaveConfig Save { get; set; } = new();
+}
+
+public class MultiQuerySymbolScanSaveConfig
+{
+    public string CsvFileName { get; set; } = "MultiQuerySymbolScanResults.csv";
+    public string TxtFileName { get; set; } = "MultiQuerySymbolScanResults.txt";
+}
+
+// =============================================================================
+// Sorgu Tarama Matrisi — Senaryo 8: MultiQuerySymbolTimeframeScan (çoklu sembol, çoklu sorgu,
+// çoklu TF — matrisin en genel hâli)
+// =============================================================================
+
+/// <summary>
+/// N sembol × M zaman dilimi, her hücrede birden fazla sorgu (MultipleQuery — hiçbiri
+/// birleştirilmez). MultiStrategySymbolTimeframeScanConfig'in (Strateji tarafı, Senaryo 8)
+/// birebir Sorgu karşılığı — senaryo 6 (nested-loop) + senaryo 4/7'nin (MultipleQuery) bileşimi.
+/// </summary>
+public class MultiQuerySymbolTimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>true: ReferenceTimeframe klasöründeki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=true iken sembol keşfi için taranacak TF klasör adı (örn. "05").</summary>
+    public string ReferenceTimeframe { get; set; } = "";
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Otomatik keşif yok, açık liste.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    /// <summary>Her hücrede bağımsız çalışacak sorgular — sırayla 0,1,2... QueryId atanır, hiçbiri birleştirilmez.</summary>
+    public List<QueryRef> Queries { get; set; } = new();
+
+    public ReadDataConfig ReadData { get; set; } = new();
+
+    public MultiQuerySymbolTimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class MultiQuerySymbolTimeframeScanSaveConfig
+{
+    public string CsvFileName { get; set; } = "MultiQuerySymbolTimeframeScanResults.csv";
+    public string TxtFileName { get; set; } = "MultiQuerySymbolTimeframeScanResults.txt";
 }
