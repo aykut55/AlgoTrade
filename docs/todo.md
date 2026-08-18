@@ -30,63 +30,54 @@
   2. Switch bitince `[9]` demo menüsü + geçici test hook'u silinecek
   3. X ekseni datetime formatını tek satıra indirmek (`panelManager.py:38`, `_dayChangeFormat`) — mekanizma hazır, sadece varsayılan değer değişecek
 
-## Tarama Matrisi Analizi
+## Tarama Motorları — TAMAMLANDI (16/16, 2026-08-18)
 
-Kullanıcının 2026-08-18'de tarif ettiği 8 senaryo (Sembol × Strateji × Zaman Dilimi, her biri
-Tek/Çoklu) temiz bir kombinasyon matrisi — gerçek bir tekrar yok, ama 8'i de ayrı ayrı inşa
-etmeye gerek yok. Kod tabanına göre bunlar 3 bağımsız yapı taşının bileşimi:
+Kullanıcının 2026-08-18'de tarif ettiği 8 senaryoluk matris (Sembol × Strateji × Zaman Dilimi,
+her biri Tek/Çoklu) **hem Strateji hem Sorgu ekseninde tamamlandı** (8/8 + 8/8 = 16/16). Console
+menüsünde `[10]`-`[21]` aralığında karşılıkları var. Tasarım kararları, sınıf/tablo eşlemeleri ve
+kalan işler aşağıda; ayrıntılı mimari/bug postmortem'leri içeren `docs/tarama-motoru-plan.md`
+artık silindi (içeriği buraya ve ilgili sınıfların XML doc comment'lerine taşındı).
+
+Kaynak: [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md), [docs/migration-guide.md](migration-guide.md)
+(madde 2, 4, 8, 9).
+
+### Strateji Tarama Matrisi (8/8) — Sınıf ve Bağımsız/Bileşke Sinyal Tablosu
 
 | # | Sembol | Strateji | Zaman Dilimi | Durum |
 |---|--------|----------|---------------|-------|
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader` |
-| 2 | Tek | Tek | Çoklu | ✅ TAMAMLANDI — `TimeframeScanner` + Console `[11] Tarama (Timeframe Scan)` (yapı taşı **A**, 2026-08-18) |
-| 3 | Tek | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultipleTrader` + Net/Majority/All/Any consensus modları (yapı taşı **B**, 2026-08-18) |
-| 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ TAMAMLANDI — `MultiStrategyTimeframeScanner` + Console `[12] Tarama (Multi-Strategy Timeframe Scan)` (2026-08-18). Hem bileşke (mainTrader) hem her child'ın bağımsız sinyali (`ChildSignals`) raporlanıyor — bkz. `docs/tarama-motoru-plan.md` "✅ DÜZELTİLDİ" |
-| 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama (Symbol Scan)` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
-| 6 | Çoklu | Tek | Çoklu | ✅ TAMAMLANDI — `SymbolTimeframeScanner` + Console `[13] Tarama (Symbol-Timeframe Scan)` (2026-08-18). N sembol × M TF, ikisi de tamamen bağımsız (iç içe iki döngü, `SymbolScanner`/`TimeframeScanner`'ın üçüncü kopyası) |
-| 7 | Çoklu | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultiStrategySymbolScanner` + Console `[14] Tarama (Multi-Strategy Symbol Scan)` (2026-08-18). Senaryo 4'ün doğrudan uyarlanmışı (döngü değişkeni TF yerine sembol), hem bileşke hem her child'ın bağımsız sinyali (`ChildSignals`) baştan doğru raporlanıyor |
-| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — 6 ve 7'nin bileşimi |
+| 2 | Tek | Tek | Çoklu | ✅ `TimeframeScanner` — Console `[11]` |
+| 3 | Tek | Çoklu (bileşke) | Tek | ✅ `MultipleTrader` (Net/Majority/All/Any consensus) — Console `[3]`/`[6]` |
+| 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ `MultiStrategyTimeframeScanner` — Console `[12]` |
+| 5 | Çoklu | Tek | Tek | ✅ `SymbolScanner` — Console `[10]` |
+| 6 | Çoklu | Tek | Çoklu | ✅ `SymbolTimeframeScanner` — Console `[13]` |
+| 7 | Çoklu | Çoklu (bileşke) | Tek | ✅ `MultiStrategySymbolScanner` — Console `[14]` |
+| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ✅ `MultiStrategySymbolTimeframeScanner` — Console `[15]` |
 
-**"Tek Sembol" sütunu (1/2/3/4), senaryo 5, 6 ve 7 tamamlandı** (bkz.
-[docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari, kritik bir bug ve düzeltmesi,
-tasarım sapmaları ve doğrulama sonuçları dahil). Kalan: 8.
+"Bileşke" kavramı sadece **3/4/7/8**'de var (sadece onlarda "Çoklu Strateji" = `MultipleTrader`).
+Hangi senaryoda bağımsız sinyal / bileşke sinyal raporlanıyor:
 
-**Önemli düzeltme (A için)**: İlk analizde zaman dilimi ekseni için de `MultipleTrader`'daki
-gibi bir "konsensüs/bileşke" gerektiği varsayılmıştı (sürücü TF + zaman-hizalama). Kullanıcı bu
-niyetin hiç olmadığını belirtti — istenen, aynı sembolü seçili zaman dilimlerinde **bağımsız
-bağımsız** çalıştırıp sonuçlara ayrı ayrı bakmaktı. "Bileşke" kelimesi sadece strateji ekseni
-için kullanılmıştı. Bu yüzden A, `SymbolScanner`'a (C) yapısal olarak neredeyse özdeş bağımsız
-bir sınıf (`TimeframeScanner`) olarak kuruldu — konsensüs/zaman-hizalama yok.
+| # | Sembol | Strateji | Zaman Dilimi | Bağımsız sinyal | Bileşke sinyal |
+|---|--------|----------|---------------|:---:|:---:|
+| 1 | Tek | Tek | Tek | — (tek strateji, kavram yok) | — |
+| 2 | Tek | Tek | Çoklu | ✅ her TF bağımsız (tasarım gereği) | — (TF'ler hiç birleşmiyor) |
+| 3 | Tek | Çoklu | Tek | ✅ (child list dosyaları + debug log) | ✅ (mainTrader consensus) |
+| 4 | Tek | Çoklu | Çoklu | ✅ (`TimeframeScanResult.ChildSignals`) | ✅ (her TF'nin kendi mainTrader'ı) |
+| 5 | Çoklu | Tek | Tek | ✅ her sembol bağımsız | — (tek strateji) |
+| 6 | Çoklu | Tek | Çoklu | ✅ her (sembol,TF) hücresi bağımsız (tek strateji → bileşke kavramı yok) | — |
+| 7 | Çoklu | Çoklu | Tek | ✅ (`ScanResult.ChildSignals`) | ✅ (her sembolün kendi mainTrader'ı) |
+| 8 | Çoklu | Çoklu | Çoklu | ✅ (`SymbolTimeframeScanResult.ChildSignals`) | ✅ (her hücrenin kendi mainTrader'ı) |
 
-**Sonraki adımlar — sıra kesinleşti: 6 → 7 → 8** (kullanıcı git commit sırasının karışmasını
-istemediği için orijinal sıra korunuyor; A/B/C/4/6 tamamlandıktan sonra kalan,
-`docs/tarama-motoru-plan.md`'deki "Kapsam Dışı" listeleriyle aynı):
-- **Senaryo 6 TAMAMLANDI** (Çoklu Sembol, Tek Strateji, Çoklu TF) — `SymbolTimeframeScanner` +
-  Console `[13]`, bkz. `docs/tarama-motoru-plan.md` "Senaryo 6" bölümü.
-- **Sırada: Senaryo 7** (Çoklu Sembol, Çoklu Strateji-bileşke, Tek TF) — senaryo 4'teki
-  `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı taze taze kurup at" tekniği doğrudan
-  uyarlanabilir, döngü değişkeni TF yerine sembol olur.
-- Senaryo 8 — 6 ve 7'nin bileşimi.
-- Zengin JSON preview ekranı (SingleTrader/MultipleTrader'daki gibi), Time filtering /
-  TradeStartBarIndex desteği, buffered flush / partial-resume, otomatik TF keşfi
+### Sorgu Tarama Matrisi (8/8) — Sınıf Tablosu
 
-**Not — Sorgu ekseni de tamamlandı (2026-08-18)**: 6/7/8 ile "Sembol × Strateji × Zaman Dilimi"
-matrisi (8/8) tamamlandıktan sonra, aynı oturumda "Sembol × Sorgu × Zaman Dilimi" matrisi de
-(8/8) tamamlandı — `IStrategy` ile birebir aynı desende bağımsız bir **Sorgu** alt sistemi
-(`IQuery`/`BaseQuery`/`QueryRegistry`, `SingleTrader.RunMode = QueryOnly`) zaten mevcuttu, artık
-tüm tarama sınıflarının bir Sorgu karşılığı da var. migration-guide.md madde 9'un (Sorgu + Toplu
-Sembol Uygulama) istediği şey `QuerySymbolScanner` (senaryo 5) ile karşılandı.
-
-### Sorgu Tarama Matrisi (Strateji matrisinin Sorgu karşılığı — TAMAMLANDI 2026-08-18)
-
-Aynı 8 senaryo, "Strateji" yerine "Sorgu" — kullanıcı kararınca (madde 6'yı atlayıp doğrudan
-tarama sınıflarına geçme, paralel 1-1 sınıf kopyası) hepsi yazıldı:
+Aynı 8 senaryo, "Strateji" yerine "Sorgu" — "Çoklu Sorgu" hiçbir zaman birleştirilmiyor (bkz.
+aşağıdaki karar), bu yüzden "Bağımsız/Bileşke" ayrımı yok, hepsi zaten bağımsız:
 
 | # | Sembol | Sorgu | Zaman Dilimi | Durum |
 |---|--------|-------|---------------|-------|
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader.RunMode = QueryOnly` |
 | 2 | Tek | Tek | Çoklu | ✅ `QueryTimeframeScanner` — Console `[17]` |
-| 3 | Tek | Çoklu | Tek | ✅ `MultipleQuery` (yeni primitive) |
+| 3 | Tek | Çoklu | Tek | ✅ `MultipleQuery` (yeni primitive, consensus YOK) |
 | 4 | Tek | Çoklu | Çoklu | ✅ `MultiQueryTimeframeScanner` — Console `[18]` |
 | 5 | Çoklu | Tek | Tek | ✅ `QuerySymbolScanner` — Console `[16]`, **madde 9'un birebir istediği şey** |
 | 6 | Çoklu | Tek | Çoklu | ✅ `QuerySymbolTimeframeScanner` — Console `[19]` |
@@ -97,15 +88,29 @@ tarama sınıflarına geçme, paralel 1-1 sınıf kopyası) hepsi yazıldı:
 birleştirilmiyor** — Strateji'deki "bileşke" (MultipleTrader, tek bir Al/Sat kararı) kavramının
 Sorgu karşılığı yok. N sorgu çalıştırılır, N sonuç **ayrı ayrı** raporlanır (ayrı kolonlar),
 kullanıcı kendisi yorumlar. `MultipleQuery` bu yüzden bir "consensus" sınıfı değil — N bağımsız
-`SingleTrader` (QueryOnly) çalıştırıp sonuçları hiç birleştirmeden topluyor. Detay:
-`docs/tarama-motoru-plan.md`'nin sonunda "Sorgu Tarama Matrisi" bölümü.
+`SingleTrader` (QueryOnly) çalıştırıp sonuçları hiç birleştirmeden topluyor.
 
-**Kapsam dışı (fast-follow)**: Madde 6 (zengin sorgu tipleri) hâlâ yazılmadı — hâlâ sadece
-`SimpleQuery1` var (v1/v2 parametre varyasyonuyla test edildi). Gerçek çeşitlilik (fiyat-
-indikatör kesişimi, indikatör-indikatör kesişimi vb.) ayrı, henüz başlanmamış bir iş.
+### Kalan işler (fast-follow, henüz başlanmadı)
 
-Kaynak: [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md), [docs/migration-guide.md](migration-guide.md)
-(madde 2, 4, 8), [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).
+- [ ] **TF'ler arası / semboller arası konsensüs** — kullanıcı şimdilik istemedi ama ileride
+  isteyebilir. Şu an her tarama sınıfı TF/sembol eksenlerinde tamamen bağımsız çalışıyor
+  (`TimeframeScanner`, `SymbolScanner` vb. hiçbir konsensüs/zaman-hizalama yapmıyor) —
+  "bileşke" kavramı sadece strateji ekseninde (`MultipleTrader`) var. İleride istenirse: TF'ler
+  arası bir konsensüs, bar index'lerin farklı granülerlikte aynı anı temsil etmediği için
+  timestamp bazlı hizalama gerektirecek (ilk tasarım denemesinde bu karmaşıklık yüzünden
+  vazgeçilmişti — kullanıcı bunun hiç niyeti olmadığını belirtmişti).
+- [ ] Ek özellikler (tüm tarama sınıfları için — v1'de hiçbirinde yok):
+  - Buffered flush / partial-resume (Optimizer'daki `FileFlushIntervalMs`/`PartialOpt` benzeri)
+  - Zengin JSON preview ekranı (SingleTrader/MultipleTrader menülerindeki gibi) — şu an sadece kutu-stili özet var
+  - `[T]` Pause/Resume Timer satırı tarama menülerinde yok
+  - Time filtering / TradeStartBarIndex desteği — hiçbir tarama sınıfının options'ına eklenmedi, tüm semboller/TF'ler `TimeFilteringEnabled=false` ile taranıyor
+  - Senaryo 8 sınıflarında (N×M×sorgu/strateji büyüklüğü kritik) kullanıcıya önceden çalışma süresi tahmini gösterme
+
+**Madde 6 (zengin sorgu tipleri) — şimdilik gerek yok**: Sorgu tarama motorları tek somut sorgu
+türüyle (`SimpleQuery1`, v1/v2 parametre varyasyonu) uçtan uca doğrulandı — mimari (dinamik
+kolonlar, `MultipleQuery`, tüm 8 sınıf) çalıştığı için yeni bir sorgu türü (`IQuery` implementasyonu)
+eklendiğinde aynı tarama sınıfları üzerinden otomatik çalışır, ekstra iş gerekmez. Gerçek çeşitlilik
+(fiyat-indikatör kesişimi, indikatör-indikatör kesişimi vb.) ayrı, ileride istenirse ele alınacak.
 
 ## Done
 

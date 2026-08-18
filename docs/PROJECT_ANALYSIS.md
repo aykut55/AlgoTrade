@@ -628,8 +628,8 @@ durumu (detaylı TODO listesi migration-guide.md'ye eklendi):
 | 5.3 | MultiTrader için scripting | YAPILMADI |
 | 6 | Sorgu yapabilme | **KISMEN** (IQuery/BaseQuery/QueryRegistry iskeleti tam, tek örnek `SimpleQuery1`) |
 | 7 | Performans hesaplaması | SingleTrader için TAMAMLANDI (`Statistics.PerformansRow`); MultiTrader için doğrulanmadı |
-| 8 | Toplu sembol taraması | **TAMAMLANDI** (2026-08-18) — `SymbolScanner` + Console `[10] Tarama`, bkz. [tarama-motoru-plan.md](tarama-motoru-plan.md) |
-| 9 | Sorgu + toplu sembol | YAPILMADI |
+| 8 | Toplu sembol taraması | **TAMAMLANDI** (2026-08-18) — tüm tarama matrisi (Strateji+Sorgu, 8/8+8/8), Console `[10]`-`[21]`, bkz. [todo.md](todo.md) "Tarama Motorları" bölümü |
+| 9 | Sorgu + toplu sembol | **TAMAMLANDI** (2026-08-18) — `QuerySymbolScanner`, Console `[16]` |
 | 10 | Strateji karşılaştırma raporu | YAPILMADI |
 
 ---

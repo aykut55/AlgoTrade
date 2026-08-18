@@ -343,16 +343,15 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       `[10] Tarama` menu secenegi. AlgoTrader'dan bilincli olarak bagimsiz, tek strateji + tek
       sembol klasoru (AutoDiscover ya da acik liste) uzerinde calisir; SingleTrader-bazli, sonuc
       CSV/TXT'ye ozet satir olarak yaziliyor + SortField'e gore siralanan ayri bir dosya. Detay:
-      [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).
-      **2026-08-18 devami**: Coklu zaman dilimi taramasi da tamamlandi — `TimeframeScanner` ([11],
-      tek sembol/tek strateji/coklu TF) ve `MultiStrategyTimeframeScanner` ([12], tek sembol/coklu
-      strateji-bileske/coklu TF). Kapsam disi (fast-follow, sirada — bkz. docs/todo.md "Tarama
-      Matrisi Analizi"): `SymbolScanner`'in `MultipleTrader` uzerinde calisan bir varyanti ve
-      sembol+TF'nin ic ice bagimsiz taranmasi (senaryo 6/7/8).
+      [docs/todo.md](todo.md) "Tarama Motorları" bolumu.
+      **2026-08-18 devami**: Strateji tarafinda tum matris (8/8, Console `[10]`-`[15]`) ve Sorgu
+      tarafinda da tum matris (8/8, Console `[16]`-`[21]`) tamamlandi — bkz.
+      [docs/todo.md](todo.md) "Tarama Motorları — TAMAMLANDI (16/16, 2026-08-18)" bolumu.
 
-- [ ] **Madde 9 — Sorgu + Toplu Sembol Uygulama**
-      Madde 8 (toplu sembol taramasi) artik TAMAMLANDI, sadece madde 6 (zengin sorgu tipleri)
-      kaldi — bu madde artik tek bir bagimliliga bagli.
+- [x] **Madde 9 — Sorgu + Toplu Sembol Uygulama** — TAMAMLANDI (2026-08-18)
+      `QuerySymbolScanner` (Console `[16]`) madde 9'un birebir istedigi seyi karsiliyor: "Hangi
+      sembollerde fiyat 20 MA'yi yukari kirdi?" gibi bir sorgu tum sembol havuzunda calistirilip
+      sonuclar listeleniyor. Detay: [docs/todo.md](todo.md) "Sorgu Tarama Matrisi" bolumu.
 
 - [ ] **Madde 10 — Farkli Stratejilerin Ayni Sembol Icin Karsilastirmasi**
       Hic implement edilmemis. `SingleTraderOptimizer` AYNI stratejinin farkli parametreleriyle
@@ -367,9 +366,8 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
   ConsensusConfig`'ten okunan Net/Majority/All/Any modlarinin hepsini destekliyor (`MinNetCount`
   dahil). Bu belgenin "Yol Haritasi" bolumundeki madde 2 ifadesi ("ileride tasarlanabilir") artik
   tamamen guncel degil — MultiTrader hem temel hem consensus-genisletmesi olarak tam.
-  **Ayrica**: Ayni sembolde tek strateji + coklu zaman dilimi (`TimeframeScanner`, [11]) ve coklu
-  strateji-bileske + coklu zaman dilimi (`MultiStrategyTimeframeScanner`, [12]) taramalari da
-  tamamlandi — bkz. [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).
+  **Ayrica**: Tum tarama matrisi (Strateji ve Sorgu ekseninde 8/8 + 8/8, Console `[10]`-`[21]`)
+  tamamlandi — bkz. [docs/todo.md](todo.md) "Tarama Motorları" bolumu.
 
 ### Sadece Belge Guncellemesi Gereken Madde (kod calisiyor, kucuk bir tutarsizlik var)
 
