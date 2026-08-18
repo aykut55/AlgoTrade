@@ -102,6 +102,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTraderPlotConfig?         _singleTraderPlotConfig         = null;
     private SingleTraderOptimizationConfig?  _singleTraderOptimizationConfig  = null;
     private MultipleTraderObjectSaveConfig?  _multipleTraderSaveConfig        = null;
+    private MultipleTraderConsensusConfig?   _multipleTraderConsensusConfig   = null;
     private SingleTraderOptRangeConfig?      _singleTraderOptRangeConfig      = null;
     private SingleTraderOptTradeParamsConfig? _singleTraderOptTradeParamsConfig = null;
     private SingleTraderSignalsConfig?       _singleTraderOptSignalsConfig    = null;
@@ -865,6 +866,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public void SetMultipleTraderSaveConfig(MultipleTraderObjectSaveConfig config)
     {
         _multipleTraderSaveConfig = config;
+    }
+
+    public void SetMultipleTraderConsensusConfig(MultipleTraderConsensusConfig config)
+    {
+        _multipleTraderConsensusConfig = config;
     }
 
     public void SetSingleTraderPlotConfig(SingleTraderPlotConfig config)
@@ -1656,6 +1662,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 multipleTrader.WriteChildTradersDataToFiles      = false;
             }
 
+            // MultipleTrader consensus config (AppConfig.MultipleTrader.Consensus)
+            if (_multipleTraderConsensusConfig is { } mtc)
+            {
+                if (!string.IsNullOrWhiteSpace(mtc.Mode))
+                    multipleTrader.ConsensusMode = mtc.Mode;
+                multipleTrader.ConsensusMinNetCount = mtc.MinNetCount;
+            }
 
             var mainTrader = multipleTrader.GetMainTrader();
             if (mainTrader == null)
@@ -2331,6 +2344,13 @@ public class MultipleTraderObjectSaveConfig
     public string MultipleTraderListsTxtFileName      { get; set; } = "MultipleTraderLists.txt";
     public string MultipleTraderListsCsvFileName      { get; set; } = "MultipleTraderLists.csv";
     public bool   WriteChildTradersDataToFiles        { get; set; } = false;
+}
+
+/// <summary>MultipleTrader.BuildConsensusSignal() ayarları (AppConfig.MultipleTrader.Consensus).</summary>
+public class MultipleTraderConsensusConfig
+{
+    public string Mode        { get; set; } = "Net";
+    public int    MinNetCount { get; set; } = 1;
 }
 
 /// <summary>OnApplyUserFlags2 (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>

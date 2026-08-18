@@ -155,6 +155,13 @@ public static class AppConfigApplier
             WriteChildTradersDataToFiles      = cfg.Save.WriteChildTradersDataToFiles,
         });
 
+        // Consensus ayarları (Mode: Net|Majority|All|Any, MinNetCount)
+        algoTrader.SetMultipleTraderConsensusConfig(new MultipleTraderConsensusConfig
+        {
+            Mode        = cfg.Consensus.Mode,
+            MinNetCount = cfg.Consensus.MinNetCount,
+        });
+
         // =====================================================================
         // MainTrader config → algoTrader (SetSingle* metodları ile)
         // =====================================================================

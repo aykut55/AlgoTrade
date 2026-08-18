@@ -41,6 +41,16 @@ public class MultipleTrader
     /// </summary>
     public bool DynamicPositionSizeEnabled { get; set; } = false;
 
+    /// <summary>
+    /// BuildConsensusSignal() modu: Net | Majority | All | Any (varsayılan: Net).
+    /// AppConfig.json → MultipleTrader.Consensus.Mode üzerinden set edilir
+    /// (bkz. AlgoTrader.SetMultipleTraderConsensusConfig).
+    /// </summary>
+    public string ConsensusMode { get; set; } = "Net";
+
+    /// <summary>Net modunda minimum net oy farkı eşiği (varsayılan: 1).</summary>
+    public int ConsensusMinNetCount { get; set; } = 1;
+
     public Action<MultipleTrader, int, int>? OnProgress { get; set; }
 
     public bool SaveStatisticsToFile { get; set; } = true;
@@ -152,30 +162,31 @@ public class MultipleTrader
     /// <summary>
     /// Build consensus signal from all traders (sinyal sayisi bazli - her trader = 1 oy).
     ///
-    /// Şu an hardcoded "Net" modunda çalışır (buyCount - sellCount).
-    /// AppConfig.json'daki MultipleTrader.Consensus bloğu gelecekte bu davranışı kontrol edecek:
+    /// Mod, <see cref="ConsensusMode"/> (AppConfig.json → MultipleTrader.Consensus.Mode) ile
+    /// belirlenir:
     ///
-    ///   Mode: Net (varsayılan)
-    ///     buyCount - sellCount > MinNetCount  → Buy
-    ///     buyCount - sellCount &lt; -MinNetCount → Sell
-    ///     aksi                                → Flat
+    ///   Net (varsayılan)
+    ///     buyCount - sellCount &gt;= ConsensusMinNetCount  → Buy
+    ///     buyCount - sellCount &lt;= -ConsensusMinNetCount → Sell
+    ///     aksi                                            → Flat
     ///
-    ///   Mode: Majority
-    ///     buyCount  > N/2 → Buy
-    ///     sellCount > N/2 → Sell
-    ///     aksi            → Flat
+    ///   Majority
+    ///     buyCount  &gt; Traders.Count/2 → Buy
+    ///     sellCount &gt; Traders.Count/2 → Sell
+    ///     aksi                        → Flat
     ///
-    ///   Mode: All
+    ///   All
     ///     tüm child'lar aynı yönde → o yön
     ///     aksi                    → Flat
     ///
-    ///   Mode: Any
+    ///   Any
     ///     en az 1 Buy  → Buy
     ///     en az 1 Sell → Sell  (ikisi de varsa → Flat)
     ///     aksi         → Flat
     ///
-    /// TODO: ConsensusConfig alanı AlgoTrader'a bağlandığında bu metot
-    ///       config.Mode ve config.MinNetCount'u okuyacak şekilde güncellenmeli.
+    /// Tanınmayan bir ConsensusMode değeri gelirse Net'e düşülür ve bir uyarı loglanır.
+    /// Buy/Sell sonucu üreten barlarda Debug seviyesinde bir satır loglanır (oy dağılımını
+    /// görmek için); Flat sonuçlar loglanmaz — büyük backtest'lerde log şişmesin diye.
     /// </summary>
     public TradeSignals BuildConsensusSignal()
     {
@@ -193,11 +204,67 @@ public class MultipleTrader
                 flatCount++;
         }
 
+        TradeSignals result;
+
+        switch (ConsensusMode?.Trim().ToLowerInvariant())
+        {
+            case "majority":
+                int half = Traders.Count / 2;
+                if (buyCount > half)
+                    result = TradeSignals.Buy;
+                else if (sellCount > half)
+                    result = TradeSignals.Sell;
+                else
+                    result = TradeSignals.Flat;
+                break;
+
+            case "all":
+                if (Traders.Count > 0 && buyCount == Traders.Count)
+                    result = TradeSignals.Buy;
+                else if (Traders.Count > 0 && sellCount == Traders.Count)
+                    result = TradeSignals.Sell;
+                else
+                    result = TradeSignals.Flat;
+                break;
+
+            case "any":
+                if (buyCount > 0 && sellCount > 0)
+                    result = TradeSignals.Flat;
+                else if (buyCount > 0)
+                    result = TradeSignals.Buy;
+                else if (sellCount > 0)
+                    result = TradeSignals.Sell;
+                else
+                    result = TradeSignals.Flat;
+                break;
+
+            case "net":
+            case null:
+            case "":
+                result = BuildNetConsensus(buyCount, sellCount);
+                break;
+
+            default:
+                LogManager.LogWarning($"MultipleTrader: taninmayan ConsensusMode '{ConsensusMode}', 'Net' moduna dusuluyor.");
+                result = BuildNetConsensus(buyCount, sellCount);
+                break;
+        }
+
+        if (result == TradeSignals.Buy || result == TradeSignals.Sell)
+        {
+            LogManager.LogDebug($"MultipleTrader consensus [{ConsensusMode}]: Buy={buyCount} Sell={sellCount} Flat={flatCount} -> {result}");
+        }
+
+        return result;
+    }
+
+    private TradeSignals BuildNetConsensus(int buyCount, int sellCount)
+    {
         int netSignal = buyCount - sellCount;
 
-        if (netSignal > 0)
+        if (netSignal >= ConsensusMinNetCount)
             return TradeSignals.Buy;
-        else if (netSignal < 0)
+        else if (netSignal <= -ConsensusMinNetCount)
             return TradeSignals.Sell;
         else
             return TradeSignals.Flat;
