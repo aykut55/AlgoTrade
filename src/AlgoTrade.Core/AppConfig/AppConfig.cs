@@ -12,6 +12,7 @@ public class AppConfig
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
     public SingleTraderOptConfig SingleTraderOptimizer { get; set; } = new();
     public SymbolScanConfig      SymbolScan     { get; set; } = new();
+    public TimeframeScanConfig   TimeframeScan  { get; set; } = new();
 }
 
 // =============================================================================
@@ -428,4 +429,51 @@ public class SymbolScanSaveConfig
     public string TxtFileName       { get; set; } = "SymbolScanResults.txt";
     public string SortedCsvFileName { get; set; } = "SymbolScanResults_sorted.csv";
     public string SortedTxtFileName { get; set; } = "SymbolScanResults_sorted.txt";
+}
+
+// =============================================================================
+// TimeframeScan  (Tarama — Yapı Taşı A: aynı sembol, farklı zaman dilimleri, BAĞIMSIZ taranır)
+// =============================================================================
+
+/// <summary>
+/// Aynı sembolü birden fazla zaman diliminde bağımsız olarak çalıştırıp sonuçları tek bir
+/// özet tabloda toplar (bkz. docs/tarama-motoru-plan.md). Zaman dilimleri arasında
+/// KONSENSÜS/BİLEŞKE yok — her biri ayrı bir backtest, ayrı bir sonuç satırı.
+/// SymbolScanConfig'in yapısal ikizi (TimeframeScanner, SymbolScanner'dan bağımsız bir sınıf).
+/// </summary>
+public class TimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>Dosya adı köküyle birebir (örn. "BTCUSDT_BNC"). Her TF klasöründe aynı isimle aranır.</summary>
+    public string Symbol { get; set; } = "";
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Otomatik keşif yok, açık liste.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    public StrategyRef          Strategy    { get; set; } = new();
+    public TradeParamsConfig    TradeParams { get; set; } = new();
+    public TraderSignalsConfig  Signals     { get; set; } = new();
+    public ReadDataConfig       ReadData    { get; set; } = new();
+
+    /// <summary>true: her zaman dilimi için ayrıca tam istatistik dosyaları da yazılır.</summary>
+    public bool WriteFullStatsPerTimeframe { get; set; } = false;
+
+    public TimeframeScanSortConfig Sort { get; set; } = new();
+    public TimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class TimeframeScanSortConfig
+{
+    public string SortField      { get; set; } = "NetProfit";
+    public bool   SortDescending { get; set; } = true;
+}
+
+public class TimeframeScanSaveConfig
+{
+    public string CsvFileName       { get; set; } = "TimeframeScanResults.csv";
+    public string TxtFileName       { get; set; } = "TimeframeScanResults.txt";
+    public string SortedCsvFileName { get; set; } = "TimeframeScanResults_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "TimeframeScanResults_sorted.txt";
 }

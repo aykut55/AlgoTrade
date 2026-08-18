@@ -665,5 +665,47 @@
       "SortedCsvFileName": "SymbolScanResults_sorted.csv",
       "SortedTxtFileName": "SymbolScanResults_sorted.txt"
     }
+  },
+
+  "TimeframeScan": {
+    // Ayni sembolu N farkli zaman diliminde BAGIMSIZ calistirir (konsensus/biles YOK).
+    // Her TF icin Path.Combine(BaseFolder, tf, Symbol+".csv") okunur.
+    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "Symbol": "BTCUSDT_BNC",
+    "Timeframes": ["01", "05", "15", "60"],
+    "Strategy": {
+      "ConfigFile": "StrategyConfig.txt",
+      "Name": "SimpleMostStrategy",
+      "Version": "v1"
+    },
+    "TradeParams": {
+      "MarketType": "FxCrypto",
+      "IlkBakiye": 100000.0,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000.0,
+      "KomisyonCarpan": 0.0,
+      "KaymaMiktari": 0.0,
+      "PyramidingEnabled": false
+    },
+    "ReadData": {
+      "FilterMode": "All",
+      "N1": 0,
+      "N2": 0,
+      "Dt1": "",
+      "Dt2": ""
+    },
+    // true: her zaman dilimi icin ayrica tam istatistik dosyalari da yazilir.
+    "WriteFullStatsPerTimeframe": false,
+    "Sort": {
+      "SortField": "NetProfit",
+      "SortDescending": true
+    },
+    "Save": {
+      "CsvFileName": "TimeframeScanResults.csv",
+      "TxtFileName": "TimeframeScanResults.txt",
+      "SortedCsvFileName": "TimeframeScanResults_sorted.csv",
+      "SortedTxtFileName": "TimeframeScanResults_sorted.txt"
+    }
   }
 }

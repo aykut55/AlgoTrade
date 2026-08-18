@@ -594,6 +594,49 @@ public static class AppConfigApplier
         return options;
     }
 
+    /// <summary>
+    /// TimeframeScanConfig'i, TimeframeScanner.Run()'a doğrudan verilebilecek bir
+    /// TimeframeScannerOptions'a çevirir. BuildSymbolScanOptions ile aynı desende —
+    /// TimeframeScanner de bilinçli olarak AlgoTrader'a bağlı değil.
+    /// </summary>
+    public static TimeframeScannerOptions BuildTimeframeScanOptions(TimeframeScanConfig cfg, string configsDir)
+    {
+        string stratPath = Path.Combine(configsDir, cfg.Strategy.ConfigFile);
+        var stratLoader  = new StrategyConfigLoader(stratPath);
+        stratLoader.LoadFromFile();
+        var stratCfg = stratLoader.GetConfiguration(cfg.Strategy.Name, cfg.Strategy.Version)
+            ?? throw new InvalidOperationException($"Strategy bulunamadı: {cfg.Strategy.Name} / {cfg.Strategy.Version}");
+
+        var options = new TimeframeScannerOptions
+        {
+            BaseFolder             = cfg.BaseFolder,
+            Symbol                 = cfg.Symbol,
+            Timeframes             = cfg.Timeframes,
+            StrategyName           = stratCfg.StrategyName,
+            StrategyParameters     = stratCfg.GetParameterValues(),
+            TradeParams            = BuildInitialTradeParams(cfg.TradeParams),
+            AlEnabled              = cfg.Signals.AlEnabled,
+            SatEnabled             = cfg.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
+            WriteFullStatsPerTimeframe = cfg.WriteFullStatsPerTimeframe,
+            SortField              = cfg.Sort.SortField,
+            SortDescending         = cfg.Sort.SortDescending,
+        };
+
+        if (Enum.TryParse<AlgoTrade.Core.StockDataReader.StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        return options;
+    }
+
     // =========================================================================
     // TradeParamsConfig → InitialTradeParams dönüşümü
     // =========================================================================

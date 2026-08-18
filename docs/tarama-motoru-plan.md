@@ -1,8 +1,10 @@
-# Sembol Tarama Motoru (Yapı Taşı C) — Mimari ve Durum
+# Tarama Motorları (Yapı Taşı A ve C) — Mimari ve Durum
 
 > Bu belge, `docs/todo.md`'deki "Tarama Matrisi Analizi" bölümünde tanımlanan 3 yapı taşından
-> (A/B/C) üçüncüsünün (C — Sembol Tarama) tasarımını ve uygulanmış durumunu kaydeder. Kaynak:
-> plan-mode oturumu (2026-08-18), kullanıcı ile soru-cevap şeklinde netleştirildi.
+> (A/B/C) ikisinin — C (Sembol Tarama) ve A (Zaman Dilimi Tarama) — tasarımını ve uygulanmış
+> durumunu kaydeder. B (MultipleTrader consensus modları) ayrı, daha küçük bir iş olduğu için
+> burada değil, doğrudan `MultipleTrader.cs`/`AppConfig.cs` içinde belgelendi. Kaynak: plan-mode
+> oturumları (2026-08-18), kullanıcı ile soru-cevap şeklinde netleştirildi.
 
 ## Durum: TAMAMLANDI (v1 — Console entegrasyonu dahil)
 
@@ -84,14 +86,80 @@ tarama devam eder) → `IndicatorManager` → `StrategyRegistry.CreateStrategy` 
 sinyal bayraklarını enable et → bar-bar `Run()` → `Finalize()` → sonuç satırını topla (performans
 kolonları + `TaramaOzeti`) → sembol başına `Dispose`.
 
-## Kapsam Dışı (fast-follow, `docs/todo.md`'ye eklendi)
+## Kapsam Dışı (C için, fast-follow, `docs/todo.md`'ye eklendi)
 
 - MultipleTrader-bazlı tarama (senaryo 7 — sembol başına consensus)
-- Yapı taşı A (çoklu zaman dilimi) ile birleşim (senaryo 6/8) — veri zaten diskte var
-  (`<tf>` klasörleri), sadece N dosyayı okuyup `MultipleTrader`'a benzer bir "zaman-dilimi
-  bileşkesi" ile birleştirmek yeterli, resampling gerekmiyor
 - Buffered flush / partial-resume (Optimizer'daki `FileFlushIntervalMs`/`PartialOpt` benzeri)
 - Zengin JSON preview ekranı (SingleTrader/MultipleTrader'daki gibi) — v1'de sadece kutu-stili
   özet var, [T] Pause/Resume Timer satırı da v1'de yok (davranışı doğrulanamadığı için eklenmedi)
 - Time filtering / TradeStartBarIndex desteği (`SymbolScanOptions`'a eklenmedi, v1'de tüm
   semboller `TimeFilteringEnabled=false` ile çalışıyor)
+
+---
+
+# Zaman Dilimi Tarama Motoru (Yapı Taşı A) — Mimari ve Durum
+
+## Durum: TAMAMLANDI (v1 — Console entegrasyonu dahil, 2026-08-18)
+
+## ⚠️ Önemli Düzeltme (plan-mode sırasında netleşti)
+
+İlk tasarım A'yı, farklı zaman dilimlerinin sinyallerini `MultipleTrader`'daki gibi bir
+konsensüs ile birleştiren, "sürücü TF seçimi + zaman-hizalama" (bar index'leri farklı
+granülerlikte aynı anı temsil etmiyor, timestamp bazlı hizalama gerekir) gerektiren karmaşık bir
+motor olarak kurgulamıştı. **Kullanıcı bunun hiç niyeti olmadığını belirtti**: gerçek istek, aynı
+sembolü seçili zaman dilimlerinde **bağımsız bağımsız** çalıştırıp sonuçlara ayrı ayrı
+bakabilmekti — "bileşke" kelimesi kullanıcı tarafından sadece **strateji ekseni** için
+kullanılmıştı (3. senaryo, `MultipleTrader`), zaman dilimi ekseni için hiç değil. Bu yanlış
+anlama, orijinal 8-senaryo matrisindeki "Zaman Dilimi: Çoklu" ifadesinin "bileşke" ile aynı
+kategoride genellenmesinden kaynaklandı — kullanıcı bunu asla söylemedi.
+
+Bu düzeltmeyle A, **`SymbolScanner`'a (Yapı Taşı C) yapısal olarak neredeyse özdeş** hale geldi:
+fark sadece hangi liste üzerinde dönüldüğü — C bir klasördeki tüm sembol dosyalarını tarar, A
+aynı sembolün N farklı zaman-dilimi klasöründeki dosyasını tarar. Konsensüs/zaman-hizalama YOK,
+her TF tamamen bağımsız bir backtest, N ayrı sonuç satırı.
+
+## Tasarım Kararı
+
+`SymbolScanner`'ı genelleştirmek yerine **yeni, bağımsız bir sınıf** (`TimeframeScanner`)
+yazıldı — projenin "her biri kendi başına yeten dosya" tarzına uygun (bkz. 24 strateji
+dosyasının aynı iskeleti tekrarlaması), küçük kod tekrarı pahasına. Zaman dilimleri config'te
+**açık bir liste** (`Timeframes: ["01","05","15","60"]`), otomatik keşif yok.
+
+## Doğrulanmış Zemin
+
+- Veri yapısı doğrulandı: `BTCUSDT_BNC.csv`, `C:\data\csvFiles\CRP\` altındaki `01/05/10/15/20/
+  30/60/120/240/A/G/H` klasörlerinin **hepsinde** mevcut, satır sayıları granülariteyle tutarlı
+  (01→4.5M, 05→904K, 15→301K, 60→75K bar).
+- `SymbolScanner`'daki kritik bug (sinyal bayrakları `ConfigureUserFlagsOnce()` sonrası
+  varsayılan kapalı kalıyor, açıkça enable edilmezse trader hiç işlem açmıyor) **baştan doğru
+  yazıldı** — `TimeframeScannerOptions`'ta 7 bayrak (`AlEnabled` vb.) ilk günden var.
+
+**Doğrulama**: Gerçek veri üzerinde (BTCUSDT_BNC, 01/05/15/60 dakika) uçtan uca test edildi —
+her TF farklı bar sayısı (4.5M/904K/301K/75K) ve farklı NetProfit üretti, sıralama (`SortField`)
+doğru çalıştı. Sinyal bayrakları baştan `true` olduğu için ilk turdaki "sürekli Flat" bug'ı hiç
+oluşmadı (`KarliIslemOrani` gibi alanlar sıfırdan farklı çıktı, işlem gerçekten alındığını
+doğruladı).
+
+## Dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `src/AlgoTrade.Core/Trading/Traders/TimeframeScanner.cs` | YENİ — `TimeframeScanner`, `TimeframeScannerOptions`, `TimeframeScanResult`. `SymbolScanner.cs`'in yapısal kopyası. |
+| `src/AlgoTrade.Core/AppConfig/AppConfig.cs` | `TimeframeScanConfig` + alt config sınıfları (`TimeframeScanSortConfig`, `TimeframeScanSaveConfig`), root `AppConfig.TimeframeScan` alanı |
+| `src/AlgoTrade.Core/AppConfig/AppConfigApplier.cs` | `BuildTimeframeScanOptions(TimeframeScanConfig, configsDir)` — `BuildSymbolScanOptions`'ın birebir kopyası |
+| `inputs/configs/AppConfig/AppConfig.json` | `TimeframeScan` bölümü eklendi (varsayılan: `CRP` base klasörü, `BTCUSDT_BNC`, `["01","05","15","60"]`, SimpleMostStrategy v1, `FxCrypto`) |
+| `AlgoTrade.Console/Program.cs` | `[11] Tarama (Timeframe Scan)` menü seçeneği, `handleTimeframeScan()`, `runTimeframeScan()`, `showModeConfigSummary("TimeframeScan")` |
+
+`AppSettings.cs`'e yeni bir dizin eklenmedi — çıktılar `SymbolScan` ile aynı `AppSettings.
+ScanLogsDir` (`outputs/scan`) altına, farklı dosya adlarıyla (`TimeframeScanResults*`) yazılıyor.
+
+## Kapsam Dışı (fast-follow)
+
+- Zaman dilimleri arası konsensüs/bileşke (kullanıcı açıkça istemedi, ileride ayrı bir istek
+  olarak gelebilir ama bu v1'in parçası değil)
+- Otomatik TF keşfi (kullanıcı açık liste istedi)
+- Senaryo 4 (Tek sembol, çoklu strateji-bileşke, çoklu TF) — `MultipleTrader`'ı
+  `TimeframeScanner`-tarzı bağımsız bir döngüye sokmak gerekir
+- Senaryo 6 (Çoklu sembol, tek strateji, çoklu TF) — `SymbolScanner` içinde her sembol için
+  `TimeframeScanner`'ı da çalıştırmak (iç içe iki bağımsız tarama)
+- Senaryo 8 — 4 ve 6'nın bileşimi

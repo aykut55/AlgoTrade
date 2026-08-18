@@ -39,32 +39,31 @@ etmeye gerek yok. Kod tabanına göre bunlar 3 bağımsız yapı taşının bile
 | # | Sembol | Strateji | Zaman Dilimi | Durum |
 |---|--------|----------|---------------|-------|
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader` |
-| 2 | Tek | Tek | Çoklu | ❌ Yok — yeni yapı taşı **A** |
+| 2 | Tek | Tek | Çoklu | ✅ TAMAMLANDI — `TimeframeScanner` + Console `[11] Tarama (Timeframe Scan)` (yapı taşı **A**, 2026-08-18) |
 | 3 | Tek | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultipleTrader` + Net/Majority/All/Any consensus modları (yapı taşı **B**, 2026-08-18) |
-| 4 | Tek | Çoklu (bileşke) | Çoklu | ❌ Yok — **A**'nın tamamlanmasını bekliyor |
-| 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
-| 6 | Çoklu | Tek | Çoklu | ❌ Yok — **C**'nin içine **A** sarılması gerekiyor |
+| 4 | Tek | Çoklu (bileşke) | Çoklu | ❌ Yok — `MultipleTrader`'ı `TimeframeScanner`-tarzı bağımsız bir döngüye sokmak gerekiyor |
+| 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama (Symbol Scan)` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
+| 6 | Çoklu | Tek | Çoklu | ❌ Yok — `SymbolScanner` içinde her sembol için `TimeframeScanner`'ı da çalıştırmak gerekiyor (iç içe iki bağımsız tarama) |
 | 7 | Çoklu | Çoklu (bileşke) | Tek | ❌ Yok — **C**'nin `MultipleTrader` üzerinde çalışan bir varyantı gerekiyor (şu an sadece `SingleTrader` bazlı) |
-| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — **C** + **A** + MultipleTrader-varyantının bileşimi |
+| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — 4, 6 ve 7'nin bileşimi |
 
-**B ve C tamamlandı** (bkz. [docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari,
-kritik bir bug ve düzeltmesi, doğrulama sonuçları dahil). Kalan yapı taşı:
+**A, B ve C tamamlandı** (bkz. [docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari,
+kritik bir bug ve düzeltmesi, doğrulama sonuçları dahil).
 
-- **A — Çoklu zaman dilimi desteği (resampling GEREKMİYOR)**: Diskte
-  (`C:\data\csvFiles\CRP\<tf>\`) her sembol için zaten ayrı ayrı üretilmiş zaman dilimi
-  klasörleri var (`01/05/10/15/20/30/60/120/240` dakika + `A/G/H`), aynı sembolün dosyası (örn.
-  `BTCUSDT_BNC.csv`) her klasörde ayrı ayrı mevcut — doğrulandı (2026-08-18). Yani A, resampling
-  motoru değil, şu basit adımlardan oluşuyor: (1) sembol için N farklı zaman dilimi dosyasını
-  `StockDataReader` ile ayrı ayrı oku, (2) seçili stratejiyi her zaman dilimi verisi üzerinde
-  bağımsız çalıştır, (3) `MultipleTrader.BuildConsensusSignal()`'a benzer bir "zaman-dilimi
-  bileşkesi" ile sonuçları birleştir.
+**Önemli düzeltme (A için)**: İlk analizde zaman dilimi ekseni için de `MultipleTrader`'daki
+gibi bir "konsensüs/bileşke" gerektiği varsayılmıştı (sürücü TF + zaman-hizalama). Kullanıcı bu
+niyetin hiç olmadığını belirtti — istenen, aynı sembolü seçili zaman dilimlerinde **bağımsız
+bağımsız** çalıştırıp sonuçlara ayrı ayrı bakmaktı. "Bileşke" kelimesi sadece strateji ekseni
+için kullanılmıştı. Bu yüzden A, `SymbolScanner`'a (C) yapısal olarak neredeyse özdeş bağımsız
+bir sınıf (`TimeframeScanner`) olarak kuruldu — konsensüs/zaman-hizalama yok.
 
-**Sonraki adımlar** (C tamamlandıktan sonra ortaya çıkan, `docs/tarama-motoru-plan.md`'deki
-"Kapsam Dışı" listesiyle aynı):
-- Yapı taşı A (çoklu zaman dilimi) — senaryo 2/4/6/8'i açar
-- `SymbolScanner`'ın `MultipleTrader` üzerinde çalışan bir varyantı — senaryo 7/8'i açar
+**Sonraki adımlar** (A/B/C tamamlandıktan sonra kalan, `docs/tarama-motoru-plan.md`'deki
+"Kapsam Dışı" listeleriyle aynı):
+- Senaryo 4/6/7/8 — yukarıdaki tabloda açıklandığı gibi, `MultipleTrader` ve `TimeframeScanner`/
+  `SymbolScanner`'ın birbirinin içine bağımsız döngüler olarak sarılması (hâlâ konsensüs yok,
+  sadece iç içe bağımsız taramalar)
 - Zengin JSON preview ekranı (SingleTrader/MultipleTrader'daki gibi), Time filtering /
-  TradeStartBarIndex desteği, buffered flush / partial-resume
+  TradeStartBarIndex desteği, buffered flush / partial-resume, otomatik TF keşfi
 
 Kaynak: [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md), [docs/migration-guide.md](migration-guide.md)
 (madde 2, 4, 8), [docs/tarama-motoru-plan.md](tarama-motoru-plan.md).

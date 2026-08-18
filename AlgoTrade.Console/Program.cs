@@ -985,6 +985,63 @@ async Task runSymbolScan()
     }
 }
 
+async Task runTimeframeScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running TimeframeScan (Tarama)");
+
+        var cfg     = appConfig.TimeframeScan;
+        var options = AppConfigApplier.BuildTimeframeScanOptions(cfg, AppSettings.ConfigsDir);
+
+        using var scanner = new TimeframeScanner(logger);
+        scanner.OnProgress = (current, total, tf) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {tf}".PadRight(60));
+        };
+
+        string csvPath       = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath       = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+        string sortedCsvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.SortedCsvFileName);
+        string sortedTxtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.SortedTxtFileName);
+
+        await Task.Run(() => scanner.Run(options, csvPath, txtPath));
+        Console.WriteLine();
+
+        scanner.WriteSortedResults(options, sortedCsvPath, sortedTxtPath);
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} zaman dilimi ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+                LogManager.LogRaw($"  {r.Timeframe,-8} {r.TaramaOzeti}");
+            else
+                LogManager.LogRaw($"  {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        var best = scanner.GetBestResult(options);
+        if (best != null)
+        {
+            LogManager.LogRaw("");
+            LogManager.LogRaw($"En iyi ({cfg.Sort.SortField}): TF={best.Timeframe}  ->  {best.TaramaOzeti}", ConsoleColor.Yellow);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar     : {csvPath}");
+        LogManager.LogRaw($"Sıralı sonuç : {sortedCsvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runTimeframeScan: {ex.Message}", ex);
+    }
+}
+
 // =============================================================================
 // Mode Handlers  (Config özeti göster → [ENTER] çalıştır | [E] düzenle | [B] geri)
 // =============================================================================
@@ -1171,6 +1228,32 @@ void showModeConfigSummary(string title)
         string fullStats = cfg.WriteFullStatsPerSymbol ? "[Enabled]" : "[Disabled]";
 
         Console.WriteLine($"║  Symbols    : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Strategy   : {stratInfo,-50}║");
+        Console.WriteLine($"║  Sort       : {sortInfo,-50}║");
+        Console.WriteLine($"║  FullStats  : {Trunc(fullStats, 50),-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "TimeframeScan")
+    {
+        var cfg = appConfig.TimeframeScan;
+
+        string sourceInfo = Trunc($"{cfg.Symbol}  |  {cfg.BaseFolder}", 50);
+        string tfInfo     = Trunc(string.Join(", ", cfg.Timeframes), 50);
+        string stratInfo  = Trunc($"{cfg.Strategy.Name}  /  {cfg.Strategy.Version}", 50);
+        string sortInfo   = Trunc($"{cfg.Sort.SortField}  ({(cfg.Sort.SortDescending ? "desc" : "asc")})", 50);
+        string fullStats  = cfg.WriteFullStatsPerTimeframe ? "[Enabled]" : "[Disabled]";
+
+        Console.WriteLine($"║  Symbol     : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
         Console.WriteLine($"║  Strategy   : {stratInfo,-50}║");
         Console.WriteLine($"║  Sort       : {sortInfo,-50}║");
         Console.WriteLine($"║  FullStats  : {Trunc(fullStats, 50),-50}║");
@@ -1799,6 +1882,43 @@ async Task handleSymbolScan()
     }
 }
 
+async Task handleTimeframeScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("TimeframeScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runTimeframeScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
 // =============================================================================
 // Script Support
 // =============================================================================
@@ -1966,6 +2086,7 @@ void showMainMenu()
     Console.WriteLine("╠═══ Tarama ═════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [10]  Tarama (Symbol Scan)                                      ║");
+    Console.WriteLine("║    [11]  Tarama (Timeframe Scan)                                   ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -2122,6 +2243,7 @@ async Task main()
             case "8": await runFullScript();                                break;
             case "9": handleDearPyGuiPlotterTest();                         break; // TODO: demo/test, silinecek
             case "10": await handleSymbolScan();                            break;
+            case "11": await handleTimeframeScan();                         break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }
