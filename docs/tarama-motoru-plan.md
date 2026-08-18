@@ -158,8 +158,96 @@ ScanLogsDir` (`outputs/scan`) altına, farklı dosya adlarıyla (`TimeframeScanR
 - Zaman dilimleri arası konsensüs/bileşke (kullanıcı açıkça istemedi, ileride ayrı bir istek
   olarak gelebilir ama bu v1'in parçası değil)
 - Otomatik TF keşfi (kullanıcı açık liste istedi)
-- Senaryo 4 (Tek sembol, çoklu strateji-bileşke, çoklu TF) — `MultipleTrader`'ı
-  `TimeframeScanner`-tarzı bağımsız bir döngüye sokmak gerekir
 - Senaryo 6 (Çoklu sembol, tek strateji, çoklu TF) — `SymbolScanner` içinde her sembol için
   `TimeframeScanner`'ı da çalıştırmak (iç içe iki bağımsız tarama)
-- Senaryo 8 — 4 ve 6'nın bileşimi
+- Senaryo 7 (Çoklu sembol, çoklu strateji-bileşke, tek TF)
+- Senaryo 8 — 4, 6, 7'nin bileşimi
+
+---
+
+# Senaryo 4 (Tek Sembol, Çoklu Strateji-Bileşke, Çoklu TF) — TAMAMLANDI (2026-08-18)
+
+Bu bölüm, uygulamaya başlamadan önce tasarım kararı olarak kaydedilmişti (kullanıcı isteği —
+iki farklı bilgisayarda çalışıldığı için). Şimdi uygulanmış ve doğrulanmış durumda; "Tek Sembol"
+sütunu (senaryo 1/2/3/4) tamamlandı.
+
+## Doğrulama
+
+Gerçek `AppConfig.json`'daki `MultiStrategyTimeframeScan` bölümü (2 child `SimpleMostStrategy`
+v1/v2, `Consensus.Mode=Net`) ile BTCUSDT_BNC üzerinde TF=15 ve TF=60'ta uçtan uca test edildi —
+`AppConfigApplier.ApplyMultipleTrader()` hiç değiştirilmeden reuse edildi, iki TF farklı sonuç
+üretti (TF=15: yön A, NetProfit≈-10.05; TF=60: yön S, NetProfit≈-199.84), `GetBestResult()`
+doğru TF'yi seçti.
+
+## Amaç
+
+Kullanıcı, 4/6/7/8'den önce **4'ü** yapmayı seçti: "Tek Sembol" sütununu (senaryo 1/2/3/4)
+tamamlamak. Senaryo 4 = tek bir sembolde, birden fazla stratejinin **consensus/bileşkesini**
+(`MultipleTrader`, yapı taşı B) her zaman diliminde **bağımsız bağımsız** çalıştırmak — TF'ler
+arası hâlâ konsensüs YOK (A'daki düzeltmeyle tutarlı), sadece MultipleTrader'ın kendisi zaten
+strateji-ekseninde konsensüs alıyor.
+
+## ⚠️ Tasarım Sapması (bilinçli, gerekçeli)
+
+`SymbolScanner`/`TimeframeScanner` bilinçli olarak `AlgoTrader`'ı bypass edip `SingleTrader`'ı
+elle kuruyordu (basit: 1 strateji, 1 TradeParams). **`MultipleTrader` için aynı şeyi yapmak
+uygun değil** — `AlgoTrader.createChildTraders()` (satır ~1462) çok daha karmaşık bir kurulum
+içeriyor: strateji cache'i (`GetStrategy(config.StrategyId)`, isim+versiyona göre dedupe edilmiş
+`_strategyConfigs` listesi), her child için ayrı Signals/Save/Export config'i,
+`ConfigureUserFlagsOnce()` + 7 bayrak + TimeFiltering + TradeStartBarIndex, EquityCurveFilter id
+eşlemesi. Bunu `TimeframeScanner`'a benzer yeni bir dosyada elle tekrar yazmak hem riskli (küçük
+bir farkla üçüncü bir "unutulan bayrak" bug'ı yaratabilir) hem de zaten var olan, test edilmiş
+`AppConfigApplier.ApplyMultipleTrader()` + `AlgoTrader.RunMultipleTraderWithProgressAsync()`
+akışını anlamsızca kopyalamak olurdu.
+
+**Karar**: Bu senaryoda `AlgoTrader`'ı **her TF için bir kere, tek kullanımlık (throwaway)**
+olarak kullanacağız — tıpkı `TimeframeScanner`'ın her TF için taze bir `SingleTrader` kurup atması
+gibi, ama bu sefer taze bir `AlgoTrader` kurup atıyoruz (`AlgoTrader` zaten `IDisposable`,
+`SetData`/`RegisterLogger`/`RegisterTimer`/`Reset`/`Initialize` ile kendi kendine yeten bir API
+sunuyor). Bu, "AlgoTrader tek veri seti varsayımıyla kurulu, N veri seti üzerinde döngü kurmaya
+uygun değil" ilkesini bozmuyor — AlgoTrader hâlâ hiçbir zaman birden fazla dataset görmüyor,
+sadece scanner sınıfı N tane *ayrı* AlgoTrader örneği kurup atıyor.
+
+## Akış (her TF için)
+
+1. `Path.Combine(BaseFolder, tf, Symbol + ".csv")` oku (`StockDataReader`, `TimeframeScanner` ile
+   aynı).
+2. `var algoTrader = new AlgoTrader("scan"); algoTrader.RegisterLogger(logger);
+   algoTrader.RegisterTimer(TimeManager.GetInstance()); algoTrader.Reset();
+   algoTrader.SetData(data);`
+3. `AppConfigApplier.ApplyMultipleTrader(algoTrader, options.MultipleTraderConfig, configsDir);`
+   — **mevcut, test edilmiş yol, hiç değiştirilmiyor**.
+4. `algoTrader.Initialize(); await algoTrader.RunMultipleTraderWithProgressAsync();`
+5. `var mainTrader = algoTrader.MultipleTrader!.GetMainTrader();` → `GetStatisticsHeaderRow`/
+   `DataRow`, `SonYon`/`TaramaOzeti`, `statistics.GetOptimizationSummary()` — `TimeframeScanner`
+   ile birebir aynı toplama deseni, kaynak sadece `mainTrader`.
+6. `algoTrader.Dispose();` → sıradaki TF.
+
+## ⚠️ Uygulama Sırasında Değişen Tasarım Detayı
+
+Tasarım notunda `MultiStrategyTimeframeScannerOptions`'ın doğrudan bir `MultipleTraderConfig`
+alanı taşıyacağı yazılmıştı — uygulama sırasında bunun `SymbolScanner`/`TimeframeScanner`'ın
+kurduğu "Trading katmanı AppConfig namespace'ini bilmez" ayrımını boz acağı görüldü
+(`MultipleTraderConfig`, `AlgoTrade.Core.AppConfig` namespace'inde). Bunun yerine
+`Options.ConfigureAlgoTrader : Action<AlgoTrader>?` delegate'i eklendi — çağıran taraf (Console)
+bu delegate içinde `AppConfigApplier.ApplyMultipleTrader(...)` çağırıyor. Bu, katman ayrımını
+koruyor ve `AlgoTrader.SetCallbacks`/`OnProgress` gibi zaten var olan callback-tabanlı
+genişletme desenine de uyuyor.
+
+## Dosyalar
+
+| Dosya | Değişiklik |
+|---|---|
+| `src/AlgoTrade.Core/Trading/Traders/MultiStrategyTimeframeScanner.cs` | YENİ — `MultiStrategyTimeframeScanner`, `MultiStrategyTimeframeScannerOptions`. Sonuç tipi olarak `TimeframeScanner.cs`'teki `TimeframeScanResult` reuse edildi (birebir aynı şekil). |
+| `src/AlgoTrade.Core/AppConfig/AppConfig.cs` | `MultiStrategyTimeframeScanConfig` (+ `Sort`/`Save` alt config'leri) — `MultipleTrader` alanı mevcut `MultipleTraderConfig` tipini birebir reuse ediyor |
+| `inputs/configs/AppConfig/AppConfig.json` | `MultiStrategyTimeframeScan` bölümü — `MultipleTrader` alt bloğu mevcut `"MultipleTrader"` bölümünün (2 child, Consensus.Mode=Net) bir kopyası |
+| `AlgoTrade.Console/Program.cs` | `[12] Tarama (Multi-Strategy Timeframe Scan)` menü seçeneği, `handleMultiStrategyTimeframeScan()`, `runMultiStrategyTimeframeScan()` (`ConfigureAlgoTrader` delegate'i burada `ApplyMultipleTrader` + child/list dosyalarını kapatan bir `SetMultipleTraderSaveConfig` override'ı içeriyor — TF'ler arası dosya çakışmasını önlemek için), `showModeConfigSummary("MultiStrategyTimeframeScan")` |
+
+`AppConfigApplier.cs`'e yeni bir `Build*` metodu **eklenmedi** — `ConfigureAlgoTrader` delegate
+tasarımı sayesinde Console doğrudan mevcut `ApplyMultipleTrader`'ı çağırıyor.
+
+## Sonraki Adım
+
+"Tek Sembol" sütunu (1/2/3/4) tamamlandı. Zaman kalırsa senaryo 6 (Çoklu sembol, tek strateji,
+çoklu TF — `SymbolScanner` içinde her sembol için `TimeframeScanner`'ı da çalıştırmak) ile
+devam edilecek.

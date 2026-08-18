@@ -41,14 +41,15 @@ etmeye gerek yok. Kod tabanına göre bunlar 3 bağımsız yapı taşının bile
 | 1 | Tek | Tek | Tek | ✅ Mevcut — `SingleTrader` |
 | 2 | Tek | Tek | Çoklu | ✅ TAMAMLANDI — `TimeframeScanner` + Console `[11] Tarama (Timeframe Scan)` (yapı taşı **A**, 2026-08-18) |
 | 3 | Tek | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultipleTrader` + Net/Majority/All/Any consensus modları (yapı taşı **B**, 2026-08-18) |
-| 4 | Tek | Çoklu (bileşke) | Çoklu | ❌ Yok — `MultipleTrader`'ı `TimeframeScanner`-tarzı bağımsız bir döngüye sokmak gerekiyor |
+| 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ TAMAMLANDI — `MultiStrategyTimeframeScanner` + Console `[12] Tarama (Multi-Strategy Timeframe Scan)` (2026-08-18) |
 | 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama (Symbol Scan)` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
 | 6 | Çoklu | Tek | Çoklu | ❌ Yok — `SymbolScanner` içinde her sembol için `TimeframeScanner`'ı da çalıştırmak gerekiyor (iç içe iki bağımsız tarama) |
-| 7 | Çoklu | Çoklu (bileşke) | Tek | ❌ Yok — **C**'nin `MultipleTrader` üzerinde çalışan bir varyantı gerekiyor (şu an sadece `SingleTrader` bazlı) |
-| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — 4, 6 ve 7'nin bileşimi |
+| 7 | Çoklu | Çoklu (bileşke) | Tek | ❌ Yok — **C**'nin `MultipleTrader` üzerinde çalışan bir varyantı gerekiyor (senaryo 4'teki `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı TF yerine sembol başına taze kurma" mantığı doğrudan uyarlanabilir) |
+| 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — 6 ve 7'nin bileşimi |
 
-**A, B ve C tamamlandı** (bkz. [docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari,
-kritik bir bug ve düzeltmesi, doğrulama sonuçları dahil).
+**"Tek Sembol" sütunu (1/2/3/4) ve senaryo 5 tamamlandı** (bkz.
+[docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari, kritik bir bug ve düzeltmesi,
+tasarım sapmaları ve doğrulama sonuçları dahil). Kalan: 6, 7, 8 — hepsi "Çoklu Sembol" sütununda.
 
 **Önemli düzeltme (A için)**: İlk analizde zaman dilimi ekseni için de `MultipleTrader`'daki
 gibi bir "konsensüs/bileşke" gerektiği varsayılmıştı (sürücü TF + zaman-hizalama). Kullanıcı bu
@@ -57,11 +58,11 @@ bağımsız** çalıştırıp sonuçlara ayrı ayrı bakmaktı. "Bileşke" kelim
 için kullanılmıştı. Bu yüzden A, `SymbolScanner`'a (C) yapısal olarak neredeyse özdeş bağımsız
 bir sınıf (`TimeframeScanner`) olarak kuruldu — konsensüs/zaman-hizalama yok.
 
-**Sonraki adımlar** (A/B/C tamamlandıktan sonra kalan, `docs/tarama-motoru-plan.md`'deki
+**Sonraki adımlar** (A/B/C/4 tamamlandıktan sonra kalan, `docs/tarama-motoru-plan.md`'deki
 "Kapsam Dışı" listeleriyle aynı):
-- Senaryo 4/6/7/8 — yukarıdaki tabloda açıklandığı gibi, `MultipleTrader` ve `TimeframeScanner`/
-  `SymbolScanner`'ın birbirinin içine bağımsız döngüler olarak sarılması (hâlâ konsensüs yok,
-  sadece iç içe bağımsız taramalar)
+- Senaryo 6/7/8 — yukarıdaki tabloda açıklandığı gibi, `SymbolScanner`'ın içine `TimeframeScanner`
+  ve/veya `MultiStrategyTimeframeScanner`'ın sarılması (hâlâ konsensüs yok, sadece iç içe
+  bağımsız taramalar)
 - Zengin JSON preview ekranı (SingleTrader/MultipleTrader'daki gibi), Time filtering /
   TradeStartBarIndex desteği, buffered flush / partial-resume, otomatik TF keşfi
 

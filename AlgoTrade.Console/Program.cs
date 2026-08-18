@@ -1042,6 +1042,92 @@ async Task runTimeframeScan()
     }
 }
 
+async Task runMultiStrategyTimeframeScan()
+{
+    try
+    {
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running MultiStrategyTimeframeScan (Tarama)");
+
+        var cfg = appConfig.MultiStrategyTimeframeScan;
+
+        var options = new MultiStrategyTimeframeScannerOptions
+        {
+            BaseFolder     = cfg.BaseFolder,
+            Symbol         = cfg.Symbol,
+            Timeframes     = cfg.Timeframes,
+            SortField      = cfg.Sort.SortField,
+            SortDescending = cfg.Sort.SortDescending,
+            ConfigureAlgoTrader = at =>
+            {
+                AppConfigApplier.ApplyMultipleTrader(at, cfg.MultipleTrader, AppSettings.ConfigsDir);
+                // Her TF icin ayni dosya adlarina yazildigi icin (collision) ve zaten kendi
+                // ozet CSV/TXT'imiz asil ciktimiz oldugu icin MultipleTrader'in kendi dosya
+                // yazimlari kapatiliyor.
+                at.SetMultipleTraderSaveConfig(new MultipleTraderObjectSaveConfig
+                {
+                    SaveStatisticsToFile              = false,
+                    SaveMultipleTraderListsTxtEnabled = false,
+                    SaveMultipleTraderListsCsvEnabled = false,
+                    WriteChildTradersDataToFiles      = false,
+                });
+            },
+        };
+
+        if (Enum.TryParse<StockDataReader.FilterMode>(cfg.ReadData.FilterMode, ignoreCase: true, out var filterMode))
+            options.ReadFilterMode = filterMode;
+        options.N1 = cfg.ReadData.N1;
+        options.N2 = cfg.ReadData.N2;
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt1)) options.Dt1 = DateTime.Parse(cfg.ReadData.Dt1);
+        if (!string.IsNullOrWhiteSpace(cfg.ReadData.Dt2)) options.Dt2 = DateTime.Parse(cfg.ReadData.Dt2);
+
+        using var scanner = new MultiStrategyTimeframeScanner(logger);
+        scanner.OnProgress = (current, total, tf) =>
+        {
+            consoleLogger!.Write($"\r\t[{current}/{total}] {tf}".PadRight(60));
+        };
+
+        string csvPath       = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.CsvFileName);
+        string txtPath       = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.TxtFileName);
+        string sortedCsvPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.SortedCsvFileName);
+        string sortedTxtPath = Path.Combine(AppSettings.ScanLogsDir, cfg.Save.SortedTxtFileName);
+
+        await scanner.RunAsync(options, csvPath, txtPath);
+        Console.WriteLine();
+
+        scanner.WriteSortedResults(options, sortedCsvPath, sortedTxtPath);
+
+        int successCount = scanner.Results.Count(r => r.Success);
+        int failCount    = scanner.Results.Count - successCount;
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"=== Tarama tamamlandı: {scanner.Results.Count} zaman dilimi ({successCount} başarılı, {failCount} hata) ===", ConsoleColor.Green);
+
+        foreach (var r in scanner.Results)
+        {
+            if (r.Success)
+                LogManager.LogRaw($"  {r.Timeframe,-8} {r.TaramaOzeti}");
+            else
+                LogManager.LogRaw($"  {r.Timeframe,-8} HATA: {r.ErrorMessage}", ConsoleColor.Red);
+        }
+
+        var best = scanner.GetBestResult(options);
+        if (best != null)
+        {
+            LogManager.LogRaw("");
+            LogManager.LogRaw($"En iyi ({cfg.Sort.SortField}): TF={best.Timeframe}  ->  {best.TaramaOzeti}", ConsoleColor.Yellow);
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw($"Sonuçlar     : {csvPath}");
+        LogManager.LogRaw($"Sıralı sonuç : {sortedCsvPath}");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runMultiStrategyTimeframeScan: {ex.Message}", ex);
+    }
+}
+
 // =============================================================================
 // Mode Handlers  (Config özeti göster → [ENTER] çalıştır | [E] düzenle | [B] geri)
 // =============================================================================
@@ -1257,6 +1343,30 @@ void showModeConfigSummary(string title)
         Console.WriteLine($"║  Strategy   : {stratInfo,-50}║");
         Console.WriteLine($"║  Sort       : {sortInfo,-50}║");
         Console.WriteLine($"║  FullStats  : {Trunc(fullStats, 50),-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Run                                                   ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
+    if (title == "MultiStrategyTimeframeScan")
+    {
+        var cfg = appConfig.MultiStrategyTimeframeScan;
+
+        string sourceInfo = Trunc($"{cfg.Symbol}  |  {cfg.BaseFolder}", 50);
+        string tfInfo     = Trunc(string.Join(", ", cfg.Timeframes), 50);
+        string childInfo  = Trunc($"{cfg.MultipleTrader.ChildTraders.Count} child  |  Consensus: {cfg.MultipleTrader.Consensus.Mode}", 50);
+        string sortInfo   = Trunc($"{cfg.Sort.SortField}  ({(cfg.Sort.SortDescending ? "desc" : "asc")})", 50);
+
+        Console.WriteLine($"║  Symbol     : {sourceInfo,-50}║");
+        Console.WriteLine($"║  Timeframes : {tfInfo,-50}║");
+        Console.WriteLine($"║  MultiTrader: {childInfo,-50}║");
+        Console.WriteLine($"║  Sort       : {sortInfo,-50}║");
 
         Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
         Console.WriteLine("║  [ENTER]  Run                                                   ║");
@@ -1919,6 +2029,43 @@ async Task handleTimeframeScan()
     }
 }
 
+async Task handleMultiStrategyTimeframeScan()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("MultiStrategyTimeframeScan");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER (veya herhangi bir tuş) → çalıştır
+        await runMultiStrategyTimeframeScan();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
 // =============================================================================
 // Script Support
 // =============================================================================
@@ -2087,6 +2234,7 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [10]  Tarama (Symbol Scan)                                      ║");
     Console.WriteLine("║    [11]  Tarama (Timeframe Scan)                                   ║");
+    Console.WriteLine("║    [12]  Tarama (Multi-Strategy Timeframe Scan)                    ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -2244,6 +2392,7 @@ async Task main()
             case "9": handleDearPyGuiPlotterTest();                         break; // TODO: demo/test, silinecek
             case "10": await handleSymbolScan();                            break;
             case "11": await handleTimeframeScan();                         break;
+            case "12": await handleMultiStrategyTimeframeScan();             break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }

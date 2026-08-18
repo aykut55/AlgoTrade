@@ -13,6 +13,7 @@ public class AppConfig
     public SingleTraderOptConfig SingleTraderOptimizer { get; set; } = new();
     public SymbolScanConfig      SymbolScan     { get; set; } = new();
     public TimeframeScanConfig   TimeframeScan  { get; set; } = new();
+    public MultiStrategyTimeframeScanConfig MultiStrategyTimeframeScan { get; set; } = new();
 }
 
 // =============================================================================
@@ -476,4 +477,50 @@ public class TimeframeScanSaveConfig
     public string TxtFileName       { get; set; } = "TimeframeScanResults.txt";
     public string SortedCsvFileName { get; set; } = "TimeframeScanResults_sorted.csv";
     public string SortedTxtFileName { get; set; } = "TimeframeScanResults_sorted.txt";
+}
+
+// =============================================================================
+// MultiStrategyTimeframeScan  (Tarama — Senaryo 4: tek sembol, MultipleTrader consensus'u,
+// birden fazla zaman diliminde BAĞIMSIZ)
+// =============================================================================
+
+/// <summary>
+/// Aynı sembolde MultipleTrader'ın (birden fazla stratejinin consensus'u) her zaman diliminde
+/// bağımsız çalıştırılmasını konfigüre eder. Child stratejiler/consensus modu/trade params için
+/// mevcut <see cref="MultipleTraderConfig"/> tipi birebir reuse edilir — AppConfig.json'daki
+/// "MultipleTrader" bölümüyle aynı şema. Zaman dilimleri arasında konsensüs YOK, her TF ayrı bir
+/// sonuç satırı (bkz. docs/tarama-motoru-plan.md, "Senaryo 4" bölümü).
+/// </summary>
+public class MultiStrategyTimeframeScanConfig
+{
+    /// <summary>Zaman dilimi klasörlerinin bulunduğu üst klasör (tam yol). Örn. C:\data\csvFiles\CRP</summary>
+    public string BaseFolder { get; set; } = "";
+
+    /// <summary>Dosya adı köküyle birebir (örn. "BTCUSDT_BNC"). Her TF klasöründe aynı isimle aranır.</summary>
+    public string Symbol { get; set; } = "";
+
+    /// <summary>Taranacak zaman dilimi klasör adları (örn. ["01","05","15","60"]). Açık liste, otomatik keşif yok.</summary>
+    public List<string> Timeframes { get; set; } = new();
+
+    /// <summary>Child stratejiler, consensus modu, trade params — mevcut MultipleTrader şemasıyla birebir aynı.</summary>
+    public MultipleTraderConfig MultipleTrader { get; set; } = new();
+
+    public ReadDataConfig ReadData { get; set; } = new();
+
+    public MultiStrategyTimeframeScanSortConfig Sort { get; set; } = new();
+    public MultiStrategyTimeframeScanSaveConfig Save { get; set; } = new();
+}
+
+public class MultiStrategyTimeframeScanSortConfig
+{
+    public string SortField      { get; set; } = "NetProfit";
+    public bool   SortDescending { get; set; } = true;
+}
+
+public class MultiStrategyTimeframeScanSaveConfig
+{
+    public string CsvFileName       { get; set; } = "MultiStrategyTimeframeScanResults.csv";
+    public string TxtFileName       { get; set; } = "MultiStrategyTimeframeScanResults.txt";
+    public string SortedCsvFileName { get; set; } = "MultiStrategyTimeframeScanResults_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "MultiStrategyTimeframeScanResults_sorted.txt";
 }
