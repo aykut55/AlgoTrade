@@ -397,60 +397,47 @@ var) buna rağmen görünmeye devam ediyor, sadece RunAsync öncesi/sonrasındak
    scratch test ile doğrulanan `AppConfigApplier`/`SymbolTimeframeScanner` yolu Console handler'ı
    birebir kullanıyor)
 5. ~~`docs/tarama-motoru-plan.md` ve `docs/todo.md`'yi TAMAMLANDI olarak güncelle.~~ ✅
-6. Sırada: commit, sonra senaryo 7'ye geç.
+6. ~~Commit, sonra senaryo 7'ye geç.~~ ✅
 
 ---
 
-# Senaryo 7 (Çoklu Sembol, Çoklu Strateji-Bileşke, Tek TF) — SIRADA (henüz uygulanmadı)
+# Senaryo 7 (Çoklu Sembol, Çoklu Strateji-Bileşke, Tek TF) — TAMAMLANDI (2026-08-18)
 
-**Durum**: Tasarım taslağı, uygulama başlamadı. Senaryo 6'dan sonra sırada.
+## Doğrulama
 
-## Amaç
+Scratch bir test projesiyle (gerçek `AppConfig.json`'daki `MultiStrategySymbolScan` bölümü —
+`DataFolder=CRP\05`, `AutoDiscover=true`, 2 child `SimpleMostStrategy` v1/v2,
+`Consensus.Mode=Net` — `ConfigureAlgoTrader` delegate'i üzerinden `AppConfigApplier.
+ApplyMultipleTrader` kullanılarak) gerçek veride uçtan uca test edildi: 2 sembol (BTCUSDT_BNC,
+ETHUSDT_BNC), ikisi de `Success=true`. Hem bileşke (mainTrader, örn. BTCUSDT_BNC: `SonYon=A`,
+`KZ=2.26`) hem her child'ın bağımsız sinyali (`Child0`/`Child1`, birbirinden hafifçe farklı
+`SonKarZararFiyat` değerleriyle — consensus'un gerçekten strateji-ekseninde birleştirme yaptığı
+doğrulandı) ayrı ayrı raporlandı. CSV çıktısında `Child0_SonYon;Child0_TaramaOzeti;
+Child1_SonYon;Child1_TaramaOzeti` kolonları doğru dolduruldu (senaryo 4'teki desenle birebir
+aynı, "✅ DÜZELTİLDİ" notuyla tutarlı — bu sefer baştan doğru uygulandı). Sıralama
+(`GetBestResult`, `SortField=NetProfit`) doğru çalıştı (ETHUSDT_BNC seçildi).
 
-`MultipleTrader` consensus'unu (birden fazla stratejinin bileşkesi), **tek bir zaman diliminde**,
-birden fazla sembolde **bağımsız bağımsız** çalıştırmak — sembol ekseninde konsensüs yok, sadece
-her sembolün kendi içinde strateji-ekseni consensus'u var (tıpkı senaryo 4'ün TF ekseni yerine
-burada sembol ekseninde olması gibi).
+## Dosyalar
 
-## Tasarım Taslağı — Senaryo 4'ün Doğrudan Uyarlanmışı
+| Dosya | Değişiklik |
+|---|---|
+| `src/AlgoTrade.Core/Trading/Traders/MultiStrategySymbolScanner.cs` | YENİ — `MultiStrategySymbolScanner`, `MultiStrategySymbolScannerOptions`. Sonuç tipi olarak `SymbolScanner.cs`'teki `ScanResult` reuse edildi (senaryo 4'ün `TimeframeScanResult` reuse etmesiyle aynı mantık) |
+| `src/AlgoTrade.Core/Trading/Traders/SymbolScanner.cs` | `ScanResult`'a `ChildSignals: List<ChildSignalInfo>` alanı eklendi (senaryo 4'te `TimeframeScanResult`'a eklenenle aynı amaç — MultiStrategySymbolScanner'ın reuse edebilmesi için) |
+| `src/AlgoTrade.Core/AppConfig/AppConfig.cs` | `MultiStrategySymbolScanConfig` (+ `Sort`/`Save` alt config'leri) — `MultipleTrader` alanı mevcut `MultipleTraderConfig` tipini birebir reuse ediyor |
+| `inputs/configs/AppConfig/AppConfig.json` | `MultiStrategySymbolScan` bölümü — `MultipleTrader` alt bloğu mevcut `"MultipleTrader"`/`"MultiStrategyTimeframeScan.MultipleTrader"` bölümlerinin bir kopyası, `DataFolder=CRP\05` |
+| `AlgoTrade.Console/Program.cs` | `[14] Tarama (Multi-Strategy Symbol Scan)` menü seçeneği, `handleMultiStrategySymbolScan()`, `runMultiStrategySymbolScan()` — `ConfigureAlgoTrader` delegate'i senaryo 4'teki gibi `ApplyMultipleTrader` + `SetMultipleTraderSaveConfig` (dosya çakışmasını önlemek için) içeriyor, `RunAsync` da aynı `DisableConsoleSink`/`EnableConsoleSink` scope'lamasını kullanıyor (consensus debug log spam'i için) |
 
-Bu senaryo, senaryo 4'te (`MultiStrategyTimeframeScanner`) kurulan tekniğin **neredeyse birebir
-kopyası** — sadece dış döngü değişkeni TF yerine sembol:
+`AppConfigApplier.cs`'e yeni bir `Build*` metodu **eklenmedi** — senaryo 4'teki gibi
+`ConfigureAlgoTrader` delegate tasarımı sayesinde Console doğrudan mevcut
+`ApplyMultipleTrader`'ı çağırıyor.
 
-- **Yeni sınıf**: `MultiStrategySymbolScanner` (isim tartışmaya açık) — `MultiStrategyTimeframeScanner`
-  ile aynı iskelet: her sembol için taze bir `AlgoTrader` kurup (`SetData`/`RegisterLogger`/
-  `RegisterTimer`/`Reset`/`Initialize`), `Options.ConfigureAlgoTrader : Action<AlgoTrader>?`
-  delegate'i ile çağıran tarafın (Console) `AppConfigApplier.ApplyMultipleTrader(...)` çağırmasına
-  izin verip, `RunMultipleTraderWithProgressAsync()`'i çalıştırıyor, `GetMainTrader()`'dan sonucu
-  topluyor, `Dispose()` edip sıradaki sembole geçiyor. `AlgoTrader.createChildTraders()`'ı elle
-  tekrar yazmama gerekçesi (karmaşıklık + zaten test edilmiş olması) burada da aynen geçerli.
-- **Sembol listesi nasıl belirlenir**: `SymbolScanner`'daki gibi `DataFolder` (tek TF klasörü,
-  örn. `CRP\05`) + `AutoDiscover`/`SymbolList` — `SymbolScanner.ResolveSymbols()` mantığı
-  doğrudan reuse edilebilir.
-- **Sonuç tipi**: `SymbolScanner.cs`'teki `ScanResult` (Symbol-anahtarlı) reuse edilir — senaryo
-  4'ün `TimeframeScanResult`'ı (Timeframe-anahtarlı) reuse etmesiyle aynı mantık.
-- **Config**: `AppConfig.cs`'e `MultiStrategySymbolScanConfig` (`DataFolder`, `AutoDiscover`,
-  `SymbolList`, `MultipleTrader: MultipleTraderConfig` — mevcut tip birebir reuse, `Sort`/`Save`).
-  `AppConfig.json`'a yeni bölüm (mevcut `"MultipleTrader"` bölümünün bir kopyası + `DataFolder`/
-  `AutoDiscover`/`SymbolList`). Console'a `[14]` menü seçeneği (13 senaryo 6'da kullanılacak).
-- **Dikkat**: Senaryo 4'te olduğu gibi, her sembol çalıştırmasından sonra `MultipleTrader`'ın
-  kendi dosya yazımlarını (`SetMultipleTraderSaveConfig` ile `SaveMultipleTraderListsTxtEnabled`
-  vb. `false`) kapatmak gerekiyor — aksi halde her sembol aynı dosya adına yazıp bir öncekini
-  ezer.
-- **Child sinyallerini de raporla (senaryo 4'te DÜZELTİLEN desen, bkz. yukarıdaki "✅ DÜZELTİLDİ"
-  bölümü)**: `RunSingleTimeframeAsync()`'in bu senaryodaki karşılığı `algoTrader.MultipleTrader.
-  Traders`'ı gezip her child'ı `TimeframeScanResult.ChildSignals`'a eklemeli (aynı `ChildId`/
-  `SonYon`/`TaramaOzeti` alanları, `TimeframeScanResult` zaten reuse ediliyor) — senaryo 4'te
-  yapılan `Child{Id}_SonYon;Child{Id}_TaramaOzeti` kolon deseni birebir buraya da uygulanmalı.
+## Yapılacaklar — TAMAMLANDI, sırada senaryo 8
 
-## Yapılacaklar (senaryo 6 bitince)
-
-1. `MultiStrategySymbolScanner.cs` yaz — `MultiStrategyTimeframeScanner.cs`'i taban al, TF yerine
-   sembol döngüsü.
-2. `AppConfig.cs` + `AppConfig.json`'a config ekle (mevcut `"MultipleTrader"` bölümünü kopyala).
-3. Küçük bir alt kümeyle (örn. 2-3 sembol) scratch test ile uçtan uca doğrula.
-4. Console'a `[14]` menü seçeneği + handler/runner ekle.
-5. Belgeleri güncelle, commit, senaryo 8'e geç.
+1. ~~`MultiStrategySymbolScanner.cs` yaz — `MultiStrategyTimeframeScanner.cs`'i taban al, TF yerine sembol döngüsü.~~ ✅
+2. ~~`AppConfig.cs` + `AppConfig.json`'a config ekle.~~ ✅
+3. ~~Küçük bir alt kümeyle (2 sembol) scratch test ile uçtan uca doğrula.~~ ✅
+4. ~~Console'a `[14]` menü seçeneği + handler/runner ekle.~~ ✅
+5. Sırada: Belgeleri güncelle (bu adım), commit, senaryo 8'e geç.
 
 ---
 

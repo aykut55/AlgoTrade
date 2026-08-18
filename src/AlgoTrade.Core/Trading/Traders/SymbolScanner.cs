@@ -307,5 +307,13 @@ public class ScanResult
     public int SonSinyaldenBeriBarSayisi { get; set; }
     public string TaramaOzeti { get; set; } = "";
 
+    /// <summary>
+    /// MultipleTrader tabanlı taramalarda (örn. MultiStrategySymbolScanner) her child'ın
+    /// BAĞIMSIZ sinyali — SonYon/TaramaOzeti alanları mainTrader'ın (bileşke) sonucu, bu liste
+    /// ise "her strateji tek başına ne derdi" bilgisini taşır. SingleTrader tabanlı taramalarda
+    /// (SymbolScanner) her zaman boş kalır.
+    /// </summary>
+    public List<ChildSignalInfo> ChildSignals { get; set; } = new();
+
     public double SortValue { get; set; }
 }

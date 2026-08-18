@@ -44,12 +44,12 @@ etmeye gerek yok. Kod tabanına göre bunlar 3 bağımsız yapı taşının bile
 | 4 | Tek | Çoklu (bileşke) | Çoklu | ✅ TAMAMLANDI — `MultiStrategyTimeframeScanner` + Console `[12] Tarama (Multi-Strategy Timeframe Scan)` (2026-08-18). Hem bileşke (mainTrader) hem her child'ın bağımsız sinyali (`ChildSignals`) raporlanıyor — bkz. `docs/tarama-motoru-plan.md` "✅ DÜZELTİLDİ" |
 | 5 | Çoklu | Tek | Tek | ✅ TAMAMLANDI — `SymbolScanner` + Console `[10] Tarama (Symbol Scan)` (yapı taşı **C**, roadmap madde 8, 2026-08-18) |
 | 6 | Çoklu | Tek | Çoklu | ✅ TAMAMLANDI — `SymbolTimeframeScanner` + Console `[13] Tarama (Symbol-Timeframe Scan)` (2026-08-18). N sembol × M TF, ikisi de tamamen bağımsız (iç içe iki döngü, `SymbolScanner`/`TimeframeScanner`'ın üçüncü kopyası) |
-| 7 | Çoklu | Çoklu (bileşke) | Tek | ❌ Yok — **C**'nin `MultipleTrader` üzerinde çalışan bir varyantı gerekiyor (senaryo 4'teki `MultiStrategyTimeframeScanner`'ın "AlgoTrader'ı TF yerine sembol başına taze kurma" mantığı doğrudan uyarlanabilir) |
+| 7 | Çoklu | Çoklu (bileşke) | Tek | ✅ TAMAMLANDI — `MultiStrategySymbolScanner` + Console `[14] Tarama (Multi-Strategy Symbol Scan)` (2026-08-18). Senaryo 4'ün doğrudan uyarlanmışı (döngü değişkeni TF yerine sembol), hem bileşke hem her child'ın bağımsız sinyali (`ChildSignals`) baştan doğru raporlanıyor |
 | 8 | Çoklu | Çoklu (bileşke) | Çoklu | ❌ Yok — 6 ve 7'nin bileşimi |
 
-**"Tek Sembol" sütunu (1/2/3/4), senaryo 5 ve senaryo 6 tamamlandı** (bkz.
+**"Tek Sembol" sütunu (1/2/3/4), senaryo 5, 6 ve 7 tamamlandı** (bkz.
 [docs/tarama-motoru-plan.md](tarama-motoru-plan.md) — mimari, kritik bir bug ve düzeltmesi,
-tasarım sapmaları ve doğrulama sonuçları dahil). Kalan: 7, 8.
+tasarım sapmaları ve doğrulama sonuçları dahil). Kalan: 8.
 
 **Önemli düzeltme (A için)**: İlk analizde zaman dilimi ekseni için de `MultipleTrader`'daki
 gibi bir "konsensüs/bileşke" gerektiği varsayılmıştı (sürücü TF + zaman-hizalama). Kullanıcı bu

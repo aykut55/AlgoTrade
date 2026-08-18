@@ -15,6 +15,7 @@ public class AppConfig
     public TimeframeScanConfig   TimeframeScan  { get; set; } = new();
     public MultiStrategyTimeframeScanConfig MultiStrategyTimeframeScan { get; set; } = new();
     public SymbolTimeframeScanConfig SymbolTimeframeScan { get; set; } = new();
+    public MultiStrategySymbolScanConfig MultiStrategySymbolScan { get; set; } = new();
 }
 
 // =============================================================================
@@ -578,4 +579,51 @@ public class SymbolTimeframeScanSaveConfig
     public string TxtFileName       { get; set; } = "SymbolTimeframeScanResults.txt";
     public string SortedCsvFileName { get; set; } = "SymbolTimeframeScanResults_sorted.csv";
     public string SortedTxtFileName { get; set; } = "SymbolTimeframeScanResults_sorted.txt";
+}
+
+// =============================================================================
+// MultiStrategySymbolScan  (Tarama — Senaryo 7: çoklu sembol, MultipleTrader consensus'u, tek
+// zaman dilimi, hepsi BAĞIMSIZ)
+// =============================================================================
+
+/// <summary>
+/// Aynı zaman diliminde MultipleTrader'ın (birden fazla stratejinin consensus'u) birden fazla
+/// sembolde bağımsız çalıştırılmasını konfigüre eder. Child stratejiler/consensus modu/trade
+/// params için mevcut <see cref="MultipleTraderConfig"/> tipi birebir reuse edilir —
+/// AppConfig.json'daki ana "MultipleTrader" bölümüyle aynı şema. Semboller arasında konsensüs
+/// YOK, her sembol ayrı bir sonuç satırı (bkz. docs/tarama-motoru-plan.md, "Senaryo 7" bölümü).
+/// MultiStrategyTimeframeScanConfig'in (senaryo 4) doğrudan uyarlanmışı.
+/// </summary>
+public class MultiStrategySymbolScanConfig
+{
+    /// <summary>Taranacak sembol dosyalarının bulunduğu klasör (tam yol). Örn. C:\data\csvFiles\CRP\05</summary>
+    public string DataFolder { get; set; } = "";
+
+    /// <summary>true: DataFolder'daki tüm *.csv dosyaları otomatik taranır. false: SymbolList kullanılır.</summary>
+    public bool AutoDiscover { get; set; } = true;
+
+    /// <summary>AutoDiscover=false iken kullanılır. Her eleman dosya adı köküyle birebir (örn. "BTCUSDT_BNC").</summary>
+    public List<string> SymbolList { get; set; } = new();
+
+    /// <summary>Child stratejiler, consensus modu, trade params — mevcut MultipleTrader şemasıyla birebir aynı.</summary>
+    public MultipleTraderConfig MultipleTrader { get; set; } = new();
+
+    public ReadDataConfig ReadData { get; set; } = new();
+
+    public MultiStrategySymbolScanSortConfig Sort { get; set; } = new();
+    public MultiStrategySymbolScanSaveConfig Save { get; set; } = new();
+}
+
+public class MultiStrategySymbolScanSortConfig
+{
+    public string SortField      { get; set; } = "NetProfit";
+    public bool   SortDescending { get; set; } = true;
+}
+
+public class MultiStrategySymbolScanSaveConfig
+{
+    public string CsvFileName       { get; set; } = "MultiStrategySymbolScanResults.csv";
+    public string TxtFileName       { get; set; } = "MultiStrategySymbolScanResults.txt";
+    public string SortedCsvFileName { get; set; } = "MultiStrategySymbolScanResults_sorted.csv";
+    public string SortedTxtFileName { get; set; } = "MultiStrategySymbolScanResults_sorted.txt";
 }
