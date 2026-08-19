@@ -891,6 +891,67 @@ async Task runMultipleTraderAlgoTrade()
     }
 }
 
+async Task runConfirmingSingleTraderAlgoTrade()
+{
+    try
+    {
+        if (stockDataReader is null || !stockDataReader.IsDataReady)
+        {
+            LogManager.LogError("[ConfirmingSingleTrader] Data not loaded — run [1] Read Data first (or use the combo menu item that reads data + runs).");
+            return;
+        }
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw("Running ConfirmingSingleTrader AlgoTrader");
+
+        algoTrader = new AlgoTrader("AlgoTrader");
+        algoTrader.OnTraderProgress += OnTraderProgress;
+        algoTrader.RegisterLogger(logger);
+        algoTrader.RegisterTimer(timer);
+        algoTrader.Reset();
+        algoTrader.SetData(stockDataReader.GetData());
+
+        if (stockMetaData != null)
+        {
+            algoTrader.SymbolName   = stockMetaData.GetValueOrDefault("GrafikSembol",  "N/A");
+            algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+        }
+
+        algoTrader.SingleTraderRunMode = selectedRunMode;
+
+        AppConfigApplier.ApplyConfirmingSingleTrader(algoTrader, appConfig.ConfirmingSingleTrader, AppSettings.ConfigsDir);
+
+        algoTrader.Initialize();
+
+        LogManager.LogRaw("");
+        LogManager.LogRaw(algoTrader.GetDataInfo().ToString());
+
+        await algoTrader.RunConfirmingSingleTraderWithProgressAsync();
+
+        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.ConfirmingSingleTrader!);
+
+        var mainTrader = algoTrader.ConfirmingSingleTrader!.GetMainTrader();
+        bool plotEnabled = mainTrader.PlotEnabled;
+        if (plotEnabled)
+        {
+            LogManager.LogRaw("");
+            LogManager.LogRaw("[Plot] mainTrader'ın gerçek/konfirme edilmiş sinyalleri çiziliyor (VirtualSignals overlay henüz yok — bkz. ConfirmingSingleTrader.VirtualSignals/.Signals).");
+
+            if (algoTrader.SetupPython())
+                await algoTrader.PlotSingleTraderData(mainTrader);
+            else
+                LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+        }
+
+        await writeTask;
+        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + signalTrader + ConfirmingSingleTraderLists)");
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"An error occurred in runConfirmingSingleTraderAlgoTrade: {ex.Message}", ex);
+    }
+}
+
 async Task runSingleTraderOptimization()
 {
     try
@@ -1885,6 +1946,56 @@ void showModeConfigSummary(string title)
         return;
     }
 
+    if (title == "ConfirmingSingleTrader")
+    {
+        var cfg = appConfig.ConfirmingSingleTrader;
+        var tp  = cfg.MainTrader.TradeParams;
+
+        string stratInfo = Trunc($"{cfg.SignalTrader.Strategy.Name}  /  {cfg.SignalTrader.Strategy.Version}", 50);
+        Console.WriteLine($"║  SignalStrat: {stratInfo,-50}║");
+
+        string confInfo = Trunc($"{cfg.Confirmation.ConflictMode}  |  Trigger:{cfg.Confirmation.Trigger}", 50);
+        Console.WriteLine($"║  Confirm    : {confInfo,-50}║");
+
+        string threshInfo = Trunc(
+            $"Profit:{cfg.Confirmation.ProfitThreshold}  Loss:{cfg.Confirmation.LossThreshold}  ({(cfg.Confirmation.ThresholdIsPercentage ? "%" : "Value")})", 50);
+        Console.WriteLine($"║  Thresholds : {threshInfo,-50}║");
+
+        string ecfLine   = "(undefined)";
+        string ecfStatus = "[Disabled]";
+        if (cfg.MainTrader.EquityCurveFilter != null)
+        {
+            ecfLine = Trunc(cfg.MainTrader.EquityCurveFilter.Version, 40);
+            try
+            {
+                string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.MainTrader.EquityCurveFilter.ConfigFile);
+                var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+                ecfLoader.LoadFromFile();
+                var ecfCfg = ecfLoader.GetConfiguration(cfg.MainTrader.EquityCurveFilter.Version);
+                if (ecfCfg != null)
+                {
+                    ecfLine   = Trunc($"{ecfCfg.Version}  ({ecfCfg.DisplayName})", 40);
+                    ecfStatus = ecfCfg.Enabled ? "[Enabled]" : "[Disabled]";
+                }
+            }
+            catch { }
+        }
+        Console.WriteLine($"║  ECFilter   : {ecfLine,-40}{ecfStatus,10}║");
+
+        string tradeInfo = Trunc($"{tp.MarketType}  |  Balance:{tp.IlkBakiye:N0}  (MainTrader)", 50);
+        Console.WriteLine($"║  TradeParam : {tradeInfo,-50}║");
+
+        Console.WriteLine("╠═════════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  [ENTER]  Preview & Run                                         ║");
+        Console.WriteLine("║  [E]      Edit AppConfig.json + Reload                          ║");
+        Console.WriteLine("║  [R]      Reload AppConfig                                      ║");
+        Console.WriteLine("║  [T]      Pause/Resume Timer                                    ║");
+        Console.WriteLine("║  [B]      Return to Main Menu                                   ║");
+        Console.WriteLine("╚═════════════════════════════════════════════════════════════════╝");
+        Console.WriteLine();
+        return;
+    }
+
     if (title == "SymbolScan")
     {
         var cfg = appConfig.SymbolScan;
@@ -2577,6 +2688,92 @@ void showMultipleTraderRunPreview()
     Console.WriteLine();
 }
 
+void showConfirmingSingleTraderRunPreview()
+{
+    var cfg = appConfig.ConfirmingSingleTrader;
+
+    var jsonOpts = new JsonSerializerOptions
+    {
+        WriteIndented          = true,
+        PropertyNamingPolicy   = null,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        Converters             = { new JsonStringEnumConverter() }
+    };
+
+    // SignalTrader strategy
+    object signalStratSection = new { cfg.SignalTrader.Strategy.Name, cfg.SignalTrader.Strategy.Version };
+    try
+    {
+        string stratPath = Path.Combine(AppSettings.ConfigsDir, cfg.SignalTrader.Strategy.ConfigFile);
+        var stratLoader  = new StrategyConfigLoader(stratPath);
+        stratLoader.LoadFromFile();
+        var stratCfg = stratLoader.GetConfiguration(cfg.SignalTrader.Strategy.Name, cfg.SignalTrader.Strategy.Version);
+        if (stratCfg != null)
+            signalStratSection = new { stratCfg.StrategyName, stratCfg.Version, stratCfg.DisplayName,
+                Parameters = stratCfg.GetParameterValues() };
+    }
+    catch { }
+
+    // MainTrader ECF
+    object? mainEcfSection = null;
+    if (cfg.MainTrader.EquityCurveFilter != null)
+    {
+        mainEcfSection = new { cfg.MainTrader.EquityCurveFilter.Version };
+        try
+        {
+            string ecfPath = Path.Combine(AppSettings.ConfigsDir, cfg.MainTrader.EquityCurveFilter.ConfigFile);
+            var ecfLoader  = new EquityCurveFilterConfigLoader(ecfPath);
+            ecfLoader.LoadFromFile();
+            var ecfCfg = ecfLoader.GetConfiguration(cfg.MainTrader.EquityCurveFilter.Version);
+            if (ecfCfg != null)
+                mainEcfSection = new { ecfCfg.Version, ecfCfg.DisplayName, ecfCfg.Enabled,
+                    ecfCfg.ThresholdTypeIsPercent, ecfCfg.ProfitThreshold, ecfCfg.LossThreshold, ecfCfg.Trigger };
+        }
+        catch { }
+    }
+
+    var preview = new
+    {
+        cfg.RunMode,
+        SignalTrader = new { Strategy = signalStratSection, cfg.SignalTrader.Signals },
+        cfg.Confirmation,
+        MainTrader   = new { cfg.MainTrader.TradeParams, cfg.MainTrader.Signals, EquityCurveFilter = mainEcfSection },
+        cfg.Save
+    };
+
+    string json = JsonSerializer.Serialize(preview, jsonOpts);
+
+    string sep = new string('═', 66);
+    Console.WriteLine();
+    Console.WriteLine("══ ConfirmingSingleTrader — Run Preview ═════════════════════════════");
+    foreach (string rawLine in json.Split('\n'))
+    {
+        string line     = rawLine.TrimEnd('\r');
+        int    colonIdx = line.IndexOf("\": ");
+        if (colonIdx >= 0)
+        {
+            string valuePart = line.Substring(colonIdx + 3).TrimEnd(',').Trim();
+            if (valuePart == "true" || valuePart == "false")
+            {
+                Console.Write(line.Substring(0, colonIdx + 3));
+                Console.ForegroundColor = valuePart == "true" ? ConsoleColor.Green : ConsoleColor.Red;
+                Console.Write(line.Substring(colonIdx + 3));
+                Console.ResetColor();
+                Console.WriteLine();
+                continue;
+            }
+        }
+        Console.WriteLine(line);
+    }
+    Console.WriteLine(sep);
+    Console.WriteLine("  [ENTER]  Run");
+    Console.WriteLine("  [E]      Edit AppConfig.json + Reload");
+    Console.WriteLine("  [R]      Reload AppConfig");
+    Console.WriteLine("  [T]      Pause/Resume Timer");
+    Console.WriteLine("  [B]      Back");
+    Console.WriteLine();
+}
+
 async Task handleSingleTrader()
 {
     reloadAppConfig();
@@ -2686,6 +2883,61 @@ async Task handleMultipleTrader()
 
         selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
         await runMultipleTraderAlgoTrade();
+
+        // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) continue;
+        return; // ENTER/diğer tuşlar → ana menü
+    }
+}
+
+async Task handleConfirmingSingleTrader()
+{
+    reloadAppConfig();
+
+    while (true)
+    {
+        showModeConfigSummary("ConfirmingSingleTrader");
+        var input = MenuInput("");
+
+        if (input == null || input.Equals("b", StringComparison.OrdinalIgnoreCase)) return;
+
+        if (input.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (input.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        // ENTER → önizleme göster
+        showConfirmingSingleTraderRunPreview();
+        var confirm = MenuInput("");
+
+        if (confirm == null || confirm.Equals("b", StringComparison.OrdinalIgnoreCase)) continue;
+
+        if (confirm.Equals("e", StringComparison.OrdinalIgnoreCase))
+        {
+            editAndReloadAppConfig();
+            continue;
+        }
+
+        if (confirm.Equals("r", StringComparison.OrdinalIgnoreCase))
+        {
+            reloadAppConfig();
+            continue;
+        }
+
+        selectedRunMode = ParseRunMode(appConfig.ConfirmingSingleTrader.RunMode);
+        await runConfirmingSingleTraderAlgoTrade();
 
         // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
         Console.WriteLine();
@@ -3378,6 +3630,11 @@ void showMainMenu()
     Console.WriteLine("║    [20]  Sorgu Tarama (Multi-Query Symbol Scan)                    ║");
     Console.WriteLine("║    [21]  Sorgu Tarama (Multi-Query Symbol-Timeframe Scan)          ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ Confirming (Sanal Pozisyon Konfirmasyonu) ═════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [22]  ConfirmingSingleTrader                                    ║");
+    Console.WriteLine("║    [23]  Read Data + ConfirmingSingleTrader                        ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [0]  Exit                                                       ║");
@@ -3496,8 +3753,12 @@ async Task main()
                 case "SINGLETRADEROPTIMIZER":
                     await runSingleTraderOptimization();
                     break;
+                case "CONFIRMINGSINGLETRADER":
+                    selectedRunMode = ParseRunMode(appConfig.ConfirmingSingleTrader.RunMode);
+                    await runConfirmingSingleTraderAlgoTrade();
+                    break;
                 default:
-                    LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOptimizer", ConsoleColor.Red);
+                    LogManager.LogRaw($"[AutoRun] Unknown mode: '{autoRun}'. Valid: SingleTrader, MultipleTrader, SingleTraderOptimizer, ConfirmingSingleTrader", ConsoleColor.Red);
                     break;
             }
 
@@ -3544,6 +3805,8 @@ async Task main()
             case "19": await handleQuerySymbolTimeframeScan();              break;
             case "20": await handleMultiQuerySymbolScan();                  break;
             case "21": await handleMultiQuerySymbolTimeframeScan();         break;
+            case "22": await handleConfirmingSingleTrader();                break;
+            case "23": if (handleReadData()) await handleConfirmingSingleTrader(); break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }

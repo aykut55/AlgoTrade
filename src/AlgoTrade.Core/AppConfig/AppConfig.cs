@@ -10,6 +10,7 @@ public class AppConfig
     public ReadDataConfig        ReadData       { get; set; } = new();
     public SingleTraderConfig    SingleTrader   { get; set; } = new();
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
+    public ConfirmingSingleTraderConfig ConfirmingSingleTrader { get; set; } = new();
     public SingleTraderOptConfig SingleTraderOptimizer { get; set; } = new();
     public SymbolScanConfig      SymbolScan     { get; set; } = new();
     public TimeframeScanConfig   TimeframeScan  { get; set; } = new();
@@ -44,7 +45,7 @@ public class AppSettingsConfig
     /// Otomatik çalıştırma modu. Uygulama başlarken JSON config'den
     /// okuyup hiç onay almadan doğrudan çalıştırır ve çıkar.
     /// Boş veya "None" → normal menü akışı.
-    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOptimizer
+    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOptimizer | ConfirmingSingleTrader
     /// </summary>
     public string AutoRunMode { get; set; } = "";
 }
@@ -338,6 +339,81 @@ public class MultipleTraderConfig
     /// Sıra önemlidir — ChildId alanı referans olarak kullanılır.
     /// </summary>
     public List<ChildTraderEntry> ChildTraders { get; set; } = new();
+}
+
+// =============================================================================
+// ConfirmingSingleTrader
+// =============================================================================
+
+/// <summary>
+/// ConfirmingSingleTrader nesnesinin kayıt ayarları (bar-by-bar composite liste dosyaları:
+/// signalTrader/virtual/mainTrader kolonları). MainTrader'ın kendi tam istatistik dosyalarından
+/// ayrı — bkz. docs/todo.md, "Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3)".
+/// </summary>
+public class ConfirmingSingleTraderSaveConfig
+{
+    public bool   SaveStatisticsToFile                      { get; set; } = true;
+    public bool   SaveConfirmingSingleTraderListsTxtEnabled { get; set; } = true;
+    public bool   SaveConfirmingSingleTraderListsCsvEnabled { get; set; } = true;
+    public string ConfirmingSingleTraderListsTxtFileName    { get; set; } = "ConfirmingSingleTraderLists.txt";
+    public string ConfirmingSingleTraderListsCsvFileName    { get; set; } = "ConfirmingSingleTraderLists.csv";
+
+    /// <summary>
+    /// SignalTrader/MainTrader'ın kendi tam istatistik dosyalarına eklenen ön ek.
+    /// SignalTrader → {FilePrefix}_Signal_{FileName}
+    /// MainTrader   → {FilePrefix}_Main_{FileName}
+    /// </summary>
+    public string FilePrefix { get; set; } = "ConfirmingSingleTrader";
+}
+
+/// <summary>Sinyal-kaynağı trader (ham Al/Sat/Flat sinyalini üreten strateji) konfigürasyonu.</summary>
+public class SignalTraderConfig
+{
+    public StrategyRef              Strategy { get; set; } = new();
+    public TraderSignalsConfig      Signals  { get; set; } = new();
+    public TraderPlotConfig         Plot     { get; set; } = new();
+    public TraderSaveConfig         Save     { get; set; } = new();
+    public TraderExportConfig?      Export   { get; set; }
+}
+
+/// <summary>
+/// Sanal pozisyon konfirmasyon ayarları — bkz. ConfirmingSingleTrader.cs.
+/// Trigger: ProfitOnly | LossOnly | Both.
+/// ConflictMode: CancelAndRestart | LockAndIgnore.
+/// </summary>
+public class ConfirmationConfig
+{
+    public bool   ThresholdIsPercentage         { get; set; } = false;
+    public double ProfitThreshold               { get; set; } = 5000.0;
+    public double LossThreshold                 { get; set; } = -3000.0;
+    public string Trigger                       { get; set; } = "Both";
+    public string ConflictMode                  { get; set; } = "CancelAndRestart";
+    public bool   FlattenImmediatelyOnFlatSignal { get; set; } = true;
+}
+
+/// <summary>
+/// ConfirmingSingleTrader'ın mainTrader'ı — konfirme edilmiş sinyal üzerinde gerçek işlem yapar.
+/// Strategy/Query yok, MultipleTrader.MainTraderConfig ile aynı gerekçe: sinyal signalTrader'dan gelir.
+/// </summary>
+public class ConfirmingMainTraderConfig
+{
+    public EcfRef?                  EquityCurveFilter { get; set; }
+    public TradeParamsConfig        TradeParams       { get; set; } = new();
+    public TraderSignalsConfig      Signals           { get; set; } = new();
+    public TraderPlotConfig         Plot              { get; set; } = new();
+    public TraderSaveConfig         Save              { get; set; } = new();
+    public TraderExportConfig?      Export            { get; set; }
+}
+
+public class ConfirmingSingleTraderConfig
+{
+    /// <summary>Şimdilik sadece TradeOnly desteklenir (Query kavramı yok).</summary>
+    public string RunMode { get; set; } = "TradeOnly";
+
+    public ConfirmingSingleTraderSaveConfig Save         { get; set; } = new();
+    public SignalTraderConfig               SignalTrader { get; set; } = new();
+    public ConfirmationConfig               Confirmation { get; set; } = new();
+    public ConfirmingMainTraderConfig       MainTrader   { get; set; } = new();
 }
 
 // =============================================================================

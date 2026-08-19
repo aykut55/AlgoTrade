@@ -187,11 +187,23 @@ early-return ekle, sonra inputs/scripts/ altına script'ten CustomConsensusFunc 
 örnek .csx yaz ve gerçek veride uçtan uca doğrula (örn. child'lardan biri Al diğeri Sat derken
 özel kuralın — mesela 'ilk child'ın dediği olsun' — doğru çalıştığını göster)."*
 
-## Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3) — Tasarım Fikri (2026-08-18)
+## Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3) — `ConfirmingSingleTrader` (2026-08-19)
 
-**Durum**: Tasarım fikri, uygulama başlamadı. Kullanıcı sorusu üzerine (`migration-guide.md`
-Madde 3, "hiç mi yapılmamış?") netleşti: **gerçekten hiç implement edilmemiş**, kod tabanında
-hiçbir iz yok (`ConfirmationMode`/`sanal`/`VirtualTrade` aramaları tamamen boş döndü).
+**Durum**: ✅ **`ConfirmingSingleTrader` implement edildi ve console menüsüne eklendi** (`[22]`,
+`AlgoTrade.Console/Program.cs`), tam config-driven (`AppConfig.json` → `ConfirmingSingleTrader`
+bölümü, `AppConfigApplier.ApplyConfirmingSingleTrader`, `AlgoTrader.RunConfirmingSingleTraderWithProgressAsync`).
+Gerçek veride (BTCUSDT_BNC, 30.000 bar, `SimpleMostStrategy`) uçtan uca doğrulandı — bkz. aşağıdaki
+"Implementasyon Notları" bölümü. `ConfirmingMultipleTrader`/`ConfirmingSingleTraderOptimizer`/
+`ConfirmingMultipleTraderOptimizer` ve Confirming tarama (scanner) varyantları henüz yapılmadı
+(bkz. "Fast-Follow: Tarama (Scanner) Versiyonları" ve "Optimizer Varyantları" bölümleri aşağıda —
+hâlâ geçerli, sıradaki adımlar).
+
+Aşağıdaki tasarım tartışması (2026-08-18, kullanıcı ile birlikte) hâlâ implementasyonun temelini
+anlatan geçerli bir kayıt — kod bu tartışmadaki kararları birebir uyguluyor.
+
+**Kullanıcı sorusu üzerine** (`migration-guide.md` Madde 3, "hiç mi yapılmamış?") netleşti:
+implementasyon başlamadan önce kod tabanında **gerçekten hiç iz yoktu**
+(`ConfirmationMode`/`sanal`/`VirtualTrade` aramaları tamamen boş dönüyordu).
 
 ### Ne İşe Yarıyor (mevcut `ApplyEquityCurveFilter`'dan farkı)
 
@@ -398,6 +410,84 @@ seviyesi) değerlerini grid-search ile taramak.
 Kullanıcı: "ileride bunun seçimi yapılacak" — şimdilik karar verilmedi, sadece iki seçenek not
 edildi. Claude'un varsayılan önerisi: sadece eşikleri tara (strateji parametreleri sabit),
 "strateji parametrelerini de dahil et" ileride opsiyonel/gelişmiş bir mod olarak eklenebilir.
+
+### Implementasyon Notları — `ConfirmingSingleTrader` (2026-08-19)
+
+**Dosyalar**:
+- `src/AlgoTrade.Core/Trading/Traders/ConfirmingSingleTrader.cs` — asıl sınıf.
+- `src/AlgoTrade.Core/AppConfig/AppConfig.cs` — `ConfirmingSingleTraderConfig` ve alt config sınıfları.
+- `src/AlgoTrade.Core/AppConfig/AppConfigApplier.cs` — `ApplyConfirmingSingleTrader(...)`.
+- `src/AlgoTrade.Core/Trading/AlgoTrader.cs` — `RunConfirmingSingleTraderWithProgressAsync(...)`,
+  `WriteTraderDataToFilesAsync(ConfirmingSingleTrader)`, ilgili `Set*`/`Apply*` metodları.
+- `AlgoTrade.Console/Program.cs` — menü `[22]`, `handleConfirmingSingleTrader()`,
+  `showConfirmingSingleTraderRunPreview()`, `runConfirmingSingleTraderAlgoTrade()`,
+  `AutoRunMode: "ConfirmingSingleTrader"` desteği.
+- `inputs/configs/AppConfig/AppConfig.json` — `ConfirmingSingleTrader` bölümü (varsayılan:
+  `SimpleMostStrategy v1`, `CancelAndRestart`, `FlattenImmediatelyOnFlatSignal=true` — yani eski
+  projenin davranışının birebir aynısı).
+
+**Mimari — tasarım tartışmasındaki "2 SingleTrader mı?" sorusunun cevabı**: Evet ama simetrik
+değil. `_signalTrader` (tam çalışan bir `SingleTrader`, kendi stratejisiyle gerçekten pozisyon
+açıp kapatıyor — bir strateji position-aware olabildiği için bu şart) ham Al/Sat/Flat sinyalini
+üretiyor; `_mainTrader` (yine tam bir `SingleTrader`, ama kendi stratejisi yok) sadece konfirme
+edilmiş sinyali alıp gerçek işlemi yapıyor — MultipleTrader'ın mainTrader'ına enjekte edilen
+consensus sinyali gibi (`ExecutePreOrderMethods → strategySignal set → MapStrategyCommandsToTradeCommands
+→ ApplyTimingFilters → ApplyEquityCurveFilter → ResolveFilterDecisions → ExecutePostOrderMethods`,
+`Run(i)` bypass edilip elle çağrılıyor). Aradaki karar verici katman `_signalTrader`'ın kendi K/Z'i
+DEĞİL, ayrı ve hafif bir `_virtualYon`/`_virtualEntryPrice`/`_confirmed` state'i (`VirtualPositionState`
+fikri) — Design A (2 tam bağımsız SingleTrader, eski proje gibi) yerine Design B seçildi, çünkü
+kullanıcının "sinyal değişince görmezden gel" (LockAndIgnore) davranışı Design A'da child'ın kendi
+otonom trade motoruyla çakışıyordu.
+
+**`SignalConflictMode`** (Al↔Sat çakışması) ve **`FlattenImmediatelyOnFlatSignal`** (Flat çakışması)
+birbirinden bağımsız iki switch — kullanıcının istediği 2×2 matris (bkz. yukarıki tartışma).
+Varsayılan `CancelAndRestart` + `true` eski projenin davranışının birebir aynısı.
+
+**Gerçek veride bulunup düzeltilen kritik hata**: İlk implementasyonda, eşik geçilip konfirme
+olduğu anda `_mainTrader`'a `_signalTrader.strategySignal` (o bar'ın HAM stratejik komutu)
+gönderiliyordu. Ama sanal pozisyon genelde birkaç/çok sayıda bar önce (ilk sinyal geldiğinde)
+açıldığı için, konfirme olduğu bar'da strateji artık yeni bir emir yayınlamıyor — `strategySignal`
+o an `None` oluyor. Sonuç: `_mainTrader` hiçbir zaman gerçek pozisyon açmıyordu (30.000 barlık
+BTCUSDT testinde `Virtual_Confirmed=1` olan ~23.811 bar'ın büyük kısmında `MainTrader_Sinyal=0`
+kalıyordu). **Düzeltme**: konfirme anında ham sinyali değil, sanal pozisyonun yönüne göre
+`TradeSignals.Buy`/`Sell`'i **biz kendimiz üretip** gönderiyoruz — konfirme anının kendisi giriş
+komutu. Konfirme SONRASI (yani `_confirmed==true` iken her bar) ise `rawSignal` hâlâ doğru
+kaynak — o noktada signalTrader'ın kendi exit/reversal kararlarını olduğu gibi mainTrader'a
+yansıtmak istiyoruz (`docs/todo.md`'deki "Konfirmasyon sonrası" kararıyla tutarlı). Bu, sadece
+gerçek veride koşturarak (CSV'deki `Virtual_Confirmed`/`MainTrader_Sinyal` kolonlarını karşılaştırarak)
+yakalanabilecek türden bir hataydı — projenin "her yeni sınıfı gerçek veride doğrula" disiplininin
+tam olarak neden var olduğunun bir örneği.
+
+**Doğrulama**: `AppConfig.json`'da geçici olarak `AutoRunMode=ConfirmingSingleTrader` +
+`ReadData.FilterMode=LastN, N1=30000` set edilip konsol uygulaması gerçek BTCUSDT_BNC verisiyle
+uçtan uca koşturuldu (test sonrası config orijinaline geri alındı). `ConfirmingSingleTraderLists.csv`
+(signalTrader/sanal/mainTrader kolonları yan yana) ile doğrulandı: sanal pozisyon strateji sinyalinden
+çok sonra (farklı fiyattan, hatta bazen farklı yönde — CancelAndRestart nedeniyle) konfirme oluyor,
+mainTrader tam o an gerçek pozisyon açıyor.
+
+**Bilinen eksikler / sonraki adımlar**:
+- **Plot overlay henüz yok — MultipleTrader'da da aynı eksik var, ortak bir fast-follow** (2026-08-19):
+  - `ConfirmingSingleTrader.VirtualSignals`/`.Signals` (public `List<double>`, `SingleTrader.lists.SinyalList`
+    ile aynı konvansiyon) hazır ve CSV export'ta zaten görünüyor, ama Python'a hiç gönderilmiyor —
+    `runConfirmingSingleTraderAlgoTrade()` (`Program.cs`) `PlotMultipleTraderData` gibi çoklu-trader'lı
+    bir fonksiyon değil, **tek-trader'lı** `PlotSingleTraderData(mainTrader)`'ı reuse ediyor
+    (`PythonPlotter.cs:266`) — `signalTrader` bu çağrıya hiç dahil değil.
+  - `MultipleTrader` bir adım ileride ama yine de eksik: `PlotMultipleTraderData` (`PythonPlotter.cs:311`)
+    mainTrader + tüm child'ları Python'a gönderiyor (veri ulaşıyor), ama `multiple_data_plotter.py`'de
+    Signals paneli (`setTradeSignals`, `:103`) **sadece `main.sinyal_list`** ile çiziliyor — `ShowChildsData`
+    flag'i (`:19`) sadece Return/Return% panellerini (4/5) etkiliyor, Signals paneli hiç çoklu seri
+    desteklemiyor.
+  - **Ortak çözüm fikri**: `PlotSingleTraderData`'yı da (MultipleTrader'daki gibi) bir trader listesi
+    kabul edecek şekilde genişletmek (ConfirmingSingleTrader için `[mainTrader, signalTrader]`), sonra
+    Python tarafında Signals panelini (`multiple_data_plotter.py` VE tekli `data_plotter*.py`) çoklu
+    seri/overlay çizecek hale getirmek — iki kullanım senaryosunu (child'lar, sanal/gerçek) aynı
+    mekanizma çözer. Kullanıcı ihtiyacı ("ilk sinyal ne zaman geldi vs ne zaman konfirme oldu" analizi)
+    şimdilik CSV üzerinden karşılanıyor.
+- `ApplyEquityCurveFilter` ile etkileşim kararı hâlâ açık (yukarıdaki "Açık kalan soru" bölümü) —
+  `MainTrader.EquityCurveFilter` config'de opsiyonel olarak bağlı, ama birlikte kullanımı gerçek
+  veride henüz test edilmedi.
+- `ConfirmingMultipleTrader`/`ConfirmingSingleTraderOptimizer`/`ConfirmingMultipleTraderOptimizer`
+  ve Confirming tarama (scanner) varyantları henüz yazılmadı (aşağıdaki iki bölüm hâlâ geçerli).
 
 ### Fast-Follow: Tarama (Scanner) Versiyonları (2026-08-18)
 

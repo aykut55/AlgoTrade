@@ -416,6 +416,188 @@ public static class AppConfigApplier
     }
 
     /// <summary>
+    /// ConfirmingSingleTrader bölümünü AlgoTrader'a uygular.
+    /// SignalTrader (ham sinyal üreten strateji) kendi ayrı Signals/Save/Plot/Export slotlarını
+    /// kullanır (SetConfirmingSignalTrader*). MainTrader ise SingleTrader/MultipleTrader'ın
+    /// mainTrader'ıyla aynı paylaşılan _singleTrader*Config slotlarını reuse eder — MultipleTrader
+    /// ile aynı desen (bkz. ApplyMultipleTrader).
+    /// </summary>
+    public static void ApplyConfirmingSingleTrader(AlgoTrader algoTrader, ConfirmingSingleTraderConfig cfg, string configsDir)
+    {
+        // RunMode (şimdilik sadece TradeOnly desteklenir)
+        if (Enum.TryParse<TraderRunMode>(cfg.RunMode, ignoreCase: true, out var runMode))
+            algoTrader.SingleTraderRunMode = runMode;
+
+        // ConfirmingSingleTrader nesnesi kayıt ayarları (composite bar-by-bar lists)
+        algoTrader.SetConfirmingSingleTraderSaveConfig(new ConfirmingSingleTraderObjectSaveConfig
+        {
+            SaveStatisticsToFile                      = cfg.Save.SaveStatisticsToFile,
+            SaveConfirmingSingleTraderListsTxtEnabled = cfg.Save.SaveConfirmingSingleTraderListsTxtEnabled,
+            SaveConfirmingSingleTraderListsCsvEnabled = cfg.Save.SaveConfirmingSingleTraderListsCsvEnabled,
+            ConfirmingSingleTraderListsTxtFileName    = cfg.Save.ConfirmingSingleTraderListsTxtFileName,
+            ConfirmingSingleTraderListsCsvFileName    = cfg.Save.ConfirmingSingleTraderListsCsvFileName,
+        });
+
+        // Sanal pozisyon konfirmasyon ayarları
+        algoTrader.SetConfirmingSingleTraderConfirmationConfig(new ConfirmingSingleTraderConfirmationConfig
+        {
+            ThresholdIsPercentage         = cfg.Confirmation.ThresholdIsPercentage,
+            ProfitThreshold               = cfg.Confirmation.ProfitThreshold,
+            LossThreshold                 = cfg.Confirmation.LossThreshold,
+            Trigger                       = cfg.Confirmation.Trigger,
+            ConflictMode                  = cfg.Confirmation.ConflictMode,
+            FlattenImmediatelyOnFlatSignal = cfg.Confirmation.FlattenImmediatelyOnFlatSignal,
+        });
+
+        string filePrefix = cfg.Save.FilePrefix;
+
+        // =====================================================================
+        // SignalTrader — Strategy + kendi ayrı Signals/Save/Plot/Export slotları
+        // =====================================================================
+
+        string stratPath = Path.Combine(configsDir, cfg.SignalTrader.Strategy.ConfigFile);
+        algoTrader.ConfigureStrategyFromConfig(stratPath, cfg.SignalTrader.Strategy.Name, cfg.SignalTrader.Strategy.Version);
+
+        algoTrader.SetConfirmingSignalTraderSignalsConfig(new SingleTraderSignalsConfig
+        {
+            AlEnabled              = cfg.SignalTrader.Signals.AlEnabled,
+            SatEnabled             = cfg.SignalTrader.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.SignalTrader.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.SignalTrader.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.SignalTrader.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.SignalTrader.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.SignalTrader.Signals.GunSonuPozKapatEnabled,
+            TimeFilteringEnabled      = cfg.SignalTrader.Signals.TimeFilteringEnabled,
+            StartDateTime             = cfg.SignalTrader.Signals.StartDateTime,
+            StopDateTime              = cfg.SignalTrader.Signals.StopDateTime,
+            TradeStartBarIndexEnabled = cfg.SignalTrader.Signals.TradeStartBarIndexEnabled,
+            TradeStartBarIndex        = cfg.SignalTrader.Signals.TradeStartBarIndex,
+        });
+
+        var ssv = cfg.SignalTrader.Save;
+        algoTrader.SetConfirmingSignalTraderSaveConfig(new SingleTraderSaveConfig
+        {
+            SaveStatisticsToFile                = ssv.SaveStatisticsToFile,
+            SaveFullStatsTxtEnabled             = ssv.SaveFullStatsTxtEnabled,
+            SaveFullStatsCsvEnabled             = ssv.SaveFullStatsCsvEnabled,
+            SaveMinimalStatsTxtEnabled          = ssv.SaveMinimalStatsTxtEnabled,
+            SaveMinimalStatsCsvEnabled          = ssv.SaveMinimalStatsCsvEnabled,
+            SaveFullListsTxtEnabled             = ssv.SaveFullListsTxtEnabled,
+            SaveFullListsCsvEnabled             = ssv.SaveFullListsCsvEnabled,
+            SaveMinimalListsTxtEnabled          = ssv.SaveMinimalListsTxtEnabled,
+            SaveMinimalListsCsvEnabled          = ssv.SaveMinimalListsCsvEnabled,
+            SaveFullStatsTxtFormattedEnabled    = ssv.SaveFullStatsTxtFormattedEnabled,
+            SaveMinimalStatsTxtFormattedEnabled = ssv.SaveMinimalStatsTxtFormattedEnabled,
+            SavePerformansTxtEnabled            = ssv.SavePerformansTxtEnabled,
+            SavePerformansCsvEnabled            = ssv.SavePerformansCsvEnabled,
+            FullStatsTxtFileName                = $"{filePrefix}_Signal_{ssv.FullStatsTxtFileName}",
+            FullStatsCsvFileName                = $"{filePrefix}_Signal_{ssv.FullStatsCsvFileName}",
+            MinimalStatsTxtFileName             = $"{filePrefix}_Signal_{ssv.MinimalStatsTxtFileName}",
+            MinimalStatsCsvFileName             = $"{filePrefix}_Signal_{ssv.MinimalStatsCsvFileName}",
+            FullListsTxtFileName                = $"{filePrefix}_Signal_{ssv.FullListsTxtFileName}",
+            FullListsCsvFileName                = $"{filePrefix}_Signal_{ssv.FullListsCsvFileName}",
+            MinimalListsTxtFileName             = $"{filePrefix}_Signal_{ssv.MinimalListsTxtFileName}",
+            MinimalListsCsvFileName             = $"{filePrefix}_Signal_{ssv.MinimalListsCsvFileName}",
+            FullStatsTxtFormattedFileName       = $"{filePrefix}_Signal_{ssv.FullStatsTxtFormattedFileName}",
+            MinimalStatsTxtFormattedFileName    = $"{filePrefix}_Signal_{ssv.MinimalStatsTxtFormattedFileName}",
+            PerformansTxtFileName               = $"{filePrefix}_Signal_{ssv.PerformansTxtFileName}",
+            PerformansCsvFileName               = $"{filePrefix}_Signal_{ssv.PerformansCsvFileName}",
+        });
+
+        algoTrader.SetConfirmingSignalTraderPlotConfig(new SingleTraderPlotConfig
+        {
+            PlotEnabled = cfg.SignalTrader.Plot.PlotEnabled,
+        });
+
+        if (cfg.SignalTrader.Export is not null)
+        {
+            algoTrader.SetConfirmingSignalTraderExportConfig(new SingleTraderExportConfig
+            {
+                ExportEnabled    = cfg.SignalTrader.Export.ExportEnabled,
+                ExportConfigFile = Path.Combine(configsDir, cfg.SignalTrader.Export.ConfigFile),
+                ExportVersion    = cfg.SignalTrader.Export.Version,
+            });
+        }
+
+        // =====================================================================
+        // MainTrader — paylaşılan _singleTrader*Config slotları (SingleTrader/MultipleTrader ile aynı)
+        // =====================================================================
+
+        // TradeParams — signalTrader ve mainTrader aynı parametreleri kullanır
+        var tradeParams = BuildInitialTradeParams(cfg.MainTrader.TradeParams);
+        algoTrader.SetSingleTraderTradeParams(tradeParams);
+
+        algoTrader.SetSingleTraderSignalsConfig(new SingleTraderSignalsConfig
+        {
+            AlEnabled              = cfg.MainTrader.Signals.AlEnabled,
+            SatEnabled             = cfg.MainTrader.Signals.SatEnabled,
+            FlatOlEnabled          = cfg.MainTrader.Signals.FlatOlEnabled,
+            PasGecEnabled          = cfg.MainTrader.Signals.PasGecEnabled,
+            KarAlEnabled           = cfg.MainTrader.Signals.KarAlEnabled,
+            ZararKesEnabled        = cfg.MainTrader.Signals.ZararKesEnabled,
+            GunSonuPozKapatEnabled = cfg.MainTrader.Signals.GunSonuPozKapatEnabled,
+            TimeFilteringEnabled      = cfg.MainTrader.Signals.TimeFilteringEnabled,
+            StartDateTime             = cfg.MainTrader.Signals.StartDateTime,
+            StopDateTime              = cfg.MainTrader.Signals.StopDateTime,
+            TradeStartBarIndexEnabled = cfg.MainTrader.Signals.TradeStartBarIndexEnabled,
+            TradeStartBarIndex        = cfg.MainTrader.Signals.TradeStartBarIndex,
+        });
+
+        var ms = cfg.MainTrader.Save;
+        algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
+        {
+            SaveStatisticsToFile                = ms.SaveStatisticsToFile,
+            SaveFullStatsTxtEnabled             = ms.SaveFullStatsTxtEnabled,
+            SaveFullStatsCsvEnabled             = ms.SaveFullStatsCsvEnabled,
+            SaveMinimalStatsTxtEnabled          = ms.SaveMinimalStatsTxtEnabled,
+            SaveMinimalStatsCsvEnabled          = ms.SaveMinimalStatsCsvEnabled,
+            SaveFullListsTxtEnabled             = ms.SaveFullListsTxtEnabled,
+            SaveFullListsCsvEnabled             = ms.SaveFullListsCsvEnabled,
+            SaveMinimalListsTxtEnabled          = ms.SaveMinimalListsTxtEnabled,
+            SaveMinimalListsCsvEnabled          = ms.SaveMinimalListsCsvEnabled,
+            SaveFullStatsTxtFormattedEnabled    = ms.SaveFullStatsTxtFormattedEnabled,
+            SaveMinimalStatsTxtFormattedEnabled = ms.SaveMinimalStatsTxtFormattedEnabled,
+            SavePerformansTxtEnabled            = ms.SavePerformansTxtEnabled,
+            SavePerformansCsvEnabled            = ms.SavePerformansCsvEnabled,
+            FullStatsTxtFileName                = $"{filePrefix}_Main_{ms.FullStatsTxtFileName}",
+            FullStatsCsvFileName                = $"{filePrefix}_Main_{ms.FullStatsCsvFileName}",
+            MinimalStatsTxtFileName             = $"{filePrefix}_Main_{ms.MinimalStatsTxtFileName}",
+            MinimalStatsCsvFileName             = $"{filePrefix}_Main_{ms.MinimalStatsCsvFileName}",
+            FullListsTxtFileName                = $"{filePrefix}_Main_{ms.FullListsTxtFileName}",
+            FullListsCsvFileName                = $"{filePrefix}_Main_{ms.FullListsCsvFileName}",
+            MinimalListsTxtFileName             = $"{filePrefix}_Main_{ms.MinimalListsTxtFileName}",
+            MinimalListsCsvFileName             = $"{filePrefix}_Main_{ms.MinimalListsCsvFileName}",
+            FullStatsTxtFormattedFileName       = $"{filePrefix}_Main_{ms.FullStatsTxtFormattedFileName}",
+            MinimalStatsTxtFormattedFileName    = $"{filePrefix}_Main_{ms.MinimalStatsTxtFormattedFileName}",
+            PerformansTxtFileName               = $"{filePrefix}_Main_{ms.PerformansTxtFileName}",
+            PerformansCsvFileName               = $"{filePrefix}_Main_{ms.PerformansCsvFileName}",
+        });
+
+        algoTrader.SetSingleTraderPlotConfig(new SingleTraderPlotConfig
+        {
+            PlotEnabled = cfg.MainTrader.Plot.PlotEnabled,
+        });
+
+        if (cfg.MainTrader.Export is not null)
+        {
+            algoTrader.SetSingleTraderExportConfig(new SingleTraderExportConfig
+            {
+                ExportEnabled    = cfg.MainTrader.Export.ExportEnabled,
+                ExportConfigFile = Path.Combine(configsDir, cfg.MainTrader.Export.ConfigFile),
+                ExportVersion    = cfg.MainTrader.Export.Version,
+            });
+        }
+
+        // MainTrader ECF (opsiyonel, id=0 — SetSingleTraderConfigureEquityCurveFilter default)
+        algoTrader.ClearEquityCurveFilterConfigs();
+        if (cfg.MainTrader.EquityCurveFilter is not null)
+        {
+            string ecfPath = Path.Combine(configsDir, cfg.MainTrader.EquityCurveFilter.ConfigFile);
+            algoTrader.ConfigureEquityCurveFilterFromConfig(ecfPath, cfg.MainTrader.EquityCurveFilter.Version, id: 0);
+        }
+    }
+
+    /// <summary>
     /// SingleTraderOpt bölümünü AlgoTrader'a uygular.
     /// </summary>
     public static void ApplySingleTraderOpt(AlgoTrader algoTrader, SingleTraderOptConfig cfg, string configsDir)
