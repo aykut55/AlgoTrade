@@ -11,6 +11,7 @@ public class AppConfig
     public SingleTraderConfig    SingleTrader   { get; set; } = new();
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
     public ConfirmingSingleTraderConfig ConfirmingSingleTrader { get; set; } = new();
+    public ConfirmingMultipleTraderConfig ConfirmingMultipleTrader { get; set; } = new();
     public SingleTraderOptConfig SingleTraderOptimizer { get; set; } = new();
     public SymbolScanConfig      SymbolScan     { get; set; } = new();
     public TimeframeScanConfig   TimeframeScan  { get; set; } = new();
@@ -45,7 +46,7 @@ public class AppSettingsConfig
     /// Otomatik çalıştırma modu. Uygulama başlarken JSON config'den
     /// okuyup hiç onay almadan doğrudan çalıştırır ve çıkar.
     /// Boş veya "None" → normal menü akışı.
-    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOptimizer | ConfirmingSingleTrader
+    /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOptimizer | ConfirmingSingleTrader | ConfirmingMultipleTrader
     /// </summary>
     public string AutoRunMode { get; set; } = "";
 }
@@ -414,6 +415,55 @@ public class ConfirmingSingleTraderConfig
     public SignalTraderConfig               SignalTrader { get; set; } = new();
     public ConfirmationConfig               Confirmation { get; set; } = new();
     public ConfirmingMainTraderConfig       MainTrader   { get; set; } = new();
+}
+
+// =============================================================================
+// ConfirmingMultipleTrader
+// =============================================================================
+
+/// <summary>
+/// ConfirmingMultipleTrader nesnesinin kayıt ayarları (bar-by-bar composite liste dosyaları:
+/// signal-consensus/virtual/mainTrader kolonları).
+/// </summary>
+public class ConfirmingMultipleTraderSaveConfig
+{
+    public bool   SaveStatisticsToFile                        { get; set; } = true;
+    public bool   SaveConfirmingMultipleTraderListsTxtEnabled { get; set; } = true;
+    public bool   SaveConfirmingMultipleTraderListsCsvEnabled { get; set; } = true;
+    public string ConfirmingMultipleTraderListsTxtFileName    { get; set; } = "ConfirmingMultipleTraderLists.txt";
+    public string ConfirmingMultipleTraderListsCsvFileName    { get; set; } = "ConfirmingMultipleTraderLists.csv";
+
+    /// <summary>SignalChild/MainTrader'ın kendi tam istatistik dosyalarına eklenen ön ek.</summary>
+    public string FilePrefix { get; set; } = "ConfirmingMultipleTrader";
+
+    /// <summary>true → signal katmanının (MultipleTrader) kendi composite lists dosyası da yazılır.</summary>
+    public bool WriteSignalMultipleTraderListsToFiles { get; set; } = false;
+
+    /// <summary>true → signal katmanındaki child trader istatistikleri de dosyaya yazılır.</summary>
+    public bool WriteSignalChildTradersDataToFiles { get; set; } = false;
+}
+
+/// <summary>
+/// ConfirmingSingleTrader'ın MultipleTrader karşılığı — tek strateji yerine N child stratejinin
+/// consensus (bileşke) sinyalini sanal pozisyonla konfirme eder. Consensus (<c>ChildTraders</c> +
+/// <c>Consensus</c>) ve MainTrader/Confirmation şemaları mevcut MultipleTrader/ConfirmingSingleTrader
+/// bölümleriyle birebir aynı — reuse ediliyor.
+/// </summary>
+public class ConfirmingMultipleTraderConfig
+{
+    /// <summary>Şimdilik sadece TradeOnly desteklenir (Query kavramı yok).</summary>
+    public string RunMode { get; set; } = "TradeOnly";
+
+    public ConfirmingMultipleTraderSaveConfig Save         { get; set; } = new();
+
+    /// <summary>BuildConsensusSignal() davranışını belirler — MultipleTrader.Consensus ile aynı şema.</summary>
+    public ConsensusConfig                    Consensus    { get; set; } = new();
+
+    public ConfirmationConfig                 Confirmation { get; set; } = new();
+    public ConfirmingMainTraderConfig         MainTrader   { get; set; } = new();
+
+    /// <summary>Consensus'u üreten child trader'lar — MultipleTrader.ChildTraders ile aynı şema.</summary>
+    public List<ChildTraderEntry>             ChildTraders { get; set; } = new();
 }
 
 // =============================================================================

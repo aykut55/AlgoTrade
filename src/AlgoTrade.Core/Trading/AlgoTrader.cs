@@ -69,6 +69,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     public MultipleTrader? MultipleTrader => multipleTrader;
     private ConfirmingSingleTrader? confirmingSingleTrader { get; set; }
     public ConfirmingSingleTrader? ConfirmingSingleTrader => confirmingSingleTrader;
+    private ConfirmingMultipleTrader? confirmingMultipleTrader { get; set; }
+    public ConfirmingMultipleTrader? ConfirmingMultipleTrader => confirmingMultipleTrader;
     private SingleTraderOptimizer? singleTraderOptimizer { get; set; }
     public SingleTraderOptimizer? SingleTraderOptimizer => singleTraderOptimizer;
     public IndicatorManager? indicators { get; private set; }
@@ -128,6 +130,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     private SingleTraderSaveConfig?     _confirmingSignalTraderSaveConfig    = null;
     private SingleTraderPlotConfig?     _confirmingSignalTraderPlotConfig    = null;
     private SingleTraderExportConfig?   _confirmingSignalTraderExportConfig  = null;
+
+    // ConfirmingMultipleTrader config (AppConfig ile set edilir). Signal katmanı (signalMultipleTrader
+    // + child'ları) paylaşılan _multipleTraderConsensusConfig / _childTraderConfigs / _strategyConfigs
+    // slotlarını reuse eder (ApplyMultipleTrader/createChildTraders ile aynı desen) — MainTrader ise
+    // ConfirmingSingleTrader'ın mainTrader'ıyla aynı paylaşılan _singleTrader*Config slotlarını kullanır.
+    private ConfirmingMultipleTraderObjectSaveConfig?    _confirmingMultipleTraderSaveConfig        = null;
+    private ConfirmingMultipleTraderConfirmationConfig?  _confirmingMultipleTraderConfirmationConfig = null;
 
     // Python görselleştirme
     private PythonPlotter? _pythonPlotter;
@@ -1006,6 +1015,20 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         }
     }
 
+    // ==========================================================================
+    // ConfirmingMultipleTrader Config (AppConfig ile set edilir)
+    // ==========================================================================
+
+    public void SetConfirmingMultipleTraderSaveConfig(ConfirmingMultipleTraderObjectSaveConfig config)
+    {
+        _confirmingMultipleTraderSaveConfig = config;
+    }
+
+    public void SetConfirmingMultipleTraderConfirmationConfig(ConfirmingMultipleTraderConfirmationConfig config)
+    {
+        _confirmingMultipleTraderConfirmationConfig = config;
+    }
+
     public void SetSingleTraderPlotConfig(SingleTraderPlotConfig config)
     {
         _singleTraderPlotConfig = config;
@@ -1723,6 +1746,123 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         }
     }
 
+    /// <summary>
+    /// createChildTraders()'ın ConfirmingMultipleTrader karşılığı — birebir aynı desen, sadece
+    /// hedef <paramref name="confirmingMultipleTrader"/> (class-level <c>multipleTrader</c> alanı
+    /// değil, parametre olarak alınıyor çünkü ConfirmingMultipleTrader ayrı bir alan).
+    /// </summary>
+    void createConfirmingChildTraders(ConfirmingMultipleTrader confirmingMultipleTrader)
+    {
+        if (_childTraderConfigs.Count == 0)
+            throw new InvalidOperationException("_childTraderConfigs boş. SetChildTraderCount() veya AddChildTraderConfig() çağrılmamış.");
+
+        for (int i = 0; i < _childTraderConfigs.Count; i++)
+        {
+            var config  = _childTraderConfigs[i];
+            int childId = config.ChildId;
+
+            var childTrader = new SingleTrader(childId, $"childTrader_{childId}", this.Data, indicators, _logger);
+            if (childTrader == null)
+                throw new InvalidOperationException($"childTrader_{childId} can not be created...");
+
+            childTrader.ClearCallbacks()
+                       .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            childTrader.Reset();
+
+            childTrader.SymbolName             = this.SymbolName;
+            childTrader.SymbolPeriod           = this.SymbolPeriod;
+            childTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            childTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            childTrader.initialTradeParams!.ApplyFrom(config.TradeParams);
+
+            if (config.Signals is { } s)
+            {
+                childTrader.ConfigureUserFlagsOnce();
+                childTrader.signals.AlEnabled              = s.AlEnabled;
+                childTrader.signals.SatEnabled             = s.SatEnabled;
+                childTrader.signals.FlatOlEnabled          = s.FlatOlEnabled;
+                childTrader.signals.PasGecEnabled          = s.PasGecEnabled;
+                childTrader.signals.KarAlEnabled           = s.KarAlEnabled;
+                childTrader.signals.ZararKesEnabled        = s.ZararKesEnabled;
+                childTrader.signals.GunSonuPozKapatEnabled = s.GunSonuPozKapatEnabled;
+                childTrader.signals.TimeFilteringEnabled   = s.TimeFilteringEnabled;
+                childTrader.signals.TradeStartBarIndexEnabled = s.TradeStartBarIndexEnabled;
+                childTrader.signals.TradeStartBarIndex        = s.TradeStartBarIndex;
+                childTrader.signals.EquityCurveFilteringEnabled = false;
+                childTrader.StartDateTimeStr = s.StartDateTime;
+                childTrader.StopDateTimeStr  = s.StopDateTime;
+                var startDt = System.DateTime.ParseExact(s.StartDateTime, "yyyy.MM.dd HH:mm:ss", null);
+                childTrader.StartDateStr = startDt.ToString("yyyy.MM.dd");
+                childTrader.StartTimeStr = startDt.ToString("HH:mm:ss");
+                var stopDt = System.DateTime.ParseExact(s.StopDateTime, "yyyy.MM.dd HH:mm:ss", null);
+                childTrader.StopDateStr = stopDt.ToString("yyyy.MM.dd");
+                childTrader.StopTimeStr = stopDt.ToString("HH:mm:ss");
+            }
+            else
+            {
+                OnApplyUserFlags(childTrader);
+            }
+
+            OnApplyUserFlags2(childTrader, TraderApplyMode.MultipleTrader);
+
+            if (config.Save is { } sv)
+            {
+                childTrader.SaveStatisticsToFile                = sv.SaveStatisticsToFile;
+                childTrader.SaveFullStatsTxtEnabled             = sv.SaveFullStatsTxtEnabled;
+                childTrader.SaveFullStatsCsvEnabled             = sv.SaveFullStatsCsvEnabled;
+                childTrader.SaveMinimalStatsTxtEnabled          = sv.SaveMinimalStatsTxtEnabled;
+                childTrader.SaveMinimalStatsCsvEnabled          = sv.SaveMinimalStatsCsvEnabled;
+                childTrader.SaveFullListsTxtEnabled             = sv.SaveFullListsTxtEnabled;
+                childTrader.SaveFullListsCsvEnabled             = sv.SaveFullListsCsvEnabled;
+                childTrader.SaveMinimalListsTxtEnabled          = sv.SaveMinimalListsTxtEnabled;
+                childTrader.SaveMinimalListsCsvEnabled          = sv.SaveMinimalListsCsvEnabled;
+                childTrader.SaveFullStatsTxtFormattedEnabled    = sv.SaveFullStatsTxtFormattedEnabled;
+                childTrader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+                childTrader.SavePerformansTxtEnabled            = sv.SavePerformansTxtEnabled;
+                childTrader.SavePerformansCsvEnabled            = sv.SavePerformansCsvEnabled;
+
+                if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFileName))             childTrader.FullStatsTxtFileName             = sv.FullStatsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullStatsCsvFileName))             childTrader.FullStatsCsvFileName             = sv.FullStatsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFileName))          childTrader.MinimalStatsTxtFileName          = sv.MinimalStatsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalStatsCsvFileName))          childTrader.MinimalStatsCsvFileName          = sv.MinimalStatsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullListsTxtFileName))             childTrader.FullListsTxtFileName             = sv.FullListsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullListsCsvFileName))             childTrader.FullListsCsvFileName             = sv.FullListsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalListsTxtFileName))          childTrader.MinimalListsTxtFileName          = sv.MinimalListsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          childTrader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
+                if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    childTrader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) childTrader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+                if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            childTrader.PerformansTxtFileName            = sv.PerformansTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            childTrader.PerformansCsvFileName            = sv.PerformansCsvFileName;
+            }
+
+            if (config.Export is { } ex)
+            {
+                childTrader.ExportEnabled    = ex.ExportEnabled;
+                childTrader.ExportConfigFile = ex.ExportConfigFile;
+                childTrader.ExportVersion    = ex.ExportVersion;
+            }
+
+            childTrader.MultipleTraderModeEnabled = true;
+
+            int ecfId = config.EcfConfigId ?? childId;
+            SetSingleTraderConfigureEquityCurveFilter(childTrader, ecfId);
+
+            childTrader.RunMode = TraderRunMode.TradeOnly;
+
+            strategy = GetStrategy(config.StrategyId);
+            childTrader.SetStrategy(strategy);
+
+            if (config.Save is null)
+                childTrader.SaveStatisticsToFile = true;
+
+            childTrader.Init();
+
+            confirmingMultipleTrader.AddTrader(childTrader);
+        }
+    }
+
     public async Task RunMultipleTraderWithProgressAsync(CancellationToken cancellationToken = default)
     {
         int totalBars = 0;
@@ -2287,6 +2427,277 @@ public class AlgoTrader : MarketDataProvider, IDisposable
         });
     }
 
+    /// <summary>
+    /// ConfirmingMultipleTrader'ı çalıştırır — signalMultipleTrader (N child + consensus, tam
+    /// bağımsız çalışan gerçek bir MultipleTrader) + sanal pozisyon konfirmasyonu + mainTrader
+    /// (gerçek işlem). Yapısal olarak RunConfirmingSingleTraderWithProgressAsync'e çok benziyor,
+    /// tek fark sinyal kaynağının bir SingleTrader değil bir MultipleTrader olması.
+    /// Bkz. docs/todo.md, "Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3)".
+    /// </summary>
+    public async Task RunConfirmingMultipleTraderWithProgressAsync(CancellationToken cancellationToken = default)
+    {
+        int totalBars = 0;
+
+        if (!IsInitialized) {
+            throw new InvalidOperationException("AlgoTrader not initialized. Call Initialize() first.");
+        }
+
+        try
+        {
+            _timer!.RestartTimer("0");
+
+            totalBars = GetDataCount();
+
+            Log($"AlgoTrader '{Name}' ConfirmingMultipleTrader started. Total bars: {totalBars}");
+
+            // *****************************************************************************
+            // Indicators
+            // *****************************************************************************
+            if (indicators != null) {
+                Log("Disposing previous indicators instance...");
+                indicators.Dispose();
+                indicators = null;
+            }
+
+            Log("\nCreating indicators...");
+
+            indicators = new IndicatorManager(this.Data);
+            if (indicators == null)
+                throw new InvalidOperationException("indicators can not be created...");
+
+            // *****************************************************************************
+            // ConfirmingMultipleTrader - Cleanup previous run
+            // *****************************************************************************
+            if (confirmingMultipleTrader != null)
+            {
+                Log("Disposing previous confirmingMultipleTrader instance...");
+                confirmingMultipleTrader.Dispose();
+                confirmingMultipleTrader = null;
+            }
+
+            Log("\nCreating confirmingMultipleTrader...");
+
+            confirmingMultipleTrader = new ConfirmingMultipleTrader(0, this.Data, indicators, _logger);
+            if (confirmingMultipleTrader == null)
+                throw new InvalidOperationException("confirmingMultipleTrader can not be created...");
+
+            confirmingMultipleTrader.Reset();
+
+            // ConfirmingMultipleTrader nesnesi kayıt ayarları
+            if (_confirmingMultipleTraderSaveConfig is { } cms)
+            {
+                confirmingMultipleTrader.SaveStatisticsToFile                      = cms.SaveStatisticsToFile;
+                confirmingMultipleTrader.SaveConfirmingMultipleTraderListsTxtEnabled = cms.SaveConfirmingMultipleTraderListsTxtEnabled;
+                confirmingMultipleTrader.SaveConfirmingMultipleTraderListsCsvEnabled = cms.SaveConfirmingMultipleTraderListsCsvEnabled;
+                confirmingMultipleTrader.ConfirmingMultipleTraderListsTxtFileName    = cms.ConfirmingMultipleTraderListsTxtFileName;
+                confirmingMultipleTrader.ConfirmingMultipleTraderListsCsvFileName    = cms.ConfirmingMultipleTraderListsCsvFileName;
+            }
+            else
+            {
+                confirmingMultipleTrader.SaveStatisticsToFile = true;
+            }
+
+            // Consensus ayarları — MultipleTrader ile paylaşılan slot (SetMultipleTraderConsensusConfig)
+            if (_multipleTraderConsensusConfig is { } mtc)
+            {
+                confirmingMultipleTrader.ConsensusMode        = mtc.Mode;
+                confirmingMultipleTrader.ConsensusMinNetCount = mtc.MinNetCount;
+            }
+
+            // Sanal pozisyon konfirmasyon ayarları
+            if (_confirmingMultipleTraderConfirmationConfig is { } cc)
+            {
+                confirmingMultipleTrader.ThresholdIsPercentage = cc.ThresholdIsPercentage;
+                confirmingMultipleTrader.ProfitThreshold       = cc.ProfitThreshold;
+                confirmingMultipleTrader.LossThreshold         = cc.LossThreshold;
+                confirmingMultipleTrader.Trigger      = Enum.TryParse<ConfirmationTrigger>(cc.Trigger, ignoreCase: true, out var trig)
+                    ? trig : ConfirmationTrigger.Both;
+                confirmingMultipleTrader.ConflictMode = Enum.TryParse<SignalConflictMode>(cc.ConflictMode, ignoreCase: true, out var cm)
+                    ? cm : SignalConflictMode.CancelAndRestart;
+                confirmingMultipleTrader.FlattenImmediatelyOnFlatSignal = cc.FlattenImmediatelyOnFlatSignal;
+            }
+
+            var mainTrader = confirmingMultipleTrader.GetMainTrader();
+
+            // Assign callbacks — mainTrader, SingleTrader/MultipleTrader'ın mainTrader'ıyla aynı callback setini kullanır
+            mainTrader.ClearCallbacks()
+                      .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+
+            mainTrader.Reset();
+
+            // Attributes
+            mainTrader.SymbolName             = this.SymbolName;
+            mainTrader.SymbolPeriod           = this.SymbolPeriod;
+            mainTrader.SystemId               = this.SystemId;
+            mainTrader.SystemName             = this.SystemName;
+            mainTrader.StrategyId             = this.StrategyId;
+            mainTrader.StrategyName           = this.StrategyName;
+            mainTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            mainTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+            // TradeParams — signal katmanı (mainTrader + tüm child'lar) ve gerçek mainTrader aynı parametreleri kullanır
+            if (_singleTraderTradeParamsConfig != null)
+                mainTrader.initialTradeParams!.ApplyFrom(_singleTraderTradeParamsConfig);
+
+            // MainTrader flags — paylaşılan _singleTrader*Config slotlarından (SingleTrader/MultipleTrader mainTrader ile aynı)
+            ApplySingleTraderFlagsConfigs(mainTrader);
+            SetSingleTraderConfigureEquityCurveFilter(mainTrader);
+            mainTrader.RunMode = TraderRunMode.TradeOnly;
+
+            // Init — ConfirmingMultipleTrader.Init() kendi signal-mainTrader'ını ve gerçek mainTrader'ı init eder
+            confirmingMultipleTrader.Init();
+
+            // Child trader'ları oluştur ve signal katmanına ekle (createChildTraders() ile aynı desen)
+            createConfirmingChildTraders(confirmingMultipleTrader);
+
+            _timer!.RestartTimer("1");
+            _timer!.RestartTimer("2");
+
+            // *****************************************************************************
+            // ConfirmingMultipleTrader - Run
+            // *****************************************************************************
+
+            Log("\nRunning confirmingMultipleTrader...");
+
+            IsRunning = true;
+            await Task.Run(() =>
+            {
+                confirmingMultipleTrader.IsStarted = true;
+                confirmingMultipleTrader.IsRunning = true;
+                confirmingMultipleTrader.IsStopped = false;
+                confirmingMultipleTrader.IsStopRequested = false;
+
+                for (int i = 0; i < totalBars; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (confirmingMultipleTrader.IsStopRequested)
+                    {
+                        Log($"ConfirmingMultipleTrader stopped by user request at bar {i}/{totalBars}");
+                        break;
+                    }
+
+                    confirmingMultipleTrader.Run(i);
+
+                    double percentage = (i + 1) / (double)totalBars * 100.0;
+                    OnTraderProgress?.Invoke(i + 1, totalBars, percentage);
+                }
+
+            }, cancellationToken);
+            IsRunning = false;
+
+            _timer!.StopTimer("2");
+
+            mainTrader.LastExecutionTimeStop    = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+            mainTrader.LastExecutionTimeInMSec  = _timer!.GetElapsedTime("2").ToString();
+
+            var yon           = mainTrader.SonYon;
+            var kacBarOnce    = mainTrader.SonSinyaldenBeriBarSayisi;
+            var karZarar      = mainTrader.SonKarZararFiyat;
+            var karZararYuzde = mainTrader.SonKarZararYuzde;
+            var ozet          = mainTrader.TaramaOzeti;
+            Log($"\nScreening summary... : {ozet}");
+
+            // *****************************************************************************
+            // ConfirmingMultipleTrader - Finalize
+            // *****************************************************************************
+
+            Log("\nFinalizing confirmingMultipleTrader...");
+
+            _timer!.RestartTimer("3");
+
+            confirmingMultipleTrader.Finalize();
+
+            _timer!.StopTimer("3");
+
+            _timer!.StopTimer("1");
+            _timer!.StopTimer("0");
+
+            var t0 = _timer!.GetElapsedTime("0");
+            var t1 = _timer!.GetElapsedTime("1");
+            var t2 = _timer!.GetElapsedTime("2");
+            var t3 = _timer!.GetElapsedTime("3");
+
+            Log($"\nt0 = {t0} msec. <==> RunConfirmingMultipleTraderWithProgressAsync elapsed time");
+            Log($"\nt1 = {t1} msec. <==> Running + Finalizing confirmingMultipleTrader elapsed time");
+            Log($"\nt2 = {t2} msec. <==> Running confirmingMultipleTrader elapsed time");
+            Log($"\nt3 = {t3} msec. <==> Finalizing confirmingMultipleTrader elapsed time");
+        }
+        catch (Exception ex)
+        {
+            Log($"An error occurred while running in RunConfirmingMultipleTraderWithProgressAsync(): {ex.Message}");
+        }
+        finally
+        {
+        }
+
+        // Update state flags
+        if (confirmingMultipleTrader is not null)
+        {
+            confirmingMultipleTrader.IsRunning = false;
+            confirmingMultipleTrader.IsStopped = true;
+            Log($"\nConfirmingMultipleTrader finished - IsRunning: {confirmingMultipleTrader.IsRunning}, IsStopped: {confirmingMultipleTrader.IsStopped}");
+        }
+
+        Log("");
+        Log($"AlgoTrader '{Name}' ConfirmingMultipleTrader completed. Processed {totalBars} bars.");
+        Log("");
+    }
+
+    /// <summary>
+    /// ConfirmingMultipleTrader verilerini arka planda dosyalara yazar (mainTrader'ın kendi tam
+    /// istatistik dosyaları + isteğe bağlı signal katmanı çıktıları).
+    /// ConfirmingMultipleTraderLists.txt/csv zaten confirmingMultipleTrader.Finalize() içinde
+    /// (SaveStatisticsToFile ise) yazılıyor.
+    /// </summary>
+    public async Task WriteTraderDataToFilesAsync(ConfirmingMultipleTrader trader)
+    {
+        if (trader is null)
+        {
+            Log("[WriteTraderDataToFilesAsync] trader is null, skipping.");
+            return;
+        }
+
+        await Task.Run(() =>
+        {
+            if (trader.IsStopRequested)
+            {
+                Log($"[WriteTraderDataToFilesAsync] Skipped. IsStopRequested={trader.IsStopRequested}");
+                return;
+            }
+
+            var mainTrader = trader.GetMainTrader();
+            if (mainTrader is not null && mainTrader.SaveStatisticsToFile)
+            {
+                Log($"\n[WriteTraderDataToFilesAsync] Saving mainTrader statistics to files...");
+                mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+                Log($"\n[WriteTraderDataToFilesAsync] ✓ mainTrader file writing completed.");
+            }
+
+            if (_confirmingMultipleTraderSaveConfig is { } cms && cms.WriteSignalMultipleTraderListsToFiles)
+            {
+                var signalMultipleTrader = trader.GetSignalMultipleTrader();
+
+                Log($"\n[WriteTraderDataToFilesAsync] Saving signal layer (MultipleTrader) lists to files...");
+                signalMultipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
+                Log($"\n[WriteTraderDataToFilesAsync] ✓ signal layer lists file writing completed.");
+
+                var signalMain = signalMultipleTrader.GetMainTrader();
+                if (signalMain is not null && signalMain.SaveStatisticsToFile)
+                    signalMain.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+
+                if (cms.WriteSignalChildTradersDataToFiles)
+                {
+                    foreach (var childTrader in signalMultipleTrader.Traders)
+                    {
+                        if (childTrader.SaveStatisticsToFile)
+                            childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+                    }
+                }
+            }
+        });
+    }
+
     public event Action<int, int, double>? OnTraderProgress;
     private void OnOptimizationProgress(SingleTraderOptimizer singleTraderOptimizer, int current, int total, double percentage)
     {
@@ -2840,6 +3251,36 @@ public class ConfirmingSingleTraderConfirmationConfig
     /// <summary>ProfitOnly | LossOnly | Both</summary>
     public string Trigger                       { get; set; } = "Both";
     /// <summary>CancelAndRestart | LockAndIgnore</summary>
+    public string ConflictMode                  { get; set; } = "CancelAndRestart";
+    public bool   FlattenImmediatelyOnFlatSignal { get; set; } = true;
+}
+
+/// <summary>ConfirmingMultipleTrader nesnesinin kayıt ayarları (composite bar-by-bar liste dosyaları).</summary>
+public class ConfirmingMultipleTraderObjectSaveConfig
+{
+    public bool   SaveStatisticsToFile                        { get; set; } = true;
+    public bool   SaveConfirmingMultipleTraderListsTxtEnabled { get; set; } = true;
+    public bool   SaveConfirmingMultipleTraderListsCsvEnabled { get; set; } = true;
+    public string ConfirmingMultipleTraderListsTxtFileName    { get; set; } = "ConfirmingMultipleTraderLists.txt";
+    public string ConfirmingMultipleTraderListsCsvFileName    { get; set; } = "ConfirmingMultipleTraderLists.csv";
+
+    /// <summary>SignalChild/MainTrader'ın kendi tam istatistik dosyalarına eklenen ön ek.</summary>
+    public string FilePrefix { get; set; } = "ConfirmingMultipleTrader";
+
+    /// <summary>true → signalMultipleTrader'ın kendi composite lists dosyası (MultipleTraderLists.txt/csv) da yazılır.</summary>
+    public bool WriteSignalMultipleTraderListsToFiles { get; set; } = false;
+
+    /// <summary>true → signal katmanındaki child trader istatistikleri de dosyaya yazılır.</summary>
+    public bool WriteSignalChildTradersDataToFiles { get; set; } = false;
+}
+
+/// <summary>ConfirmingMultipleTrader'ın sanal pozisyon konfirmasyon ayarları (ConfirmingSingleTraderConfirmationConfig ile aynı şema).</summary>
+public class ConfirmingMultipleTraderConfirmationConfig
+{
+    public bool   ThresholdIsPercentage         { get; set; } = false;
+    public double ProfitThreshold               { get; set; } = 5000.0;
+    public double LossThreshold                 { get; set; } = -3000.0;
+    public string Trigger                       { get; set; } = "Both";
     public string ConflictMode                  { get; set; } = "CancelAndRestart";
     public bool   FlattenImmediatelyOnFlatSignal { get; set; } = true;
 }

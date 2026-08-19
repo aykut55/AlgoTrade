@@ -189,9 +189,11 @@ early-return ekle, sonra inputs/scripts/ altına script'ten CustomConsensusFunc 
 
 ## Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3) — `ConfirmingSingleTrader` (2026-08-19)
 
-**Durum**: ✅ **`ConfirmingSingleTrader` implement edildi ve console menüsüne eklendi** (`[22]`,
-`AlgoTrade.Console/Program.cs`), tam config-driven (`AppConfig.json` → `ConfirmingSingleTrader`
-bölümü, `AppConfigApplier.ApplyConfirmingSingleTrader`, `AlgoTrader.RunConfirmingSingleTraderWithProgressAsync`).
+**Durum**: ✅ **`ConfirmingSingleTrader` VE `ConfirmingMultipleTrader` implement edildi ve console
+menüsüne eklendi** (`[22]`-`[25]`, `AlgoTrade.Console/Program.cs`), ikisi de tam config-driven
+(`AppConfig.json` → `ConfirmingSingleTrader`/`ConfirmingMultipleTrader` bölümleri,
+`AppConfigApplier.ApplyConfirmingSingleTrader`/`ApplyConfirmingMultipleTrader`,
+`AlgoTrader.RunConfirmingSingleTraderWithProgressAsync`/`RunConfirmingMultipleTraderWithProgressAsync`).
 Gerçek veride (BTCUSDT_BNC, 30.000 bar, `SimpleMostStrategy`) uçtan uca doğrulandı — bkz. aşağıdaki
 "Implementasyon Notları" bölümü. `ConfirmingMultipleTrader`/`ConfirmingSingleTraderOptimizer`/
 `ConfirmingMultipleTraderOptimizer` ve Confirming tarama (scanner) varyantları henüz yapılmadı
@@ -486,8 +488,62 @@ mainTrader tam o an gerçek pozisyon açıyor.
 - `ApplyEquityCurveFilter` ile etkileşim kararı hâlâ açık (yukarıdaki "Açık kalan soru" bölümü) —
   `MainTrader.EquityCurveFilter` config'de opsiyonel olarak bağlı, ama birlikte kullanımı gerçek
   veride henüz test edilmedi.
-- `ConfirmingMultipleTrader`/`ConfirmingSingleTraderOptimizer`/`ConfirmingMultipleTraderOptimizer`
-  ve Confirming tarama (scanner) varyantları henüz yazılmadı (aşağıdaki iki bölüm hâlâ geçerli).
+- `ConfirmingSingleTraderOptimizer`/`ConfirmingMultipleTraderOptimizer` ve Confirming tarama
+  (scanner) varyantları henüz yazılmadı (aşağıdaki iki bölüm hâlâ geçerli — `ConfirmingMultipleTrader`
+  artık tamamlandı, bkz. aşağıdaki bölüm).
+
+### Implementasyon Notları — `ConfirmingMultipleTrader` (2026-08-19)
+
+**Dosyalar** (ConfirmingSingleTrader'ın dosyalarına ek olarak):
+- `src/AlgoTrade.Core/Trading/Traders/ConfirmingMultipleTrader.cs` — asıl sınıf.
+- `src/AlgoTrade.Core/Trading/Core/VirtualPositionConfirmer.cs` — **yeni**, konfirmasyon state
+  machine'i (`SignalConflictMode` enum dahil) buraya çıkarıldı — `ConfirmingSingleTrader` de bunu
+  kullanacak şekilde refactor edildi (kod tekrarı yok, tek yerde bakım). Bu refactor sonrası
+  ConfirmingSingleTrader gerçek veride yeniden koşturulup davranışın birebir aynı kaldığı doğrulandı.
+- `AlgoTrader.cs` → `createConfirmingChildTraders(...)` (createChildTraders()'ın Confirming karşılığı),
+  `RunConfirmingMultipleTraderWithProgressAsync(...)`, `WriteTraderDataToFilesAsync(ConfirmingMultipleTrader)`.
+- `AppConfig.json` → `ConfirmingMultipleTrader` bölümü — `ChildTraders`/`Consensus` şeması
+  MultipleTrader'la, `Confirmation`/`MainTrader` şeması ConfirmingSingleTrader'la birebir aynı
+  (mevcut `ConsensusConfig`/`ConfirmationConfig`/`ConfirmingMainTraderConfig`/`ChildTraderEntry`
+  sınıfları reuse edildi, yeni sınıf sadece `ConfirmingMultipleTraderSaveConfig` + root config).
+
+**Mimari — composition**: `ConfirmingSingleTrader`'ın "signalTrader = tam çalışan bağımsız trader"
+deseninin MultipleTrader karşılığı — `_signalMultipleTrader` tam, bağımsız çalışan **gerçek bir
+`MultipleTrader`** (N child + kendi consensus mantığı, MultipleTrader kodunun kendisi HİÇ
+değiştirilmeden reuse edildi), onun kendi mainTrader'ı bizim ham sinyal kaynağımız. Konfirmasyon
+katmanı (`VirtualPositionConfirmer`) ConfirmingSingleTrader ile birebir aynı kod.
+
+**Gerçek veride bulunup düzeltilen ikinci kritik hata**: İlk implementasyonda `_signalMultipleTrader`
+30.000 barlık BTCUSDT testinde **hiçbir zaman** Buy/Sell üretmiyordu (`SignalConsensus_Sinyal` sürekli
+`0.00`) — bar-by-bar incelemede iki child'ın **%94 oranında hemfikir olduğu** (`agree_buy=14249,
+agree_sell=14089`, sadece ~1585/30000 barda anlaşmazlık) ortaya çıktı, yani "Net" consensus'un
+gerçekte Flat dönmesi gereken bir durum değildi — asıl sebep, `MultipleTrader`'ın kendi mainTrader'ının
+(`signalMain`) `signals.AlEnabled`/`SatEnabled`/`FlatOlEnabled` bayraklarının **varsayılan `false`**
+olması (`Signals.cs:181-183`, `ConfigureUserFlagsOnce()`/`Reset()` ile sıfırlanıyor) — normal
+`RunMultipleTraderWithProgressAsync()` akışında bunlar `ApplySingleTraderFlagsConfigs(mainTrader)`
+ile AppConfig'den açılıyor, ama `ConfirmingMultipleTrader` kendi `signalMain`'ini kurarken bu çağrı
+hiç yapılmıyordu. Sonuç: `MapStrategyCommandsToTradeCommands()` consensus'un ürettiği Buy/Sell'i
+sessizce yok sayıyordu (`signals.Al`/`Sat` hiç `true` olmuyordu) — `signalMain.SonYon` sonsuza kadar
+"F" kalıyor, konfirmasyon hiç tetiklenmiyordu. **Düzeltme**: `ConfirmingMultipleTrader.Init()`
+içinde `signalMain.signals.AlEnabled/SatEnabled/FlatOlEnabled = true` doğrudan set ediliyor (dosya
+adı çakışmasını önlemek için `ApplySingleTraderFlagsConfigs`'in tamamını reuse etmek yerine sadece
+gerekli 3 bayrak açıldı). Düzeltme sonrası aynı testte consensus 14093 Sell / 1658 Flat / 14249 Buy
+üretti (manuel bar-by-bar sayımla birebir eşleşiyor) ve `mainTrader` 788 barda gerçek pozisyon açtı.
+
+**Doğrulama**: Aynı yöntemle (`AutoRunMode=ConfirmingMultipleTrader`, `LastN=30000`, `SimpleMostStrategy`
+v1/v2, 2 child, `Net` consensus) gerçek veride uçtan uca koşturuldu, `ConfirmingMultipleTraderLists.csv`
+incelendi — bar 73'te consensus ilk kez yön değiştiriyor (sanal pozisyon başlıyor), bar 6189'da
+(94744.43 fiyattan, Long) ilk gerçek konfirme pozisyon açılıyor — ConfirmingSingleTrader testindeki
+davranış deseniyle tutarlı.
+
+**Bilinen eksikler**: ConfirmingSingleTrader'la aynı (plot overlay yok, `ApplyEquityCurveFilter`
+etkileşimi test edilmedi). Ek olarak: `WriteSignalMultipleTraderListsToFiles`/`WriteSignalChildTradersDataToFiles`
+(opsiyonel, varsayılan kapalı) açıldığında signal katmanının dosyaları **`AppSettings.LogsDir`**'e
+(`outputs/logs/`) yazılıyor, `ConfirmingMultipleTraderLists.txt/csv` ise `AppDomain.CurrentDomain.BaseDirectory/logs`'a
+(`bin/Debug/net8.0/logs/`) — iki farklı log dizini konvansiyonu aynı anda kullanılıyor (bu, zaten
+var olan `WriteMultipleTraderListsToFiles` vs `ConfirmingSingleTrader`'ın kendi list-writer'ı
+arasındaki mevcut tutarsızlığın devamı, yeni bir sorun değil — ama debug ederken nereye bakılacağını
+bilmek gerekiyor).
 
 ### Fast-Follow: Tarama (Scanner) Versiyonları (2026-08-18)
 
@@ -504,6 +560,18 @@ yeni bir mimari gerekmez.
 yazılıp doğrulanmalı — tarama (scanner) versiyonları bunlardan SONRA, doğal bir fast-follow
 olarak gelmeli (tıpkı Strateji tarafında B/C'den sonra 4/6/7/8'in gelmesi gibi). Şimdiden
 planlamaya gerek yok, ama bu genişleme **kesinlikle gündemde**.
+
+**Sıralama — kullanıcı ile netleşti (2026-08-19)**, `ConfirmingSingleTrader` bitince şu sıra:
+1. ✅ `ConfirmingMultipleTrader` — TAMAMLANDI (2026-08-19), bkz. yukarıdaki "Implementasyon Notları"
+   bölümü. ConfirmingSingleTrader'ın kurduğu mimari (VirtualPositionConfirmer, ConflictMode,
+   threshold mantığı, config-driven menü entegrasyonu deseni) reuse edilerek yazıldı.
+2. **Script versiyonları — önemli, atlanmayacak, SIRADAKİ ADIM**: hem `ConfirmingSingleTrader` hem
+   `ConfirmingMultipleTrader` için `[8] Run Script` üzerinden erişilebilir hale getirme
+   (`ScriptGlobals`'a `algoTrader.ConfirmingSingleTrader`/`.ConfirmingMultipleTrader` eklemek —
+   bkz. "Script Yeteneği (Scripting) — Durum Analizi" bölümü, aynı desen).
+3. `[9] DearPyGuiDataPlotter (Start/Stop Test)` için de bir script versiyonu hazırlanacak.
+4. **Tarama (scanner) script'leri ŞİMDİLİK BEKLEYECEK** — kullanıcı açıkça erteledi, üstteki 3
+   madde bitmeden ele alınmayacak.
 
 ## Done
 

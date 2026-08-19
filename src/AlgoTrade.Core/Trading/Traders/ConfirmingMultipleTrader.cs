@@ -2,28 +2,31 @@ using AlgoTrade.Core.DataProvider;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Trading.Strategy;
 
 namespace AlgoTrade.Core.Trading;
 
 /// <summary>
-/// Tek bir stratejinin Al/Sat sinyallerini gerçek pozisyona çevirmeden önce sanal (paper)
-/// bir pozisyonla "konfirme" eder. Strateji Al/Sat dediğinde gerçek emir AÇILMAZ — o bar'ın
-/// fiyatından sanal bir pozisyon takip edilmeye başlanır. Sanal pozisyonun anlık K/Z'i
-/// <see cref="ProfitThreshold"/>/<see cref="LossThreshold"/> eşiğini (<see cref="Trigger"/>'a
-/// göre) geçtiği ANDA — orijinal sinyal fiyatından değil, o barın fiyatından — gerçek sinyal
-/// <see cref="_mainTrader"/>'a iletilir. Yön hiçbir zaman ters çevrilmez, mekanizma sadece giriş
-/// zamanlamasını geciktirir. Konfirmasyondan sonra çıkış tamamen normal trade yönetimine
-/// bırakılır — bu katman bir daha filtre uygulamaz.
+/// <see cref="ConfirmingSingleTrader"/>'ın MultipleTrader karşılığı — tek bir stratejinin ham
+/// sinyali yerine N child stratejinin consensus (bileşke) sinyalini sanal pozisyonla konfirme
+/// eder. Strateji/consensus "AL" dediğinde gerçek emir AÇILMAZ — o bar'ın fiyatından sanal bir
+/// pozisyon takip edilmeye başlanır; eşik (<see cref="ProfitThreshold"/>/<see cref="LossThreshold"/>)
+/// geçildiği ANDA gerçek sinyal <see cref="_mainTrader"/>'a iletilir.
 ///
-/// SymbolScanner gibi AlgoTrader'dan bağımsız, kendi başına yeten bir sınıf. MultipleTrader'ın
-/// (bir sinyal-kaynağı SingleTrader + ayrı bir mainTrader, dışarıdan çözümlenmiş sinyal alır)
-/// yapısına benziyor, ama consensus yerine sanal pozisyon + eşik konfirmasyonu var.
+/// Mimari — composition, ConfirmingSingleTrader'ın "signalTrader = tam çalışan bağımsız trader"
+/// deseninin MultipleTrader karşılığı: <see cref="_signalMultipleTrader"/> tam, bağımsız çalışan
+/// gerçek bir <see cref="MultipleTrader"/> (N child + kendi consensus mantığı, hiç değiştirilmeden
+/// reuse ediliyor) — onun kendi mainTrader'ı bizim "ham sinyal kaynağımız". Konfirmasyon state
+/// machine'i (<see cref="VirtualPositionConfirmer"/>) ConfirmingSingleTrader ile ORTAK — kod
+/// tekrarı yok, aynı sınıf.
 ///
-/// Tasarım tartışması ve eski projeyle karşılaştırma için bkz. docs/todo.md,
-/// "Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3)".
+/// MultipleTrader'ın kendi lifecycle konvansiyonuna uyulur: <c>MultipleTrader.Reset()/Init()</c>
+/// kendi mainTrader'ını/child'larını YÖNETMEZ (no-op'a yakın) — çağıran taraf (burada bu sınıf)
+/// signalMultipleTrader'ın mainTrader'ını ve her child'ı (AddTrader'dan ÖNCE) kendisi
+/// Reset/Init etmekle yükümlü, tıpkı AlgoTrader.createChildTraders()'ın yaptığı gibi.
+///
+/// Tasarım tartışması için bkz. docs/todo.md, "Getiri Eğrisi / KarZarar Eğrisi Konfirmasyonu (Madde 3)".
 /// </summary>
-public class ConfirmingSingleTrader
+public class ConfirmingMultipleTrader
 {
     #region Properties
 
@@ -40,90 +43,74 @@ public class ConfirmingSingleTrader
     public bool IsStopped { get; set; }
     public bool IsStopRequested { get; set; }
 
-    private SingleTrader _signalTrader;
+    private MultipleTrader _signalMultipleTrader;
     private SingleTrader _mainTrader;
 
-    public Action<ConfirmingSingleTrader, int, int>? OnProgress { get; set; }
+    public Action<ConfirmingMultipleTrader, int, int>? OnProgress { get; set; }
 
     public bool SaveStatisticsToFile { get; set; } = true;
 
-    // Output file settings
-    public string ConfirmingSingleTraderListsTxtFileName { get; set; } = "ConfirmingSingleTraderLists.txt";
-    public string ConfirmingSingleTraderListsCsvFileName { get; set; } = "ConfirmingSingleTraderLists.csv";
-    public bool SaveConfirmingSingleTraderListsTxtEnabled { get; set; } = true;
-    public bool SaveConfirmingSingleTraderListsCsvEnabled { get; set; } = true;
+    // Output file settings (3-yönlü: signal-consensus / sanal / mainTrader)
+    public string ConfirmingMultipleTraderListsTxtFileName { get; set; } = "ConfirmingMultipleTraderLists.txt";
+    public string ConfirmingMultipleTraderListsCsvFileName { get; set; } = "ConfirmingMultipleTraderLists.csv";
+    public bool SaveConfirmingMultipleTraderListsTxtEnabled { get; set; } = true;
+    public bool SaveConfirmingMultipleTraderListsCsvEnabled { get; set; } = true;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSENSUS — signalMultipleTrader'a pass-through
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// <summary>Net | Majority | All | Any — bkz. MultipleTrader.BuildConsensusSignal().</summary>
+    public string ConsensusMode { get => _signalMultipleTrader.ConsensusMode; set => _signalMultipleTrader.ConsensusMode = value; }
+    public int ConsensusMinNetCount { get => _signalMultipleTrader.ConsensusMinNetCount; set => _signalMultipleTrader.ConsensusMinNetCount = value; }
 
     // ═══════════════════════════════════════════════════════════════════════
     // CONFIRMATION — paylaşılan state machine, bkz. VirtualPositionConfirmer.cs
-    // (ConfirmingMultipleTrader ile ortak; kod tekrarını önlemek için oraya çıkarıldı)
+    // (ConfirmingSingleTrader ile ortak)
     // ═══════════════════════════════════════════════════════════════════════
 
     private readonly VirtualPositionConfirmer _confirmer = new();
 
-    /// <summary>false: Değer bazlı eşik (puan/fiyat farkı), true: Yüzde bazlı.</summary>
     public bool ThresholdIsPercentage { get => _confirmer.ThresholdIsPercentage; set => _confirmer.ThresholdIsPercentage = value; }
-
-    /// <summary>Sanal pozisyonun konfirme sayılması için ulaşması gereken kâr eşiği (trend teyidi).</summary>
     public double ProfitThreshold { get => _confirmer.ProfitThreshold; set => _confirmer.ProfitThreshold = value; }
-
-    /// <summary>Sanal pozisyonun konfirme sayılması için ulaşması gereken zarar eşiği (dip teyidi). NEGATİF girilmeli.</summary>
     public double LossThreshold { get => _confirmer.LossThreshold; set => _confirmer.LossThreshold = value; }
-
-    /// <summary>Hangi eşik(ler) konfirmasyonu tetikleyebilir.</summary>
     public ConfirmationTrigger Trigger { get => _confirmer.Trigger; set => _confirmer.Trigger = value; }
-
-    /// <summary>Sanal pozisyon beklerken çakışan (ters yönlü) bir ham sinyal geldiğinde izlenecek davranış.</summary>
     public SignalConflictMode ConflictMode { get => _confirmer.ConflictMode; set => _confirmer.ConflictMode = value; }
-
-    /// <summary>
-    /// true: Flat ham sinyali bekleyen sanal pozisyonu anında iptal eder (eski proje davranışı).
-    /// false: Flat görmezden gelinir — sanal pozisyon kendi eşiğine ulaşana kadar beklemeye devam eder.
-    /// </summary>
     public bool FlattenImmediatelyOnFlatSignal { get => _confirmer.FlattenImmediatelyOnFlatSignal; set => _confirmer.FlattenImmediatelyOnFlatSignal = value; }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // VIRTUAL POSITION STATE (diagnostic — _confirmer'a pass-through)
+    // VIRTUAL POSITION STATE (diagnostic)
     // ═══════════════════════════════════════════════════════════════════════
 
     private string[] _virtualYonHistory;
     private bool[] _confirmedHistory;
 
-    /// <summary>Sanal pozisyonun o anki yönü ("A"/"S"), bekleyen sanal pozisyon yoksa null.</summary>
     public string? VirtualYon => _confirmer.VirtualYon;
     public double VirtualEntryPrice => _confirmer.VirtualEntryPrice;
     public bool IsConfirmed => _confirmer.IsConfirmed;
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PLOTTING — Signals (SingleTrader.lists.SinyalList ile aynı konvansiyon: 1.0=Al, -1.0=Sat, 0.0=Flat)
+    // PLOTTING — Signals (SingleTrader.lists.SinyalList ile aynı konvansiyon)
     // ═══════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Sinyal-kaynağı trader'ın ham sinyal timeline'ı — strateji konfirmasyon beklemeden
-    /// "hemen girseydim" davranışıyla ürettiği sinyal (signalTrader zaten kendi başına tam
-    /// çalışan bir trader olduğu için bu doğrudan onun kendi <c>lists.SinyalList</c>'i).
-    /// <see cref="Signals"/> ile aynı plota çizdirilip ilk ham sinyalin ne zaman geldiği ile
-    /// bizim kurallarımıza göre ne zaman konfirme olup gerçek pozisyona dönüştüğü karşılaştırılabilir.
-    /// </summary>
-    public List<double> VirtualSignals => _signalTrader.lists.SinyalList;
+    /// <summary>Consensus'un ham sinyal timeline'ı — signalMultipleTrader'ın kendi mainTrader'ının <c>lists.SinyalList</c>'i.</summary>
+    public List<double> VirtualSignals => _signalMultipleTrader.GetMainTrader().lists.SinyalList;
 
-    /// <summary>mainTrader'ın gerçek/konfirme edilmiş sinyal timeline'ı (1.0=Al, -1.0=Sat, 0.0=Flat).</summary>
+    /// <summary>mainTrader'ın gerçek/konfirme edilmiş sinyal timeline'ı.</summary>
     public List<double> Signals => _mainTrader.lists.SinyalList;
 
     #endregion
 
     #region Constructor
 
-    public ConfirmingSingleTrader(int id, List<StockData> data, IndicatorManager indicators, LogManager? logger)
+    public ConfirmingMultipleTrader(int id, List<StockData> data, IndicatorManager indicators, LogManager? logger)
     {
         Id = id;
         Data = data;
         Indicators = indicators;
         Logger = logger;
 
-        _signalTrader = new SingleTrader(id, "signalTrader", data, indicators, logger)
-        {
-            RunMode = TraderRunMode.TradeOnly
-        };
+        _signalMultipleTrader = new MultipleTrader(id, data, indicators, logger);
 
         // mainTrader'a MultipleTrader konvansiyonuyla tutarlı olarak Id = -1 veriliyor
         _mainTrader = new SingleTrader(-1, "mainTrader", data, indicators, logger)
@@ -138,10 +125,14 @@ public class ConfirmingSingleTrader
 
     #region Setup
 
-    /// <summary>Stratejiyi sinyal-kaynağı trader'a bağlar — mainTrader kendi stratejisini hiç çalıştırmaz, sadece konfirme edilmiş sinyalleri alır.</summary>
-    public void SetStrategy(IStrategy strategy)
+    /// <summary>
+    /// Sinyal katmanına (consensus üreten signalMultipleTrader'a) bir child trader ekler.
+    /// MultipleTrader.AddTrader ile aynı sözleşme: child, çağrılmadan ÖNCE tamamen
+    /// Reset/configure/Init edilmiş olmalı (bkz. AlgoTrader.createChildTraders()).
+    /// </summary>
+    public void AddTrader(SingleTrader trader)
     {
-        _signalTrader.SetStrategy(strategy);
+        _signalMultipleTrader.AddTrader(trader);
     }
 
     #endregion
@@ -150,7 +141,8 @@ public class ConfirmingSingleTrader
 
     public void Reset()
     {
-        _signalTrader.Reset();
+        _signalMultipleTrader.Reset();
+        _signalMultipleTrader.GetMainTrader().Reset();   // MultipleTrader.Reset() kendi mainTrader'ını resetlemiyor
         _mainTrader.Reset();
 
         _confirmer.Reset();
@@ -163,7 +155,22 @@ public class ConfirmingSingleTrader
 
     public void Init()
     {
-        _signalTrader.Init();
+        var signalMain = _signalMultipleTrader.GetMainTrader();
+        signalMain.RunMode = TraderRunMode.TradeOnly;
+        signalMain.Init();   // MultipleTrader.Init() kendi mainTrader'ını init etmiyor
+
+        // KRİTİK: SingleTrader.signals.AlEnabled/SatEnabled/FlatOlEnabled varsayılan olarak FALSE
+        // (ConfigureUserFlagsOnce()/Signals.Reset() ile) — normal MultipleTrader akışında bunlar
+        // ApplySingleTraderFlagsConfigs(mainTrader) ile AppConfig'den açılıyor, ama burada
+        // signalMain'i biz kendimiz kuruyoruz, o çağrı hiç yapılmıyor. Açılmazsa
+        // MapStrategyCommandsToTradeCommands() consensus Buy/Sell'i sessizce yok sayar (signals.Al/
+        // Sat hiç true olmaz) — signalMain SonYon'u sonsuza kadar "F" kalır, konfirmasyon hiç
+        // tetiklenmez. (Gerçek veride bulunmuş bir hata — bkz. docs/todo.md.)
+        signalMain.signals.AlEnabled = true;
+        signalMain.signals.SatEnabled = true;
+        signalMain.signals.FlatOlEnabled = true;
+
+        _signalMultipleTrader.Init();
         _mainTrader.Init();
 
         _virtualYonHistory = new string[Data.Count];
@@ -176,12 +183,13 @@ public class ConfirmingSingleTrader
 
     /// <summary>
     /// Sanal pozisyon state'ini günceller ve bu bar'da mainTrader'a gönderilecek sinyali döner.
-    /// Asıl mantık paylaşımlı <see cref="VirtualPositionConfirmer"/>'da — bkz. o dosya.
+    /// Asıl mantık paylaşımlı <see cref="VirtualPositionConfirmer"/>'da.
     /// </summary>
     private TradeSignals ResolveConfirmedSignal(int i)
     {
-        string currentYon = _signalTrader.SonYon;              // "A" / "S" / "F"
-        TradeSignals rawSignal = _signalTrader.strategySignal;
+        var signalMain = _signalMultipleTrader.GetMainTrader();
+        string currentYon = signalMain.SonYon;              // "A" / "S" / "F"
+        TradeSignals rawSignal = signalMain.strategySignal; // consensus'un o barki komutu
         double currentPrice = Data[i].Close;
 
         return _confirmer.Resolve(currentYon, rawSignal, currentPrice);
@@ -192,7 +200,7 @@ public class ConfirmingSingleTrader
         if (i >= Data.Count)
             return;
 
-        _signalTrader.Run(i);
+        _signalMultipleTrader.Run(i);
 
         _mainTrader.ExecutePreOrderMethods(i);
 
@@ -217,9 +225,7 @@ public class ConfirmingSingleTrader
         _mainTrader.ExecutePostOrderMethods(i);
 
         int totalBars = Data.Count;
-        double percentage = (i + 1) / (double)totalBars * 100.0;
         OnProgress?.Invoke(this, i + 1, totalBars);
-        _ = percentage;
     }
 
     #endregion
@@ -230,9 +236,9 @@ public class ConfirmingSingleTrader
     public void Finalize()
     {
         if (!IsInitialized)
-            throw new InvalidOperationException("ConfirmingSingleTrader not initialized");
+            throw new InvalidOperationException("ConfirmingMultipleTrader not initialized");
 
-        _signalTrader.Finalize();
+        _signalMultipleTrader.Finalize();   // child'ları finalize eder + kendi mainTrader'ının istatistiklerini hesaplar
 
         LogManager.LogRaw($"\nCalculating statistics...");
 
@@ -244,7 +250,7 @@ public class ConfirmingSingleTrader
         _mainTrader.CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani);
 
         if (SaveStatisticsToFile)
-            WriteConfirmingSingleTraderListsToFiles();
+            WriteConfirmingMultipleTraderListsToFiles();
     }
 #pragma warning restore CS0465
 
@@ -253,9 +259,14 @@ public class ConfirmingSingleTrader
     #region Main/Signal Trader Access
 
     public SingleTrader GetMainTrader() => _mainTrader;
-    public SingleTrader GetSignalTrader() => _signalTrader;
 
-    /// <summary>mainTrader ve signalTrader için aynı callback setini bağlar.</summary>
+    /// <summary>
+    /// Sinyal katmanına doğrudan erişim — child'ların kendi verisi, consensus ayarları, ve
+    /// (istenirse) signalMultipleTrader'ın kendi composite lists dosyalarını yazmak için.
+    /// </summary>
+    public MultipleTrader GetSignalMultipleTrader() => _signalMultipleTrader;
+
+    /// <summary>mainTrader ve signal katmanı (consensus mainTrader + tüm child'lar) için aynı callback setini bağlar.</summary>
     public void SetCallbacks(
         Action<SingleTrader, int>? onReset = null,
         Action<SingleTrader, int>? onInit = null,
@@ -268,7 +279,7 @@ public class ConfirmingSingleTrader
         Action<SingleTrader>? onApplyUserFlags = null)
     {
         _mainTrader.SetCallbacks(onReset, onInit, onRun, onFinal, onBeforeOrders, onNotifySignal, onAfterOrders, onProgress, onApplyUserFlags);
-        _signalTrader.SetCallbacks(onReset, onInit, onRun, onFinal, onBeforeOrders, onNotifySignal, onAfterOrders, onProgress, onApplyUserFlags);
+        _signalMultipleTrader.SetCallbacks(onReset, onInit, onRun, onFinal, onBeforeOrders, onNotifySignal, onAfterOrders, onProgress, onApplyUserFlags);
     }
 
     public void Stop()
@@ -276,7 +287,7 @@ public class ConfirmingSingleTrader
         if (IsRunning)
         {
             IsStopRequested = true;
-            LogManager.LogRaw($"Stop requested for ConfirmingSingleTrader (Id: {Id})");
+            LogManager.LogRaw($"Stop requested for ConfirmingMultipleTrader (Id: {Id})");
         }
     }
 
@@ -284,16 +295,16 @@ public class ConfirmingSingleTrader
 
     #region Lists Export
 
-    private void WriteConfirmingSingleTraderListsToFiles()
+    private void WriteConfirmingMultipleTraderListsToFiles()
     {
-        if (SaveConfirmingSingleTraderListsTxtEnabled)
-            WriteConfirmingSingleTraderListsToTxt();
+        if (SaveConfirmingMultipleTraderListsTxtEnabled)
+            WriteConfirmingMultipleTraderListsToTxt();
 
-        if (SaveConfirmingSingleTraderListsCsvEnabled)
-            WriteConfirmingSingleTraderListsToCsv();
+        if (SaveConfirmingMultipleTraderListsCsvEnabled)
+            WriteConfirmingMultipleTraderListsToCsv();
     }
 
-    private void WriteConfirmingSingleTraderListsToTxt()
+    private void WriteConfirmingMultipleTraderListsToTxt()
     {
         if (_mainTrader == null || Data == null || Data.Count == 0)
             return;
@@ -302,12 +313,14 @@ public class ConfirmingSingleTrader
         if (!System.IO.Directory.Exists(logDir))
             System.IO.Directory.CreateDirectory(logDir);
 
-        var filePath = System.IO.Path.Combine(logDir, ConfirmingSingleTraderListsTxtFileName);
+        var filePath = System.IO.Path.Combine(logDir, ConfirmingMultipleTraderListsTxtFileName);
+        var signalMain = _signalMultipleTrader.GetMainTrader();
 
         using (var writer = new System.IO.StreamWriter(filePath, append: false, System.Text.Encoding.UTF8))
         {
-            writer.WriteLine($"CONFIRMING SINGLE TRADER BAR-BY-BAR DATA");
+            writer.WriteLine($"CONFIRMING MULTIPLE TRADER BAR-BY-BAR DATA");
             writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            writer.WriteLine($"ConsensusMode: {ConsensusMode}, ConsensusMinNetCount: {ConsensusMinNetCount}, ChildCount: {_signalMultipleTrader.Traders.Count}");
             writer.WriteLine($"ThresholdIsPercentage: {ThresholdIsPercentage}");
             writer.WriteLine($"ProfitThreshold: {ProfitThreshold}, LossThreshold: {LossThreshold}, Trigger: {Trigger}");
             writer.WriteLine($"ConflictMode: {ConflictMode}, FlattenImmediatelyOnFlatSignal: {FlattenImmediatelyOnFlatSignal}");
@@ -317,13 +330,13 @@ public class ConfirmingSingleTrader
 
             for (int i = 0; i < Data.Count; i++)
             {
-                WriteBarDataTxt(writer, i);
+                WriteBarDataTxt(writer, i, signalMain);
             }
 
             writer.WriteLine("".PadRight(300, '='));
         }
 
-        Logger?.LogRawInstance($"ConfirmingSingleTraderLists.txt written to: {filePath}");
+        Logger?.LogRawInstance($"ConfirmingMultipleTraderLists.txt written to: {filePath}");
     }
 
     private void WriteHeaderTxt(System.IO.StreamWriter writer)
@@ -339,7 +352,7 @@ public class ConfirmingSingleTrader
         writer.WriteLine(header);
     }
 
-    private void WriteBarDataTxt(System.IO.StreamWriter writer, int barIndex)
+    private void WriteBarDataTxt(System.IO.StreamWriter writer, int barIndex, SingleTrader signalMain)
     {
         var bar = Data[barIndex];
 
@@ -347,14 +360,14 @@ public class ConfirmingSingleTrader
                   $"{bar.Date:yyyy.MM.dd} | " +
                   $"{bar.DateTime:HH:mm:ss} | " +
                   $"{bar.Close,10:F2} | " +
-                  $"{GetYon(_signalTrader, barIndex),6} | {GetSeviye(_signalTrader, barIndex),10:F2} | {GetSinyal(_signalTrader, barIndex),6:F2} | " +
+                  $"{GetYon(signalMain, barIndex),6} | {GetSeviye(signalMain, barIndex),10:F2} | {GetSinyal(signalMain, barIndex),6:F2} | " +
                   $"{GetVirtualYon(barIndex),6} | {GetConfirmed(barIndex),6} | " +
                   $"{GetYon(_mainTrader, barIndex),7} | {GetSeviye(_mainTrader, barIndex),10:F2} | {GetSinyal(_mainTrader, barIndex),7:F2}";
 
         writer.WriteLine(line);
     }
 
-    private void WriteConfirmingSingleTraderListsToCsv()
+    private void WriteConfirmingMultipleTraderListsToCsv()
     {
         if (_mainTrader == null || Data == null || Data.Count == 0)
             return;
@@ -363,7 +376,8 @@ public class ConfirmingSingleTrader
         if (!System.IO.Directory.Exists(logDir))
             System.IO.Directory.CreateDirectory(logDir);
 
-        var filePath = System.IO.Path.Combine(logDir, ConfirmingSingleTraderListsCsvFileName);
+        var filePath = System.IO.Path.Combine(logDir, ConfirmingMultipleTraderListsCsvFileName);
+        var signalMain = _signalMultipleTrader.GetMainTrader();
 
         using (var writer = new System.IO.StreamWriter(filePath, append: false, System.Text.Encoding.UTF8))
         {
@@ -371,24 +385,24 @@ public class ConfirmingSingleTrader
 
             for (int i = 0; i < Data.Count; i++)
             {
-                WriteBarDataCsv(writer, i);
+                WriteBarDataCsv(writer, i, signalMain);
             }
         }
 
-        Logger?.LogRawInstance($"ConfirmingSingleTraderLists.csv written to: {filePath}");
+        Logger?.LogRawInstance($"ConfirmingMultipleTraderLists.csv written to: {filePath}");
     }
 
     private void WriteHeaderCsv(System.IO.StreamWriter writer)
     {
         var header = "BarNo;Date;Time;Close;" +
-                     "SignalTrader_Yon;SignalTrader_Seviye;SignalTrader_Sinyal;" +
+                     "SignalConsensus_Yon;SignalConsensus_Seviye;SignalConsensus_Sinyal;" +
                      "Virtual_Yon;Virtual_Confirmed;" +
                      "MainTrader_Yon;MainTrader_Seviye;MainTrader_Sinyal";
 
         writer.WriteLine(header);
     }
 
-    private void WriteBarDataCsv(System.IO.StreamWriter writer, int barIndex)
+    private void WriteBarDataCsv(System.IO.StreamWriter writer, int barIndex, SingleTrader signalMain)
     {
         var bar = Data[barIndex];
 
@@ -396,7 +410,7 @@ public class ConfirmingSingleTrader
                   $"{bar.Date:yyyy.MM.dd};" +
                   $"{bar.DateTime:HH:mm:ss};" +
                   $"{bar.Close:F2};" +
-                  $"{GetYon(_signalTrader, barIndex)};{GetSeviye(_signalTrader, barIndex):F2};{GetSinyal(_signalTrader, barIndex):F2};" +
+                  $"{GetYon(signalMain, barIndex)};{GetSeviye(signalMain, barIndex):F2};{GetSinyal(signalMain, barIndex):F2};" +
                   $"{GetVirtualYon(barIndex)};{GetConfirmed(barIndex)};" +
                   $"{GetYon(_mainTrader, barIndex)};{GetSeviye(_mainTrader, barIndex):F2};{GetSinyal(_mainTrader, barIndex):F2}";
 
@@ -458,8 +472,8 @@ public class ConfirmingSingleTrader
 
     public void Dispose()
     {
-        _signalTrader?.Dispose();
-        _signalTrader = null;
+        _signalMultipleTrader?.Dispose();
+        _signalMultipleTrader = null;
 
         _mainTrader?.Dispose();
         _mainTrader = null;
