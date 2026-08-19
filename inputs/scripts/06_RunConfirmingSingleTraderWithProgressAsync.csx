@@ -1,10 +1,10 @@
 // =============================================================================
 // 06_RunConfirmingSingleTraderWithProgressAsync.csx - ConfirmingSingleTrader Inlined Execution
-// ProgramsConfirmingSingleTrader.csx'den gelen konfigurasyonu kullanarak
+// Config_06_ConfirmingSingleTrader.csx'den gelen konfigurasyonu kullanarak
 // ConfirmingSingleTrader'i calistirir. 02_RunMultipleTraderWithProgressAsync.csx'in
 // deseniyle aynidir.
 // =============================================================================
-#load "ProgramsConfirmingSingleTrader.csx"
+#load "Config_06_ConfirmingSingleTrader.csx"
 
 using System;
 using System.Diagnostics;

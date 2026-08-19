@@ -1,18 +1,18 @@
 // =============================================================================
-// ProgramsMultipleTrader.csx - MultipleTrader Konfigürasyon Scripti
-// Strategy, query, ECF listelerini ve diger ayarları burada tanimlayin
+// Config_07_ConfirmingMultipleTrader.csx - 07_RunConfirmingMultipleTraderWithProgressAsync.csx icin Konfigurasyon Scripti
+// Child stratejiler, consensus, confirmation ve trade params ayarlari burada
 // =============================================================================
 using System.Collections.Generic;
 using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Trading.Core;
 
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
-TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
+string stockDataFullFileName = @"C:\data\csvFiles\CRP\05\BTCUSDT_BNC.csv";
 
 // =============================================================================
-// Strategy Configurations (Id bazli)
+// Child Strategy Configurations (consensus'u ureten stratejiler)
 // =============================================================================
 var strategyConfigs = new List<(int id, string name, Dictionary<string, object> parameters)>
 {
@@ -31,40 +31,29 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
 };
 
 // =============================================================================
-// Query Configurations (Id bazli)
+// Consensus Ayarlari - bkz. MultipleTrader.BuildConsensusSignal()
 // =============================================================================
-var queryConfigs = new List<(int id, string name, Dictionary<string, object> parameters)>
-{
-    (0, "SimpleQuery1", new Dictionary<string, object>
-    {
-        ["ma8Period"] = 8,
-        ["ma200Period"] = 200,
-        ["choice"] = 0
-    }),
-    (1, "SimpleQuery1", new Dictionary<string, object>
-    {
-        ["ma8Period"] = 5,
-        ["ma200Period"] = 100,
-        ["choice"] = 0
-    })
-};
+string consensusMode = "Net";
+int consensusMinNetCount = 1;
 
 // =============================================================================
-// Equity Curve Filter Configuration
+// Sanal Pozisyon Konfirmasyon Ayarlari - bkz. docs/todo.md, "Getiri Egrisi /
+// KarZarar Egrisi Konfirmasyonu (Madde 3)"
 // =============================================================================
-bool ecfEnabled = false;
-bool ecfThresholdTypeIsPercent = true;
-double ecfProfitThreshold = 0.05;
-double ecfLossThreshold = -0.05;
-ConfirmationTrigger ecfTrigger = ConfirmationTrigger.Both;
+bool thresholdIsPercentage = false;
+double profitThreshold = 5000.0;
+double lossThreshold = -3000.0;
+ConfirmationTrigger confirmationTrigger = ConfirmationTrigger.Both;
+SignalConflictMode conflictMode = SignalConflictMode.CancelAndRestart;
+bool flattenImmediatelyOnFlatSignal = true;
 
 // =============================================================================
-// Trade Params
+// Trade Params (mainTrader ve tum child'lar ayni parametreleri kullanir)
 // =============================================================================
 double ilkBakiye = 100000.0;
-int kontratSayisi = 1;
-double komisyonCarpan = 20.0;
-double kaymaMiktari = 0.5;
+double lotSayisi = 0.01;
+double komisyonCarpan = 0.0;
+double kaymaMiktari = 0.0;
 
 // =============================================================================
 // Symbol Info
@@ -76,4 +65,5 @@ string symbolPeriod = "...";
 // Save Statistics
 // =============================================================================
 bool saveMainTraderStatistics = true;
-bool saveChildTraderStatistics = true;
+bool saveChildTraderStatistics = false;
+bool saveConfirmingMultipleTraderLists = true;

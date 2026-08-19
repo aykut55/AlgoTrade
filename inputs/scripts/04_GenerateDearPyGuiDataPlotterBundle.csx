@@ -1,6 +1,6 @@
 // =============================================================================
 // 04_GenerateDearPyGuiDataPlotterBundle.csx - latest_bundle.npz / .view.json uretir
-// SingleTrader'i (Programs.csx ayarlariyla, TradeOnly modda) kendi icinde calistirir
+// SingleTrader'i (Config_01_SingleTrader.csx ayarlariyla, TradeOnly modda) kendi icinde calistirir
 // ve TradeDataBundleConverter ile src/DearPyGuiDataPlotter/inputs/latest_bundle.npz +
 // latest_bundle.view.json dosyalarini yazar - 05_RunDearPyGuiDataPlotterTest.csx'in
 // yukledigi/bekledigi dosyalar bunlar.
@@ -11,7 +11,7 @@
 // Bu yuzden burada kendi (Dispose'suz) minimal run akisi var - #load edilen script'in
 // kendi cleanup sirasina mudahale etmenin bir yolu yok.
 // =============================================================================
-#load "Programs.csx"
+#load "Config_01_SingleTrader.csx"
 
 using System;
 using System.Diagnostics;

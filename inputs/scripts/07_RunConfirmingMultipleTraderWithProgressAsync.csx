@@ -1,10 +1,10 @@
 // =============================================================================
 // 07_RunConfirmingMultipleTraderWithProgressAsync.csx - ConfirmingMultipleTrader Inlined Execution
-// ProgramsConfirmingMultipleTrader.csx'den gelen konfigurasyonu kullanarak
+// Config_07_ConfirmingMultipleTrader.csx'den gelen konfigurasyonu kullanarak
 // ConfirmingMultipleTrader'i calistirir. 02_RunMultipleTraderWithProgressAsync.csx'in
 // deseniyle aynidir (child olusturma burada dongu ile yapiliyor, cunku sayi degisken).
 // =============================================================================
-#load "ProgramsConfirmingMultipleTrader.csx"
+#load "Config_07_ConfirmingMultipleTrader.csx"
 
 using System;
 using System.Diagnostics;

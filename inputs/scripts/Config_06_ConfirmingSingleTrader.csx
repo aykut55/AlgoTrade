@@ -1,5 +1,5 @@
 // =============================================================================
-// ProgramsConfirmingSingleTrader.csx - ConfirmingSingleTrader Konfigurasyon Scripti
+// Config_06_ConfirmingSingleTrader.csx - 06_RunConfirmingSingleTraderWithProgressAsync.csx icin Konfigurasyon Scripti
 // Strategy, confirmation, trade params ve diger ayarlari burada tanimlayin
 // =============================================================================
 using System.Collections.Generic;

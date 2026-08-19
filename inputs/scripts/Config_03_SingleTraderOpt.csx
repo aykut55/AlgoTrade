@@ -1,5 +1,5 @@
 // =============================================================================
-// ProgramsSingleTraderOpt.csx - SingleTraderOptimizer Konfigürasyon Scripti
+// Config_03_SingleTraderOpt.csx - 03_RunSingleTraderOptWithProgressAsync.csx icin Konfigurasyon Scripti
 // Parametre range'leri, strategy factory, optimization range ve diger ayarları
 // burada tanimlayin
 // =============================================================================

@@ -1,8 +1,8 @@
 // =============================================================================
 // RunSingleTraderOptWithProgressAsync.csx - SingleTraderOptimizer Inlined Execution
-// ProgramsSingleTraderOpt.csx'den gelen konfigürasyonu kullanarak optimization çalıştırır
+// Config_03_SingleTraderOpt.csx'den gelen konfigürasyonu kullanarak optimization çalıştırır
 // =============================================================================
-#load "ProgramsSingleTraderOpt.csx"
+#load "Config_03_SingleTraderOpt.csx"
 
 using System;
 using System.Diagnostics;

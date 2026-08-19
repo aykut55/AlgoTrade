@@ -1,6 +1,6 @@
 // =============================================================================
-// Programs.csx - Konfigürasyon Scripti
-// Strateji, sorgu, ECF, trade params ve diger ayarları burada tanimlayin
+// Config_02_MultipleTrader.csx - 02_RunMultipleTraderWithProgressAsync.csx icin Konfigurasyon Scripti
+// Strategy, query, ECF listelerini ve diger ayarları burada tanimlayin
 // =============================================================================
 using System.Collections.Generic;
 using AlgoTrade.Core.Trading;
@@ -12,26 +12,41 @@ string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // =============================================================================
-// Strategy Configuration
+// Strategy Configurations (Id bazli)
 // =============================================================================
-string strategyName = "SimpleMostStrategy";
-var strategyParams = new Dictionary<string, object>
+var strategyConfigs = new List<(int id, string name, Dictionary<string, object> parameters)>
 {
-    ["period"]  = 21,
-    ["percent"] = 1.0,
-    ["choice"]  = 0
+    (0, "SimpleMostStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 21,
+        ["percent"] = 1.0,
+        ["choice"] = 0
+    }),
+    (1, "SimpleMostStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["percent"] = 0.5,
+        ["choice"] = 0
+    })
 };
 
 // =============================================================================
-// Query Configuration
+// Query Configurations (Id bazli)
 // =============================================================================
-bool queryEnabled = true;
-string queryName = "SimpleQuery1";
-var queryParams = new Dictionary<string, object>
+var queryConfigs = new List<(int id, string name, Dictionary<string, object> parameters)>
 {
-    ["ma8Period"]   = 8,
-    ["ma200Period"] = 200,
-    ["choice"]      = 0
+    (0, "SimpleQuery1", new Dictionary<string, object>
+    {
+        ["ma8Period"] = 8,
+        ["ma200Period"] = 200,
+        ["choice"] = 0
+    }),
+    (1, "SimpleQuery1", new Dictionary<string, object>
+    {
+        ["ma8Period"] = 5,
+        ["ma200Period"] = 100,
+        ["choice"] = 0
+    })
 };
 
 // =============================================================================
@@ -60,4 +75,5 @@ string symbolPeriod = "...";
 // =============================================================================
 // Save Statistics
 // =============================================================================
-bool saveStatisticsToFile = true;
+bool saveMainTraderStatistics = true;
+bool saveChildTraderStatistics = true;

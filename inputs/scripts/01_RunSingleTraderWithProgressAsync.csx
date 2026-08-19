@@ -1,8 +1,8 @@
 // =============================================================================
 // RunSingleTraderWithProgressAsync.csx - SingleTrader Inlined Execution
-// Programs.csx'den gelen konfigürasyonu kullanarak SingleTrader çalıştırır
+// Config_01_SingleTrader.csx'den gelen konfigürasyonu kullanarak SingleTrader çalıştırır
 // =============================================================================
-#load "Programs.csx"
+#load "Config_01_SingleTrader.csx"
 
 using System;
 using System.Diagnostics;

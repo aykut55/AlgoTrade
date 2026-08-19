@@ -1,8 +1,8 @@
 // =============================================================================
 // RunMultipleTraderWithProgressAsync.csx - MultipleTrader Inlined Execution
-// ProgramsMultipleTrader.csx'den gelen konfigürasyonu kullanarak MultipleTrader çalıştırır
+// Config_02_MultipleTrader.csx'den gelen konfigürasyonu kullanarak MultipleTrader çalıştırır
 // =============================================================================
-#load "ProgramsMultipleTrader.csx"
+#load "Config_02_MultipleTrader.csx"
 
 using System;
 using System.Diagnostics;
