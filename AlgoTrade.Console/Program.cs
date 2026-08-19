@@ -3802,6 +3802,12 @@ void printScriptResult(ScriptExecutionResult result)
 
 async Task runFullScript()
 {
+    if (algoTrader is null)
+    {
+        LogManager.LogRaw("\n[WARNING] AlgoTrader has not been created yet. Run [2] or [5] first.", ConsoleColor.Yellow);
+        return;
+    }
+
     var (code, filePath) = readScriptFromFile();
     if (string.IsNullOrEmpty(code)) return;
 
