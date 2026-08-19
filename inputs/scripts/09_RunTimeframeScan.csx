@@ -6,6 +6,7 @@
 // straight-line calisir. Konfigurasyon AppConfig.json'daki "TimeframeScan"
 // bolumunden okunur.
 // =============================================================================
+using System.IO;
 using AlgoTrade.Core.AppConfig;
 
 try

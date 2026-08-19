@@ -6,6 +6,7 @@
 // tek seferlik, straight-line calisir. Konfigurasyon AppConfig.json'daki
 // "SymbolTimeframeScan" bolumunden okunur.
 // =============================================================================
+using System.IO;
 using AlgoTrade.Core.AppConfig;
 
 try

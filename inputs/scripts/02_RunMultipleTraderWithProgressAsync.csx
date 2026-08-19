@@ -348,13 +348,13 @@ if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
     if (mainTrader.SaveStatisticsToFile)
     {
         Log("\nSaving mainTrader statistics to files...");
-        mainTrader.WriteStatisticsToFile(AppSettings.LogsDir);
+        mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
     }
 
     foreach (var childTrader in multipleTrader.Traders)
     {
         if (childTrader.SaveStatisticsToFile)
-            childTrader.WriteStatisticsToFile(AppSettings.LogsDir);
+            childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
     }
 }
 

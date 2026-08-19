@@ -9,6 +9,7 @@
 // AppConfig/AppConfigApplier namespace'i script'e otomatik import edilmiyor,
 // bu yuzden asagida elle "using AlgoTrade.Core.AppConfig;" var.
 // =============================================================================
+using System.IO;
 using AlgoTrade.Core.AppConfig;
 
 try

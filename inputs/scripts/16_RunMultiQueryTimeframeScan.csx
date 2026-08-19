@@ -10,6 +10,7 @@
 // yok (MultiQueryTimeframeScanner'da bu metodlar tanimli degil, sadece Results
 // listesi var).
 // =============================================================================
+using System.IO;
 using AlgoTrade.Core.AppConfig;
 
 try

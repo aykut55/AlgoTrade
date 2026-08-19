@@ -9,6 +9,7 @@
 // ConfigureAlgoTrader callback'i icinde her sembol icin tam bir MultipleTrader
 // (N child + consensus) kuruluyor, tipki console'daki gibi.
 // =============================================================================
+using System.IO;
 using AlgoTrade.Core.AppConfig;
 
 try

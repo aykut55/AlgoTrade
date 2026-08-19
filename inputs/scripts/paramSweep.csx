@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using AlgoTrade.Core;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
 string dataFile       = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
@@ -54,6 +55,13 @@ if (data.Count == 0)
     Log("[HATA] Data bos.");
     return;
 }
+
+// RunSingleTraderWithProgressAsync() AlgoTrader'in kendi ic _timer/_logger
+// alanlarini kullaniyor - console'daki her menu bunlari RegisterLogger/
+// RegisterTimer ile dolduruyor, script'te de gerekiyor (algoTrader.Reset()
+// bunlari sifirlamiyor, tek seferlik kayit yeterli).
+algoTrader.RegisterLogger(LogManager.GetInstance());
+algoTrader.RegisterTimer(TimeManager.GetInstance());
 
 // 2. Parametre taramasi
 var results = new List<(int period, double percent, string ozet)>();

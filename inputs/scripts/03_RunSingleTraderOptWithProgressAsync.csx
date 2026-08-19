@@ -18,6 +18,7 @@ using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
+using AlgoTrade.Core.Timer;
 
 // =============================================================================
 // Degiskenler
@@ -68,6 +69,13 @@ if (data.Count == 0)
 // 2. AlgoTrader Konfigure Et
 // =============================================================================
 algoTrader.SetData(data);
+
+// RunSingleTraderOptWithProgressAsync() AlgoTrader'in kendi ic _timer/_logger
+// alanlarini kullaniyor (orn. _timer!.RestartTimer("0")) - console'daki her
+// menu bunlari RegisterLogger/RegisterTimer ile dolduruyor, script'te de aynisi
+// gerekiyor, yoksa _timer null kalip NullReferenceException firlatiyor.
+algoTrader.RegisterLogger(LogManager.GetInstance());
+algoTrader.RegisterTimer(TimeManager.GetInstance());
 
 algoTrader.SymbolName = symbolName;
 algoTrader.SymbolPeriod = symbolPeriod;

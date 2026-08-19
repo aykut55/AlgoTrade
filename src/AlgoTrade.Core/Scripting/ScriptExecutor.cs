@@ -92,8 +92,16 @@ namespace AlgoTrade.Core.Scripting
 
             var inlinedCode = ProcessCode(code, sourceDirectory);
 
-            // Collect all using statements and move to top
-            var usingRegex = new Regex(@"^\s*using\s+[^(][^;]+;\s*$", RegexOptions.Multiline);
+            // Collect all using DIRECTIVE statements and move to top. Excludes C# 8+
+            // "using var x = ...;" / "using Type x = ...;" DECLARATIONS (IDisposable
+            // locals) - those have an identifier right after "using" followed by another
+            // identifier before "=" (e.g. "using var scanner = ..."), which a real using
+            // directive never does (directives are "using Namespace.Path;" or at most
+            // "using Alias = Namespace.Path;" - a single identifier before "="). Without
+            // this exclusion, a line like "using var scanner = new SymbolScanner(...);"
+            // gets hoisted to the top as if it were an import, and Roslyn then fails to
+            // parse it as a using directive ("; expected") since "var" isn't followed by ';'.
+            var usingRegex = new Regex(@"^\s*using\s+(?!\w+\s+\w+\s*=)[^(][^;]+;\s*$", RegexOptions.Multiline);
             var usings = new HashSet<string>();
             var codeWithoutUsings = usingRegex.Replace(inlinedCode, match =>
             {
