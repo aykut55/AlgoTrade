@@ -580,13 +580,59 @@ planlamaya gerek yok, ama bu genişleme **kesinlikle gündemde**.
 1. ✅ `ConfirmingMultipleTrader` — TAMAMLANDI (2026-08-19), bkz. yukarıdaki "Implementasyon Notları"
    bölümü. ConfirmingSingleTrader'ın kurduğu mimari (VirtualPositionConfirmer, ConflictMode,
    threshold mantığı, config-driven menü entegrasyonu deseni) reuse edilerek yazıldı.
-2. **Script versiyonları — önemli, atlanmayacak, SIRADAKİ ADIM**: hem `ConfirmingSingleTrader` hem
-   `ConfirmingMultipleTrader` için `[8] Run Script` üzerinden erişilebilir hale getirme
-   (`ScriptGlobals`'a `algoTrader.ConfirmingSingleTrader`/`.ConfirmingMultipleTrader` eklemek —
-   bkz. "Script Yeteneği (Scripting) — Durum Analizi" bölümü, aynı desen).
-3. `[9] DearPyGuiDataPlotter (Start/Stop Test)` için de bir script versiyonu hazırlanacak.
-4. **Tarama (scanner) script'leri ŞİMDİLİK BEKLEYECEK** — kullanıcı açıkça erteledi, üstteki 3
-   madde bitmeden ele alınmayacak.
+2. ✅ **`ConfirmingSingleTrader`/`ConfirmingMultipleTrader` script versiyonları — TAMAMLANDI (2026-08-19)**.
+   Beklenenin aksine `ScriptGlobals`'a hiçbir ekleme gerekmedi — `ScriptExecutor` zaten tüm
+   assembly'yi ve `AlgoTrade.Core.Trading` namespace'ini script'e açıyor, `algoTrader.ConfirmingSingleTrader`/
+   `.ConfirmingMultipleTrader` property'leri de zaten vardı. İş, mevcut `ProgramsMultipleTrader.csx` +
+   `02_RunMultipleTraderWithProgressAsync.csx` desenini takip eden örnek script'ler yazmaktan ibaretti:
+   - `inputs/scripts/ProgramsConfirmingSingleTrader.csx` + `05_RunConfirmingSingleTraderWithProgressAsync.csx`
+   - `inputs/scripts/ProgramsConfirmingMultipleTrader.csx` + `06_RunConfirmingMultipleTraderWithProgressAsync.csx`
+3. ✅ **`[9]` DearPyGuiDataPlotter (Start/Stop Test) script versiyonu — TAMAMLANDI (2026-08-19)**:
+   `inputs/scripts/05_RunDearPyGuiDataPlotterTest.csx` — `handleDearPyGuiPlotterTest()`'in yaptığını
+   yapıyor (process başlat → test bundle yükle → bekle, ESC ile iptal edilebilir → clear_panel → durdur).
+   İnteraktif `ReadMenuInput()` yerine cancellable bekleme kullanıldı (script'ler Program.cs'in konsol
+   input fonksiyonlarına erişemiyor).
+4. **Tarama (scanner) script'leri ŞİMDİLİK BEKLEYECEK** — kullanıcı açıkça erteledi, henüz ele alınmadı.
+
+**Script dosya numaralandırması (son hali, 2026-08-19)**: `04`=bundle üretimi, `05`=plotter test,
+`06`=ConfirmingSingleTrader, `07`=ConfirmingMultipleTrader (kullanıcı isteğiyle bu sıraya getirildi —
+bundle üretimi test'ten mantıksal olarak önce gelmeli):
+- `04_GenerateDearPyGuiDataPlotterBundle.csx` (yeni)
+- `05_RunDearPyGuiDataPlotterTest.csx`
+- `06_RunConfirmingSingleTraderWithProgressAsync.csx`
+- `07_RunConfirmingMultipleTraderWithProgressAsync.csx`
+
+**Bulunan iki ek hata (2026-08-19)**:
+- **Eski/silinmiş dosya adı referansı**: Hem orijinal `[9]` menüsü (`Program.cs`,
+  `handleDearPyGuiPlotterTest()`) hem de ilk script versiyonum `full_pipeline_bundle.npz` adını
+  arıyordu — bu dosya artık üretilmiyor (`.gitignore`'da bile listeli). Gerçekte var olan/commit
+  edilen dosya `latest_bundle.npz`/`.view.json` (bkz. `src/DearPyGuiDataPlotter/inputs/input.json`).
+  **Her iki yerde de düzeltildi** — kullanıcının kendi testinde "GUI açıldı ama hiçbir şey load
+  etmedi" şikayetiyle bulundu.
+- **`TradeDataBundleConverter` + `#load` sırası çakışması**: İlk `04_GenerateDearPyGuiDataPlotterBundle.csx`
+  denemesi `01_RunSingleTraderWithProgressAsync.csx`'i `#load` edip `singleTrader`'ı reuse etmeye
+  çalışıyordu — ama `01`'in kendi sonunda `singleTrader.Dispose()` çağrısı var (`DeleteModules()` ile
+  `trader.Data` boşalıyor), bu da `ConvertSingleTrader`'ın "Finalize() sonrası çağırın, Data boş
+  olmamalı" kontrolüne takılıyordu. **Düzeltme**: `01`'e dokunmadan (dış davranışını bozmamak için),
+  `04` kendi minimal (query'siz, TradeOnly) SingleTrader çalıştırma akışını kendi içinde tutuyor,
+  bundle dönüşümünü `Dispose()`'dan ÖNCE yapıyor.
+
+**Doğrulama yöntemi**: `[8] Run Script` menüsü `Console.ReadKey` kullandığı için redirected/piped
+stdin ile hiç çalışmıyor (headless test edilemiyor) — bunun yerine `ScriptExecutor`+`ScriptGlobals`'ı
+doğrudan kullanan küçük, geçici bir headless harness yazıldı (`[8]`'in içeride yaptığı tam olarak bu),
+dört script de bu harness üzerinden **gerçek veride, tam veri setinde** uçtan uca koşturulup
+doğrulandı, sonra harness silindi (repoya hiç commit edilmedi). `04`'ün test koşumu commit edilmiş
+`latest_bundle.npz`/`.view.json`'ı geçici olarak değiştirdi — test sonrası `git checkout` ile
+orijinaline geri alındı (bilerek regenerate etmek isterlerse kullanıcı kendisi `04`'ü çalıştırabilir).
+Sonuçlar:
+- DearPyGuiDataPlotter test script'i (`05`): process gerçekten başladı/durdu, `[9]` ile birebir aynı davrandı.
+- Bundle üretim script'i (`04`): 1.911.603 barlık VIP-X030-T verisinde ~8sn'de bundle üretti (kullanıcının
+  kendi ortamında gerçek kullanım sırasında doğrulandı).
+- ConfirmingSingleTrader script'i (`06`): 904.437 barda çalıştı (~51sn, çoğu dosya yazma), `VirtualSignals`
+  (476K Buy/428K Sell) vs `Signals` (278K Buy/264K Sell) — konfirmasyon filtresi bekleneni yaptı.
+- ConfirmingMultipleTrader script'i (`07`): 2 child, 904.437 barda çalıştı (~57sn), consensus `VirtualSignals`
+  (337K Buy/285K Sell) vs `Signals` (441 Buy/187 Sell) — consensus + confirmation çift filtresi
+  (daha az konfirme giriş, ConfirmingSingleTrader'a göre beklenen bir fark) doğru çalıştı.
 
 ## Done
 

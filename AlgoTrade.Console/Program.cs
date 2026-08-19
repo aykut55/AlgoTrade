@@ -3942,9 +3942,11 @@ void handleDearPyGuiPlotterTest()
         return;
     }
 
-    // Test amaçlı örnek bundle: src/DearPyGuiDataPlotter/inputs/full_pipeline_bundle.npz
-    string testBundlePath = Path.Combine(plotter.ProjectDir, "inputs", "full_pipeline_bundle.npz");
-    string testViewPath   = Path.Combine(plotter.ProjectDir, "inputs", "full_pipeline_bundle.view.json");
+    // Test amaçlı örnek bundle: src/DearPyGuiDataPlotter/inputs/latest_bundle.npz
+    // (eski "full_pipeline_bundle.npz" adı artık üretilmiyor — .gitignore'da bile listeli;
+    //  gerçekte var olan/commit edilen dosya latest_bundle.npz — bkz. inputs/input.json)
+    string testBundlePath = Path.Combine(plotter.ProjectDir, "inputs", "latest_bundle.npz");
+    string testViewPath   = Path.Combine(plotter.ProjectDir, "inputs", "latest_bundle.view.json");
 
     if (File.Exists(testBundlePath))
     {
