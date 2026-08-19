@@ -252,7 +252,10 @@ public class MultipleTrader
 
         if (result == TradeSignals.Buy || result == TradeSignals.Sell)
         {
-            LogManager.LogDebug($"MultipleTrader consensus [{ConsensusMode}]: Buy={buyCount} Sell={sellCount} Flat={flatCount} -> {result}");
+            // Sadece File'a yazılıyor (Console DEĞİL) — bar başına senkron Console.WriteLine,
+            // büyük veri setlerinde (yüz binlerce bar × çoğunlukla Buy/Sell konsensüs) koşum
+            // süresini dakikalarca uzatan bir darboğazdı. Bilgi app.log'da kalmaya devam ediyor.
+            LogManager.Log(LogLevel.Debug, LogSinks.File, $"MultipleTrader consensus [{ConsensusMode}]: Buy={buyCount} Sell={sellCount} Flat={flatCount} -> {result}");
         }
 
         return result;

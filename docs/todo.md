@@ -545,6 +545,21 @@ var olan `WriteMultipleTraderListsToFiles` vs `ConfirmingSingleTrader`'ın kendi
 arasındaki mevcut tutarsızlığın devamı, yeni bir sorun değil — ama debug ederken nereye bakılacağını
 bilmek gerekiyor).
 
+**MultipleTrader'da bulunup düzeltilen performans hatası (2026-08-19, kullanıcı onayıyla)**:
+`ConfirmingMultipleTrader`'ı tam veri setinde (900K bar) test ederken koşumun bitmediği (aslında
+çok yavaş ilerlediği) fark edildi. Sebep `MultipleTrader.BuildConsensusSignal()`'daki
+(`MultipleTrader.cs:255`) `LogManager.LogDebug(...)` çağrısıydı — Buy/Sell konsensüs üretilen HER
+barda (bizim test verimizde barların ~%94'ü) senkron `Console.WriteLine` tetikliyordu; 900K bar ×
+%94 ≈ 850K senkron konsol yazımı, koşumu dakikalarca uzatıyordu (SingleTrader'ın aynı veri setinde
+saniyeler içinde bitmesiyle tam tersi orantısız bir yavaşlık — çocuk sayısından değil, bu tek log
+satırından kaynaklanıyordu). **Düzeltme**: `LogManager.LogDebug(...)` → `LogManager.Log(LogLevel.Debug,
+LogSinks.File, ...)` — artık sadece `app.log`'a yazılıyor, Console'a gitmiyor (bilgi kaybı yok,
+sadece hedef daraltıldı). 200.000 barlık gerçek veri testinde doğrulandı: önce konsolu tıkayan
+akış tamamen kesildi, koşum **20 saniyede** bitti (önceden dakikalarca sürüyordu), `app.log`'da
+190.387 consensus satırı hâlâ mevcut (bilgi korunuyor). Kullanıcı "MultipleTrader'a dokunma"
+kuralına bu spesifik performans düzeltmesi için açıkça istisna verdi (kod commit'li, gerekirse
+revert edilecek).
+
 ### Fast-Follow: Tarama (Scanner) Versiyonları (2026-08-18)
 
 `ConfirmingSingleTrader`/`ConfirmingMultipleTrader` (tıpkı `SingleTrader`/`MultipleTrader` gibi)
