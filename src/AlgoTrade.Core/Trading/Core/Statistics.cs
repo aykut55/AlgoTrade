@@ -1412,13 +1412,52 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("KaymayiDahilEt", KaymayiDahilEt);
 
             StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
+
             Add("MicroLotSizeEnabled", MicroLotSizeEnabled);
             Add("PyramidingEnabled", PyramidingEnabled);
             Add("MaxPositionSizeEnabled", MaxPositionSizeEnabled);
             Add("MaxPositionSize", MaxPositionSize, "F4");
             Add("MaxPositionSizeMicro", MaxPositionSizeMicro, "F4");
+
+            StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
+
+/*
+ *          KAFA KARISTIRDIGI ICIN KAPATILDI
+ * 
+            // --- Balance (Initial) (point) ---
+            Add("IlkBakiyePuan", IlkBakiyePuan, "F2");
+
+            // --- Balance (Current) (point) ---
+            Add("BakiyePuan", BakiyePuan, "F2");
+            Add("GetiriPuan", GetiriPuan, "F2");
+            Add("GetiriPuanYuzde", GetiriPuanYuzde, "F2");
+            StatisticsMapMinimal["KomisyonPuan"] = "..."; // KomisyonPuan property yok
+            Add("BakiyePuanNet", BakiyePuanNet, "F2");
+            Add("GetiriPuanNet", GetiriPuanNet, "F2");
+            Add("GetiriPuanYuzdeNet", GetiriPuanYuzdeNet, "F2");
+
+            StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
+
+            // --- Balance (Min/Max) (point) ---
+            Add("MinBakiyePuan", MinBakiyePuan, "F2");
+            Add("MaxBakiyePuan", MaxBakiyePuan, "F2");
+            Add("MinBakiyePuanIndex", MinBakiyePuanIndex);
+            Add("MaxBakiyePuanIndex", MaxBakiyePuanIndex);
+            StatisticsMapMinimal["MinBakiyePuanNet"] = "...";      // MinBakiyePuanNet property yok
+            StatisticsMapMinimal["MaxBakiyePuanNet"] = "...";      // MaxBakiyePuanNet property yok
+            StatisticsMapMinimal["MinBakiyePuanNetIndex"] = "..."; // MinBakiyePuanNetIndex property yok
+            StatisticsMapMinimal["MaxBakiyePuanNetIndex"] = "..."; // MaxBakiyePuanNetIndex property yok
+            StatisticsMapMinimal["MinBakiyePuanNetYuzde"] = "..."; // MinBakiyePuanNetYuzde property yok
+            StatisticsMapMinimal["MaxBakiyePuanNetYuzde"] = "..."; // MaxBakiyePuanNetYuzde property yok
+            Add("MaxKarPuan", MaxKarPuan, "F4");
+            Add("MaxZararPuan", MaxZararPuan, "F4");
+            StatisticsMapMinimal["MaxKarPuanNet"] = "...";   // MaxKarPuanNet property yok
+            StatisticsMapMinimal["MaxZararPuanNet"] = "..."; // MaxZararPuanNet property yok
+
+            StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
+*/
         }
-        
+
         public void SaveToTxtMinimal(string filePath)
         {
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtMinimal(filePath);
