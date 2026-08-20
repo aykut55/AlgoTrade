@@ -634,6 +634,57 @@ Sonuçlar:
   (337K Buy/285K Sell) vs `Signals` (441 Buy/187 Sell) — consensus + confirmation çift filtresi
   (daha az konfirme giriş, ConfirmingSingleTrader'a göre beklenen bir fark) doğru çalıştı.
 
+## Crypto/FX Lot Büyüklüğü Çarpanı (`VarlikAdedCarpani`) — Uygulandı, Broker Teyidi Bekleniyor (2026-08-20)
+
+**Potansiyel yanlış**: `InitialTradeParams.cs`'deki piyasa-tipi kurulum metotlarının (`SetKontratParamsX`)
+hepsinde `varlikAdedCarpani` gerçek bir broker sabiti olarak hardcoded — **sadece Crypto/FxCrypto'da
+`1.0`'da (no-op) kalmış**, muhtemelen crypto desteği eklenirken hiç ayarlanmadan unutulmuş:
+
+```csharp
+SetKontratParamsViopEndex  (kontratSayisi=1.0, varlikAdedCarpani=10.0)
+SetKontratParamsViopHisse  (kontratSayisi=1.0, varlikAdedCarpani=100.0)
+SetKontratParamsViopParite (kontratSayisi=1.0, varlikAdedCarpani=1000.0)
+SetKontratParamsFxEndex/FxHisse/FxParite/FxMetal (lotSayisi=1.0, varlikAdedCarpani=100000.0)  // standart forex: 1 lot = 100.000 birim
+SetKontratParamsFxCrypto (lotSayisi=1.0, varlikAdedCarpani=1.0)   ← şüpheli
+SetKontratParamsCrypto   (lotSayisi=1.0, varlikAdedCarpani=1.0)   ← şüpheli
+```
+
+(`AppConfigApplier.cs:1375`, `MarketType: "FxCrypto"` için sadece `lotSayisi: cfg.LotSayisi` geçiliyor,
+`varlikAdedCarpani` hiç geçilmiyor → her zaman varsayılan `1.0` kullanılıyor.)
+
+**Nasıl fark edildi**: Kullanıcı gerçek broker/platform deneyiminde "0.01 lot ile pozisyon açıp fiyat
+$10 artarsa, canlı hesapta ~$10 kâr yazıyor" diyor (yaklaşık 1:1 oran). `outputs/logs/SingleTraderLists.txt`
+üzerinden gerçek veri kontrol edildi (BarNo 904436): `KarZararPuan=309.63` iken `KarZararFiyat=3.10`
+çıkıyor — oran tam `LotSayisi=0.01` ile eşleşiyor (`VarlikAdedCarpani=1.0` olduğu için). Kullanıcının
+tarif ettiği 1:1 oranı bu kodda yakalamak için `LotSayisi=0.01` (gerçekte girdiği gibi) sabit kalıp
+`VarlikAdedCarpani=100` olması gerekirdi — ama bu sadece kullanıcının hafızasına dayanıyor ("yanlış
+hatırlamıyorsam" dedi), kesin değil.
+
+**Kullanıcı broker'ından/platformundan kesin sabiti teyit edecek.**
+
+**Test edildi ve uygulandı (2026-08-20)**: `SetKontratParamsFxCrypto`'nun varsayılan `varlikAdedCarpani`
+değeri `1.0` → **`100.0`** yapıldı (`InitialTradeParams.cs:588`). Geçici olarak `AppConfig.json`'da
+`ReadData.FilterMode=LastN, N1=5000` + `AppSettings.AutoRunMode=SingleTrader` set edilip gerçek
+BTCUSDT_BNC verisiyle koşturuldu (test sonrası config orijinaline geri alındı, `InitialTradeParams.cs`
+değişikliği kalıcı bırakıldı). `SingleTraderLists.txt`'te birden fazla bar'da doğrulandı —
+`KarZararFiyat` artık `KarZararPuan`'a **birebir eşit** çıkıyor (örn. Bar 132: ikisi de `-165.64`;
+Bar 419: ikisi de `2632.72`), yani kullanıcının "$X hareket → $X kâr/bakiye değişimi" kriteri karşılandı.
+
+Kullanıcı notu: *"100 olarak bırak, test ettim beklentimi karşıladı; broker'dan farklı bir teyit
+gelirse o zaman 100'ü güncellerim."* — yani bu değer **kesinleşmiş broker doğrulaması değil**,
+kullanıcının hafızasına dayalı en iyi tahmini; broker/platform üzerinden kesin sabit teyit edildiğinde
+farklıysa güncellenecek.
+
+**Öğrenildiğinde (veya farklı çıkarsa) neresi güncellenecek**:
+- `src/AlgoTrade.Core/Trading/Core/InitialTradeParams.cs`, `SetKontratParamsFxCrypto` (satır 588,
+  şu an `varlikAdedCarpani=100.0`) — asıl kullanılan metot (`AppConfig.json`'da `MarketType: "FxCrypto"`).
+- `SetKontratParamsCrypto` (satır 604, plain `"Crypto"` market type) **hâlâ `1.0`'da bırakıldı** —
+  kullanıcı şu an `FxCrypto` kullanıyor, bu metot hiç test edilmedi/dokunulmadı. Aynı sabit
+  uygulanmak istenirse ayrıca güncellenmeli.
+- `AppConfig.json`'a veya `TradeParamsConfig`'e yeni bir alan eklemeye **gerek yok**, kullanıcı
+  zaten sadece `LotSayisi` giriyor (Viop/Fx'teki diğer piyasa tiplerinde olduğu gibi,
+  `VarlikAdedCarpani` kavramını hiç bilmeden).
+
 ## Done
 
 - [x] [docs/roadmap.md](roadmap.md) güncellendi — Python entegrasyonu için 3 yaklaşımdan ikisinin (dosya+subprocess: `DearPyGuiDataPlotter`, pythonnet: `PythonPlotter.cs`) fiilen benimsendiği, REST/gRPC'nin kullanılmadığı belgeye yansıtıldı.

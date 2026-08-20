@@ -585,7 +585,7 @@ namespace AlgoTrade.Core.Trading.Core
         /// FxCrypto (12) için kontrat parametrelerini ayarla
         /// Micro lot desteği aktif (0.01, 0.1 gibi kesirli lotlar)
         /// </summary>
-        public InitialTradeParams SetKontratParamsFxCrypto(double lotSayisi = 1.0, double varlikAdedCarpani = 1.0)
+        public InitialTradeParams SetKontratParamsFxCrypto(double lotSayisi = 1.0, double varlikAdedCarpani = 100.0)
         {
             MarketType = MarketTypes.FxCrypto;
             LotSayisi = lotSayisi;
