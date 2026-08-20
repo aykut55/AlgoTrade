@@ -1,4 +1,4 @@
 {
-  "bundle": "D:\\Aykut\\Projects\\AlgoTrade\\src\\DearPyGuiDataPlotter\\inputs\\latest_bundle.npz",
-  "view": "D:\\Aykut\\Projects\\AlgoTrade\\src\\DearPyGuiDataPlotter\\inputs\\latest_bundle.view.json"
+  "bundle": "src/DearPyGuiDataPlotter/inputs/latest_bundle.npz",
+  "view": "src/DearPyGuiDataPlotter/inputs/latest_bundle.view.json"
 }

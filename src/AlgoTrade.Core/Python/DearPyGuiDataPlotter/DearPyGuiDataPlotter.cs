@@ -7,8 +7,8 @@ namespace AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 /// <summary>
 /// DearPyGuiDataPlotter (src/DearPyGuiDataPlotter) projesini ayrı bir Python process'i
 /// olarak başlatıp görselleştirme yapmayı yönetir.
-/// PythonPlotter'ın aksine pythonnet ile in-process çalışmaz; kendi .venv'i ile
-/// bağımsız bir process olarak çalıştırılır. Veri aktarımı ileride
+/// PythonPlotter'ın aksine pythonnet ile in-process çalışmaz; proje kökündeki
+/// ortak .venv ile bağımsız bir process olarak çalıştırılır. Veri aktarımı ileride
 /// npz bundle + view.json dosyaları ve dosya tabanlı runtime command'lar üzerinden yapılacak.
 /// </summary>
 public class DearPyGuiDataPlotter : IDisposable
@@ -18,8 +18,8 @@ public class DearPyGuiDataPlotter : IDisposable
     /// <summary>DearPyGuiDataPlotter proje klasörü (main.py'nin bulunduğu dizin).</summary>
     public string ProjectDir { get; set; } = AppSettings.DearPyGuiDataPlotterDir;
 
-    /// <summary>Proje içi venv'deki python.exe yolu.</summary>
-    public string PythonExePath => Path.Combine(ProjectDir, ".venv", "Scripts", "python.exe");
+    /// <summary>Proje kökündeki ortak venv'deki python.exe yolu.</summary>
+    public string PythonExePath => Path.Combine(AppSettings.VenvDir, "Scripts", "python.exe");
 
     /// <summary>Çalıştırılacak giriş script'i.</summary>
     public string MainScriptPath => Path.Combine(ProjectDir, "main.py");
@@ -113,8 +113,8 @@ public class DearPyGuiDataPlotter : IDisposable
     /// mevcut panelleri yeniden kurması için "load_bundle" komutu gönderir.
     /// Python tarafı bunu inputs/runtime_commands/ altından her frame poll eder.
     /// </summary>
-    /// <param name="bundlePath">.npz bundle dosyasının tam yolu.</param>
-    /// <param name="viewPath">.view.json dosyasının tam yolu (opsiyonel).</param>
+    /// <param name="bundlePath">.npz bundle dosyasının yolu (mutlak veya relative olabilir).</param>
+    /// <param name="viewPath">.view.json dosyasının yolu (mutlak veya relative, opsiyonel).</param>
     public void LoadBundle(string bundlePath, string? viewPath = null)
     {
         if (string.IsNullOrEmpty(bundlePath))
@@ -123,12 +123,33 @@ public class DearPyGuiDataPlotter : IDisposable
         var payload = new Dictionary<string, object?>
         {
             ["command"] = "load_bundle",
-            ["bundlePath"] = bundlePath,
+            ["bundlePath"] = ToInputsRelativePath(bundlePath),
         };
         if (!string.IsNullOrEmpty(viewPath))
-            payload["viewPath"] = viewPath;
+            payload["viewPath"] = ToInputsRelativePath(viewPath);
 
         WriteCommand("load_bundle", payload);
+    }
+
+    /// <summary>
+    /// Yol proje (repo) kökü altındaysa ona göre relative hale getirir
+    /// (örn. "src/DearPyGuiDataPlotter/inputs/latest_bundle.npz"; Python tarafı bunu
+    /// aynı köke göre çözüyor, bkz. docs/InputConfig.md); değilse mutlak yolu olduğu
+    /// gibi bırakır. Bu sayede runtimeCommandManager.py'nin üzerine yazdığı
+    /// inputs/input.json makineler arasında (farklı proje kök yolları) taşınabilir kalır.
+    /// </summary>
+    private string ToInputsRelativePath(string path)
+    {
+        try
+        {
+            string rel = Path.GetRelativePath(AppSettings.RootDir, Path.GetFullPath(path))
+                .Replace('\\', '/');
+            return rel.StartsWith("..") ? path : rel;
+        }
+        catch
+        {
+            return path;
+        }
     }
 
     /// <summary>

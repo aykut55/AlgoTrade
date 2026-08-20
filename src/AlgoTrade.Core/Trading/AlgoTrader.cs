@@ -2963,21 +2963,16 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             }
             else
             {
-                string[] preferredDlls =
-                {
-                    // Python 3.12 (tercih edilen)
-                    @"C:\Program Files\Python312\python312.dll",
-                    @"C:\Python312\python312.dll",
-                    $@"C:\Users\{Environment.UserName}\AppData\Local\Programs\Python\Python312\python312.dll"
-                };
-
-                var found = preferredDlls.FirstOrDefault(File.Exists);
-                PythonDll = found ?? string.Empty;
+                // Proje kökündeki ortak .venv'in pyvenv.cfg'sinden DLL'i çözer;
+                // venv hangi Python sürümüyle kurulduysa (setupPythonEnvs.bat) otomatik ona uyar.
+                PythonDll = AppSettings.ResolvePythonDll() ?? string.Empty;
+                if (!string.IsNullOrEmpty(PythonDll))
+                    Log($"Python DLL (venv'den çözümlendi): {PythonDll}");
             }
 
             if (string.IsNullOrWhiteSpace(PythonDll))
             {
-                Log("Python DLL bulunamadı. PYTHONNET_PYDLL ayarlayın veya Python 3.12 kurun.");
+                Log("Python DLL bulunamadı. PYTHONNET_PYDLL ayarlayın veya proje kökünde setupPythonEnvs.bat çalıştırıp .venv kurun.");
                 return false;
             }
 

@@ -139,10 +139,10 @@ public class PythonPlotter : IDisposable
                     dynamic sys = Py.Import("sys");
                     sys.path.insert(0, new PyString(PythonScriptsDir));
 
-                    // Venv site-packages — Python 3.12 uyumlu proje içi venv
+                    // Venv site-packages — proje kökündeki tek ortak .venv
                     string[] venvPaths =
                     {
-                        Path.Combine(PythonScriptsDir, ".venv", "Lib", "site-packages")
+                        Path.Combine(AppSettings.VenvDir, "Lib", "site-packages")
                     };
 
                     dynamic os = Py.Import("os");
@@ -531,9 +531,9 @@ public class PythonPlotter : IDisposable
                 {
                     throw new Exception(
                         "imgui_bundle yüklü değil!\n\n" +
-                        "Lütfen şu komutları çalıştırın:\n" +
-                        "  py -3.12 -m venv inputs\\python\\.venv\n" +
-                        "  inputs\\python\\.venv\\Scripts\\pip install \"imgui-bundle[full]\""
+                        "Proje kökünde ortak .venv artık burada: " + AppSettings.VenvDir + "\n" +
+                        "Lütfen proje kökünde şunu çalıştırın:\n" +
+                        "  setupPythonEnvs.bat"
                     );
                 }
 
@@ -648,8 +648,22 @@ public class PythonPlotter : IDisposable
     /// </summary>
     private string? FindPythonDll()
     {
+        // Öncelik: proje kökündeki ortak .venv'in pyvenv.cfg'sinden türetilen DLL.
+        // Venv hangi Python sürümüyle kurulduysa (bkz. setupPythonEnvs.bat) otomatik onu bulur;
+        // ABI uyumu için pythonnet'in venv'in paket wheel'leriyle aynı sürümü embed etmesi şart.
+        var fromVenv = AppSettings.ResolvePythonDll();
+        if (fromVenv != null)
+        {
+            _logger?.WriteLog($"Python DLL (venv'den çözümlendi): {fromVenv}");
+            return fromVenv;
+        }
+
+        // Yedek: venv/pyvenv.cfg okunamazsa bilinen sistem-geneli kurulum yolları.
         string[] possiblePaths = new[]
         {
+            // Python 3.14
+            @"C:\Program Files\Python314\python314.dll",
+            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python314\python314.dll",
             // Python 3.13
             @"C:\Program Files\Python313\python313.dll",
             @"C:\Python313\python313.dll",
@@ -674,8 +688,8 @@ public class PythonPlotter : IDisposable
         }
 
         throw new FileNotFoundException(
-            "Python DLL bulunamadı! Lütfen Python 3.11+ kurun.\n" +
-            "İndirme: https://www.python.org/downloads/"
+            "Python DLL bulunamadı! Proje kökünde setupPythonEnvs.bat'ı çalıştırıp .venv'i kurun,\n" +
+            "veya PYTHONNET_PYDLL ortam değişkenini elle ayarlayın."
         );
     }
 

@@ -12,6 +12,11 @@ import numpy as np
 SCRIPT_DIR = getattr(gm.scriptPanel, "_scripts_dir", os.path.join(os.getcwd(), "DearPyGuiDataPlotter", "scripts"))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 INPUTS_DIR = os.path.join(PROJECT_DIR, "inputs")
+# Repo koku (AlgoTrade.sln'in bulundugu dizin) - src/DearPyGuiDataPlotter'dan 2 seviye yukarisi.
+# input.json'daki relative bundle/view yollari buna gore cozulur (bkz. docs/InputConfig.md),
+# boylece C# tarafinin yazdigi "src/DearPyGuiDataPlotter/inputs/latest_bundle.npz" gibi yollar
+# hangi makinede/hangi surucude checkout edilmis olursa olsun dogru cozulur.
+ROOT_DIR = os.path.dirname(os.path.dirname(PROJECT_DIR))
 DEFAULT_BUNDLE_PATH = os.path.join(INPUTS_DIR, "latest_bundle.npz")
 INPUT_CONFIG_CANDIDATES = (
     os.path.join(INPUTS_DIR, "input.json"),
@@ -150,14 +155,14 @@ class App:
                    inputConfig.get("bundle_path") or inputConfig.get("bundlePath") or
                    inputConfig.get("source") or inputConfig.get("file") or
                    DEFAULT_BUNDLE_PATH)
-        path = self._resolvePath(rawPath, INPUTS_DIR)
+        path = self._resolvePath(rawPath, ROOT_DIR)
         print(f"Input bundle: {path}")
         return path
 
     def resolveViewPath(self, inputConfig, bundlePath):
         rawPath = inputConfig.get("view") or inputConfig.get("view_path") or inputConfig.get("viewPath")
         if rawPath:
-            path = self._resolvePath(rawPath, INPUTS_DIR)
+            path = self._resolvePath(rawPath, ROOT_DIR)
         else:
             base, _ = os.path.splitext(bundlePath or DEFAULT_BUNDLE_PATH)
             path = base + ".view.json"
@@ -166,9 +171,21 @@ class App:
 
     def _resolvePath(self, path, baseDir):
         path = os.path.expandvars(os.path.expanduser(str(path)))
-        if not os.path.isabs(path):
-            path = os.path.join(baseDir, path)
-        return os.path.abspath(path)
+        if os.path.isabs(path):
+            return os.path.abspath(path)
+
+        resolved = os.path.abspath(os.path.join(baseDir, path))
+        if os.path.isfile(resolved):
+            return resolved
+
+        # Geriye donuk uyumluluk: bare dosya adi ("latest_bundle.npz") gibi eski
+        # inputs/-relative kullanim icin, baseDir'de bulunamazsa INPUTS_DIR'e gore de dene.
+        if baseDir != INPUTS_DIR:
+            fallback = os.path.abspath(os.path.join(INPUTS_DIR, path))
+            if os.path.isfile(fallback):
+                return fallback
+
+        return resolved
 
     def loadViewDescription(self, viewPath):
         view = self._readJsonConfig(viewPath) if viewPath and os.path.isfile(viewPath) else None

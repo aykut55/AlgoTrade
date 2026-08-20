@@ -1063,24 +1063,24 @@ class Panel:
                     label = "OHLC"
 
                     # High-Low wick (thin line)
-                    implot.set_next_line_style(color, 1.0)
-                    implot.plot_line(label, np.array([x, x]), np.array([l, h]))
+                    implot.plot_line(label, np.array([x, x]), np.array([l, h]),
+                                      spec=implot.Spec(line_color=color, line_weight=1.0))
 
                     # Open-Close body (filled rectangle)
                     if c >= o:
                         # Bullish - hollow (just outline)
-                        implot.set_next_line_style(color, 2.0)
                         xs = np.array([x_left, x_right, x_right, x_left, x_left])
                         ys = np.array([o, o, c, c, o])
-                        implot.plot_line(label, xs, ys)
+                        implot.plot_line(label, xs, ys,
+                                          spec=implot.Spec(line_color=color, line_weight=2.0))
                     else:
                         # Bearish - filled rectangle
-                        implot.set_next_fill_style(color, 0.8)
                         xs_top = np.array([x_left, x_right])
                         xs_bottom = np.array([x_left, x_right])
                         ys_top = np.array([c, c])
                         ys_bottom = np.array([o, o])
-                        implot.plot_shaded(label, xs_top, ys_top, ys_bottom)
+                        implot.plot_shaded(label, xs_top, ys_top, ys_bottom,
+                                            spec=implot.Spec(fill_color=color, fill_alpha=0.8))
 
                 # Draw horizontal lines for Buy/Sell signals (TODO 4)
                 if show_signals and signals_array is not None:
@@ -1132,11 +1132,11 @@ class Panel:
                                     # Draw horizontal line for this segment
                                     x_start = float(segment_start)
                                     x_end = float(segment_end + 1)
-                                    implot.set_next_line_style(line_color, 2.0)
                                     implot.plot_line(
                                         f"##Signal_{current_signal}_{segment_start}",  # ## prefix hides from legend
                                         np.array([x_start, x_end]),
-                                        np.array([y_pos, y_pos])
+                                        np.array([y_pos, y_pos]),
+                                        spec=implot.Spec(line_color=line_color, line_weight=2.0)
                                     )
                     except Exception as e:
                         try:
@@ -1160,9 +1160,8 @@ class Panel:
                         plotted_bars = max(plotted_bars, int(len(lod_x)))
                     except Exception:
                         pass
-                    if item.color:
-                        implot.set_next_line_style(imgui.ImVec4(*item.color))
-                    implot.plot_line(item.label, lod_x, lod_y)
+                    line_spec = implot.Spec(line_color=imgui.ImVec4(*item.color)) if item.color else None
+                    implot.plot_line(item.label, lod_x, lod_y, spec=line_spec)
 
             elif item.data_type == DataType.Volume or item.data_type == DataType.Histogram:
                 # Bar plot with LOD
@@ -1194,10 +1193,7 @@ class Panel:
                     lod_x = np.asarray(lod_x, dtype=np.float64)
                     lod_y = np.asarray(lod_y, dtype=np.float64)
                     # Ensure visible fill color
-                    if item.color:
-                        implot.set_next_fill_style(imgui.ImVec4(*item.color))
-                    else:
-                        implot.set_next_fill_style(imgui.ImVec4(0.2, 0.6, 1.0, 0.6))
+                    default_fill_color = imgui.ImVec4(*item.color) if item.color else imgui.ImVec4(0.2, 0.6, 1.0, 0.6)
 
                     # For histogram, use different colors for positive/negative
                     if item.data_type == DataType.Histogram:
@@ -1205,14 +1201,15 @@ class Panel:
                         neg_mask = lod_y < 0
 
                         if np.any(pos_mask):
-                            implot.set_next_fill_style(imgui.ImVec4(0.0, 1.0, 0.0, 0.5))
-                            implot.plot_bars(f"{item.label}_pos", lod_x[pos_mask], lod_y[pos_mask], 0.8)
+                            implot.plot_bars(f"{item.label}_pos", lod_x[pos_mask], lod_y[pos_mask], 0.8,
+                                              spec=implot.Spec(fill_color=imgui.ImVec4(0.0, 1.0, 0.0, 0.5)))
 
                         if np.any(neg_mask):
-                            implot.set_next_fill_style(imgui.ImVec4(1.0, 0.0, 0.0, 0.5))
-                            implot.plot_bars(f"{item.label}_neg", lod_x[neg_mask], lod_y[neg_mask], 0.8)
+                            implot.plot_bars(f"{item.label}_neg", lod_x[neg_mask], lod_y[neg_mask], 0.8,
+                                              spec=implot.Spec(fill_color=imgui.ImVec4(1.0, 0.0, 0.0, 0.5)))
                     else:
-                        implot.plot_bars(item.label, lod_x, lod_y, 0.9)
+                        implot.plot_bars(item.label, lod_x, lod_y, 0.9,
+                                          spec=implot.Spec(fill_color=default_fill_color))
 
             elif item.data_type == DataType.Bands:
                 # Bands (upper, lower)
@@ -1227,31 +1224,27 @@ class Panel:
 
                 if len(lod_x_upper) > 0 and len(lod_x_lower) > 0:
                     color = item.color if item.color else (0.5, 0.5, 1.0, 1.0)
+                    band_spec = implot.Spec(line_color=imgui.ImVec4(*color))
 
                     # Plot upper band
-                    implot.set_next_line_style(imgui.ImVec4(*color))
-                    implot.plot_line(f"{item.label}_upper", lod_x_upper, lod_y_upper)
+                    implot.plot_line(f"{item.label}_upper", lod_x_upper, lod_y_upper, spec=band_spec)
 
                     # Plot lower band
-                    implot.set_next_line_style(imgui.ImVec4(*color))
-                    implot.plot_line(f"{item.label}_lower", lod_x_lower, lod_y_lower)
+                    implot.plot_line(f"{item.label}_lower", lod_x_lower, lod_y_lower, spec=band_spec)
 
                     # Shaded area between bands
-                    implot.set_next_fill_style(imgui.ImVec4(color[0], color[1], color[2], 0.2))
                     # Note: ImPlot's plot_shaded requires same X arrays, so we need to interpolate
                     # For simplicity, plot without shading for now
                     # TODO: Implement proper band shading
 
             elif item.data_type == DataType.Levels:
                 # Horizontal reference lines
+                level_spec = implot.Spec(line_color=imgui.ImVec4(*item.color)) if item.color else None
                 for level in item.data:
-                    if item.color:
-                        implot.set_next_line_style(imgui.ImVec4(*item.color))
-
                     # Plot horizontal line across visible range
                     x_range = np.array([visible_range[0], visible_range[1]])
                     y_range = np.array([level, level])
-                    implot.plot_line(f"{item.label}_{level}", x_range, y_range)
+                    implot.plot_line(f"{item.label}_{level}", x_range, y_range, spec=level_spec)
 
             elif item.data_type == DataType.TradeSignals:
                 # Scatter plot for trade signals
@@ -1271,12 +1264,14 @@ class Panel:
                     sell_mask = visible_types == -1
 
                     if np.any(buy_mask):
-                        implot.set_next_marker_style(implot.Marker_.up, 8, imgui.ImVec4(0.0, 1.0, 0.0, 1.0))
-                        implot.plot_scatter(f"{item.label}_buy", visible_x[buy_mask], visible_y[buy_mask])
+                        implot.plot_scatter(f"{item.label}_buy", visible_x[buy_mask], visible_y[buy_mask],
+                                             spec=implot.Spec(marker=implot.Marker_.up, marker_size=8,
+                                                               marker_fill_color=imgui.ImVec4(0.0, 1.0, 0.0, 1.0)))
 
                     if np.any(sell_mask):
-                        implot.set_next_marker_style(implot.Marker_.down, 8, imgui.ImVec4(1.0, 0.0, 0.0, 1.0))
-                        implot.plot_scatter(f"{item.label}_sell", visible_x[sell_mask], visible_y[sell_mask])
+                        implot.plot_scatter(f"{item.label}_sell", visible_x[sell_mask], visible_y[sell_mask],
+                                             spec=implot.Spec(marker=implot.Marker_.down, marker_size=8,
+                                                               marker_fill_color=imgui.ImVec4(1.0, 0.0, 0.0, 1.0)))
 
             elif item.data_type == DataType.Stairs:
                 # Stairs/step plot for trade signal states (e.g., -1, 0, 1)
@@ -1311,13 +1306,13 @@ class Panel:
 
                     # Use ImPlot's stairs mode if available, otherwise use line with step-like rendering
                     if item.color:
-                        implot.set_next_line_style(imgui.ImVec4(*item.color), 2.0)
+                        stairs_spec = implot.Spec(line_color=imgui.ImVec4(*item.color), line_weight=2.0)
                     else:
-                        implot.set_next_line_style(imgui.ImVec4(1.0, 0.5, 0.0, 1.0), 2.0)  # Orange default
+                        stairs_spec = implot.Spec(line_color=imgui.ImVec4(1.0, 0.5, 0.0, 1.0), line_weight=2.0)  # Orange default
 
                     # Check if ImPlot has plot_stairs function
                     if hasattr(implot, 'plot_stairs'):
-                        implot.plot_stairs(item.label, lod_x, lod_y)
+                        implot.plot_stairs(item.label, lod_x, lod_y, spec=stairs_spec)
                     else:
                         # Fallback: manually create step/stairs effect by duplicating points
                         # For stairs: horizontal then vertical transitions
@@ -2712,8 +2707,8 @@ class DataPlotterImgBundle:
                                 )
 
                             # Plot mini chart line
-                            implot.set_next_line_style(imgui.ImVec4(0.5, 0.7, 1.0, 1.0))
-                            implot.plot_line("Data", lod_x, lod_y)
+                            implot.plot_line("Data", lod_x, lod_y,
+                                              spec=implot.Spec(line_color=imgui.ImVec4(0.5, 0.7, 1.0, 1.0)))
 
                             # Get plot position and size for overlay drawing
                             plot_pos = implot.get_plot_pos()
