@@ -644,47 +644,20 @@ public class PythonPlotter : IDisposable
 
     /// <summary>
     /// Python DLL yolunu otomatik tespit eder.
-    /// Önce PYTHONNET_PYDLL ortam değişkenine, sonra PATH'deki 'python' komutuna bakar.
+    /// Tek kaynak: proje kökündeki ortak .venv'in pyvenv.cfg'sinden türetilen DLL — venv hangi
+    /// Python sürümüyle kurulduysa (bkz. setupPythonEnvs.bat) otomatik onu bulur. Sistem geneli
+    /// kurulum yollarına bilerek bakılmıyor: pythonnet'in embed ettiği sürüm venv'in paket
+    /// wheel'leriyle (ABI) eşleşmek zorunda — sys.path her zaman venv/Lib/site-packages'a sabit
+    /// eklendiğinden, yanlış (ör. başka bir işten kalma sistem geneli) bir DLL bulunması "DLL yok"
+    /// hatası yerine çok daha kafa karıştırıcı bir ABI uyuşmazlığı/crash'e yol açardı.
     /// </summary>
     private string? FindPythonDll()
     {
-        // Öncelik: proje kökündeki ortak .venv'in pyvenv.cfg'sinden türetilen DLL.
-        // Venv hangi Python sürümüyle kurulduysa (bkz. setupPythonEnvs.bat) otomatik onu bulur;
-        // ABI uyumu için pythonnet'in venv'in paket wheel'leriyle aynı sürümü embed etmesi şart.
         var fromVenv = AppSettings.ResolvePythonDll();
         if (fromVenv != null)
         {
             _logger?.WriteLog($"Python DLL (venv'den çözümlendi): {fromVenv}");
             return fromVenv;
-        }
-
-        // Yedek: venv/pyvenv.cfg okunamazsa bilinen sistem-geneli kurulum yolları.
-        string[] possiblePaths = new[]
-        {
-            // Python 3.14
-            @"C:\Program Files\Python314\python314.dll",
-            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python314\python314.dll",
-            // Python 3.13
-            @"C:\Program Files\Python313\python313.dll",
-            @"C:\Python313\python313.dll",
-            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python313\python313.dll",
-            // Python 3.12
-            @"C:\Program Files\Python312\python312.dll",
-            @"C:\Python312\python312.dll",
-            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python312\python312.dll",
-            // Python 3.11
-            @"C:\Program Files\Python311\python311.dll",
-            @"C:\Python311\python311.dll",
-            @"C:\Users\" + Environment.UserName + @"\AppData\Local\Programs\Python\Python311\python311.dll"
-        };
-
-        foreach (var path in possiblePaths)
-        {
-            if (File.Exists(path))
-            {
-                _logger?.WriteLog($"Python DLL found: {path}");
-                return path;
-            }
         }
 
         throw new FileNotFoundException(
