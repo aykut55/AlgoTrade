@@ -1,0 +1,15 @@
+/* Vurgulanan kod satırlarının (hl_lines="...") yazı rengini de değiştirir,
+   sadece arka plan değil. Açık/koyu tema için ayrı renk (kontrast icin). */
+.highlight .hll {
+    font-weight: 700;
+}
+
+.highlight .hll,
+.highlight .hll span {
+    color: #b71c1c;
+}
+
+[data-md-color-scheme="slate"] .highlight .hll,
+[data-md-color-scheme="slate"] .highlight .hll span {
+    color: #ff8a65;
+}

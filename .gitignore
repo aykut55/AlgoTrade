@@ -84,6 +84,9 @@ desktop.ini
 # Python cache
 **/__pycache__/
 
+# MkDocs build output (docs/ kaynak, bundan uretilir - bkz. mkdocs.yml)
+/site/
+
 # DearPyGuiDataPlotter / DearImGuiBundleDataPlotter alt-projeleri
 src/DearImGuiBundleDataPlotter/*.ini
 # input.json / latest_bundle.npz / latest_bundle.view.json BILEREK commitli -

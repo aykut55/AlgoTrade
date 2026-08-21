@@ -1,0 +1,76 @@
+site_name: AlgoTrade Docs
+site_description: AlgoTrade — proje içi dokümantasyon (class reference, konsol menü, scripting, migration, indikatörler)
+docs_dir: docs
+site_dir: site
+
+extra_css:
+  - stylesheets/extra.css
+
+theme:
+  name: material
+  language: tr
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Koyu temaya geç
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Açık temaya geç
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.expand
+    - toc.integrate
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Ana Sayfa: manual/README.md
+  - Manual:
+      - Class Reference:
+          - Genel Bakış (§1-§8): manual/01-class-reference.md
+          - StockDataReader (§9): manual/classes/09-stockdatareader.md
+      - Console Menü Rehberi: manual/02-console-menu-guide.md
+      - Scripting Rehberi: manual/03-scripting-guide.md
+      - Varyant Kataloğu: manual/04-variant-catalog.md
+      - Findings: manual/05-findings.md
+      - Sınıf Dokümantasyon Yöntemi: manual/06-class-doc-method.md
+  - Proje Durumu:
+      - Project Analysis: PROJECT_ANALYSIS.md
+      - Migration Guide: migration-guide.md
+      - Todo: todo.md
+      - Yapılacak: yapilacak.md
+      - SingleTrader Akış: SingleTraderAkis.md
+  - İndikatörler:
+      - README: Indicators-README.md
+      - TODO: Indicators-TODO.md
+  - Eski Proje Referansı:
+      - README: reference/old-project-confirming/README.md
+      - Confirmation Mode Planı: reference/old-project-confirming/ConfirmationMode_Implementation_Plan.md
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 2
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+
+not_in_nav: |
+  reference/old-project-confirming/ConfirmingSingleTrader.cs

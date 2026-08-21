@@ -15,7 +15,8 @@
 1. **[01-class-reference.md](01-class-reference.md)** — Class/API Referansı. `AlgoTrader`,
    `SingleTrader`, `MultipleTrader`, `ConfirmingSingleTrader`/`ConfirmingMultipleTrader`,
    `SingleTraderOptimizer`, `IndicatorManager`, `StrategyRegistry`/`QueryRegistry`, 12 Scanner
-   sınıfı — property grupları, public metodlar, tipik kullanım akışları.
+   sınıfı, `StockDataReader` (Menü `[1]` Read Data) — property grupları, public metodlar,
+   tipik kullanım akışları.
 2. **[02-console-menu-guide.md](02-console-menu-guide.md)** — Console Menü Rehberi. `[1]`-`[25]`
    menü haritası, `handleXxx()`/`runXxxAlgoTrade()` ortak deseni, **yeni bir menü öğesi adım adım
    nasıl eklenir**.
@@ -31,6 +32,10 @@
    aksiyon gerektirebilecek** bulguların öncelik sırasına dizilmiş özeti (örn. Timing Filter
    mekanizmasının hardcode nedeniyle fiilen erişilemez olması). Katalog geniştir, bu dosya onun
    "önce buna bak" özeti.
+6. **[06-class-doc-method.md](06-class-doc-method.md)** — Sınıf Dokümantasyon Yöntemi.
+   `StockDataReader` (§9, `classes/09-stockdatareader.md`) belgelenirken canlı iterasyonla
+   çıkan, onaylanmış bölüm sırası + format kuralları — §1-§8'den biri kendi sayfasına
+   taşınırken **bu dosya okunup harfiyen takip edilecek**.
 
 ## Bu Setin Kapsamadığı Şeyler (bilerek — başka dokümanlarda zaten var)
 
