@@ -323,6 +323,15 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       tarif edilen "fiyat-indikator kesisimleri", "indikator-indikator kesisimleri" (genel
       amacli), "kullanici stratejisinden A/S/F bayraklari sorgusu" gibi zengin sorgu tipleri
       henuz yazilmadi.
+      **Netlestirme (2026-08-21):** Bu bir ALTYAPI eksigi DEGIL — `BaseQuery.cs`'in kendi XML
+      doc'unda dedigi gibi "Similar to BaseStrategy but for querying market state" — `IQuery/
+      BaseQuery/QueryRegistry/QueryConfigLoader` `IStrategy/BaseStrategy/StrategyRegistry/
+      StrategyConfigLoader` ile BIREBIR ayni desende (reflection ile otomatik kesif, ayni
+      pipe-formatli config dosyasi). Yani madde 5'teki scripting/sandbox konusuyla (kullanicinin
+      C# koduna dokunmadan .csx'ten strateji/sorgu calistirabilmesi) ILGISI YOK — sadece
+      `BaseQuery`'den tureyen yeni somut C# siniflarinin (24 Strategy sinifina karsilik gelecek
+      sekilde) henuz yazilmamis olmasi meselesi, ayni "Strategy #25 yazilmadi" demek gibi
+      icerik/geliştirme borcu.
 
 - [ ] **Madde 7 (kismi) — MultiTrader icin Performans Hesaplamasi**
       SingleTrader tarafinda trade-bazli detayli performans raporu TAMAM (`Statistics.
@@ -346,10 +355,25 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       sembollerde fiyat 20 MA'yi yukari kirdi?" gibi bir sorgu tum sembol havuzunda calistirilip
       sonuclar listeleniyor. Detay: [docs/todo.md](todo.md) "Sorgu Tarama Matrisi" bolumu.
 
-- [ ] **Madde 10 — Farkli Stratejilerin Ayni Sembol Icin Karsilastirmasi**
-      Hic implement edilmemis. `SingleTraderOptimizer` AYNI stratejinin farkli parametreleriyle
-      tarama yapiyor (grid search) ama FARKLI stratejileri (orn. SimpleRSIStrategy vs
-      SimpleMACDStrategy) ayni sembolde calistirip karsilastiran bir rapor/tablo mekanizmasi yok.
+- [ ] **Madde 10 (kismi) — Farkli Stratejilerin Ayni Sembol Icin Karsilastirmasi**
+      `SingleTraderOptimizer` AYNI stratejinin farkli parametreleriyle tarama yapiyor (grid
+      search), FARKLI stratejileri (orn. SimpleRSIStrategy vs SimpleMACDStrategy) karsilastiran
+      dedike bir mekanizma olarak hic yazilmamisti.
+      **Netlestirme (2026-08-21):** `MultipleTrader` + yeni `WriteMultipleTraderStatistics()`
+      (bkz. `MultipleTrader.cs`) bu ihtiyacin OZET/SAYISAL kismini dolayli yoldan zaten
+      karsiliyor — `_strategyConfigs`'e farkli stratejiler tanimlanirsa her biri ayni sembol/veri
+      uzerinde bagimsiz bir childTrader olarak calisiyor (kendi gercek trade'leriyle, standalone
+      sonuc uretiyor — bkz. yukarida "Ayrica Not" benzeri tartisma) ve `MultipleTraderStatistics.
+      txt/.csv` satir=strateji (childTrader_N) / kolon=NetProfit/WinRate/ProfitFactor/MaxDD
+      seklinde karsilastirma tablosunu zaten uretiyor (mainTrader satiri konsensus, digerleri
+      tek tek strateji sonuclari).
+      **Gercekten eksik kalan iki nokta** (ayrintili TODO: [docs/todo.md](todo.md) "Strateji
+      Karsilastirma — Getiri Egrisi Gorsellestirme" bolumu):
+      1. Getiri egrisi (equity curve) GORSELLESTIRMESI yok — her stratejinin kendi bar-bar
+         liste dosyasinda egri verisi var ama tek grafikte ust uste bindirme/karsilastirma yok.
+      2. Bunu kullanmak icin hala tam `MultipleTrader` kurulumu (consensus mode dahil,
+         umursanmasa bile) gerekiyor — "N strateji sec, karsilastir" diye dedike/hafif bir
+         menu yok.
 
 ### Tam Tamamlanmis Madde
 

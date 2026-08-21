@@ -42,6 +42,65 @@
   `TradeDataBundleConverter`'a bir `ConvertMultipleTrader(...)` overload'ı (mainTrader + her
   child için ayrı panel/bundle) eklenmesi gerekecek.
 
+## Strateji Karşılaştırma — Getiri Eğrisi Görselleştirme (migration-guide.md Madde 10, 2026-08-21)
+
+`MultipleTrader` + yeni `WriteMultipleTraderStatistics()` (bkz. "Done" bölümü) sayesinde
+migration-guide.md Madde 10'un ("Farklı Stratejilerin Aynı Sembol İçin Karşılaştırması") sayısal
+özet kısmı dolaylı yoldan zaten karşılanıyor — `_strategyConfigs`'e farklı stratejiler (örn.
+SimpleRSIStrategy + SimpleMACDStrategy) tanımlanırsa her biri aynı sembol/veri üzerinde bağımsız
+childTrader olarak standalone sonuç üretiyor ve `MultipleTraderStatistics.txt/.csv` bunları
+satır=strateji / kolon=metrik (NetProfit/WinRate/ProfitFactor/MaxDD) şeklinde karşılaştırıyor.
+
+Gerçekten eksik kalan iki nokta:
+
+- [ ] **Getiri eğrisi (equity curve) görselleştirme**: Her stratejinin (childTrader'ın) bar-bar
+  bakiye/getiri verisi kendi liste dosyasında zaten var (`trader.lists` → `WriteMultipleTraderListsToFiles`),
+  ama bunları TEK bir grafikte üst üste bindirip görsel karşılaştırma yapan bir mekanizma yok.
+  Muhtemel yaklaşım: `TradeDataBundleConverter`'a (bkz. yukarıdaki madde, DearPyGuiDataPlotter
+  entegrasyonu) her childTrader'ın equity curve'ünü ayrı bir seri olarak ekleyen bir
+  `ConvertMultipleTraderComparison(...)` fonksiyonu — N strateji = N çizgi, tek panelde.
+
+- [ ] **Dedike/hafif bir "strateji karşılaştır" menüsü yok**: Şu an bu işlevi kullanmak için
+  kullanıcının tam `MultipleTrader` kurulumunu (consensus mode dahil, sonucu umursanmasa bile
+  `ConsensusMode`/`mainTrader` config'i gerekiyor) yapması lazım. Madde 10'un hayal ettiği
+  "N strateji seç, aynı sembolde karşılaştır" akışı için Console'a ayrı, daha basit bir menü
+  seçeneği (consensus/mainTrader kavramını gizleyen, sadece childTrader sonuçlarını
+  raporlayan) eklenebilir — Scanner ailesindeki (`[10]-[21]`) desene benzer, tek sembol +
+  çoklu strateji varyantı.
+
+### Yeni Özellik İhtiyacı: GEÇMİŞ (offline) Çalıştırmaların Karşılaştırılması (2026-08-21, kullanıcı talebi)
+
+Yukarıdaki `MultipleTrader` tabanlı çözüm **canlı/tek oturumda birlikte çalışan** stratejileri
+karşılaştırıyor — hepsi aynı anda, aynı `MultipleTrader` içinde child olarak koşuyor olmalı.
+Kullanıcının gerçek kullanım şekli farklı: örn. son 3 gün içinde **aynı sembol** için 20 farklı
+strateji/parametre ile **ayrı ayrı SingleTrader çalıştırmaları** yapılmış, her biri kaydedilmiş
+(muhtemelen sonuç dosyaları elle farklı isimlerle taşınmış/yeniden adlandırılmış — çünkü düz
+`SingleTraderConfig`'te `MultipleTraderConfig`/`ConfirmingSingleTraderConfig`'teki gibi otomatik
+bir `FilePrefix` alanı YOK, `SingleTraderStatistics.csv` her koşuda üzerine yazılıyor). Şimdi bu
+**20 ayrı, geçmişte kaydedilmiş** sonuç dosyasını sonradan (post-hoc) tek bir karşılaştırma
+tablosunda görmek istiyor — hiçbirini yeniden çalıştırmadan.
+
+**İki senaryo birbirini tamamlıyor, ikisi de gerekli:**
+1. Canlı: tek `MultipleTrader` run'ı içindeki child stratejileri karşılaştır (yukarıdaki madde,
+   `WriteMultipleTraderStatistics()` ile büyük ölçüde tamam).
+2. **Offline (bu madde, YENİ, henüz yazılmadı):** diskte zaten var olan N adet ayrı
+   `SingleTraderStatistics.csv` (veya `SingleTraderPerformans.csv`) dosyasını okuyup tek bir
+   konsolide karşılaştırma tablosu üreten bağımsız bir araç/menü.
+
+**Taslak yaklaşım:**
+- Yeni bir sınıf (örn. `StatisticsComparisonTool` veya `SavedRunsComparer`) — bir klasör yolu
+  (veya dosya listesi/glob pattern) alır, içindeki her `*_SingleTraderStatistics.csv` dosyasını
+  okur (zaten CSV formatında tek satırlık özet — `GetOptimizationSummary()` çıktısıyla aynı
+  kolon seti), satırları birleştirip `MultipleTraderStatistics.csv` ile aynı desende
+  (satır=dosya/run, kolon=metrik) tek bir çıktı üretir.
+- **Ön koşul/bağımlılık:** Bu işin pratik olması için önce standalone `SingleTraderConfig`'e de
+  `MultipleTraderConfig`'teki gibi bir `FilePrefix` alanı eklenmeli (her run'ın kendine özgü,
+  otomatik isimlendirilmiş bir çıktı dosyası bırakması için) — aksi halde kullanıcı hâlâ elle
+  dosya adlandırıp taşımak zorunda kalıyor, araç sadece "zaten doğru adlandırılmış dosyaları"
+  toplayabilir.
+- Console'a yeni bir menü seçeneği: bir klasör/pattern seçtir → eşleşen dosyaları listele →
+  konsolide rapor üret.
+
 ## Tarama Motorları — TAMAMLANDI (16/16, 2026-08-18)
 
 Kullanıcının 2026-08-18'de tarif ettiği 8 senaryoluk matris (Sembol × Strateji × Zaman Dilimi,
