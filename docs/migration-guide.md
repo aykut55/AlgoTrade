@@ -298,13 +298,6 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
 
 ### Yapilmamis / Eksik Maddeler (oncelik sirasiyla)
 
-- [ ] **Madde 3 — SingleTrader + Getiri Egrisi / KarZarar Egrisi (sanal islem konfirmasyonu)**
-      Hic implement edilmemis. Mevcut `ApplyEquityCurveFilter` (SingleTrader.cs) FARKLI bir
-      mekanizma — kendi equity curve'una bakip GIRIS sinyallerini iptal ediyor, ama "once sanal
-      emir uret, kar/zarar esigine gore GERCEK emir uret" mantigi (ConfirmationMode) yok.
-      Eski projede `ResetConfirmationMode()` bu amacla vardi, yeni projede bilincli olarak
-      KAPSAM DISI birakilmisti (bkz. yukarida "Reset()" bolumu, satir 103-108).
-
 - [ ] **Madde 5.1b — Scripting: Sandbox Mod**
       `ScriptExecutor` (src/AlgoTrade.Core/Scripting/ScriptExecutor.cs) su an SADECE tam
       erisimli modda calisiyor; script tum proje assembly'sine erisebiliyor. Kullaniciyi
@@ -359,6 +352,16 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       SimpleMACDStrategy) ayni sembolde calistirip karsilastiran bir rapor/tablo mekanizmasi yok.
 
 ### Tam Tamamlanmis Madde
+
+- [x] **Madde 3 — SingleTrader + Getiri Egrisi / KarZarar Egrisi (sanal islem konfirmasyonu)** —
+  TAMAMLANDI (2026-08-19). Onceki analizde "Hic implement edilmemis / KAPSAM DISI" denmisti, bu
+  artik guncel degil: `ConfirmingSingleTrader.cs` (469 satir) + `ConfirmingMultipleTrader.cs`
+  (483 satir) + `Trading/Core/VirtualPositionConfirmer.cs` (175 satir) ile tam bir
+  signal-trader → sanal pozisyon → konfirmasyon → mainTrader gercek emir state machine'i
+  implement edilmis. AppConfig'te `ConfirmingSingleTraderConfig`/`ConfirmingMultipleTraderConfig`
+  ile yapilandiriliyor, export tarafinda `SetConfirmingSignalTraderExportConfig` ile ayrica
+  versiyonlanmis export destegi var, Console `[22]`-`[25]` menuleri bu akisi calistiriyor. Detay:
+  [docs/PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) §2.9.
 
 - [x] **Madde 2 — MultiTrader**: `MultipleTrader.cs` (618 satir) tam ve calisir durumda
   implement edilmis (`Trading/Traders/MultipleTrader.cs`). **2026-08-18 guncellemesi**: Consensus

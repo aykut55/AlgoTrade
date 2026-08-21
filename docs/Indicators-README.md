@@ -23,7 +23,7 @@ IndicatorManager (Top-level Manager)
 ## 📁 Folder Structure
 
 ```
-src/Indicators/
+src/AlgoTrade.Core/Trading/Indicators/
 ├── Base/
 │   ├── MAMethod.cs                   ✅ 70+ MA enum (Python match)
 │   └── IndicatorConfig.cs            ✅ Configuration

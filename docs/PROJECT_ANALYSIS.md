@@ -1,8 +1,10 @@
 # AlgoTrade — Proje Analizi (Fonksiyonel / Davranışsal / Class-Method Envanteri)
 
 > Bu doküman, projenin sıfırdan tekrar analiz edilmesine gerek kalmaması için hazırlanmış kalıcı bir
-> referanstır. `D:\SageProjects\AlgoTrade` altındaki tüm C# kod tabanı (152 dosya) dört alt sisteme
-> bölünerek satır satır okunmuş ve analiz edilmiştir. Analiz tarihi: 2026-08-18.
+> referanstır. `D:\SageProjects\AlgoTrade` altındaki tüm C# kod tabanı (147 dosya) dört alt sisteme
+> bölünerek satır satır okunmuş ve analiz edilmiştir. Analiz tarihi: 2026-08-18, **güncelleme:
+> 2026-08-21** (Confirming* alt sistemi, Scanner ailesi, consensus düzeltmesi ve güncel satır
+> sayıları eklendi — bkz. §2.9, §2.10, değişen bölümler).
 >
 > İlgili diğer belgeler: [migration-guide.md](migration-guide.md) (eski projeden taşıma durumu + yol
 > haritası), [todo.md](todo.md), [roadmap.md](roadmap.md), [Indicators-TODO.md](Indicators-TODO.md),
@@ -33,22 +35,25 @@ kullanılmıyor** — kendi `LogManager`'ı var), `Skender.Stock.Indicators`, `T
 `Tulip.NETCore` (3 ayrı 3.parti indikatör kütüphanesi referanslı — ama proje kendi indikatörlerini
 de yazmış, bkz. §4).
 
-**AlgoTrade.Console**: harici bağımlılık yok, top-level statements, 2076 satır.
+**AlgoTrade.Console**: harici bağımlılık yok, top-level statements, **4169 satır** (2026-08-18'de
+2076 satırdı — Scanner + Confirming menüleri `[10]-[25]` ile ~2x büyüdü, bkz. §6.1).
 **AlgoTrade.WinForms**: `OpenTK/OpenTK.GLControl`, `ScottPlot.WinForms`, `SkiaSharp.Views.WindowsForms`
 referanslı ama **hiçbiri kullanılmıyor** — proje büyük ölçüde iskelet (bkz. §6.2).
 
-Toplam kod tabanı: 152 `.cs` dosyası, ~30.000+ satır (Core Trading Engine tek başına ~14.500 satır,
-İndikatörler ~6.068 satır, Strateji dosyaları 29 dosya, Altyapı 24+ dosya).
+Toplam kod tabanı: **147** `.cs` dosyası (bin/obj hariç, tüm solution), ~33.000+ satır (Core Trading
+Engine ~16.100 satır — Confirming* alt sistemi + Scanner ailesi dahil, İndikatörler ~6.068 satır,
+Strateji dosyaları 29 dosya, Altyapı 24+ dosya).
 
 ---
 
 ## 2. Core Trading Engine
 
 **Kapsam**: `AlgoTrader.cs`, `Trading/Traders/SingleTrader.cs`, `MultipleTrader.cs`,
-`SingleTraderOptimizer.cs`, `Trading/Core/*.cs` (10 dosya), `Trading/EquityCurve/*`,
-`Trading/Utils/*` — 18 dosya, ~14.500 satır.
+`ConfirmingSingleTrader.cs`, `ConfirmingMultipleTrader.cs`, 12 Scanner sınıfı, `MultipleQuery.cs`,
+`SingleTraderOptimizer.cs`, `Trading/Core/*.cs` (`VirtualPositionConfirmer.cs` dahil 11 dosya),
+`Trading/EquityCurve/*`, `Trading/Utils/*` — ~34 dosya, ~16.100 satır.
 
-### 2.1 AlgoTrader.cs (2467 satır)
+### 2.1 AlgoTrader.cs (3365 satır)
 **Rolü**: Tüm trading alt sisteminin orkestratörü/facade'i. `MarketDataProvider`'dan türer,
 `IDisposable`. Strategy/Query/EquityCurveFilter/Optimization konfigürasyonlarını toplar,
 `SingleTrader`/`MultipleTrader`/`SingleTraderOptimizer` instance'larını yaratıp çalıştırır.
@@ -147,15 +152,15 @@ senkronize eder. İçinde "Silinecek" etiketli comment-out kalıntılar (eski Ge
 (kullanılıyor) vs `ClosePositionEOD_2()` (çağrıldığı yer bulunamadı), `GetPerformansParams()`
 (TODO etiketli), `WriteStatisticsToFile()` (12 farklı çıktı türü, Minimal* metodları comment-out).
 
-### 2.3 MultipleTrader.cs (618 satır) — ⚠️ roadmap ile çelişen bulgu
+### 2.3 MultipleTrader.cs (688 satır) — ✅ 2026-08-21 güncelleme: consensus artık tam implement
 **Rolü**: Birden fazla child `SingleTrader`'ı aynı bar üzerinde çalıştırıp sinyal konsensüsü
 üzerinden tek bir `mainTrader` (id=-1) ile emir üreten sınıf.
 
-**`BuildConsensusSignal()`**: Şu an hardcoded "Net" modunda (`buyCount - sellCount`). Kod içi XML
-doc'ta 4 mod tasarlanmış (Net/Majority/All/Any) ama **3'ü implement edilmemiş**, TODO:
-"ConsensusConfig alanı AlgoTrader'a bağlandığında..." — `AppConfig.MultipleTraderConfig.
-ConsensusConfig` alanı config modelinde zaten var, ama `MultipleTrader`'a tam bağlanmamış
-(çapraz doğrulama gerekir).
+**`BuildConsensusSignal()`**: **Düzeltme (2026-08-18 commit f93dfb6'da zaten tamamlanmış,
+önceki analizde yanlış "eksik" işaretlenmişti)** — `ConsensusMode` property'si (Net/Majority/
+All/Any, varsayılan "Net") üzerinden 4 modun hepsi `switch` ile implement edilmiş, tanınmayan
+mod değeri Net'e düşüp uyarı logluyor. `AppConfig.MultipleTraderConfig.ConsensusConfig` alanı
+`AppConfigApplier` üzerinden bu property'e tam bağlı.
 
 **`DynamicPositionSizeEnabled`**: flag var ama gövdesi TODO ("PozisyonBuyuklugu mevcut projede
 yok") — **işlevsiz**.
@@ -195,7 +200,9 @@ sıralama kriteri arasında tutarsızlık olabilir**.
 - **InitialTradeParams.cs** (650 satır): `MarketTypes` enum 14 değer, her biri için ayrı
   `SetKontratParams<Type>()` metodu (13 tane) + genel `SetMarketType()` switch — **iki paralel
   API, kısmi kod tekrarı**. **Pyramiding desteği** tam implement (migration-guide.md'de hiç bahsi
-  geçmiyor — sonradan eklenmiş).
+  geçmiyor — sonradan eklenmiş). **2026-08-20 değişikliği**: `SetKontratParamsFxCrypto`'nun
+  `varlikAdedCarpani` varsayılanı `1.0`'dan `100.0`'a çıkarıldı (kullanıcı onaylı; broker teyidi
+  hâlâ bekleniyor — bkz. [todo.md](todo.md)).
 - **Lists.cs** (462 satır): ~35 zaman-serisi listesi. `InitOrReuse()` — aynı bar sayısında
   realloc'suz sıfırlama (GC optimizasyonu; optimizer her seferinde yeni SingleTrader yarattığı
   için orada devreye girmiyor).
@@ -232,6 +239,46 @@ dizi-dizi ve dizi-skaler). Stratejiler tarafından yaygın kullanılan temel API
 Config-driven export motoru. **Dikkat çekici**: JSON binding sınıflarında bilinçli
 typo-tolerant alias property'ler (`SngleTrader`, `descrpton`, `wdth` vb.) — elle düzenlenen
 config dosyalarındaki yazım hatalarını tolere etmek için.
+
+### 2.9 Confirming* Alt Sistemi (2026-08-19 eklendi) — roadmap Madde 3'ün karşılığı
+
+**Kapsam**: `Trading/Traders/ConfirmingSingleTrader.cs` (469 satır),
+`Trading/Traders/ConfirmingMultipleTrader.cs` (483 satır),
+`Trading/Core/VirtualPositionConfirmer.cs` (175 satır).
+
+**Amaç**: migration-guide.md Madde 3'te tarif edilen "sanal pozisyon konfirmasyonu" — bir
+sinyal üretildiğinde gerçek emir açmadan önce, sinyali bir süre/koşul boyunca **sanal** olarak
+izleyip belirli bir konfirmasyon kriteri sağlanırsa gerçek pozisyona geçme mekanizması. Not:
+mevcut `SingleTrader.ApplyEquityCurveFilter` mekanizmasından **farklı** — o equity-curve tabanlı
+soft-block, bu ise sinyal-bazlı virtual-then-real state machine'i.
+
+**Mimari**: `ConfirmingSingleTrader`/`ConfirmingMultipleTrader`, içlerinde bir "sinyal" trader
+(`signalTrader`/`signalMultipleTrader` — asıl stratejiyi çalıştırıp ham sinyal üretir) ve bir
+"ana" trader (`mainTrader` — gerçek emirleri açan) çiftini yönetir; ikisi arasındaki köprü
+`VirtualPositionConfirmer` state machine'idir (sinyal geldiğinde sanal pozisyon açar, konfirmasyon
+koşulu sağlanınca `mainTrader`'a gerçek emir tetikler, sağlanmazsa sanal pozisyonu iptal eder).
+
+**AppConfig entegrasyonu**: `ConfirmingSingleTraderConfig`/`ConfirmingMultipleTraderConfig` (bkz.
+§5.2), export tarafında `SetConfirmingSignalTraderExportConfig` ile ayrı versiyonlanmış export
+desteği var (bkz. [export-adimlar.md](export-adimlar.md)).
+
+**Console**: `[22]-[25]` menü aralığı (bkz. §6.1).
+
+**Durum**: roadmap Madde 3 artık **TAMAMLANDI** sayılmalı — §7 tablosu buna göre güncellendi.
+
+### 2.10 Scanner Ailesi ve MultipleQuery — Toplu Tarama Motorları
+
+**Kapsam**: `Trading/Traders/{Symbol,Timeframe,SymbolTimeframe}Scanner.cs`,
+`Trading/Traders/MultiStrategy{Timeframe,Symbol,SymbolTimeframe}Scanner.cs`,
+`Trading/Traders/Query{Timeframe,Symbol,SymbolTimeframe}Scanner.cs`,
+`Trading/Traders/MultiQuery{Timeframe,Symbol,SymbolTimeframe}Scanner.cs` (12 sınıf) +
+`Trading/Traders/MultipleQuery.cs`.
+
+Bu sınıflar §7 tablosundaki madde 8 ("Toplu sembol taraması") ve madde 9 ("Sorgu + toplu sembol")
+için kod tabanındaki gerçek karşılıktır — Strateji ve Sorgu eksenlerini, Sembol/Timeframe/
+Sembol×Timeframe boyutlarıyla çarpan tam bir tarama matrisi oluşturuyorlar (Strateji tarafı 6
+sınıf: tekil + Multi varyantı × 3 boyut; Sorgu tarafı aynı desende 6 sınıf). Detaylı kullanım ve
+Console menü haritası için bkz. [todo.md](todo.md) "Tarama Motorları" bölümü.
 
 ---
 
@@ -515,9 +562,13 @@ Current* + boolean sinyal property'leri + Length).
 ### 5.2 AppConfig Sistemi (`AppConfig/*`)
 Olgun, JSON tabanlı büyük bir katman:
 - `AppConfig.cs`: kök model + `SingleTraderConfig/MultipleTraderConfig/SingleTraderOptConfig`
-  ağaçları. `MultipleTraderConfig.ConsensusConfig` (`Net/Majority/All/Any` + `MinNetCount`)
-  config modeli mevcut (bkz. §2.3 — `MultipleTrader.BuildConsensusSignal()`'a tam
-  bağlanmamış). `AppSettingsConfig.AutoRunMode` ile menüsüz otomatik çalıştırma var.
+  ağaçları + **`ConfirmingSingleTraderConfig`/`ConfirmingMultipleTraderConfig`** (bkz. §2.9).
+  `MultipleTraderConfig.ConsensusConfig` (`Net/Majority/All/Any` + `MinNetCount`) config modeli
+  `MultipleTrader.BuildConsensusSignal()`'a **tam bağlı** (bkz. §2.3, düzeltildi 2026-08-21).
+  `AppSettingsConfig.AutoRunMode` ile menüsüz otomatik çalıştırma var. Export tarafında versiyonlu
+  (v1/v2) `SingleTraderExportConfig` + `SetSingleTraderExportConfig`/
+  `SetConfirmingSignalTraderExportConfig` ile tüm Trader/ConfirmingTrader varyantlarına export
+  desteği bağlanmış (bkz. [export-adimlar.md](export-adimlar.md), TAMAMLANDI).
 - `AppConfigApplier.cs`: config → `AlgoTrader` köprüsü. `ApplyMultipleTrader()` child'ların
   benzersiz Strategy/Query/ECF kombinasyonlarını dedupe edip id-map kuruyor, dosya adlarına
   `{prefix}_Main_/{prefix}_Child{i}_` prefixi otomatik ekliyor. `BuildInitialTradeParams()`:
@@ -591,14 +642,16 @@ güncel değil.
 
 ## 6. Uygulama Katmanı (Console / WinForms)
 
-### 6.1 Console Uygulaması (2076 satır, top-level statements)
+### 6.1 Console Uygulaması (4169 satır, top-level statements — 2026-08-18'de 2076 satırdı)
 Menü: `[1] Read Data`, `[2-4] SingleTrader/MultipleTrader/SingleTraderOptimizer`, `[5-7]
 Read+Run varyantları`, `[8] Run Script`, `[9] DearPyGuiDataPlotter Test` (kod içinde "silinecek"
-notlu), `[0] Exit`. Varsayılan seçim `"5"`. `AutoRunMode` ile menüsüz otomatik çalıştırma var.
-Her mod için renkli JSON "Preview" ekranı (`[ENTER]` çalıştır, `[E]` config düzenle+reload, `[R]`
-reload, `[T]` timer pause, `[B]` geri). Dosya yazma (`WriteTraderDataToFilesAsync`) plot ile
-paralelleştiriliyor (async başlatılıp sonra await). Kendi yazılmış geri-sayımlı/duraklatılabilir
-konsol input okuyucusu var (`ReadMenuInputWithTimeout`).
+notlu), `[10]-[21]` Scanner ailesi (Strateji/Sorgu × Sembol/Timeframe/SembolxTimeframe tarama
+menüleri, bkz. §2.10), `[22]-[25]` Confirming* menüleri (bkz. §2.9), `[0] Exit`. Varsayılan seçim
+`"5"`. `AutoRunMode` ile menüsüz otomatik çalıştırma var. Her mod için renkli JSON "Preview"
+ekranı (`[ENTER]` çalıştır, `[E]` config düzenle+reload, `[R]` reload, `[T]` timer pause, `[B]`
+geri). Dosya yazma (`WriteTraderDataToFilesAsync`) plot ile paralelleştiriliyor (async başlatılıp
+sonra await). Kendi yazılmış geri-sayımlı/duraklatılabilir konsol input okuyucusu var
+(`ReadMenuInputWithTimeout`).
 
 ### 6.2 WinForms Uygulaması
 **Neredeyse tamamen iskelet.** `MainForm.cs` (52 satır): `AlgoTrader("MyStrategy")` +
@@ -618,8 +671,8 @@ durumu (detaylı TODO listesi migration-guide.md'ye eklendi):
 | # | Madde | Gerçek Durum |
 |---|---|---|
 | 1 | SingleTrader | TAMAMLANDI (temel çalışan yapı) |
-| 2 | MultiTrader | **BÜYÜK ÖLÇÜDE TAMAMLANDI** (`MultipleTrader.cs` çalışıyor) — sadece Consensus modu (Majority/All/Any) eksik, Net modu hardcoded |
-| 3 | Sanal işlem / Getiri Eğrisi konfirmasyonu | YAPILMADI (migration-guide.md'de de "KAPSAM DIŞI" işaretli; mevcut `ApplyEquityCurveFilter` farklı bir mekanizma) |
+| 2 | MultiTrader | **TAMAMLANDI** (`MultipleTrader.cs` çalışıyor, Consensus modu Net/Majority/All/Any hepsi implement — düzeltildi 2026-08-21, bkz. §2.3) |
+| 3 | Sanal işlem / Getiri Eğrisi konfirmasyonu | **TAMAMLANDI** (2026-08-19, `ConfirmingSingleTrader`/`ConfirmingMultipleTrader` + `VirtualPositionConfirmer`, bkz. §2.9 — önceki analizde "YAPILMADI" işaretliydi, düzeltildi) |
 | 4 | SingleTraderOptimization | **TAMAMLANDI** (`SingleTraderOptimizer.cs` tam grid-search motoru) |
 | 5.1a | Scripting — tam erişimli mod | TAMAMLANDI (`ScriptExecutor`) |
 | 5.1b | Scripting — sandbox mod | YAPILMADI |
@@ -628,7 +681,7 @@ durumu (detaylı TODO listesi migration-guide.md'ye eklendi):
 | 5.3 | MultiTrader için scripting | YAPILMADI |
 | 6 | Sorgu yapabilme | **KISMEN** (IQuery/BaseQuery/QueryRegistry iskeleti tam, tek örnek `SimpleQuery1`) |
 | 7 | Performans hesaplaması | SingleTrader için TAMAMLANDI (`Statistics.PerformansRow`); MultiTrader için doğrulanmadı |
-| 8 | Toplu sembol taraması | **TAMAMLANDI** (2026-08-18) — tüm tarama matrisi (Strateji+Sorgu, 8/8+8/8), Console `[10]`-`[21]`, bkz. [todo.md](todo.md) "Tarama Motorları" bölümü |
+| 8 | Toplu sembol taraması | **TAMAMLANDI** (2026-08-18) — tüm tarama matrisi (12 Scanner sınıfı, bkz. §2.10), Console `[10]`-`[21]`, bkz. [todo.md](todo.md) "Tarama Motorları" bölümü |
 | 9 | Sorgu + toplu sembol | **TAMAMLANDI** (2026-08-18) — `QuerySymbolScanner`, Console `[16]` |
 | 10 | Strateji karşılaştırma raporu | YAPILMADI |
 
