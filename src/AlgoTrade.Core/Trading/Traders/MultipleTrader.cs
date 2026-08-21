@@ -51,6 +51,16 @@ public class MultipleTrader
     /// <summary>Net modunda minimum net oy farkı eşiği (varsayılan: 1).</summary>
     public int ConsensusMinNetCount { get; set; } = 1;
 
+    /// <summary>
+    /// Script'ten (veya kod'dan) atanabilen özel consensus kuralı. Doluysa
+    /// <see cref="BuildConsensusSignal"/> hardcoded Net/Majority/All/Any switch'ini atlar ve
+    /// doğrudan bu fonksiyonun döndürdüğü sinyali kullanır (migration-guide.md Madde 5.3 —
+    /// "MultiTrader için Scripting"). AppConfig.json'dan set edilemez (Func serialize edilemez);
+    /// sadece [8] Run Script üzerinden `algoTrader.MultipleTrader.CustomConsensusFunc = ...`
+    /// şeklinde atanması beklenir. Örnek: inputs/scripts/CustomConsensusExample.csx.
+    /// </summary>
+    public Func<List<SingleTrader>, TradeSignals>? CustomConsensusFunc { get; set; }
+
     public Action<MultipleTrader, int, int>? OnProgress { get; set; }
 
     public bool SaveStatisticsToFile { get; set; } = true;
@@ -198,6 +208,14 @@ public class MultipleTrader
     /// </summary>
     public TradeSignals BuildConsensusSignal()
     {
+        if (CustomConsensusFunc != null)
+        {
+            TradeSignals customResult = CustomConsensusFunc(Traders);
+            if (customResult == TradeSignals.Buy || customResult == TradeSignals.Sell)
+                LogManager.Log(LogLevel.Debug, LogSinks.File, $"MultipleTrader consensus [Custom]: -> {customResult}");
+            return customResult;
+        }
+
         int buyCount = 0;
         int sellCount = 0;
         int flatCount = 0;
