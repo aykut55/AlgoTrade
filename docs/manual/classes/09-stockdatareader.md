@@ -287,7 +287,7 @@ private static List<StockData> ApplyFilter(List<StockData> data, FilterMode mode
   `IsBullish`/`IsBearish`/`IsNeutral`, `Range`, `BodySize`, `UpperShadow`/`LowerShadow`,
   `MidPrice`, `TypicalPrice`, `WeightedClose`.
 
-## Çağrı Zinciri (Console `[1]` → `handleReadData()`)
+## Çağrı Zinciri — Menüden Çağrılma (Console `[1]` → `handleReadData()`)
 
 1. `handleReadData()` (`Program.cs:730`) — döngü: `showReadDataPreview()` ile
    `appConfig.ReadData` (`FilterMode`/`N1`/`N2`/`Dt1`/`Dt2`) + `stockDataFullFileName`'i JSON
@@ -535,7 +535,7 @@ güncellenir:
   loglanır, `stockDataReader.IsDataReady` `false` kalır — sonraki adım (varsa) veri yokluğu
   nedeniyle sessizce `return` eder.
 
-## Tipik Kullanım — Farklı `FilterMode` Kombinasyonları
+## Tipik Kullanım — Script'ten Çağrılma (Farklı `FilterMode` Kombinasyonları)
 
 - Konum: `Program.cs`/Console akışının dışında (örn. bir `.csx` script'inde) `StockDataReader`'ı
   doğrudan çağırırken.

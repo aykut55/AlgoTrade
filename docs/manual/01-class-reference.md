@@ -15,15 +15,19 @@
 
 ## İçindekiler
 
-1. [AlgoTrader — Orkestratör/Facade](#1-algotrader--orkestratörfacade)
-2. [SingleTrader — Çekirdek Motor](#2-singletrader--çekirdek-motor)
-3. [MultipleTrader — Çoklu Strateji + Consensus](#3-multipletrader--çoklu-strateji--consensus)
-4. [ConfirmingSingleTrader / ConfirmingMultipleTrader / VirtualPositionConfirmer](#4-confirmingsingletrader--confirmingmultipletrader--virtualpositionconfirmer)
-5. [SingleTraderOptimizer — Grid-Search Optimizasyon](#5-singletraderoptimizer--grid-search-optimizasyon)
-6. [IndicatorManager — İndikatör Merkezi Girişi](#6-indicatormanager--i̇ndikatör-merkezi-girişi)
-7. [StrategyRegistry / QueryRegistry — Auto-Discovery](#7-strategyregistry--queryregistry--auto-discovery)
-8. [Scanner Ailesi (12 sınıf) — Toplu Tarama](#8-scanner-ailesi-12-sınıf--toplu-tarama)
-9. [StockDataReader — Veri Okuma (Read Data, Menü [1])](#9-stockdatareader--veri-okuma-read-data-menü-1) — özet burada, tam referans [ayrı sayfada](classes/09-stockdatareader.md)
+- §1 — [AlgoTrader — Orkestratör/Facade](#1-algotrader--orkestratörfacade)
+- §2 — [StockDataReader — Veri Okuma (Read Data, Menü [1])](#2-stockdatareader--veri-okuma-read-data-menü-1) — özet burada, tam referans [ayrı sayfada](classes/09-stockdatareader.md)
+- §3 — [SingleTrader — Çekirdek Motor](#3-singletrader--çekirdek-motor) — özet burada, tam referans [ayrı sayfada](classes/02-singletrader.md)
+- §4 — [MultipleTrader — Çoklu Strateji + Consensus](#4-multipletrader--çoklu-strateji--consensus) — özet burada, tam referans [ayrı sayfada](classes/03-multipletrader.md)
+- §5 — [SingleTraderOptimizer — Grid-Search Optimizasyon](#5-singletraderoptimizer--grid-search-optimizasyon) — özet burada, tam referans [ayrı sayfada](classes/05-singletraderoptimizer.md)
+- §6 — [ConfirmingSingleTrader — Sanal Pozisyon Konfirmasyonu](#6-confirmingsingletrader--sanal-pozisyon-konfirmasyonu) — özet burada, tam referans [ayrı sayfada](classes/04-confirmingsingletrader.md)
+- §7 — [ConfirmingMultipleTrader — Consensus + Sanal Pozisyon Konfirmasyonu](#7-confirmingmultipletrader--consensus--sanal-pozisyon-konfirmasyonu) — özet burada, tam referans [ayrı sayfada](classes/04-confirmingmultipletrader.md)
+- §8 — [VirtualPositionConfirmer — Ortak Konfirmasyon Motoru](#8-virtualpositionconfirmer--ortak-konfirmasyon-motoru) — özet burada, tam referans [ConfirmingSingleTrader sayfasında](classes/04-confirmingsingletrader.md#virtualpositionconfirmer--ortak-konfirmasyon-motoru)
+- §9 — [PythonPlotter — pythonnet Tabanlı Görselleştirme (Eski/Varsayılan)](#9-pythonplotter--pythonnet-tabanlı-görselleştirme-eskivarsayılan) — özet burada, tam referans [ayrı sayfada](classes/python-plotter.md)
+- §10 — [DearPyGuiDataPlotter — Ayrı Process Tabanlı Görselleştirme (Yeni, Geliştirilmekte)](#10-dearpyguidataplotter--ayrı-process-tabanlı-görselleştirme-yeni-geliştirilmekte) — özet burada, tam referans [ayrı sayfada](classes/dearpyguidataplotter.md)
+- §11 — [IndicatorManager — İndikatör Merkezi Girişi](#11-indicatormanager--indikatör-merkezi-girişi)
+- §12 — [StrategyRegistry / QueryRegistry — Auto-Discovery](#12-strategyregistry--queryregistry--auto-discovery)
+- §13 — [Scanner Ailesi (12 sınıf) — Toplu Tarama](#13-scanner-ailesi-12-sınıf--toplu-tarama)
 
 ---
 
@@ -39,7 +43,7 @@ menüleri ve `.csx` scriptler neredeyse her zaman bir `AlgoTrader` örneği üze
 
 **Ne zaman kullanılır**: Neredeyse her zaman — Console'daki her menü ve her `.csx` script bir
 `AlgoTrader` örneği yaratıp onun üzerinden çalışır. Doğrudan `SingleTrader`/`MultipleTrader`
-kurmak (bkz. [Bölüm 2](#2-singletrader--çekirdek-motor)/[Bölüm 3](#3-multipletrader--çoklu-strateji--consensus)) sadece scripting'te tam kontrol istendiğinde (örn.
+kurmak (bkz. [Bölüm 3](#3-singletrader--çekirdek-motor)/[Bölüm 4](#4-multipletrader--çoklu-strateji--consensus)) sadece scripting'te tam kontrol istendiğinde (örn.
 `CustomConsensusExample.csx`) tercih edilir.
 
 ### Property Grupları
@@ -86,7 +90,7 @@ kurmak (bkz. [Bölüm 2](#2-singletrader--çekirdek-motor)/[Bölüm 3](#3-multip
 `SetSingleTraderOptRangeConfig/OptTradeParamsConfig/OptLogConfig/OptSortOutputConfig`.
 Script yazarken bunlara genelde gerek yok — bunlar `AppConfig.json` → `AppConfigApplier` →
 `AlgoTrader` zincirinin parçası; script kendi `SingleTrader`/`MultipleTrader`'ını manuel kurarsa
-(bkz. [Bölüm 2](#2-singletrader--çekirdek-motor)/[Bölüm 3](#3-multipletrader--çoklu-strateji--consensus)) doğrudan trader'ın kendi property'lerini set eder.
+(bkz. [Bölüm 3](#3-singletrader--çekirdek-motor)/[Bölüm 4](#4-multipletrader--çoklu-strateji--consensus)) doğrudan trader'ın kendi property'lerini set eder.
 
 ### Public API — Optimizasyon
 
@@ -131,210 +135,228 @@ strategyName, version?)`.
 
 ---
 
-## 2. SingleTrader — Çekirdek Motor
+## 2. StockDataReader — Veri Okuma (Read Data, Menü [1])
 
-**Dosya**: `src/AlgoTrade.Core/Trading/Traders/SingleTrader.cs` (2692 satır)
+**Dosyalar**: `src/AlgoTrade.Core/StockDataReader/StockDataReader.cs`,
+`src/AlgoTrade.Core/DataProvider/MarketDataProvider.cs` (taban sınıf),
+`src/AlgoTrade.Core/StockData/StockData.cs` (veri birimi `struct`).
+
+**Rolü**: Disk üzerindeki `;`-ayraçlı CSV/TXT bar verisini okuyup `List<StockData>`'a çevirir.
+Console `[1] Read Data` menüsü bu sınıfı iki aşamalı (`ReadMetaData` → `ReadDataFast`) çağırır;
+sonucu tüm `AlgoTrader` tabanlı run'lar (`SingleTrader`/`MultipleTrader`/`SingleTraderOptimizer`/
+Confirming*, bkz. yukarıdaki [Bölüm 1](#1-algotrader--orkestratörfacade) ve aşağıdaki §3-§7)
+veri kaynağı olarak kullanır.
+
+**Ne zaman kullanılır**: Her `AlgoTrader` akışından ÖNCE — Console `[1]` (sadece oku) veya
+`[5]`-`[7]`/`[23]`/`[25]` ("Read Data + X" kombo menüleri).
+
+**Detaylı referans** — sınıf iskeleti, tüm Public API, `readStockData()`'nın tam kaynağı,
+Console callback metodları, `FilterMode`'un 7 kombinasyonu için bağımsız C#/JSON örnekleri,
+ve tüm public üyelerin gerçek kullanım haritası (bu diğer sınıflardan çok daha derin işlendiği
+için ayrı sayfada tutuluyor):
+
+**[→ StockDataReader — Veri Okuma (ayrı sayfa)](classes/09-stockdatareader.md)**
+
+---
+
+## 3. SingleTrader — Çekirdek Motor
+
+**Dosya**: `src/AlgoTrade.Core/Trading/Traders/SingleTrader.cs` (2693 satır)
 
 **Rolü**: Tek stratejiyi bar-bar çalıştıran, gerçek emir açıp kapatan çekirdek motor. Projenin en
 kritik sınıfı — `MultipleTrader`'ın her child'ı, `ConfirmingSingleTrader`'ın hem `signalTrader`'ı
-hem `mainTrader`'ı, Scanner'ların içindeki throwaway trader'lar hep birer `SingleTrader`.
+hem `mainTrader`'ı, 12 Scanner sınıfının içindeki throwaway trader'lar, `MultipleQuery`'nin her
+satırı hep birer `SingleTrader` (25 instantiation noktası). Kendi state'ini 9 kompozisyon
+modülüne (`signals`/`status`/`flags`/`lists`/`initialTradeParams` vb.) böler.
 
 **Ne zaman kullanılır**: Tek bir stratejiyi tek bir sembolde çalıştırmak istediğinde (Console
 `[2]`/`[5]`). Ayrıca her "çoklu" sistemin (MultipleTrader, Confirming*, Scanner) içindeki asıl
 işi yapan birim budur — onları anlamak için önce bunu anlamak gerekir.
 
-### Modül Kompozisyonu
+**Detaylı referans** — sınıf iskeleti, tüm Public API, emir motorunun (`ExecuteOrders`) sinyal-
+geçiş tablosu, `AlgoTrader.RunSingleTraderWithProgressAsync()`'in tam kaynağı, `AppConfig.
+SingleTrader` eşlemesi, ve tüm public üyelerin gerçek kullanım haritası (bu diğer sınıflardan çok
+daha derin işlendiği için ayrı sayfada tutuluyor — 2 önemli bulgu dahil: `ApplyTimingFilters`'ın
+hardcoded `filterMode=1`'i ve hiç tetiklenmeyen `OnNotifySignal` event'i):
 
-`initialTradeParams`, `signals`, `status`, `flags`, `lists`, `timeUtils`, `karZarar`,
-`karAlZararKes`, `statistics` — hepsi `private set + public get` property. `CreateModules()` /
-`ResetModules()` / `InitModules()` / `DeleteModules()` dörtlüsüyle yönetilir (genelde elle
-çağırmana gerek yok, `Reset()`/`Init()` bunları içeriden tetikler).
-
-### Kimlik ve Kurulum
-
-- `SingleTrader(id, name, data, indicators, logger?)` — constructor.
-- `SetStrategy(strategy)` / `SetQuery(query)` — strateji/sorgu enjekte eder.
-- `SetCallbacks(onReset, onInit, onRun, onFinal, onBeforeOrder, onNotifySignal, onAfterOrder, onProgress)` → `SingleTrader` döner (fluent), `ClearCallbacks()` de fluent.
-- `is_son_yon_a()/_s()/_f()`, `is_prev_yon_a()/_s()/_f()` — son/önceki yönü sorgular (`MultipleTrader.BuildConsensusSignal()`'ın kullandığı API).
-
-### Yaşam Döngüsü
-
-1. `Reset()` — state sıfırlar.
-2. attribute'ları set et (`SymbolName`, `initialTradeParams.Reset().SetBakiyeParams(...)...` vb.).
-3. `ConfigureUserFlagsOnce()` → sinyal bayraklarını (`AlEnabled` vb.) ilklendirir.
-4. `Init()`.
-5. Bar-bar döngü: `Run(barIndex)` (RunMode'a göre `ExecuteStrategy → MapStrategyCommandsToTradeCommands → ApplyTimingFilters → ApplyEquityCurveFilter → ResolveFilterDecisions → ExecutePostOrderMethods`).
-6. `Finalize()` → `CalculateStatistics()` → `WriteStatisticsToFile(outputDir, inputsDir)`.
-
-### Run() ve Emir Motoru
-
-- `Run(int barIndex)` — `RunMode` (`TradeOnly`/`TradeAndQuery`/`QueryOnly`) dalına göre yukarıdaki zinciri işletir.
-- `ExecuteStrategy(barIndex)` → `TradeSignals` — stratejinin `OnStep()`'ini çağırır.
-- `ExecuteQuery(barIndex)` → `IReadOnlyList<object>` — sorgunun ürettiği sütun değerleri.
-- `MapStrategyCommandsToTradeCommands(strategySignal)` — enum'u `signals.Al/Sat/...` bool'larına çevirir.
-- `ApplyTimingFilters(barIndex)` / `CheckOrderTimeEligibility(...)` — 6 FilterMode (saat/tarih/aralık × sadece-başlangıç).
-- `ConfigureEquityCurveFilter(isPercent, profitThreshold, lossThreshold, trigger)` / `ApplyEquityCurveFilter(barIndex)` — equity curve tabanlı GİRİŞ sinyali soft-block (bkz. ConfirmingSingleTrader ile farkı için [Bölüm 4](#4-confirmingsingletrader--confirmingmultipletrader--virtualpositionconfirmer)).
-- `ResolveFilterDecisions(barIndex)` — öncelik sırası: PozKapat > GünSonuPozKapat > Timing hard block > TradeStartBarIndex warmup > EquityCurve soft block.
-- `ExecuteOrders(barIndex)` → `int` — asıl emir yürütme (pyramiding, ters yön, slippage dahil, ~720 satır).
-- `ExecutePreOrderMethods(barIndex)` / `ExecutePostOrderMethods(barIndex)` — Run() akışının parçalanmış hali (`MultipleTrader.Run()`, `ConfirmingSingleTrader.Run()` bu ikisini ayrı ayrı çağırır ki aradaki adımlara (consensus, konfirmasyon) müdahale edebilsin).
-- `CalculateBalance(barIndex)`, `CalculateUnrealizedPnL(barIndex)`.
-- `ClosePositionEOD(i, gunSonuPozKapatEnabled=true)` — kullanılıyor; `ClosePositionEOD_2(...)` çağrıldığı yer yok (bkz. [PROJECT_ANALYSIS.md §8](../PROJECT_ANALYSIS.md#8-doğrulanmasıtemizlenmesi-önerilen-noktalar), ölü kod adayı).
-
-### İstatistik/Rapor
-
-- `CalculateStatistics()` / `CalculatePerformances(bakiyePuan, lotSayisi, varlikAdedCarpani)`.
-- `WriteStatisticsToFile(outputDir, inputsDir)` — 12 çıktı türü (Full/Minimal × Stats/Lists × Txt/Csv + Formatted + Performans), `Save*Enabled` flag'leri + `*FileName` property'leriyle kontrol edilir (bkz. [Bölüm 1](#1-algotrader--orkestratörfacade) `SingleTraderSaveConfig`).
-- `TaramaOzeti` (property) → `"{SonYon} | Bar:{N} | KZ:{fiyat} | %:{yüzde}"` — Scanner'ların özet satırı bundan geliyor.
-- `SonSinyaldenBeriBarSayisi`, `SonKarZararFiyat`, `SonKarZararYuzde` — hesaplanan property'ler.
-
-### Export (versiyonlu, opsiyonel)
-
-`ExportEnabled`, `ExportConfigFile` (`StatisticsExporterConfig.json`), `ExportVersion` (`"v1"`/`"v2"` vb.) — doluysa `StatisticsExporter` üzerinden ek, config-driven bir export daha yapılır (bkz. `docs/export-adimlar.md` — artık silinmiş, tamamlanmıştı).
+**[→ SingleTrader — Çekirdek Motor (ayrı sayfa)](classes/02-singletrader.md)**
 
 ---
 
-## 3. MultipleTrader — Çoklu Strateji + Consensus
+## 4. MultipleTrader — Çoklu Strateji + Consensus
 
-**Dosya**: `src/AlgoTrade.Core/Trading/Traders/MultipleTrader.cs` (832 satır)
+**Dosya**: `src/AlgoTrade.Core/Trading/Traders/MultipleTrader.cs` (833 satır)
 
 **Rolü**: Birden fazla child `SingleTrader`'ı **her biri kendi sinyaliyle gerçekten trade
-ederek** aynı bar üzerinde çalıştırır, sinyallerini bir "consensus" kuralıyla birleştirip tek bir
-`mainTrader` (id=-1) ile ayrı bir gerçek emir üretir. Önemli: child'lar sinyal üretip pasif
-kalmaz — her biri `SingleTrader.Run()`'ın aynısını çalıştırıp **kendi defterinde** gerçek trade
-yapar (bkz. `MultipleTrader.Run()` → `trader.Run(i)`, `SingleTrader.cs:452`). Yani her child'ın
-kendi `WriteStatisticsToFile()` çıktısı, o stratejiyi TEK BAŞINA çalıştırsaydın alacağın sonucun
+ederek** aynı bar üzerinde çalıştırır, sinyallerini bir "consensus" kuralıyla (`Net`/`Majority`/
+`All`/`Any`, veya script'ten `CustomConsensusFunc`) birleştirip tek bir `mainTrader` (id=-1) ile
+ayrı bir gerçek emir üretir. Child'lar sinyal üretip pasif kalmaz — her biri `SingleTrader.Run()`'ın
+aynısını çalıştırıp **kendi defterinde** gerçek trade yapar; her child'ın kendi
+`WriteStatisticsToFile()` çıktısı, o stratejiyi TEK BAŞINA çalıştırsaydın alacağın sonucun
 birebir aynısıdır.
 
 **Ne zaman kullanılır**: (a) Gerçekten birden fazla stratejiyi birleştirip TEK bir consensus
 sinyaliyle trade etmek istediğinde (Console `[3]`/`[6]`), (b) Aynı sembolde birden fazla
 stratejinin performansını YAN YANA karşılaştırmak istediğinde (`WriteMultipleTraderStatistics()`
-ile — mainTrader satırını yok sayıp child satırlarına bakarsın; bkz.
-[docs/todo.md](../todo.md) "Strateji Karşılaştırma" bölümü).
+ile), (c) hazır 4 consensus modu yetmiyorsa script'ten `CustomConsensusFunc` ile kendi kuralını
+yazmak istediğinde.
 
-### Property Grupları
+**Detaylı referans** — sınıf iskeleti, `BuildConsensusSignal()`'ın tam kaynağı ve davranış
+tablosu, `AlgoTrader.RunMultipleTraderWithProgressAsync()`'in tam kaynağı, `createChildTraders()`
+akışı, `AppConfig.MultipleTrader` eşlemesi, `CustomConsensusExample.csx` üzerinden script'ten
+manuel kurulum, ve tüm public üyelerin gerçek kullanım haritası (bu diğer sınıflardan çok daha
+derin işlendiği için ayrı sayfada tutuluyor — dikkat çeken bulgular: `DynamicPositionSizeEnabled`
+işlevsiz, mainTrader'ın `OnRun` event'i hiç tetiklenmiyor, `MultipleTrader::PlotEnabled` hiç
+okunmuyor):
 
-- `Id`, `Data`, `Indicators`, `Traders` (child `SingleTrader` listesi), `IsInitialized`, `CurrentIndex`.
-- Consensus: `ConsensusMode` (`"Net"`/`"Majority"`/`"All"`/`"Any"`, varsayılan `"Net"`), `ConsensusMinNetCount` (Net modunda eşik, varsayılan 1).
-- **`CustomConsensusFunc`** (`Func<List<SingleTrader>, TradeSignals>?`, **2026-08-21 eklendi**) — doluysa `BuildConsensusSignal()` hardcoded switch'i atlayıp bunu çağırır. Script'ten atanır (bkz. `inputs/scripts/CustomConsensusExample.csx`), `AppConfig.json`'dan set edilemez (Func serialize edilemez).
-- `DynamicPositionSizeEnabled` — flag var ama gövdesi TODO, işlevsiz ([PROJECT_ANALYSIS.md §8](../PROJECT_ANALYSIS.md#8-doğrulanmasıtemizlenmesi-önerilen-noktalar)).
-- Dosya adları: `MultipleTraderListsTxtFileName/CsvFileName` (bar-bar sinyal listesi), `MultipleTraderStatisticsTxtFileName/CsvFileName` (**2026-08-21 eklendi**, trader-bazlı özet karşılaştırma).
-
-### Kurulum ve Çalıştırma
-
-- `MultipleTrader(id, data, indicators, logger?)` — constructor (parametresiz overload da var).
-- `AddTrader(SingleTrader trader)` — child ekler.
-- `Reset()` → `Init()` → bar-bar `Run(int i)` → `Finalize()`.
-- `Run(i)` akışı: her child için `trader.Run(i)` → sinyalleri say → `BuildConsensusSignal()` → mainTrader'da manuel olarak `ExecutePreOrderMethods → MapStrategyCommandsToTradeCommands → ApplyTimingFilters → ApplyEquityCurveFilter → ResolveFilterDecisions → ExecutePostOrderMethods` (SingleTrader'ın 6 adımlı pipeline'ının aynısı, elle tekrarlanmış).
-- `BuildConsensusSignal()` → `TradeSignals` — public, dışarıdan da çağrılabilir (izole test için kullanışlı, bkz. aşağıdaki "Nasıl genişletilir").
-- `GetMainTrader()` → `SingleTrader`.
-
-### Dosyaya Yazma
-
-- `WriteMultipleTraderListsToFiles(logDir)` — bar-bar rapor (her bar için tüm trader'ların Yön/Seviye/Sinyal'i yan yana). **Performans raporu DEĞİL.**
-- `WriteMultipleTraderStatistics(logDir)` (**yeni**) — mainTrader + her child'ın `GetOptimizationSummary()` özetini (NetProfit/WinRate/ProfitFactor/MaxDrawdown vb.) satır=trader / kolon=metrik formatında tek dosyada listeler. `Finalize()` sonrası çağrılmalı.
-
-### Nasıl Genişletilir: Kendi Consensus Kuralını Yazmak
-
-`inputs/scripts/CustomConsensusExample.csx` çalışan, gerçek 7 referans method içerir
-(`NetConsensusReference`/`MajorityConsensusReference`/`AllConsensusReference`/
-`AnyConsensusReference` — 4 hazır modun script karşılığı; `FirstChildWinsConsensus`/
-`WeightedConsensus`/`BothAgreeConsensus` — özel örnekler). Kendi kuralını yazmak için:
-
-1. `List<SingleTrader> → TradeSignals` imzalı bir method/lambda yaz (`traders[i].is_son_yon_a()/_s()` ile her child'ın son yönüne bakabilirsin).
-2. `multipleTrader.CustomConsensusFunc = MyRule;` ata.
-3. `[8] Run Script` ile çalıştır.
-
-`Run(i)`'yi hiç çağırmadan, her child'ı manuel `Run(i)` ile çalıştırıp tamamen kendi orkestrasyon
-mantığını da yazabilirsin — script tam erişimli modda çalıştığı için (`Scripting/ScriptExecutor.cs`)
-hiçbir sınır yok, `CustomConsensusFunc` sadece hazır bir "resmi" enjeksiyon noktası.
-
----
-
-## 4. ConfirmingSingleTrader / ConfirmingMultipleTrader / VirtualPositionConfirmer
-
-**Dosyalar**: `Traders/ConfirmingSingleTrader.cs` (469 satır), `Traders/ConfirmingMultipleTrader.cs`
-(483 satır), `Trading/Core/VirtualPositionConfirmer.cs` (175 satır) — 2026-08-19 eklendi.
-
-**Rolü**: "Sanal pozisyon konfirmasyonu" — bir sinyal geldiğinde hemen gerçek emir açmak yerine,
-önce **sanal** olarak takip edip belirli bir kâr/zarar eşiği geçilince gerçek pozisyona geçme.
-`SingleTrader.ApplyEquityCurveFilter`'dan **farklı** bir mekanizma — o equity-curve tabanlı bir
-soft-block, bu ise sinyal-bazlı bir virtual-then-real state machine.
-
-**Ne zaman kullanılır**: Ham stratejinin ürettiği her sinyali hemen trade etmek yerine, "önce
-biraz kâr/zarar potansiyelini gör, sonra karar ver" davranışı istediğinde. Console `[22]`-`[25]`.
-
-### Mimari
-
-Her ikisinde de bir **signal katmanı** (ham sinyali üreten, gerçek stratejiyle çalışan) ve bir
-**mainTrader** (sadece konfirme edilmiş sinyali alıp gerçek emri açan) var:
-
-- `ConfirmingSingleTrader`: `_signalTrader` (tek `SingleTrader`) + `_mainTrader`.
-- `ConfirmingMultipleTrader`: `_signalMultipleTrader` (tam bağımsız çalışan bir `MultipleTrader`,
-  N child + consensus — [Bölüm 3](#3-multipletrader--çoklu-strateji--consensus)'teki sınıfın kendisi, hiç değiştirilmeden reuse edilmiş) + `_mainTrader`.
-
-Aradaki köprü `VirtualPositionConfirmer` — sinyal geldiğinde sanal pozisyon açar (yön + giriş
-fiyatı + confirm durumu), kâr/zarar eşiği (`ProfitThreshold`/`LossThreshold`, değer veya yüzde)
-geçilince mainTrader'a gerçek emri tetikler, geçilmezse sanal pozisyonu iptal eder.
-
-### VirtualPositionConfirmer — Ortak Konfirmasyon Motoru
-
-- `SignalConflictMode` enum: `CancelAndRestart` / `LockAndIgnore` (sanal pozisyon beklerken ters sinyal gelirse ne olur).
-- Property'ler: `ThresholdIsPercentage`, `ProfitThreshold` (varsayılan 5000), `LossThreshold` (varsayılan -3000), `Trigger` (`ConfirmationTrigger`: ProfitOnly/LossOnly/Both), `ConflictMode`, `FlattenImmediatelyOnFlatSignal` (varsayılan true).
-- `Reset()`, `Resolve(currentYon, rawSignal, currentPrice)` → `TradeSignals` — asıl karar mantığı.
-- Hem `ConfirmingSingleTrader` hem `ConfirmingMultipleTrader` bu sınıfı kompozisyonla kullanır (`_confirmer` alanı), property'leri kendi üzerlerinden pass-through olarak da açarlar (`trader.ProfitThreshold` gibi doğrudan erişim için).
-
-### ConfirmingSingleTrader
-
-- `ConfirmingSingleTrader(id, data, indicators, logger?)`, `SetStrategy(strategy)`.
-- `Reset()` → `Init()` → `Run(i)` → `Finalize()`.
-- `GetMainTrader()` / `GetSignalTrader()` → `SingleTrader`.
-- Çıktı: `ConfirmingSingleTraderLists.txt/.csv` (signalTrader/sanal/mainTrader kolonları yan yana, bar-bar).
-
-### ConfirmingMultipleTrader
-
-- `ConfirmingMultipleTrader(id, data, indicators, logger?)`, `AddTrader(trader)` (signal katmanına child ekler).
-- `ConsensusMode`/`ConsensusMinNetCount` — `_signalMultipleTrader`'a pass-through.
-- `VirtualSignals` → `_signalMultipleTrader.GetMainTrader().lists.SinyalList` (ham vs. konfirme edilmiş sinyali karşılaştırmak için).
-- `GetMainTrader()` / `GetSignalMultipleTrader()` → sırasıyla `SingleTrader`/`MultipleTrader`.
-- Çıktı: `ConfirmingMultipleTraderLists.txt/.csv` + (opsiyonel, `WriteSignalMultipleTraderListsToFiles=true` ise) signal katmanının kendi `MultipleTraderLists`/`MultipleTraderStatistics` dosyaları da (bkz. [Bölüm 3](#3-multipletrader--çoklu-strateji--consensus)) — `FilePrefix` (varsayılan `"ConfirmingMultipleTrader"`) ile önekleniyor.
+**[→ MultipleTrader — Çoklu Strateji + Consensus (ayrı sayfa)](classes/03-multipletrader.md)**
 
 ---
 
 ## 5. SingleTraderOptimizer — Grid-Search Optimizasyon
 
-**Dosya**: `src/AlgoTrade.Core/Trading/Traders/SingleTraderOptimizer.cs` (934 satır)
+**Dosya**: `src/AlgoTrade.Core/Trading/Traders/SingleTraderOptimizer.cs` (935 satır)
 
 **Rolü**: Bir stratejinin parametre uzayını (`ParameterRange` listesi) kartezyen çarpımla tarayıp
-her kombinasyon için ayrı bir `SingleTrader` çalıştırır, sonuçları sıralı dosyaya yazar.
+her kombinasyon için ayrı, throwaway bir `SingleTrader` çalıştırır, sonuçları sıralı dosyaya
+yazar.
 
 **Ne zaman kullanılır**: "Bu stratejinin en iyi period/multiplier kombinasyonu hangisi?" sorusuna
-cevap ararken. Console `[4]`/`[7]`. Not: FARKLI stratejileri karşılaştırmaz (bkz. [Bölüm 3](#3-multipletrader--çoklu-strateji--consensus)'teki
+cevap ararken. Console `[4]`/`[7]`. Not: FARKLI stratejileri karşılaştırmaz (bkz. [Bölüm 4](#4-multipletrader--çoklu-strateji--consensus)'teki
 `MultipleTrader` + `WriteMultipleTraderStatistics` — o iş için kullanılan yol).
 
-### Ana Tipler
+**Detaylı referans** — sınıf iskeleti, `Run()`'ın tam kaynağı, `createSingleTrader()`'ın her
+kombinasyon için trader kurulumu, `AlgoTrader.RunSingleTraderOptWithProgressAsync()`'in tam
+kaynağı, `AppConfig.SingleTraderOptimizer` eşlemesi, ve tüm public üyelerin gerçek kullanım
+haritası (dikkat çeken bulgular: optimizasyon ilerleme callback'leri tamamen yorum satırı,
+`SaveEveryN` işlevsiz, `AppConfig.SingleTraderOptimizer.SingleTrader.*` — "best trader" ayarları —
+hiçbir yeniden-koşum tarafından okunmuyor):
 
-- `ParameterRange(name, min, max, step)` → `GetValues()` (taranacak değer listesi).
-- `OptimizationResult` — `Parameters` (o kombinasyonun değerleri) + `Values`
-  (`GetOptimizationSummary()` map'i) + convenience getter'lar: `NetProfit`, `WinRate`,
-  `ProfitFactor`, `ProfitFactorNet`, `MaxDrawdown`, `ScoreFiyatNet`, `ScoreFiyat`, `ScorePuan`,
-  `StrategyName`.
-- `StrategyFactory` delegate: `(data, indicators, parameters) → IStrategy`.
-
-### Public API
-
-- `SingleTraderOptimizer(id, data, indicators, logger?)`.
-- `AddParameterRange(name, min, max, step)`, `SetStrategyFactory(factory)`.
-- `Reset()` → `Init()`.
-- `GenerateParameterCombinations()` → `List<Dictionary<string,object>>` — recursive backtracking, kombinasyon patlaması için sınır YOK (dikkat).
-- `Run(cancellationToken?)` → `OptimizationResult?` — her kombinasyon için `createSingleTrader()` + `runSingleTrader(...)`, sonuçları biriktirir/dosyaya yazar (anlık append veya zaman-aralıklı buffer, `FileFlushIntervalMs`'e göre).
-- `GetBestResult()` → `OptimizationResult?` — **sadece `NetProfit`'e göre** sıralar (dosya çıktısındaki `SortField`'den farklı olabilir — bilinen tutarsızlık, bkz. [PROJECT_ANALYSIS.md §8](../PROJECT_ANALYSIS.md#8-doğrulanmasıtemizlenmesi-önerilen-noktalar)).
-- `WriteSortedFiles()` — CSV cache'den okuyup `SortField`'e göre sıralı ayrı dosya üretir.
-- Event'ler: `OnOptimizationProgress`, `OnSingleTraderProgressCallback`, `OnReadOptimizationResultsFile`, `OnSaveResults`.
-- `OptimizationFrom`/`OptimizationTo` — PartialOpt desteği (kesintiye uğrayan uzun taramaları parça parça devam ettirmek için).
+**[→ SingleTraderOptimizer — Grid-Search Optimizasyon (ayrı sayfa)](classes/05-singletraderoptimizer.md)**
 
 ---
 
-## 6. IndicatorManager — İndikatör Merkezi Girişi
+## 6. ConfirmingSingleTrader — Sanal Pozisyon Konfirmasyonu
+
+**Dosya**: `Traders/ConfirmingSingleTrader.cs` (469 satır) + `Trading/Core/VirtualPositionConfirmer.cs`
+(bkz. [Bölüm 8](#8-virtualpositionconfirmer--ortak-konfirmasyon-motoru)).
+
+**Rolü**: "Sanal pozisyon konfirmasyonu" — bir sinyal geldiğinde hemen gerçek emir açmak yerine,
+önce **sanal** olarak takip edip belirli bir kâr/zarar eşiği geçilince gerçek pozisyona geçme.
+`SingleTrader.ApplyEquityCurveFilter`'dan **farklı** bir mekanizma — o equity-curve tabanlı bir
+soft-block, bu ise sinyal-bazlı bir virtual-then-real state machine. Bir **`signalTrader`**
+(ham sinyali üreten, gerçek bir `SingleTrader`) ve bir **`mainTrader`** (sadece konfirme edilmiş
+sinyali alıp gerçek emri açan) var, aradaki köprü [`VirtualPositionConfirmer`](#8-virtualpositionconfirmer--ortak-konfirmasyon-motoru).
+
+**Ne zaman kullanılır**: Ham stratejinin ürettiği her sinyali hemen trade etmek yerine, "önce
+biraz kâr/zarar potansiyelini gör, sonra karar ver" davranışı istediğinde. Console `[22]`-`[23]`.
+
+**Detaylı referans** — sınıf iskeleti, `Run()`'ın konfirmasyon akışı, `AlgoTrader.RunConfirmingSingleTraderWithProgressAsync()`'in
+tam kaynağı, `AppConfig` eşlemesi, ve tüm public üyelerin gerçek kullanım haritası (dikkat çeken
+bulgu: `ConfirmingSingleTraderLists.txt/.csv` çıktısı, projedeki her diğer dosyanın kullandığı
+`AppSettings.LogsDir` yerine yanlışlıkla derlenmiş exe'nin yanındaki bir `logs/` klasörüne
+yazılıyor):
+
+**[→ ConfirmingSingleTrader (ayrı sayfa)](classes/04-confirmingsingletrader.md)**
+
+---
+
+## 7. ConfirmingMultipleTrader — Consensus + Sanal Pozisyon Konfirmasyonu
+
+**Dosya**: `Traders/ConfirmingMultipleTrader.cs` (483 satır) + `Trading/Core/VirtualPositionConfirmer.cs`
+(bkz. [Bölüm 8](#8-virtualpositionconfirmer--ortak-konfirmasyon-motoru)).
+
+**Rolü**: [ConfirmingSingleTrader](#6-confirmingsingletrader--sanal-pozisyon-konfirmasyonu)'ın
+`MultipleTrader` karşılığı — tek bir stratejinin ham sinyali yerine **N child stratejinin
+consensus (bileşke) sinyalini** sanal pozisyonla konfirme eder. `_signalMultipleTrader` — tam,
+bağımsız çalışan gerçek bir [`MultipleTrader`](#4-multipletrader--çoklu-strateji--consensus)
+(N child + kendi consensus mantığı, hiç değiştirilmeden reuse edilmiş) — onun kendi mainTrader'ı
+ham sinyal kaynağı. Konfirmasyon state machine'i (`VirtualPositionConfirmer`) ConfirmingSingleTrader
+ile ORTAK.
+
+**Ne zaman kullanılır**: Birden fazla stratejinin CONSENSUS'unu (tek strateji değil) gerçek
+pozisyona çevirmeden önce sanal pozisyonla teyit etmek istediğinde. Console `[24]`-`[25]`.
+
+**Detaylı referans** — sınıf iskeleti, `Run()`'ın konfirmasyon akışı, `AlgoTrader.RunConfirmingMultipleTraderWithProgressAsync()`'in
+tam kaynağı, `AppConfig` eşlemesi, ve tüm public üyelerin gerçek kullanım haritası (aynı `logs/`
+klasör bulgusu burada da geçerli):
+
+**[→ ConfirmingMultipleTrader (ayrı sayfa)](classes/04-confirmingmultipletrader.md)**
+
+---
+
+## 8. VirtualPositionConfirmer — Ortak Konfirmasyon Motoru
+
+**Dosya**: `src/AlgoTrade.Core/Trading/Core/VirtualPositionConfirmer.cs` (175 satır).
+
+**Rolü**: [ConfirmingSingleTrader](#6-confirmingsingletrader--sanal-pozisyon-konfirmasyonu) VE
+[ConfirmingMultipleTrader](#7-confirmingmultipletrader--consensus--sanal-pozisyon-konfirmasyonu)
+arasında PAYLAŞILAN, bağımsız bir state machine sınıfı — kod tekrarını önlemek için ayrı dosyaya
+çıkarılmış. Sinyal geldiğinde sanal pozisyon açar (yön + giriş fiyatı + confirm durumu), kâr/zarar
+eşiği (`ProfitThreshold`/`LossThreshold`, değer veya yüzde) geçilince mainTrader'a gerçek emri
+tetikler, geçilmezse sanal pozisyonu iptal eder. `SignalConflictMode` enum'u (`CancelAndRestart`/
+`LockAndIgnore`) sanal pozisyon beklerken ters yönlü bir ham sinyal gelirse ne olacağını belirler.
+
+**Ne zaman kullanılır**: Doğrudan kullanılmaz — her iki Confirming* sınıfı bunu kompozisyonla
+kullanır (`_confirmer` alanı), property'leri kendi üzerlerinden pass-through olarak da açarlar
+(`trader.ProfitThreshold` gibi doğrudan erişim için).
+
+**Detaylı referans** — bu sınıfın ayrı bir sayfası yok, tam kaynağı ve `Resolve()`'un adım adım
+karar akışı [ConfirmingSingleTrader sayfasında](classes/04-confirmingsingletrader.md#virtualpositionconfirmer--ortak-konfirmasyon-motoru)
+tam olarak ele alınıyor (iki sınıf arasında birebir ortak olduğu için tekrar edilmiyor):
+
+**[→ VirtualPositionConfirmer (ConfirmingSingleTrader sayfasında)](classes/04-confirmingsingletrader.md#virtualpositionconfirmer--ortak-konfirmasyon-motoru)**
+
+---
+
+## 9. PythonPlotter — pythonnet Tabanlı Görselleştirme (Eski/Varsayılan)
+
+**Dosya**: `src/AlgoTrade.Core/Python/PythonPlotter.cs` (692 satır).
+
+**Rolü**: `AlgoTrader`'ın eski/varsayılan plot yolu. pythonnet ile aynı process içinde gömülü
+bir Python yorumlayıcısı başlatır, `SingleTrader`/`MultipleTrader` koşum sonuçlarını doğrudan
+`PyList`/`PyDict` nesnelerine çevirip Python tarafında (`inputs/python/`) bir plot penceresi
+açtırır.
+
+**Ne zaman kullanılır**: `AppConfig.json`'da ilgili trader'ın `Plot.PlotEnabled=true` olduğunda,
+koşum bitince otomatik tetiklenir — Console `[2]`/`[3]`/`[22]`/`[24]`.
+
+**Detaylı referans** — sınıf iskeleti, tam Public API, menüden çağrılma zinciri, ve kullanım
+haritası (dikkat çeken bulgu: `PlotOptimizationResults` hiçbir yerden çağrılmıyor,
+[SingleTraderOptimizer](#5-singletraderoptimizer--grid-search-optimizasyon) akışına hiç
+bağlanmamış):
+
+**[→ PythonPlotter (ayrı sayfa)](classes/python-plotter.md)**
+
+---
+
+## 10. DearPyGuiDataPlotter — Ayrı Process Tabanlı Görselleştirme (Yeni, Geliştirilmekte)
+
+**Dosyalar**: `src/AlgoTrade.Core/Python/DearPyGuiDataPlotter/DearPyGuiDataPlotter.cs`
+(276 satır), `TradeDataBundleConverter.cs`.
+
+**Rolü**: [PythonPlotter](#9-pythonplotter--pythonnet-tabanlı-görselleştirme-eskivarsayılan)'ın
+YERİNİ almayı hedefleyen, henüz geliştirilmekte olan alternatif. pythonnet ile in-process
+ÇALIŞMAZ — ayrı bir Python PROCESS'i başlatır, veriyi `TradeDataBundleConverter` ile `.npz`
+bundle + `.view.json` dosya çiftine dönüştürüp dosya-tabanlı runtime komutlarıyla ("load_bundle"
+vb.) o process'e iletir.
+
+**Ne zaman kullanılır**: Şu an için sadece Console `[9]` (demo/test menüsü, kod içi TODO'ya göre
+silinmesi planlı) ve `[8] Run Script` ile `04_GenerateDearPyGuiDataPlotterBundle.csx`/
+`05_RunDearPyGuiDataPlotterTest.csx` script çifti üzerinden. Ayrıca Console `[2]`'de
+(`PlotEnabled=true` iken) `PythonPlotter`'a EK olarak, aynı `SingleTrader` verisiyle paralel
+tetikleniyor (kod içi TODO: "gerçek `PlotBackend` switch'i gelince bu ikili çalışma
+kaldırılacak").
+
+**Detaylı referans** — sınıf iskeleti, tam Public API, menüden/script'ten çağrılma zincirleri,
+ve kullanım haritası (dikkat çeken bulgu: `ClearAllPanels`/`ReloadCurrent`/`AddSeriesFromBundle`
+komutları tanımlı ama hiçbir akıştan kullanılmıyor):
+
+**[→ DearPyGuiDataPlotter (ayrı sayfa)](classes/dearpyguidataplotter.md)**
+
+---
+
+## 11. IndicatorManager — İndikatör Merkezi Girişi
 
 **Dosya**: `src/AlgoTrade.Core/Trading/Indicators/IndicatorManager.cs` (296 satır) — asıl
 hesaplama kodu `Trading/Indicators/**` altında 50 dosyaya, ~6068 satıra yayılı.
@@ -370,7 +392,7 @@ optimizasyon taramalarında dikkat, bkz. [PROJECT_ANALYSIS.md §4.11](../PROJECT
 
 ---
 
-## 7. StrategyRegistry / QueryRegistry — Auto-Discovery
+## 12. StrategyRegistry / QueryRegistry — Auto-Discovery
 
 **Dosyalar**: `Trading/Strategies/StrategyRegistry.cs` (288 satır), `Trading/Queries/QueryRegistry.cs`
 (287 satır) — birebir aynı desen, biri `IStrategy`/`BaseStrategy` için biri `IQuery`/`BaseQuery` için.
@@ -406,7 +428,7 @@ tek şart doğru base class'tan türetmek.
 
 ---
 
-## 8. Scanner Ailesi (12 sınıf) — Toplu Tarama
+## 13. Scanner Ailesi (12 sınıf) — Toplu Tarama
 
 **Dosyalar**: `src/AlgoTrade.Core/Trading/Traders/*Scanner.cs` — 12 sınıf, ortak isimlendirme
 deseni: `[Multi][Query|Strategy-implicit][Symbol][Timeframe]Scanner`. Ayrıca `MultipleQuery.cs`
@@ -458,29 +480,6 @@ yapılır — sınıf kendisi consensus/config detayını bilmez.
 
 Detaylı Console menü eşlemesi ve senaryo numaraları için [docs/todo.md](../todo.md) "Tarama
 Motorları" bölümüne bakın.
-
----
-
-## 9. StockDataReader — Veri Okuma (Read Data, Menü [1])
-
-**Dosyalar**: `src/AlgoTrade.Core/StockDataReader/StockDataReader.cs`,
-`src/AlgoTrade.Core/DataProvider/MarketDataProvider.cs` (taban sınıf),
-`src/AlgoTrade.Core/StockData/StockData.cs` (veri birimi `struct`).
-
-**Rolü**: Disk üzerindeki `;`-ayraçlı CSV/TXT bar verisini okuyup `List<StockData>`'a çevirir.
-Console `[1] Read Data` menüsü bu sınıfı iki aşamalı (`ReadMetaData` → `ReadDataFast`) çağırır;
-sonucu tüm `AlgoTrader` tabanlı run'lar (bkz. [Bölüm 1](#1-algotrader--orkestratörfacade)–
-[Bölüm 5](#5-singletraderoptimizer--grid-search-optimizasyon)) veri kaynağı olarak kullanır.
-
-**Ne zaman kullanılır**: Her `AlgoTrader` akışından ÖNCE — Console `[1]` (sadece oku) veya
-`[5]`-`[7]`/`[23]`/`[25]` ("Read Data + X" kombo menüleri).
-
-**Detaylı referans** — sınıf iskeleti, tüm Public API, `readStockData()`'nın tam kaynağı,
-Console callback metodları, `FilterMode`'un 7 kombinasyonu için bağımsız C#/JSON örnekleri,
-ve tüm public üyelerin gerçek kullanım haritası (bu diğer 8 sınıftan çok daha derin işlendiği
-için ayrı sayfada tutuluyor):
-
-**[→ StockDataReader — Veri Okuma (ayrı sayfa)](classes/09-stockdatareader.md)**
 
 ---
 

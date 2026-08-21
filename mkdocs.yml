@@ -36,8 +36,15 @@ nav:
   - Ana Sayfa: manual/README.md
   - Manual:
       - Class Reference:
-          - Genel Bakış (§1-§8): manual/01-class-reference.md
+          - Genel Bakış (§1, §6-§8): manual/01-class-reference.md
+          - SingleTrader (§2): manual/classes/02-singletrader.md
+          - MultipleTrader (§3): manual/classes/03-multipletrader.md
+          - ConfirmingSingleTrader (§4): manual/classes/04-confirmingsingletrader.md
+          - ConfirmingMultipleTrader (§4): manual/classes/04-confirmingmultipletrader.md
+          - SingleTraderOptimizer (§5): manual/classes/05-singletraderoptimizer.md
           - StockDataReader (§9): manual/classes/09-stockdatareader.md
+          - Python Plotter: manual/classes/python-plotter.md
+          - DearPyGuiDataPlotter: manual/classes/dearpyguidataplotter.md
       - Console Menü Rehberi: manual/02-console-menu-guide.md
       - Scripting Rehberi: manual/03-scripting-guide.md
       - Varyant Kataloğu: manual/04-variant-catalog.md
