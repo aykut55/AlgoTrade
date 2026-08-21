@@ -310,13 +310,6 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       uygulamasinin kullandigi gercek `AlgoTrader` akisiyla (RegisterLogger/SetData/
       ConfigureStrategyFromConfig/Initialize/...) bile ortusmuyor gibi duruyor (dogrulanmali).
 
-- [ ] **Madde 5.3 — MultiTrader icin Scripting**
-      Birden fazla trader'in nasil birlestirilecegi (consensus kurallari) hala script uzerinden
-      tanimlanamiyor — ama artik 4 hazir mod (Net/Majority/All/Any, AppConfig.json'dan secilebilir)
-      var (bkz. Madde 2 notu, TAMAMLANDI 2026-08-18). Kalan tek eksik: script'ten TAMAMEN OZEL
-      (bu 4 modun disinda) bir consensus kurali tanimlama imkani — dar bir eksik, genis kapsamli
-      degil.
-
 - [ ] **Madde 6 (genisletme) — Sorgu Yapabilme: zengin sorgu tipleri**
       Alt yapi (IQuery/BaseQuery/QueryRegistry/QueryConfigLoader) TAMAM ve calisiyor, ama somut
       sorgu ornegi sadece 1 tane: `SimpleQuery1` (MA8/MA200 kesisimi + trader-state). Roadmap'te
@@ -339,6 +332,16 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
       tarafinda `WriteMultipleTraderListsToFiles()` sadece BAR-BAR rapor uretiyor (her bar icin
       tum trader'larin Yon/Seviye/Sinyal'i), consensus trader'in (mainTrader) trade-bazli
       performans raporu urup uretmedigi dogrulanmali.
+      **Netlestirme (2026-08-21):** mainTrader VE her childTrader aslinda `ExecutePostOrderMethods
+      → ExecuteOrders` uzerinden GERCEK, kendi basina trade yapiyor (standalone SingleTrader'la
+      birebir ayni pipeline) — yani trade-bazli performans raporu (`WriteStatisticsToFile()`)
+      HER BIRI icin zaten ayri ayri uretiliyordu, sadece KONSOLIDE degildi. Bu boslugu kapatan
+      `MultipleTrader.WriteMultipleTraderStatistics()` (yeni, 2026-08-21) eklendi —
+      mainTrader + tum childTrader'larin `GetOptimizationSummary()` ozetini (NetProfit/WinRate/
+      ProfitFactor/MaxDrawdown vb.) tek dosyada (`MultipleTraderStatistics.txt/.csv`, satir=trader)
+      karsilastiriyor. Kalan tek eksik (kucuk, kismi isaretin sebebi): getiri egrisi (equity
+      curve) GORSELLESTIRMESI hala yok — bkz. [docs/todo.md](todo.md) "Strateji Karsilastirma —
+      Getiri Egrisi Gorsellestirme" bolumu.
 
 - [x] **Madde 8 — AlgoTrader ile Toplu Sembol Taramasi (Screening)** — TAMAMLANDI (2026-08-18)
       `SymbolScanner` (bkz. `src/AlgoTrade.Core/Trading/Traders/SymbolScanner.cs`) + Console
@@ -376,6 +379,19 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
          menu yok.
 
 ### Tam Tamamlanmis Madde
+
+- [x] **Madde 5.3 — MultiTrader icin Scripting** — TAMAMLANDI (2026-08-21). Onceki analizde
+  "consensus kurali script'ten tanimlanamiyor" denmisti — artik tanimlanabiliyor:
+  `MultipleTrader.CustomConsensusFunc` (`Func<List<SingleTrader>, TradeSignals>?`) property'si
+  eklendi, `BuildConsensusSignal()` bu doluysa hardcoded Net/Majority/All/Any switch'ini atlayip
+  dogrudan onun sonucunu kullaniyor (null ise eski davranis degismeden calisiyor). Script tarafi:
+  [inputs/scripts/CustomConsensusExample.csx](../inputs/scripts/CustomConsensusExample.csx) —
+  4 hazir modun script'e birebir tasinmis referans implementasyonlari
+  (`NetConsensusReference`/`MajorityConsensusReference`/`AllConsensusReference`/
+  `AnyConsensusReference`) + 3 ozel ornek (`FirstChildWinsConsensus` varsayilan aktif,
+  `WeightedConsensus`, `BothAgreeConsensus`), tek satir degistirerek secilebiliyor. Izole birim
+  testiyle (CustomConsensusFunc set/unset dongusu) ve gercek veriyle (1.9M bar) uctan uca
+  dogrulandi.
 
 - [x] **Madde 3 — SingleTrader + Getiri Egrisi / KarZarar Egrisi (sanal islem konfirmasyonu)** —
   TAMAMLANDI (2026-08-19). Onceki analizde "Hic implement edilmemis / KAPSAM DISI" denmisti, bu
