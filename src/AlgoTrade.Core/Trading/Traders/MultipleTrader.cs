@@ -61,6 +61,14 @@ public class MultipleTrader
     public string MultipleTraderListsCsvFileName { get; set; } = "MultipleTraderLists.csv";
     public bool SaveMultipleTraderListsTxtEnabled { get; set; } = true;
     public bool SaveMultipleTraderListsCsvEnabled { get; set; } = true;
+
+    // TODO: "MultipleTraderStatistics" ismi yerine daha aciklayici bir isim (orn.
+    // "MultipleTraderPerformanceSummary") tercih edilebilir - kullanici ile konusulup karar verilecek.
+    public string MultipleTraderStatisticsTxtFileName { get; set; } = "MultipleTraderStatistics.txt";
+    public string MultipleTraderStatisticsCsvFileName { get; set; } = "MultipleTraderStatistics.csv";
+    public bool SaveMultipleTraderStatisticsTxtEnabled { get; set; } = true;
+    public bool SaveMultipleTraderStatisticsCsvEnabled { get; set; } = true;
+
     public bool PlotEnabled { get; set; } = false;
 
     #endregion
@@ -663,6 +671,124 @@ public class MultipleTrader
             return 0.0;
 
         return trader.lists.SinyalList[barIndex];
+    }
+
+    #endregion
+
+    #region MultipleTrader Statistics Export
+
+    // TODO: "MultipleTraderStatistics" ismi yerine daha aciklayici bir isim (orn.
+    // "MultipleTraderPerformanceSummary") tercih edilebilir - kullanici ile konusulup karar verilecek.
+    //
+    // Amac: mainTrader ve her childTrader'in WriteStatisticsToFile() ile zaten ayri ayri uretilen
+    // tam performans raporlarini (bkz. SingleTraderStatistics.txt/.csv, SingleTraderPerformans.txt/.csv)
+    // tek bir dosyada, satir=trader / kolon=metrik seklinde yan yana ozetler. Var olan trade-bazli
+    // raporlarin YERINE gecmez, onlarin konsolide bir karsilastirma gorunumudur.
+
+    /// <summary>
+    /// mainTrader + tum childTrader'larin GetOptimizationSummary() ozetini tek bir dosyada
+    /// (satir=trader, kolon=metrik) yazar. WriteMultipleTraderListsToFiles() (bar-bar sinyal
+    /// listesi) ile karistirilmamali - bu method performans/istatistik ozetidir.
+    /// Finalize() cagrildiktan (istatistikler hesaplandiktan) sonra cagrilmalidir.
+    /// </summary>
+    public void WriteMultipleTraderStatistics(string logDir)
+    {
+        if (this.SaveMultipleTraderStatisticsTxtEnabled)
+        {
+            LogManager.LogRaw($"\n\tSaving MultipleTrader statistics to {MultipleTraderStatisticsTxtFileName}...");
+            WriteMultipleTraderStatisticsToTxt(logDir);
+        }
+        if (this.SaveMultipleTraderStatisticsCsvEnabled)
+        {
+            LogManager.LogRaw($"\n\tSaving MultipleTrader statistics to {MultipleTraderStatisticsCsvFileName}...");
+            WriteMultipleTraderStatisticsToCsv(logDir);
+        }
+    }
+
+    private List<(string Name, Dictionary<string, string> Summary)> BuildStatisticsRows()
+    {
+        var rows = new List<(string Name, Dictionary<string, string> Summary)>();
+
+        if (_mainTrader != null)
+            rows.Add((_mainTrader.Name, _mainTrader.statistics.GetOptimizationSummary()));
+
+        foreach (var trader in Traders)
+            rows.Add((trader.Name, trader.statistics.GetOptimizationSummary()));
+
+        return rows;
+    }
+
+    private void WriteMultipleTraderStatisticsToTxt(string logDir)
+    {
+        var rows = BuildStatisticsRows();
+        if (rows.Count == 0)
+            return;
+
+        if (!System.IO.Directory.Exists(logDir))
+            System.IO.Directory.CreateDirectory(logDir);
+
+        var filePath = System.IO.Path.Combine(logDir, MultipleTraderStatisticsTxtFileName);
+        var keys = rows[0].Summary.Keys.ToList();
+
+        var traderColWidth = Math.Max("Trader".Length, rows.Max(r => r.Name.Length)) + 1;
+        var colWidths = keys.ToDictionary(
+            k => k,
+            k => Math.Max(k.Length, rows.Max(r => r.Summary.TryGetValue(k, out var v) ? v.Length : 0)) + 1);
+
+        var fs = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using (var writer = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8))
+        {
+            writer.WriteLine("MULTIPLE TRADER STATISTICS SUMMARY");
+            writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            writer.WriteLine("".PadRight(300, '='));
+
+            var headerParts = new List<string> { "Trader".PadRight(traderColWidth) };
+            foreach (var key in keys)
+                headerParts.Add(key.PadLeft(colWidths[key]));
+            writer.WriteLine(string.Join(" | ", headerParts));
+
+            writer.WriteLine("".PadRight(300, '-'));
+
+            foreach (var row in rows)
+            {
+                var dataParts = new List<string> { row.Name.PadRight(traderColWidth) };
+                foreach (var key in keys)
+                    dataParts.Add((row.Summary.TryGetValue(key, out var v) ? v : "").PadLeft(colWidths[key]));
+                writer.WriteLine(string.Join(" | ", dataParts));
+            }
+        }
+
+        LogManager.LogRaw($"{MultipleTraderStatisticsTxtFileName} written to: {filePath}");
+    }
+
+    private void WriteMultipleTraderStatisticsToCsv(string logDir)
+    {
+        var rows = BuildStatisticsRows();
+        if (rows.Count == 0)
+            return;
+
+        if (!System.IO.Directory.Exists(logDir))
+            System.IO.Directory.CreateDirectory(logDir);
+
+        var filePath = System.IO.Path.Combine(logDir, MultipleTraderStatisticsCsvFileName);
+        var keys = rows[0].Summary.Keys.ToList();
+
+        var fs = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using (var writer = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8))
+        {
+            var headerParts = new List<string> { "Trader" };
+            headerParts.AddRange(keys);
+            writer.WriteLine(string.Join(";", headerParts));
+
+            foreach (var row in rows)
+            {
+                var dataParts = new List<string> { row.Name };
+                dataParts.AddRange(keys.Select(k => row.Summary.TryGetValue(k, out var v) ? v : ""));
+                writer.WriteLine(string.Join(";", dataParts));
+            }
+        }
+
+        LogManager.LogRaw($"{MultipleTraderStatisticsCsvFileName} written to: {filePath}");
     }
 
     #endregion

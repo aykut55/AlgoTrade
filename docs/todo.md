@@ -30,6 +30,18 @@
   2. Switch bitince `[9]` demo menüsü + geçici test hook'u silinecek
   3. X ekseni datetime formatını tek satıra indirmek (`panelManager.py:38`, `_dayChangeFormat`) — mekanizma hazır, sadece varsayılan değer değişecek
 
+- [ ] **MultipleTrader → DearPyGuiDataPlotter (yeni plotter) veri aktarımı hiç yapılmıyor** (2026-08-21
+  tespit edildi). `AlgoTrader.PlotMultipleTraderData()` (`AlgoTrader.cs:3031-3039`) sadece eski
+  `_pythonPlotter.PlotMultipleTraderData(multipleTrader)` (pythonnet tabanlı, §5.7 mekanizma 1) çağırıyor.
+  Yeni plotter tarafındaki `TradeDataBundleConverter`/`DearPyGuiDataPlotter` test hook'u
+  (`Program.cs:803-823`) sadece **SingleTrader** verisini bundle'a çeviriyor — MultipleTrader
+  (mainTrader + child'lar) için eşdeğer bir `.npz` bundle üretimi/`load_bundle` çağrısı yok.
+  Yani MultipleTrader çalıştırıldığında sadece ilk (eski) plotter'da veri görünüyor, ikinci
+  (yeni, DearPyGuiDataPlotter) plotter'a hiç veri çizdirilmiyor. Yukarıdaki madde 1'deki
+  `PlotBackend` switch'i implement edilirken bu boşluk da kapatılmalı — muhtemelen
+  `TradeDataBundleConverter`'a bir `ConvertMultipleTrader(...)` overload'ı (mainTrader + her
+  child için ayrı panel/bundle) eklenmesi gerekecek.
+
 ## Tarama Motorları — TAMAMLANDI (16/16, 2026-08-18)
 
 Kullanıcının 2026-08-18'de tarif ettiği 8 senaryoluk matris (Sembol × Strateji × Zaman Dilimi,

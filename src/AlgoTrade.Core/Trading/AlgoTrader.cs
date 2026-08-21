@@ -1585,6 +1585,11 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 multipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
                 Log($"\n[WriteTraderDataToFilesAsync] ✓ multipleTrader file writing completed.");
 
+                // mainTrader + childTraders özet karşılaştırması (tek dosya)
+                Log($"\n[WriteTraderDataToFilesAsync] Saving multipleTrader statistics summary to files...");
+                trader.WriteMultipleTraderStatistics(AppSettings.LogsDir);
+                Log($"\n[WriteTraderDataToFilesAsync] ✓ multipleTrader statistics summary file writing completed.");
+
                 // mainTrader
                 var mainTrader = trader.GetMainTrader();
                 if (mainTrader is not null && mainTrader.SaveStatisticsToFile)
@@ -2681,6 +2686,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 Log($"\n[WriteTraderDataToFilesAsync] Saving signal layer (MultipleTrader) lists to files...");
                 signalMultipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
                 Log($"\n[WriteTraderDataToFilesAsync] ✓ signal layer lists file writing completed.");
+
+                Log($"\n[WriteTraderDataToFilesAsync] Saving signal layer (MultipleTrader) statistics summary to files...");
+                signalMultipleTrader.WriteMultipleTraderStatistics(AppSettings.LogsDir);
+                Log($"\n[WriteTraderDataToFilesAsync] ✓ signal layer statistics summary file writing completed.");
 
                 var signalMain = signalMultipleTrader.GetMainTrader();
                 if (signalMain is not null && signalMain.SaveStatisticsToFile)
