@@ -1,3 +1,14 @@
+> **⚠️ ESKİMİŞ — güncel kod farklı (2026-08-21).** Bu belgenin "kalıcı" saydığı `00ff0d5` commit'i
+> repoda bulunamadı ve önerilen metod isimleri (`onSync`, `_dispatchSync`,
+> `applyClickEventToOthers`, `applyDoubleClickEventToOthers`, `applyZoomEventsToOthers`,
+> `applyPanEventsToOthers`, `_applySrcToOthers`, `_applyInProgress`, `readSourceParams`,
+> `applySavedParamsToOthers`) kodda yok. Gerçek kod farklı isimlerle bir sync mekanizması
+> kullanıyor: `interactionManager.py`'de `scheduleSyncOthers`/`syncOthers`/
+> `getPendingSyncCount`/`_applyPendingSyncToPanel`, `panelManager.py`'de
+> `readPanelPlotParams`/`getLastReadPlotParams` (bağlandığı yer: `guiManager.py:486-491`
+> `_onApplySrcParams`). Bu belgeyi tasarım niyeti için tarihsel referans olarak oku, davranış
+> açıklaması olarak güvenme.
+
 # InteractionManager — Tasarlanan Davranış (kod revert edilse bile kalıcı özet)
 
 Bu dosya, `interactionManager.py`/`guiManager.py` üzerinde henüz commit edilmemiş

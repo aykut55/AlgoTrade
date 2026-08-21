@@ -1,3 +1,14 @@
+> **⚠️ ESKİMİŞ — güncel kod farklı (2026-08-21).** "Read" tarafı (`readPanelPlotParams`,
+> `panelManager.py:1032`, `guiManager.py:479,526,544`) implement edilmiş, ama "Apply" tarafı
+> önerilen isimlerle (`applyLastReadPlotParamsToOthers`, `_queuePanelAxisSync`,
+> `_applyPendingAxisSync`, `_applyPendingYAdjust`, `_releasePendingAxisLocks`,
+> `_queuePanelsForSyncOnScroll`) hiç yok. Daha önemlisi: bu belge "`InteractionManager` eksen
+> uygulaması yapmayacak, `set_axis_limits`/`fit_axis_data` gibi işler `PanelManager`'da kalacak"
+> diyor — gerçek kod tam tersini yapıyor: `guiManager.py:490`'da
+> `interactionManager.scheduleSyncOthers()` çağrılıyor, yani sorumluluk `InteractionManager`'a
+> verilmiş. Bu belgeyi tasarım niyeti için tarihsel referans olarak oku, davranış açıklaması
+> olarak güvenme.
+
 # Manual Axis Sync Plan
 
 Bu not, top paneldeki `Read Params (src)` / `Apply Params (dst)` akisini
