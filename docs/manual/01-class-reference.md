@@ -28,6 +28,7 @@
 - §11 — [IndicatorManager — İndikatör Merkezi Girişi](#11-indicatormanager--indikatör-merkezi-girişi)
 - §12 — [StrategyRegistry / QueryRegistry — Auto-Discovery](#12-strategyregistry--queryregistry--auto-discovery)
 - §13 — [Scanner Ailesi (12 sınıf) — Toplu Tarama](#13-scanner-ailesi-12-sınıf--toplu-tarama)
+- §14 — [Script'ler — Numaralı Envanter](#14-scriptler--numaralı-envanter)
 
 ---
 
@@ -480,6 +481,45 @@ yapılır — sınıf kendisi consensus/config detayını bilmez.
 
 Detaylı Console menü eşlemesi ve senaryo numaraları için [docs/todo.md](../todo.md) "Tarama
 Motorları" bölümüne bakın.
+
+---
+
+## 14. Script'ler — Numaralı Envanter
+
+**Dosyalar**: `inputs/scripts/01_*.csx` — `19_*.csx`, Console `[8] Run Script` ile çalıştırılır.
+
+**Rolü**: Bu tablo sadece bir **envanter/eşleme** — hangi numaralı script hangi sınıfı çalıştırıyor.
+01-07 zaten ilgili sınıfın "Script'ten Çağrılma" bölümünde derinlemesine anlatıldı (aşağıda link
+var). 08-19 (Scanner script'leri) henüz ayrı ayrı incelenip belgelenmedi — bilinçli olarak
+ertelendi, burada sadece isim eşlemesi var.
+
+| # | Script Dosyası | İlgili Sınıf |
+|---|---|---|
+| 01 | `01_RunSingleTraderWithProgressAsync.csx` | [SingleTrader (§3)](classes/02-singletrader.md#tipik-kullanım--scriptten-çağrılma-manuel-kurulum) |
+| 02 | `02_RunMultipleTraderWithProgressAsync.csx` | [MultipleTrader (§4)](classes/03-multipletrader.md#tipik-kullanım--scriptten-çağrılma-customconsensusfunc-örneği) |
+| 03 | `03_RunSingleTraderOptWithProgressAsync.csx` | [SingleTraderOptimizer (§5)](classes/05-singletraderoptimizer.md#tipik-kullanım--scriptten-çağrılma) |
+| 04 | `04_GenerateDearPyGuiDataPlotterBundle.csx` | [DearPyGuiDataPlotter (§10)](classes/dearpyguidataplotter.md#tipik-kullanım--scriptten-çağrılma) |
+| 05 | `05_RunDearPyGuiDataPlotterTest.csx` | [DearPyGuiDataPlotter (§10)](classes/dearpyguidataplotter.md#tipik-kullanım--scriptten-çağrılma) |
+| 06 | `06_RunConfirmingSingleTraderWithProgressAsync.csx` | [ConfirmingSingleTrader (§6)](classes/04-confirmingsingletrader.md#tipik-kullanım--scriptten-çağrılma) |
+| 07 | `07_RunConfirmingMultipleTraderWithProgressAsync.csx` | [ConfirmingMultipleTrader (§7)](classes/04-confirmingmultipletrader.md#tipik-kullanım--scriptten-çağrılma) |
+| 08 | `08_RunSymbolScan.csx` | `SymbolScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 09 | `09_RunTimeframeScan.csx` | `TimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 10 | `10_RunMultiStrategyTimeframeScan.csx` | `MultiStrategyTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 11 | `11_RunSymbolTimeframeScan.csx` | `SymbolTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 12 | `12_RunMultiStrategySymbolScan.csx` | `MultiStrategySymbolScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 13 | `13_RunMultiStrategySymbolTimeframeScan.csx` | `MultiStrategySymbolTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 14 | `14_RunQuerySymbolScan.csx` | `QuerySymbolScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 15 | `15_RunQueryTimeframeScan.csx` | `QueryTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 16 | `16_RunMultiQueryTimeframeScan.csx` | `MultiQueryTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 17 | `17_RunQuerySymbolTimeframeScan.csx` | `QuerySymbolTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 18 | `18_RunMultiQuerySymbolScan.csx` | `MultiQuerySymbolScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+| 19 | `19_RunMultiQuerySymbolTimeframeScan.csx` | `MultiQuerySymbolTimeframeScanner` ([§13](#13-scanner-ailesi-12-sınıf--toplu-tarama)) |
+
+Numaralanmamış diğer script'ler (`Config_*.csx`, `mainScript*.csx`, `paramSweep.csx`,
+`runSingleTraderWithStrategy.csx`, `runMultiTraderWithStrategies.csx`, `CustomConsensusExample.csx`,
+`console_scripts.csx`, `test_hello.csx`) için kategorize liste:
+[inputs/scripts/readme.txt](../../inputs/scripts/readme.txt) ve
+[03-scripting-guide.md §6](03-scripting-guide.md#6-mevcut-script-envanteri).
 
 ---
 
