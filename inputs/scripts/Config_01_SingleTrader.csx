@@ -13,6 +13,21 @@ string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // =============================================================================
+// Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
+// FilterMode: All, LastN, FirstN, IndexRange, AfterDateTime, BeforeDateTime, DateTimeRange
+// Dt1/Dt2 formati: "yyyy.MM.dd HH:mm:ss" (bos string = kullanilmiyor)
+// =============================================================================
+string readDataFilterMode = "All";
+int readDataN1 = 0;
+int readDataN2 = 0;
+string readDataDt1 = "";
+string readDataDt2 = "";
+
+// Head/Tail log - [5] menusundeki addHeadTailInfo karsiligi (menude de varsayilan/hep kapali,
+// bkz. Program.cs:52 - orada hicbir zaman true yapilmiyor). Debug icin script'te acilabilir.
+bool addHeadTailInfo = false;
+
+// =============================================================================
 // Strategy Configuration
 // =============================================================================
 string strategyName = "SimpleMostStrategy";
@@ -62,3 +77,12 @@ string symbolPeriod = "...";
 // Save Statistics
 // =============================================================================
 bool saveStatisticsToFile = true;
+
+// =============================================================================
+// Export (versiyonlu sutun tanimlariyla FullListsTxt/PerformansTxt uzerine ek yazim)
+// AppConfig.json'daki SingleTrader.Export bolumunun karsiligi (SingleTrader.cs:2662-2675).
+// exportEnabled=false ise devre disi (varsayilan, AppConfig'de de Export bolumu yoksa boyle).
+// =============================================================================
+bool exportEnabled = false;
+string exportConfigFile = "StatisticsExporterConfig.json";
+string exportVersion = "v1";

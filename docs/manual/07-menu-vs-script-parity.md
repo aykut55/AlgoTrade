@@ -53,27 +53,65 @@ sarmalayıcısını kullanmıyor).
   Gate şartı menüdekiyle aynı mantık: `selectedRunMode != TraderRunMode.QueryOnly` (menüde ayrıca
   `singleTrader.PlotEnabled` de kontrol ediliyor — script bunu bilerek atlıyor, bkz. aşağıdaki not).
 
-### 🟡 Açık farklar — gerçek eksiklik (fonksiyonu etkiler)
+- **Veri okuma filtreleme yoktu.** Menü tarafı `readStockData()`
+  (`Program.cs:610-692`, özellikle satır 665) `AppConfig.json`'daki `ReadData` bölümünden
+  (`FilterMode`, `N1`, `N2`, `Dt1`, `Dt2`) gelen parametrelerle
+  `stockDataReader.ReadDataFast(filePath, filterMode, n1, n2, dt1, dt2)` çağırıyor — yani veriyi
+  tarih aralığına veya son-N-bar'a göre kısıtlayabiliyor. Script'te parametresiz
+  `stockDataReader.ReadDataFast(stockDataFullFileName)` çağrılıyordu — her zaman dosyanın tamamı
+  okunuyordu. **Fix:** `Config_01_SingleTrader.csx`'e `ReadDataConfig` ile birebir aynı 5 alan
+  eklendi (`readDataFilterMode`, `readDataN1`, `readDataN2`, `readDataDt1`, `readDataDt2` —
+  Ayarlar bölümünün hemen altı). `01_RunSingleTraderWithProgressAsync.csx`'te "1. Veri Oku"
+  bölümünde (satır ~129-133) `Enum.TryParse<StockDataReader.FilterMode>(...)` +
+  `Dt1`/`Dt2` boşsa `null` olacak şekilde `DateTime.Parse(...)` yapılıp
+  `ReadDataFast(stockDataFullFileName, filterMode, readDataN1, readDataN2, dt1, dt2)` 6
+  parametreli haliyle çağrılıyor artık — menünün `readStockData()`'daki mantığının birebir
+  aynısı.
 
-1. **Veri okuma filtreleme yok.** Menü tarafı `readStockData()`
-   (`Program.cs:610-692`, özellikle satır 665) `AppConfig.json`'daki `ReadData` bölümünden
-   (`FilterMode`, `N1`, `N2`, `Dt1`, `Dt2`) gelen parametrelerle
-   `stockDataReader.ReadDataFast(filePath, filterMode, n1, n2, dt1, dt2)` çağırıyor — yani veriyi
-   tarih aralığına veya son-N-bar'a göre kısıtlayabiliyor. Script'te parametresiz
-   `stockDataReader.ReadDataFast(stockDataFullFileName)` çağrılıyor — **her zaman dosyanın
-   tamamı** okunuyor. AppConfig'de bir filtre tanımlıysa [5] ile script farklı bar
-   sayısı/aralığıyla çalışır, sonuçlar örtüşmez.
-2. **Export config eksik.** `AppConfigApplier.ApplySingleTrader()` içinde `cfg.Export` varsa
-   `algoTrader.SetSingleTraderExportConfig(...)` çağrılıyor (`AppConfigApplier.cs:121-129`).
-   Script'te export adımının karşılığı hiç yok.
-3. **Head/Tail log yok.** `readStockData()`'da `addHeadTailInfo` açıksa ilk/son satırlar
-   loglanıyor (`Program.cs:680-686`). Script bunu yapmıyor (sadece bar sayısını basıyor).
-4. **Okuma sırasında progress event'i yok.** Menü `OnReadMetaData`/`OnReadData`/`OnProgress`'e
-   abone oluyor (`Program.cs:621-623`). Script okuma bitince tek satır log basıyor, ara ilerleme
-   yok (küçük dosyalarda önemsiz, büyük dosyalarda fark eder).
-5. **t0-t3 zaman metrikleri eksik.** `RunSingleTraderWithProgressAsync()` içinde `TimeManager`
-   ile 4 ayrı elapsed-time loglanıyor: t0=toplam, t1=run+finalize, t2=run, t3=finalize
-   (`AlgoTrade.cs:1515-1518`). Script sadece `runElapsed`/`finalizeElapsed` (2 metrik) hesaplıyor.
+- **Head/Tail log yoktu.** `readStockData()`'da `addHeadTailInfo` açıksa ilk/son satırlar
+  loglanıyor (`Program.cs:680-686`). **Not:** `addHeadTailInfo` (`Program.cs:52`) kod tabanında
+  **hiçbir yerde `true` yapılmıyor** — [5] de fiilen bu logu hiç basmıyor (ölü flag). **Fix:**
+  yine de `Config_01_SingleTrader.csx`'e aynı isimde bir `addHeadTailInfo = false` toggle'ı
+  eklendi (satır ~26-28) ve script'te veri okunduktan sonra (satır ~159-166)
+  `if (addHeadTailInfo) { Log(stockDataReader.Head()); Log(stockDataReader.Tail()); }` bloğu
+  eklendi — varsayılan davranış [5] ile aynı (kapalı), script'te debug amaçlı açılabilir bir
+  esneklik olarak duruyor.
+- **Okuma sırasında progress event'i yoktu.** Menü `OnReadMetaData`/`OnProgress`'e abone oluyor
+  (`Program.cs:64-92`) — `OnReadData` handler'ı ise boş (`Program.cs:94`, no-op), o yüzden
+  sync'lenmedi. **Fix:** `01_RunSingleTraderWithProgressAsync.csx`'te `stockDataReader`
+  oluşturulduktan hemen sonra (satır ~116-131) aynı iki event'e (`OnReadMetaData`/`OnProgress`)
+  Program.cs'teki handler'larla birebir aynı içerikte (Record Time/Chart Symbol/Chart
+  Period/Bar Count/Start Date/End Date/Format + her 1000 kayıtta bir "Record no") abone olundu.
+- **t0-t3 zaman metrikleri eksikti.** `RunSingleTraderWithProgressAsync()` içinde `TimeManager`
+  ile 4 ayrı elapsed-time loglanıyor: t0=toplam, t1=run+finalize, t2=run, t3=finalize
+  (`AlgoTrade.cs:1515-1518`). Script sadece `Stopwatch` ile `runElapsed`/`finalizeElapsed`
+  (2 metrik) hesaplıyordu. **Fix:** script'teki `Stopwatch` tamamen kaldırıldı,
+  `using AlgoTrade.Core.Timer;` eklenip aynı `TimeManager.GetInstance()` singleton'ı ve aynı
+  "0"/"1"/"2"/"3" timer ID'leri, menüdeki **birebir aynı sınır noktalarında**
+  (`RestartTimer("0")` indicators'tan önce, `RestartTimer("1")`+`RestartTimer("2")` Init
+  sonrası run loop'tan önce, `StopTimer("2")` run loop sonrası, `RestartTimer("3")`/`StopTimer("3")`
+  sadece `Finalize()` çağrısını sarıyor, `StopTimer("1")`/`StopTimer("0")` query summary'den
+  sonra) kullanılarak eklendi. **Ayrıca fark edilen bir sıralama sorunu da düzeltildi:** Plot
+  bölümü ("9b") başta t0/t1 ölçümünün İÇİNE düşüyordu (plot penceresi açık kaldığı sürece t0/t1
+  şişerdi) — menüde Plot, `RunSingleTraderWithProgressAsync()` tamamen bittikten (t0-t3
+  hesaplandıktan) SONRA tetikleniyor (`Program.cs:793-825`), bu yüzden Plot bölümü script'te de
+  t0-t3 loglandıktan sonraya (bölüm 12 Temizle'den hemen önceye) taşındı.
+
+- **Export config eksikti.** `AppConfigApplier.ApplySingleTrader()` içinde `cfg.Export` varsa
+  `algoTrader.SetSingleTraderExportConfig(...)` çağrılıyor (`AppConfigApplier.cs:121-129`) —
+  bu, `SingleTrader.WriteStatisticsToFile()` içinde (`SingleTrader.cs:2662-2675`)
+  `ExportEnabled=true` ise `FullListsTxtFileName`/`PerformansTxtFileName`'i `ExportConfigFile`
+  (`StatisticsExporterConfig.json`) içindeki `ExportVersion` (örn. "v2") sütun tanımıyla
+  **üzerine tekrar yazan** aktif bir özellik (dead code değil — varsayılan `ExportEnabled=false`
+  olduğu için AppConfig'de açılmadıkça görünmez). Script'te bu adımın karşılığı hiç yoktu.
+  **Fix:** `Config_01_SingleTrader.csx`'e `exportEnabled`/`exportConfigFile`/`exportVersion`
+  (varsayılan `false`/`"StatisticsExporterConfig.json"`/`"v1"` — AppConfig'in kendi
+  varsayılanlarıyla aynı) eklendi; `01_RunSingleTraderWithProgressAsync.csx`'te
+  `OnApplyUserFlags2(SingleTrader trader)` içine (satır ~100-102)
+  `trader.ExportEnabled/ExportConfigFile/ExportVersion` atamaları eklendi.
+
+**§1 durumu: artık tüm 🟡/🔴 farklar kapatıldı — [5] ile 01 script'i arasında sadece ⚪ (kasıtlı/
+kozmetik) farklar kaldı.**
 
 ### ⚪ Kasıtlı/kozmetik farklar (bug değil — tasarım gereği)
 
@@ -129,10 +167,15 @@ kurup elle `for` döngüsüyle çalıştırıyor.
    yazımı `trader.WriteChildTradersDataToFiles` flag'ine bağlı (`AlgoTrade.cs:1611`). Script
    doğrudan her child'ın kendi `SaveStatisticsToFile`'ına bakıyor (satır 356-360), üst seviye
    flag'i hiç sormuyor — AppConfig'de bu flag kapalıyken bile script child dosyalarını yazar.
-3. **Aynı 1-5 madde (SingleTrader bölümündeki ReadData filtreleme / Export config / Head-Tail /
-   okuma progress / t0-t3 metrikleri) burada da geçerli** — `readStockData()` ve
-   `AppConfigApplier.ApplyMultipleTrader()` yolunun tamamı SingleTrader ile aynı mekanizmayı
-   kullanıyor.
+3. **Export config eksik** — SingleTrader bölümündeki (§1) aynı eksiklik burada da geçerli.
+4. **SingleTrader (§1) için düzeltilen 3 fix henüz buraya taşınmadı**: ReadData filtreleme
+   (`stockDataReader.ReadDataFast(stockDataFullFileName)` hâlâ parametresiz), Head/Tail toggle,
+   okuma sırasında `OnReadMetaData`/`OnProgress` event'leri, ve t0-t3 zaman metrikleri (script
+   hâlâ `Stopwatch` ile `runElapsed`/`finalizeElapsed` kullanıyor) —
+   `02_RunMultipleTraderWithProgressAsync.csx` + `Config_02_MultipleTrader.csx`'e henüz
+   uygulanmadı. `readStockData()` ve `AppConfigApplier.ApplyMultipleTrader()` yolunun tamamı
+   SingleTrader ile aynı mekanizmayı kullandığı için §1'deki fix'lerin aynısı buraya da
+   taşınabilir.
 
 ### ⚪ Kasıtlı/kozmetik farklar
 
@@ -197,9 +240,9 @@ eklenmeli.
    `Log(...)` ile en iyi sonucu basıyor, hiçbir kalıcı çıktı dosyası yok. Menü tarafında bunlar
    `AppConfig.json`'daki `SingleTraderOptimizer.Save`/`Sort` bölümünden
    `AppConfigApplier.ApplySingleTraderOpt()` (satır 926-944) ile otomatik geliyor.
-2. **Veri okuma filtreleme yok** — §1'deki 1. madde ile aynı (`ReadDataFast(stockDataFullFileName)`
-   parametresiz çağrılıyor, `AppConfig.json`'daki `ReadData.FilterMode/N1/N2/Dt1/Dt2` script'te
-   karşılığı yok).
+2. **Veri okuma filtreleme yok** — §1'de SingleTrader script'i için düzeltilen fix
+   (`readDataFilterMode`/`N1`/`N2`/`Dt1`/`Dt2`) henüz buraya taşınmadı;
+   `ReadDataFast(stockDataFullFileName)` hâlâ parametresiz çağrılıyor.
 
 ### ⚪ Kasıtlı/kozmetik farklar — ve bir "dead code" notu
 

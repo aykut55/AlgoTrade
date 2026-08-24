@@ -5,7 +5,6 @@
 #load "Config_01_SingleTrader.csx"
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,13 +19,14 @@ using AlgoTrade.Core.Trading.Strategy;
 using AlgoTrade.Core.Trading.Query;
 using AlgoTrade.Core.Python;
 using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
+using AlgoTrade.Core.Timer;
 
 // =============================================================================
 // Degiskenler
 // =============================================================================
 StockDataReader? stockDataReader = null;
 ConcurrentDictionary<string, string>? stockMetaData = null;
-var sw = new Stopwatch();
+var timeManager = TimeManager.GetInstance();
 
 // =============================================================================
 // Local Methods
@@ -96,6 +96,11 @@ void OnApplyUserFlags2(SingleTrader trader)
     trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
     trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
     trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
+
+    // Export (AppConfigApplier.cs:121-129 ile ayni - versiyonlu sutun tanimlariyla ek yazim)
+    trader.ExportEnabled    = exportEnabled;
+    trader.ExportConfigFile = exportConfigFile;
+    trader.ExportVersion    = exportVersion;
 }
 
 // =============================================================================
@@ -110,6 +115,26 @@ if (!File.Exists(stockDataFullFileName))
 }
 
 stockDataReader = new StockDataReader();
+
+// Program.cs:64-92 (OnReadMetaData/OnProgress) ile ayni icerik/tetikleme noktasi -
+// [5] menusundeki karsiliginin birebir aynisi.
+stockDataReader.OnReadMetaData += (reader, metaData) =>
+{
+    if (!reader.IsMetaDataRead) return;
+    int padding = 18;
+    Log($"{"\tRecord Time".PadRight(padding)}: {metaData.GetValueOrDefault("Kayit_Zamani", "N/A")}");
+    Log($"{"\tChart Symbol".PadRight(padding)}: {metaData.GetValueOrDefault("GrafikSembol", "N/A")}");
+    Log($"{"\tChart Period".PadRight(padding)}: {metaData.GetValueOrDefault("GrafikPeriyot", "N/A")}");
+    Log($"{"\tBar Count".PadRight(padding)}: {metaData.GetValueOrDefault("BarCount", "N/A")}");
+    Log($"{"\tStart Date".PadRight(padding)}: {metaData.GetValueOrDefault("Baslangic_Tarihi", "N/A")}");
+    Log($"{"\tEnd Date".PadRight(padding)}: {metaData.GetValueOrDefault("Bitis_Tarihi", "N/A")}");
+    Log($"{"\tFormat".PadRight(padding)}: {metaData.GetValueOrDefault("Format", "N/A")}");
+};
+stockDataReader.OnProgress += (reader, count, isCompleted) =>
+{
+    Log(isCompleted ? $"\tRecord count     : {count}" : $"\tRecord no        : {count}");
+};
+
 stockDataReader.ReadMetaData(stockDataFullFileName);
 
 if (!stockDataReader.IsMetaDataRead)
@@ -122,11 +147,11 @@ stockMetaData = stockDataReader.GetMetaData();
 symbolName = stockMetaData.GetValueOrDefault("GrafikSembol", "N/A");
 symbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
 
-Log($"Sembol    : {symbolName}");
-Log($"Periyot   : {symbolPeriod}");
-Log($"Bar Count : {stockMetaData.GetValueOrDefault("BarCount", "N/A")}");
+Enum.TryParse<StockDataReader.FilterMode>(readDataFilterMode, ignoreCase: true, out var filterMode);
+DateTime? dt1 = string.IsNullOrWhiteSpace(readDataDt1) ? null : DateTime.Parse(readDataDt1);
+DateTime? dt2 = string.IsNullOrWhiteSpace(readDataDt2) ? null : DateTime.Parse(readDataDt2);
 
-stockDataReader.ReadDataFast(stockDataFullFileName);
+stockDataReader.ReadDataFast(stockDataFullFileName, filterMode, readDataN1, readDataN2, dt1, dt2);
 var data = stockDataReader.GetData();
 Log($"Okunan    : {data.Count} bar");
 
@@ -134,6 +159,15 @@ if (data.Count == 0)
 {
     Log("[HATA] Data bos.");
     return;
+}
+
+// Program.cs:680-686 (addHeadTailInfo) ile ayni - [5]'te de varsayilan/hep kapali (bkz. Config_01_SingleTrader.csx).
+if (addHeadTailInfo)
+{
+    Log("");
+    Log(stockDataReader.Head());
+    Log("");
+    Log(stockDataReader.Tail());
 }
 
 // =============================================================================
@@ -162,6 +196,9 @@ algoTrader.ConfirmationTrigger = ecfTrigger;
 algoTrader.Initialize();
 
 Log($"\n{algoTrader.GetDataInfo()}");
+
+// AlgoTrade.cs:1270 RestartTimer("0") ile ayni baslangic noktasi (indicators olusturmadan hemen once).
+timeManager.RestartTimer("0");
 
 // =============================================================================
 // 3. Indicators Olustur
@@ -295,14 +332,16 @@ if (singleTrader.RunMode == TraderRunMode.TradeAndQuery || singleTrader.RunMode 
 // Init
 singleTrader.Init();
 
+// AlgoTrade.cs:1410-1412 RestartTimer("1")+RestartTimer("2") ile ayni nokta (Init sonrasi, run loop'tan once).
+timeManager.RestartTimer("1");
+timeManager.RestartTimer("2");
+
 // =============================================================================
 // 7. Run Loop
 // =============================================================================
 int totalBars = data.Count;
 
 Log($"\nRunning singleTrader... Total bars: {totalBars}");
-
-sw.Restart();
 
 singleTrader.IsStarted = true;
 singleTrader.IsRunning = true;
@@ -337,11 +376,10 @@ for (int i = 0; i < totalBars; i++)
     }
 }
 
-sw.Stop();
-long runElapsed = sw.ElapsedMilliseconds;
+timeManager.StopTimer("2");
 
 singleTrader.LastExecutionTimeStop = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-singleTrader.LastExecutionTimeInMSec = runElapsed.ToString();
+singleTrader.LastExecutionTimeInMSec = timeManager.GetElapsedTime("2").ToString();
 
 // =============================================================================
 // 8. Tarama Bilgileri
@@ -357,9 +395,11 @@ if (selectedRunMode == TraderRunMode.TradeOnly || selectedRunMode == TraderRunMo
 // =============================================================================
 Log("\nFinalizing singleTrader...");
 
-sw.Restart();
-
+// AlgoTrade.cs:1468/1496 RestartTimer("3")/StopTimer("3") ile ayni sinir - sadece Finalize() maliyeti,
+// dosyaya yazma (WriteStatisticsToFile) menude de bu olcumun disinda (ayri bir asamada).
+timeManager.RestartTimer("3");
 singleTrader.Finalize();
+timeManager.StopTimer("3");
 
 if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
 {
@@ -374,11 +414,43 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.Sa
     }
 }
 
-sw.Stop();
-long finalizeElapsed = sw.ElapsedMilliseconds;
+// =============================================================================
+// 10. Query Ozeti
+// =============================================================================
+if (selectedRunMode == TraderRunMode.TradeAndQuery || selectedRunMode == TraderRunMode.QueryOnly)
+{
+    var sorguOzeti = singleTrader.SorguOzeti;
+    Log($"\nQuery summary: {sorguOzeti}");
+}
+
+// AlgoTrade.cs:1506/1508 StopTimer("1")/StopTimer("0") ile ayni nokta (query summary sonrasi,
+// plot'tan once - menude de t0/t1 olcumu plot'u kapsamiyor, bkz. asagidaki "9b. Plot" notu).
+timeManager.StopTimer("1");
+timeManager.StopTimer("0");
+
+// =============================================================================
+// 11. Sonuc
+// =============================================================================
+singleTrader.IsRunning = false;
+singleTrader.IsStopped = true;
+
+var t0 = timeManager.GetElapsedTime("0");
+var t1 = timeManager.GetElapsedTime("1");
+var t2 = timeManager.GetElapsedTime("2");
+var t3 = timeManager.GetElapsedTime("3");
+
+Log($"\nt0 = {t0} msec. <==> RunSingleTraderWithProgressAsync elapsed time");
+Log($"\nt1 = {t1} msec. <==> Running + Finalizing singleTrader elapsed time");
+Log($"\nt2 = {t2} msec. <==> Running singleTrader elapsed time");
+Log($"\nt3 = {t3} msec. <==> Finalizing singleTrader elapsed time");
+
+Log($"\nProcessed {totalBars} bars.");
 
 // =============================================================================
 // 9b. Plot (pythonnet + DearPyGuiDataPlotter)
+// t0-t3 olcumunden SONRA calisiyor - menude de Plot, RunSingleTraderWithProgressAsync()
+// donduktan (yani t0-t3 hesaplandiktan) SONRA, runSingleTraderAlgoTrade() icinde tetikleniyor
+// (Program.cs:793-825) - plot penceresinin acik kalma suresi t0/t1'i sismesin diye.
 // =============================================================================
 if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode != TraderRunMode.QueryOnly)
 {
@@ -408,27 +480,6 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
         Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
     }
 }
-
-// =============================================================================
-// 10. Query Ozeti
-// =============================================================================
-if (selectedRunMode == TraderRunMode.TradeAndQuery || selectedRunMode == TraderRunMode.QueryOnly)
-{
-    var sorguOzeti = singleTrader.SorguOzeti;
-    Log($"\nQuery summary: {sorguOzeti}");
-}
-
-// =============================================================================
-// 11. Sonuc
-// =============================================================================
-singleTrader.IsRunning = false;
-singleTrader.IsStopped = true;
-
-Log($"\nt_run      = {runElapsed} msec.");
-Log($"t_finalize = {finalizeElapsed} msec.");
-Log($"t_total    = {runElapsed + finalizeElapsed} msec.");
-
-Log($"\nProcessed {totalBars} bars.");
 
 // =============================================================================
 // 12. Temizle
