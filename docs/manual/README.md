@@ -36,6 +36,12 @@
    `StockDataReader` (§9, `classes/09-stockdatareader.md`) belgelenirken canlı iterasyonla
    çıkan, onaylanmış bölüm sırası + format kuralları — §1-§8'den biri kendi sayfasına
    taşınırken **bu dosya okunup harfiyen takip edilecek**.
+7. **[07-menu-vs-script-parity.md](07-menu-vs-script-parity.md)** — Menü ↔ Script Paritesi.
+   Console'un interaktif `[N]` menü çiftleri (SingleTrader `[5]`, MultipleTrader `[6]`,
+   SingleTraderOptimizer `[7]`, ...) ile bunların tek seferlik script hali
+   (`inputs/scripts/0N_RunXxxWithProgressAsync.csx`) arasındaki davranış farklarının
+   (plot, dosya yazımı, veri filtreleme vb.) takip listesi — hangisi düzeltildi, hangisi
+   hâlâ açık.
 
 ## Bu Setin Kapsamadığı Şeyler (bilerek — başka dokümanlarda zaten var)
 

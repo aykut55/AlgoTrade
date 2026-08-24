@@ -18,6 +18,8 @@ using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using AlgoTrade.Core.Trading.Query;
+using AlgoTrade.Core.Python;
+using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 
 // =============================================================================
 // Degiskenler
@@ -360,6 +362,38 @@ if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
 
 sw.Stop();
 long finalizeElapsed = sw.ElapsedMilliseconds;
+
+// =============================================================================
+// 8b. Plot (pythonnet + DearPyGuiDataPlotter)
+// =============================================================================
+if (!IsCancellationRequested && !multipleTrader.IsStopRequested && selectedRunMode != TraderRunMode.QueryOnly)
+{
+    Log("");
+
+    algoTrader.RegisterLogger(LogManager.GetInstance());
+
+    if (algoTrader.SetupPython())
+        await algoTrader.PlotMultipleTraderData(multipleTrader);
+    else
+        Log("[HATA] Python setup failed. PlotMultipleTraderData skipped.");
+
+    try
+    {
+        var bundleConverter = new TradeDataBundleConverter();
+        string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+        var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(multipleTrader, bundleOutDir);
+
+        var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
+        dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
+        dearPyGuiTestPlotter.StartPlotter();
+        dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+        Log($"[DearPyGuiDataPlotter] MultipleTrader datasi yuklendi: {bundlePath}");
+    }
+    catch (Exception ex)
+    {
+        Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
+    }
+}
 
 // =============================================================================
 // 9. Sonuc

@@ -18,6 +18,8 @@ using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using AlgoTrade.Core.Trading.Query;
+using AlgoTrade.Core.Python;
+using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 
 // =============================================================================
 // Degiskenler
@@ -374,6 +376,38 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.Sa
 
 sw.Stop();
 long finalizeElapsed = sw.ElapsedMilliseconds;
+
+// =============================================================================
+// 9b. Plot (pythonnet + DearPyGuiDataPlotter)
+// =============================================================================
+if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode != TraderRunMode.QueryOnly)
+{
+    Log("");
+
+    algoTrader.RegisterLogger(LogManager.GetInstance());
+
+    if (algoTrader.SetupPython())
+        await algoTrader.PlotSingleTraderData(singleTrader);
+    else
+        Log("[HATA] Python setup failed. PlotSingleTraderData skipped.");
+
+    try
+    {
+        var bundleConverter = new TradeDataBundleConverter();
+        string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+        var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(singleTrader, bundleOutDir);
+
+        var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
+        dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
+        dearPyGuiTestPlotter.StartPlotter();
+        dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+        Log($"[DearPyGuiDataPlotter] SingleTrader datasi yuklendi: {bundlePath}");
+    }
+    catch (Exception ex)
+    {
+        Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
+    }
+}
 
 // =============================================================================
 // 10. Query Ozeti
