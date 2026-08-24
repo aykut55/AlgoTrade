@@ -1734,6 +1734,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Configure multiple trader mode flag
             childTrader.MultipleTraderModeEnabled = true;
+            childTrader.ReportContext = TraderReportContext.MultipleTrader;
 
             int ecfId = config.EcfConfigId ?? childId;
             SetSingleTraderConfigureEquityCurveFilter(childTrader, ecfId);
@@ -1866,6 +1867,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             }
 
             childTrader.MultipleTraderModeEnabled = true;
+            childTrader.ReportContext = TraderReportContext.ConfirmingMultipleTrader;
 
             int ecfId = config.EcfConfigId ?? childId;
             SetSingleTraderConfigureEquityCurveFilter(childTrader, ecfId);
@@ -1997,6 +1999,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Configure multiple trader mode flag
             mainTrader.MultipleTraderModeEnabled = true;
+            mainTrader.ReportContext = TraderReportContext.MultipleTrader;
 
             // Configure equity curve filter
             SetSingleTraderConfigureEquityCurveFilter(mainTrader);
@@ -2275,6 +2278,9 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             signalTrader.Reset();
             mainTrader.Reset();
 
+            signalTrader.ReportContext = TraderReportContext.ConfirmingSingleTrader;
+            mainTrader.ReportContext   = TraderReportContext.ConfirmingSingleTrader;
+
             // Attributes
             signalTrader.SymbolName   = this.SymbolName;
             signalTrader.SymbolPeriod = this.SymbolPeriod;
@@ -2545,6 +2551,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                       .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal, OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
 
             mainTrader.Reset();
+            mainTrader.ReportContext = TraderReportContext.ConfirmingMultipleTrader;
 
             // Attributes
             mainTrader.SymbolName             = this.SymbolName;

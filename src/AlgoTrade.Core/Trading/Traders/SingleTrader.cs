@@ -26,6 +26,23 @@ public enum ConfirmationTrigger
     Both = 2
 }
 
+/// <summary>
+/// Bu trader hangi ust-seviye "mod"un parcasi olarak calisiyor - GridReportConfig.json'da
+/// SingleTrader/MultipleTrader/ConfirmingSingleTrader/ConfirmingMultipleTrader icin AYRI
+/// duzen (sutun sayisi + blok sirasi) tanimlanabilmesi icin (bkz. SaveToTxtGrid/
+/// SaveToTxtMinimalGrid). MultipleTraderModeEnabled'dan (genel "bu trader bir ensemble'in
+/// parcasi mi" bayragi) KASITLI olarak ayri bir alan - ReportContext sadece rapor
+/// duzeni secimi icindir, MultipleTraderModeEnabled'in diger olasi kullanimlarina
+/// (gelecekte baska mantik) karismasin diye.
+/// </summary>
+public enum TraderReportContext
+{
+    SingleTrader = 0,
+    MultipleTrader = 1,
+    ConfirmingSingleTrader = 2,
+    ConfirmingMultipleTrader = 3
+}
+
 public class SingleTrader : MarketDataProvider, IDisposable
 {
     #region Properties
@@ -179,6 +196,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool BakiyeInitialized { get; set; }
     public bool OptimizationEnabled { get; set; }
     public bool MultipleTraderModeEnabled { get; set; }
+    public TraderReportContext ReportContext { get; set; } = TraderReportContext.SingleTrader;
     public bool PlotEnabled { get; set; } = false;
 
     #region StateFlags
@@ -421,6 +439,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
         BakiyeInitialized = false;
         OptimizationEnabled = false;
         MultipleTraderModeEnabled = false;
+        ReportContext = TraderReportContext.SingleTrader;
 
         // Reset equity curve filter properties
         thresholdTypeIsPercent = false;
@@ -2631,13 +2650,13 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (this.SaveGridStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {GridStatsTxtFileName}...");
-            statistics.SaveToTxtGrid(Path.Combine(outputDir, GridStatsTxtFileName), this.MultipleTraderModeEnabled);
+            statistics.SaveToTxtGrid(Path.Combine(outputDir, GridStatsTxtFileName), this.ReportContext);
         }
 
         if (this.SaveMinimalGridStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalGridStatsTxtFileName}...");
-            statistics.SaveToTxtMinimalGrid(Path.Combine(outputDir, MinimalGridStatsTxtFileName), this.MultipleTraderModeEnabled);
+            statistics.SaveToTxtMinimalGrid(Path.Combine(outputDir, MinimalGridStatsTxtFileName), this.ReportContext);
         }
 
         // Export (versiyonlu sütun tanımlarıyla çıktı)

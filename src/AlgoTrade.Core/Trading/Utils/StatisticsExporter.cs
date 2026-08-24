@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AlgoTrade.Core.Trading;
 using StatisticsModel = AlgoTrade.Core.Trading.Statistics.Statistics;
 
 namespace AlgoTrade.Core.Trading.Utils;
@@ -582,16 +583,16 @@ public class StatisticsExporter
         WriteAllTextShared(filePath, BuildDetailedReport());
     }
 
-    public void SaveToTxtGrid(string filePath, bool isMultipleTraderMode = false)
+    public void SaveToTxtGrid(string filePath, TraderReportContext reportContext = TraderReportContext.SingleTrader)
     {
         _statistics.AssignToMapForExport();
-        WriteAllTextShared(filePath, BuildGridReport(isMultipleTraderMode));
+        WriteAllTextShared(filePath, BuildGridReport(reportContext));
     }
 
-    public void SaveToTxtMinimalGrid(string filePath, bool isMultipleTraderMode = false)
+    public void SaveToTxtMinimalGrid(string filePath, TraderReportContext reportContext = TraderReportContext.SingleTrader)
     {
         _statistics.AssignToMapMinimalForExport();
-        WriteAllTextShared(filePath, BuildMinimalGridReport(isMultipleTraderMode));
+        WriteAllTextShared(filePath, BuildMinimalGridReport(reportContext));
     }
 
     public void SaveToTxtMinimalFormatted(string filePath)
@@ -1316,7 +1317,8 @@ public class StatisticsExporter
     public static string BuildMultipleTraderGridReport(
         string reportTitle,
         IReadOnlyList<(string Name, Dictionary<string, string> Map)> rows,
-        bool minimal)
+        bool minimal,
+        TraderReportContext reportContext = TraderReportContext.MultipleTrader)
     {
         var sections = minimal
             ? GridMinimalReportSections
@@ -1325,8 +1327,8 @@ public class StatisticsExporter
             ? GridMinimalReportDefaultOrder
             : GridReportDefaultOrder;
 
-        var config = LoadGridReportConfig();
-        var sectionConfig = minimal ? config?.MultipleTrader?.Minimal : config?.MultipleTrader?.Full;
+        var modeConfig = SelectGridReportModeConfig(LoadGridReportConfig(), reportContext);
+        var sectionConfig = minimal ? modeConfig?.Minimal : modeConfig?.Full;
         IReadOnlyList<string> order = sectionConfig?.sections != null && sectionConfig.sections.Count > 0
             ? sectionConfig.sections
             : defaultOrder;
@@ -1456,7 +1458,7 @@ public class StatisticsExporter
         return sb.ToString();
     }
 
-    private string BuildGridReport(bool isMultipleTraderMode)
+    private string BuildGridReport(TraderReportContext reportContext)
     {
         string GetValue(string key)
         {
@@ -1465,8 +1467,7 @@ public class StatisticsExporter
             return "...";
         }
 
-        var config = LoadGridReportConfig();
-        var modeConfig = isMultipleTraderMode ? config?.MultipleTrader : config?.SingleTrader;
+        var modeConfig = SelectGridReportModeConfig(LoadGridReportConfig(), reportContext);
         return BuildGridReportGeneric(
             "SINGLE TRADER RUN RESULTS - GRID REPORT",
             GridReportSections, GridReportDefaultOrder, modeConfig?.Full, GetValue);
@@ -1621,7 +1622,7 @@ public class StatisticsExporter
         "PERFORMANCE & SCORE", "ASSET & POSITION INFO"
     };
 
-    private string BuildMinimalGridReport(bool isMultipleTraderMode)
+    private string BuildMinimalGridReport(TraderReportContext reportContext)
     {
         string GetValue(string key)
         {
@@ -1630,11 +1631,22 @@ public class StatisticsExporter
             return "...";
         }
 
-        var config = LoadGridReportConfig();
-        var modeConfig = isMultipleTraderMode ? config?.MultipleTrader : config?.SingleTrader;
+        var modeConfig = SelectGridReportModeConfig(LoadGridReportConfig(), reportContext);
         return BuildGridReportGeneric(
             "SINGLE TRADER RUN RESULTS - MINIMAL GRID REPORT",
             GridMinimalReportSections, GridMinimalReportDefaultOrder, modeConfig?.Minimal, GetValue);
+    }
+
+    private static GridReportModeConfig? SelectGridReportModeConfig(GridReportConfig? config, TraderReportContext reportContext)
+    {
+        if (config is null) return null;
+        return reportContext switch
+        {
+            TraderReportContext.MultipleTrader => config.MultipleTrader,
+            TraderReportContext.ConfirmingSingleTrader => config.ConfirmingSingleTrader,
+            TraderReportContext.ConfirmingMultipleTrader => config.ConfirmingMultipleTrader,
+            _ => config.SingleTrader
+        };
     }
 
     /// Loads inputs/configs/GridReportConfig.json (columns + section order/selection for the
@@ -1862,18 +1874,22 @@ public class StatisticsExporter
         };
     }
 
-    // inputs/configs/GridReportConfig.json root: "SingleTrader" configures a plain single-trader
-    // run, "MultipleTrader" configures every MultipleTrader member (mainTrader + each childTrader -
-    // they all go through this same StatisticsExporter/SingleTrader plumbing, so the mode has to be
-    // told apart explicitly). SingleTrader.WriteStatisticsToFile passes its own
-    // MultipleTraderModeEnabled flag through SaveToTxtGrid/SaveToTxtMinimalGrid to pick the right
-    // one. Under each mode, "Full" configures SaveToTxtGrid and "Minimal" configures
-    // SaveToTxtMinimalGrid. Any node missing (or the file missing entirely) falls back to
-    // GridDefaultColumns/GridReportDefaultOrder.
+    // inputs/configs/GridReportConfig.json root: one node per TraderReportContext value
+    // (SingleTrader / MultipleTrader / ConfirmingSingleTrader / ConfirmingMultipleTrader) - every
+    // SingleTrader instance goes through this same StatisticsExporter plumbing regardless of which
+    // menu/mode created it, so the mode has to be told apart explicitly via SingleTrader.ReportContext
+    // (set at trader-creation time in AlgoTrader.cs). Deliberately 4 separate nodes rather than
+    // reusing SingleTrader for the Confirming* single-trader-shaped reports (Main/Signal) too -
+    // otherwise tuning the layout for e.g. ConfirmingSingleTrader would silently change the plain
+    // SingleTrader layout as well, since both would share one node. Under each mode, "Full"
+    // configures SaveToTxtGrid and "Minimal" configures SaveToTxtMinimalGrid. Any node missing (or
+    // the file missing entirely) falls back to GridDefaultColumns/GridReportDefaultOrder.
     private sealed class GridReportConfig
     {
         public GridReportModeConfig? SingleTrader { get; set; }
         public GridReportModeConfig? MultipleTrader { get; set; }
+        public GridReportModeConfig? ConfirmingSingleTrader { get; set; }
+        public GridReportModeConfig? ConfirmingMultipleTrader { get; set; }
     }
 
     private sealed class GridReportModeConfig
