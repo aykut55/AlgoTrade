@@ -2,6 +2,19 @@
 
 ## Todo
 
+- [ ] **[7] SingleTraderOptimizer ↔ `03_RunSingleTraderOptWithProgressAsync.csx` senkronize
+  edilecek** (2026-08-24, bkz. [docs/manual/07-menu-vs-script-parity.md](manual/07-menu-vs-script-parity.md)
+  §3 — [5]/01 ve [6]/02 için aynı iş zaten yapıldı). İki bilinen açık madde:
+  1. **🔴 Kritik**: script `algoTrader.SetSingleTraderOptSignalsConfig(...)` çağırmıyor →
+     `SingleTraderOptimizer.ApplyConfigsToTrader()` içinde her test trader `ConfigureUserFlagsOnce()`
+     ile tüm AL/SAT sinyallerini `false`'a resetliyor ve bir daha `true` yapılmıyor →
+     optimizasyon muhtemelen hiçbir kombinasyonda işlem açmıyor (§2'de MultipleTrader script'inde
+     bulunup düzeltilen hatayla birebir aynı kalıp — orada gerçekten sıfır işlem olduğu doğrulanmıştı).
+  2. **🟡**: `SetSingleTraderOptLogConfig`/`SetSingleTraderOptSortOutputConfig` çağrılmadığı için
+     CSV/TXT optimizasyon log + sıralı sonuç dosyaları hiç yazılmıyor, script sadece konsola
+     en iyi sonucu basıyor.
+  Ayrıca §1/§2'de yapılan ReadData filtreleme senkronizasyonunun aynısı buraya da taşınabilir.
+
 - [ ] venv'ler merkezileştirilecek. Şu an projede 3 ayrı `.venv` klasörü var, toplam ~624 MB:
   - `inputs/python/.venv` — 356 MB — Ana AlgoTrade Python entegrasyonu (pythonnet vb.)
   - `src/DearPyGuiDataPlotter/.venv` — 134 MB — Aktif kullanılan DearPyGui plotter alt-projesi

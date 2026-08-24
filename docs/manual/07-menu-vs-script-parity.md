@@ -144,45 +144,86 @@ kozmetik) farklar kaldı.**
 `Config_02_MultipleTrader.csx`'den alıyor; `MultipleTrader` + child `SingleTrader`'ları elle
 kurup elle `for` döngüsüyle çalıştırıyor.
 
+### 🔴 Kritik hata (2026-08-24) — mainTrader ve child'lar muhtemelen hiç işlem açmıyordu
+
+**Zincir:** `mainTrader.ConfigureUserFlagsOnce()` (eski satır 128) ve her
+`childTrader.ConfigureUserFlagsOnce()` (eski satır 175/218/261) çağrılıyordu ama **hiçbirinde
+ardından `AlEnabled`/`SatEnabled`/... `true` yapılmıyordu** — 01 script'teki `OnApplyUserFlags`'ın
+karşılığı hiç yoktu. `ConfigureUserFlagsOnce()` tüm sinyal flag'lerini `false`'a resetliyor
+(`SingleTrader.cs:2508-2542`); `MapStrategyCommandsToTradeCommands()` (`SingleTrader.cs:769-786`)
+`AlEnabled`/`SatEnabled` false iken strateji Buy/Sell üretse bile `signals.Al`/`.Sat`'ı hiç `true`
+yapmıyor → `signals.Sinyal` hiç "A"/"S" olmuyor → `SonYon` hiç değişmiyor →
+`MultipleTrader.BuildConsensusSignal()`'daki `is_son_yon_a()/_s()` (`MultipleTrader.cs:233-238`)
+hep `false` → consensus hep Flat → mainTrader'ın kendi `AlEnabled`'ı da false olduğu için zaten
+pozisyon açmıyor. **Yani hem child'lar hem mainTrader muhtemelen hiçbir zaman tek bir işlem bile
+açmamıştı** — script'in ürettiği tüm istatistikler (varsa) 0 işlemli/flat olmalıydı. Bu, §3'teki
+optimizer `SignalsConfig` hatasıyla birebir aynı kalıp.
+
+**Fix:** `02_RunMultipleTraderWithProgressAsync.csx`'e 01 script'teki `OnApplyUserFlags`'ın
+karşılığı olan `ApplyUserFlags(SingleTrader trader)` local fonksiyonu eklendi (satır ~39-62) ve
+`mainTrader.ConfigureUserFlagsOnce()` ile her 3 `childTrader.ConfigureUserFlagsOnce()` çağrısının
+hemen ardına `ApplyUserFlags(...)` çağrısı eklendi.
+
+### 🔴 Kritik hata (2026-08-24) — main/child dosya adı çakışması, sessiz veri kaybı
+
+`mainTrader` ve 3 `childTrader`'ın hiçbiri dosya adlarını override etmiyordu — hepsi
+`SingleTrader`'ın varsayılan adlarını (`SingleTraderStatistics.txt` vb., `SingleTrader.cs:275-306`)
+kullanıyordu. `WriteStatisticsToFile` main→child0→child1→child2 sırasıyla çağrıldığı için **her
+biri bir öncekinin dosyasının üzerine yazıyordu** — sadece son çalışan trader'ın (child2) çıktısı
+hayatta kalıyordu, mainTrader ve child0/child1'in istatistikleri sessizce kayboluyordu. [6] bunu
+`FilePrefix` ile (`AppConfigApplier.cs:214-215,236-249,379,397-410`,
+`{prefix}_Main_{file}`/`{prefix}_Child{i}_{file}`) çözüyor.
+
+**Fix:** `Config_02_MultipleTrader.csx`'e `filePrefix = "MultipleTrader"` eklendi.
+`02_RunMultipleTraderWithProgressAsync.csx`'e `ApplyFileNamesAndExport(SingleTrader trader, string
+cp)` local fonksiyonu eklendi (satır ~64-84, tüm `Save*FileName` alanlarını `{cp}_...` ile
+ayrıştırıyor) ve mainTrader için `ApplyFileNamesAndExport(mainTrader, $"{filePrefix}_Main")`,
+her child için `ApplyFileNamesAndExport(childTrader, $"{filePrefix}_Child{childId}")` çağrıları
+eklendi.
+
 ### ✅ Düzeltildi (2026-08-24)
 
 - **Plot hiç çalışmıyordu.** Menüdeki karşılığı `Program.cs:872-904`
   (`PlotMultipleTraderData` + `TradeDataBundleConverter.ConvertMultipleTrader` +
-  `DearPyGuiDataPlotter`). **Fix:** script'e "8b. Plot" bölümü eklendi (satır ~366-396), aynı iki
+  `DearPyGuiDataPlotter`). **Fix:** script'e "8b. Plot" bölümü eklendi, aynı iki
   plot çağrısı (`algoTrader.PlotMultipleTraderData(multipleTrader)` ve
   `bundleConverter.ConvertMultipleTrader(multipleTrader, bundleOutDir)` +
   `DearPyGuiDataPlotter.StartPlotter()/LoadBundle(...)`) eklendi, ilgili `using`'ler eklendi.
+- **MultipleTrader özet/karşılaştırma dosyası (grid) hiç üretilmiyordu.**
+  `AlgoTrader.WriteTraderDataToFilesAsync(MultipleTrader)` (`AlgoTrade.cs:1579-1628`) içinde
+  `trader.WriteMultipleTraderStatistics(AppSettings.LogsDir)` çağrılıyor (satır 1598) — bu,
+  mainTrader + tüm child'ları yan yana karşılaştıran tek dosyayı (MultipleTraderStatisticsGrid.txt
+  / MinimalGrid.txt, bkz. `a37d950` commit) üretiyor. **Fix:** script'te Finalize bloğuna aynı
+  `multipleTrader.WriteMultipleTraderStatistics(AppSettings.LogsDir)` çağrısı eklendi.
+- **`WriteChildTradersDataToFiles` flag'i kontrol edilmiyordu.** Menü tarafında child istatistik
+  yazımı `trader.WriteChildTradersDataToFiles` flag'ine bağlı (`AlgoTrade.cs:1611`). **Fix:**
+  `Config_02_MultipleTrader.csx`'e `writeChildTradersDataToFiles = true` eklendi,
+  `multipleTrader.WriteChildTradersDataToFiles` property'sine atandı ve child dosya yazma döngüsü
+  bu flag'e bağlandı.
+- **Export config eksikti** — §1'deki gibi `Config_02_MultipleTrader.csx`'e ortak
+  `exportEnabled`/`exportConfigFile`/`exportVersion` eklendi, `ApplyFileNamesAndExport(...)`
+  içinde her trader'a (main + 3 child) uygulanıyor.
+- **§1'deki 4 fix buraya taşındı**: ReadData filtreleme (`readDataFilterMode`/`N1`/`N2`/`Dt1`/`Dt2`
+  + filtreli `ReadDataFast` çağrısı), `addHeadTailInfo` toggle, okuma sırasında
+  `OnReadMetaData`/`OnProgress` event'leri, ve `Stopwatch` yerine `TimeManager` ile menüdeki
+  birebir aynı sınır noktalarında (`RunMultipleTraderWithProgressAsync()`'in `AlgoTrade.cs:1899`
+  `RestartTimer("0")`, `:2038-2039` `RestartTimer("1")`/`("2")`, `:2068` `StopTimer("2")`, `:2096`/
+  `:2136` `RestartTimer("3")`/`StopTimer("3")`, `:2138-2139` `StopTimer("1")`/`("0")`) t0-t3
+  zaman metrikleri. Plot bölümü de (§1'deki gibi) t0-t3 loglandıktan sonraya taşındı — menüde
+  Plot, `RunMultipleTraderWithProgressAsync()` tamamen bittikten sonra tetikleniyor
+  (`Program.cs:872-904`), plot penceresi açık kaldıkça t0/t1 şişmesin diye.
 
-### 🟡 Açık farklar — gerçek eksiklik (fonksiyonu etkiler)
-
-1. **MultipleTrader özet/karşılaştırma dosyası (grid) hiç üretilmiyor.**
-   `AlgoTrader.WriteTraderDataToFilesAsync(MultipleTrader)` (`AlgoTrade.cs:1579-1628`) içinde
-   `trader.WriteMultipleTraderStatistics(AppSettings.LogsDir)` çağrılıyor (satır 1598) — bu,
-   mainTrader + tüm child'ları yan yana karşılaştıran tek dosyayı (MultipleTraderStatisticsGrid.txt
-   / MinimalGrid.txt, bkz. `a37d950` commit) üretiyor. Script sadece
-   `multipleTrader.WriteMultipleTraderListsToFiles(...)` ve her trader için ayrı ayrı
-   `WriteStatisticsToFile(...)` çağırıyor (satır 346-360) — **grid karşılaştırma dosyası
-   script'te hiç oluşmuyor.**
-2. **`WriteChildTradersDataToFiles` flag'i kontrol edilmiyor.** Menü tarafında child istatistik
-   yazımı `trader.WriteChildTradersDataToFiles` flag'ine bağlı (`AlgoTrade.cs:1611`). Script
-   doğrudan her child'ın kendi `SaveStatisticsToFile`'ına bakıyor (satır 356-360), üst seviye
-   flag'i hiç sormuyor — AppConfig'de bu flag kapalıyken bile script child dosyalarını yazar.
-3. **Export config eksik** — SingleTrader bölümündeki (§1) aynı eksiklik burada da geçerli.
-4. **SingleTrader (§1) için düzeltilen 3 fix henüz buraya taşınmadı**: ReadData filtreleme
-   (`stockDataReader.ReadDataFast(stockDataFullFileName)` hâlâ parametresiz), Head/Tail toggle,
-   okuma sırasında `OnReadMetaData`/`OnProgress` event'leri, ve t0-t3 zaman metrikleri (script
-   hâlâ `Stopwatch` ile `runElapsed`/`finalizeElapsed` kullanıyor) —
-   `02_RunMultipleTraderWithProgressAsync.csx` + `Config_02_MultipleTrader.csx`'e henüz
-   uygulanmadı. `readStockData()` ve `AppConfigApplier.ApplyMultipleTrader()` yolunun tamamı
-   SingleTrader ile aynı mekanizmayı kullandığı için §1'deki fix'lerin aynısı buraya da
-   taşınabilir.
+**§2 durumu: artık tüm 🔴/🟡 farklar kapatıldı — [6] ile 02 script'i arasında sadece ⚪ (kasıtlı/
+kozmetik) farklar kaldı.**
 
 ### ⚪ Kasıtlı/kozmetik farklar
 
 - **Csv/txt dosya seti:** main + her child trader için flag'ler yine varsayılan `true`, dolayısıyla
-  (grid dosyası hariç, bkz. madde 1) [6] ve 02 script'i aynı per-trader dosya setini üretiyor.
+  [6] ve 02 script'i aynı per-trader dosya setini üretiyor (artık grid dosyası dahil).
 - Config kaynağı / progress UI / dosya yazma sırası farkları SingleTrader bölümündekiyle aynı
-  gerekçeyle kasıtlı.
+  gerekçeyle kasıtlı. (Not: [6]'nın per-child farklı Export ayarı desteği script'te tek ortak
+  export config'e sadeleştirildi — script zaten tüm child'lar için ortak hardcoded ayar setini
+  paylaşıyor, bu bilinçli bir sadeleştirme.)
 
 ---
 
