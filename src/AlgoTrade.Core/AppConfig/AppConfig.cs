@@ -192,6 +192,8 @@ public class TraderSaveConfig
     public bool SaveMinimalListsCsvEnabled          { get; set; } = true;
     public bool SaveFullStatsTxtFormattedEnabled    { get; set; } = true;
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SaveGridStatsTxtEnabled             { get; set; } = true;
+    public bool SaveMinimalGridStatsTxtEnabled      { get; set; } = true;
     public bool SavePerformansTxtEnabled            { get; set; } = true;
     public bool SavePerformansCsvEnabled            { get; set; } = true;
 
@@ -206,6 +208,8 @@ public class TraderSaveConfig
     public string MinimalListsCsvFileName          { get; set; } = "SingleTraderListsMinimal.csv";
     public string FullStatsTxtFormattedFileName    { get; set; } = "SingleTraderStatisticsFormatted.txt";
     public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsMinimalFormatted.txt";
+    public string GridStatsTxtFileName             { get; set; } = "SingleTraderStatisticsGrid.txt";
+    public string MinimalGridStatsTxtFileName      { get; set; } = "SingleTraderStatisticsMinimalGrid.txt";
     public string PerformansTxtFileName            { get; set; } = "SingleTraderPerformans.txt";
     public string PerformansCsvFileName            { get; set; } = "SingleTraderPerformans.csv";
 }

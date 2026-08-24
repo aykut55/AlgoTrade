@@ -1,43 +1,84 @@
 {
-  "// ": "SingleTraderStatisticsGrid.txt / SingleTraderStatisticsMinimalGrid.txt icin sutun sayisi + blok siralamasi.",
+  "// ": "SingleTraderStatisticsGrid.txt / SingleTraderStatisticsMinimalGrid.txt (ve MultipleTrader'daki Main/Child esdegerleri) icin sutun sayisi + blok siralamasi.",
   "// columns": "2 veya 3 (ya da baska bir sayi) - her blok, o an EN KISA olan sutuna yerlestirilir (bosluk azaltmak icin), sabit sol/sag esleme degil.",
   "// sections": "sadece burada listelenen bloklar (bu sirayla) basilir - bir bloğu cikarmak icin listeden silin, sirasini degistirmek icin yerini degistirin. Bos/eksik birakilirsa kod-icindeki varsayilan sira/tum bloklar kullanilir.",
+  "// SingleTrader vs MultipleTrader": "SingleTrader dugumu duz tek-trader calistirmalarinda (SingleTraderStatisticsGrid.txt) kullanilir. MultipleTrader dugumu ise mainTrader + tum childTrader'lar icin kullanilir (MultipleTrader_Main_StatisticsGrid.txt, MultipleTrader_Child0_StatisticsGrid.txt, ...) - hepsi ayni trader.MultipleTraderModeEnabled bayragina gore bu dugume yonlendirilir.",
 
-  "Full": {
-    "columns": 3,
-    "sections": [
-      "TRADER & SYSTEM INFORMATION",
-      "EXECUTION INFORMATION",
-      "BAR INFORMATION",
-      "TIME STATISTICS",
-      "BALANCE & RETURNS",
-      "BALANCE MIN/MAX",
-      "TRADE COUNTS",
-      "COMMAND COUNTS",
-      "COMMISSION DETAILS",
-      "RISK METRICS",
-      "PROFIT & LOSS",
-      "SCORE",
-      "SIGNALS & EXECUTION STATUS",
-      "ASSET & POSITION INFO",
-      "PERIODIC RETURNS (PRICE)",
-      "PERIODIC RETURNS (POINTS)"
-    ]
+  "SingleTrader": {
+    "Full": {
+      "columns": 3,
+      "sections": [
+        "TRADER & SYSTEM INFORMATION",
+        "EXECUTION INFORMATION",
+        "BAR INFORMATION",
+        "TIME STATISTICS",
+        "BALANCE & RETURNS",
+        "BALANCE MIN/MAX",
+        "TRADE COUNTS",
+        "COMMAND COUNTS",
+        "COMMISSION DETAILS",
+        "RISK METRICS",
+        "PROFIT & LOSS",
+        "SCORE",
+        "SIGNALS & EXECUTION STATUS",
+        "ASSET & POSITION INFO",
+        "PERIODIC RETURNS (PRICE)",
+        "PERIODIC RETURNS (POINTS)"
+      ]
+    },
+    "Minimal": {
+      "columns": 3,
+      "sections": [
+        "TRADER & SYSTEM INFORMATION",
+        "EXECUTION INFORMATION",
+        "BAR INFORMATION",
+        "TIME STATISTICS",
+        "BALANCE & RETURNS",
+        "BALANCE MIN/MAX",
+        "TRADE COUNTS",
+        "COMMISSION DETAILS",
+        "PERFORMANCE & SCORE",
+        "ASSET & POSITION INFO"
+      ]
+    }
   },
 
-  "Minimal": {
-    "columns": 3,
-    "sections": [
-      "TRADER & SYSTEM INFORMATION",
-      "EXECUTION INFORMATION",
-      "BAR INFORMATION",
-      "TIME STATISTICS",
-      "BALANCE & RETURNS",
-      "BALANCE MIN/MAX",
-      "TRADE COUNTS",
-      "COMMISSION DETAILS",
-      "PERFORMANCE & SCORE",
-      "ASSET & POSITION INFO"
-    ]
+  "MultipleTrader": {
+    "Full": {
+      "columns": 2,
+      "sections": [
+        "TRADER & SYSTEM INFORMATION",
+        "EXECUTION INFORMATION",
+        "BAR INFORMATION",
+        "TIME STATISTICS",
+        "BALANCE & RETURNS",
+        "BALANCE MIN/MAX",
+        "TRADE COUNTS",
+        "COMMAND COUNTS",
+        "COMMISSION DETAILS",
+        "RISK METRICS",
+        "PROFIT & LOSS",
+        "SCORE",
+        "SIGNALS & EXECUTION STATUS",
+        "ASSET & POSITION INFO",
+        "PERIODIC RETURNS (PRICE)",
+        "PERIODIC RETURNS (POINTS)"
+      ]
+    },
+    "Minimal": {
+      "columns": 2,
+      "sections": [
+        "TRADER & SYSTEM INFORMATION",
+        "EXECUTION INFORMATION",
+        "BAR INFORMATION",
+        "TIME STATISTICS",
+        "BALANCE & RETURNS",
+        "BALANCE MIN/MAX",
+        "TRADE COUNTS",
+        "COMMISSION DETAILS",
+        "PERFORMANCE & SCORE",
+        "ASSET & POSITION INFO"
+      ]
+    }
   }
 }

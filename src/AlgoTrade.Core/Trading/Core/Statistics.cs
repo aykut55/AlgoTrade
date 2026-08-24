@@ -1257,14 +1257,14 @@ namespace AlgoTrade.Core.Trading.Statistics
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtFormatted(filePath);
         }
 
-        public void SaveToTxtGrid(string filePath)
+        public void SaveToTxtGrid(string filePath, bool isMultipleTraderMode = false)
         {
-            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtGrid(filePath);
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtGrid(filePath, isMultipleTraderMode);
         }
 
-        public void SaveToTxtMinimalGrid(string filePath)
+        public void SaveToTxtMinimalGrid(string filePath, bool isMultipleTraderMode = false)
         {
-            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtMinimalGrid(filePath);
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtMinimalGrid(filePath, isMultipleTraderMode);
         }
 
         private void AssignToMapMinimal()

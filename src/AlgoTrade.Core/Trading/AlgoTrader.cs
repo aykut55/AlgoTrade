@@ -985,6 +985,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.SaveMinimalListsCsvEnabled         = sv.SaveMinimalListsCsvEnabled;
             trader.SaveFullStatsTxtFormattedEnabled   = sv.SaveFullStatsTxtFormattedEnabled;
             trader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+            trader.SaveGridStatsTxtEnabled            = sv.SaveGridStatsTxtEnabled;
+            trader.SaveMinimalGridStatsTxtEnabled     = sv.SaveMinimalGridStatsTxtEnabled;
             trader.SavePerformansTxtEnabled           = sv.SavePerformansTxtEnabled;
             trader.SavePerformansCsvEnabled           = sv.SavePerformansCsvEnabled;
 
@@ -998,6 +1000,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          trader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
             if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    trader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
             if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) trader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+            if (!string.IsNullOrWhiteSpace(sv.GridStatsTxtFileName))             trader.GridStatsTxtFileName             = sv.GridStatsTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalGridStatsTxtFileName))      trader.MinimalGridStatsTxtFileName      = sv.MinimalGridStatsTxtFileName;
             if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            trader.PerformansTxtFileName            = sv.PerformansTxtFileName;
             if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            trader.PerformansCsvFileName            = sv.PerformansCsvFileName;
         }
@@ -1109,6 +1113,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.SaveMinimalListsCsvEnabled         = sv.SaveMinimalListsCsvEnabled;
             trader.SaveFullStatsTxtFormattedEnabled   = sv.SaveFullStatsTxtFormattedEnabled;
             trader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+            trader.SaveGridStatsTxtEnabled            = sv.SaveGridStatsTxtEnabled;
+            trader.SaveMinimalGridStatsTxtEnabled     = sv.SaveMinimalGridStatsTxtEnabled;
             trader.SavePerformansTxtEnabled           = sv.SavePerformansTxtEnabled;
             trader.SavePerformansCsvEnabled           = sv.SavePerformansCsvEnabled;
 
@@ -1123,6 +1129,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          trader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
             if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    trader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
             if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) trader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+            if (!string.IsNullOrWhiteSpace(sv.GridStatsTxtFileName))             trader.GridStatsTxtFileName             = sv.GridStatsTxtFileName;
+            if (!string.IsNullOrWhiteSpace(sv.MinimalGridStatsTxtFileName))      trader.MinimalGridStatsTxtFileName      = sv.MinimalGridStatsTxtFileName;
             if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            trader.PerformansTxtFileName            = sv.PerformansTxtFileName;
             if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            trader.PerformansCsvFileName            = sv.PerformansCsvFileName;
         }
@@ -1696,6 +1704,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 childTrader.SaveMinimalListsCsvEnabled          = sv.SaveMinimalListsCsvEnabled;
                 childTrader.SaveFullStatsTxtFormattedEnabled    = sv.SaveFullStatsTxtFormattedEnabled;
                 childTrader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+                childTrader.SaveGridStatsTxtEnabled             = sv.SaveGridStatsTxtEnabled;
+                childTrader.SaveMinimalGridStatsTxtEnabled      = sv.SaveMinimalGridStatsTxtEnabled;
                 childTrader.SavePerformansTxtEnabled            = sv.SavePerformansTxtEnabled;
                 childTrader.SavePerformansCsvEnabled            = sv.SavePerformansCsvEnabled;
 
@@ -1709,6 +1719,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          childTrader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
                 if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    childTrader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
                 if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) childTrader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+                if (!string.IsNullOrWhiteSpace(sv.GridStatsTxtFileName))             childTrader.GridStatsTxtFileName             = sv.GridStatsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalGridStatsTxtFileName))      childTrader.MinimalGridStatsTxtFileName      = sv.MinimalGridStatsTxtFileName;
                 if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            childTrader.PerformansTxtFileName            = sv.PerformansTxtFileName;
                 if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            childTrader.PerformansCsvFileName            = sv.PerformansCsvFileName;
             }
@@ -1825,6 +1837,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 childTrader.SaveMinimalListsCsvEnabled          = sv.SaveMinimalListsCsvEnabled;
                 childTrader.SaveFullStatsTxtFormattedEnabled    = sv.SaveFullStatsTxtFormattedEnabled;
                 childTrader.SaveMinimalStatsTxtFormattedEnabled = sv.SaveMinimalStatsTxtFormattedEnabled;
+                childTrader.SaveGridStatsTxtEnabled             = sv.SaveGridStatsTxtEnabled;
+                childTrader.SaveMinimalGridStatsTxtEnabled      = sv.SaveMinimalGridStatsTxtEnabled;
                 childTrader.SavePerformansTxtEnabled            = sv.SavePerformansTxtEnabled;
                 childTrader.SavePerformansCsvEnabled            = sv.SavePerformansCsvEnabled;
 
@@ -1838,6 +1852,8 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 if (!string.IsNullOrWhiteSpace(sv.MinimalListsCsvFileName))          childTrader.MinimalListsCsvFileName          = sv.MinimalListsCsvFileName;
                 if (!string.IsNullOrWhiteSpace(sv.FullStatsTxtFormattedFileName))    childTrader.FullStatsTxtFormattedFileName    = sv.FullStatsTxtFormattedFileName;
                 if (!string.IsNullOrWhiteSpace(sv.MinimalStatsTxtFormattedFileName)) childTrader.MinimalStatsTxtFormattedFileName = sv.MinimalStatsTxtFormattedFileName;
+                if (!string.IsNullOrWhiteSpace(sv.GridStatsTxtFileName))             childTrader.GridStatsTxtFileName             = sv.GridStatsTxtFileName;
+                if (!string.IsNullOrWhiteSpace(sv.MinimalGridStatsTxtFileName))      childTrader.MinimalGridStatsTxtFileName      = sv.MinimalGridStatsTxtFileName;
                 if (!string.IsNullOrWhiteSpace(sv.PerformansTxtFileName))            childTrader.PerformansTxtFileName            = sv.PerformansTxtFileName;
                 if (!string.IsNullOrWhiteSpace(sv.PerformansCsvFileName))            childTrader.PerformansCsvFileName            = sv.PerformansCsvFileName;
             }
@@ -3196,6 +3212,8 @@ public class SingleTraderSaveConfig
     public bool SaveMinimalListsCsvEnabled          { get; set; } = true;
     public bool SaveFullStatsTxtFormattedEnabled    { get; set; } = true;
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SaveGridStatsTxtEnabled             { get; set; } = true;
+    public bool SaveMinimalGridStatsTxtEnabled      { get; set; } = true;
     public bool SavePerformansTxtEnabled            { get; set; } = true;
     public bool SavePerformansCsvEnabled            { get; set; } = true;
 
@@ -3210,6 +3228,8 @@ public class SingleTraderSaveConfig
     public string MinimalListsCsvFileName          { get; set; } = "SingleTraderListsMinimal.csv";
     public string FullStatsTxtFormattedFileName    { get; set; } = "SingleTraderStatisticsFormatted.txt";
     public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsMinimalFormatted.txt";
+    public string GridStatsTxtFileName             { get; set; } = "SingleTraderStatisticsGrid.txt";
+    public string MinimalGridStatsTxtFileName      { get; set; } = "SingleTraderStatisticsMinimalGrid.txt";
     public string PerformansTxtFileName            { get; set; } = "SingleTraderPerformans.txt";
     public string PerformansCsvFileName            { get; set; } = "SingleTraderPerformans.csv";
 }

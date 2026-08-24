@@ -2,6 +2,7 @@ using AlgoTrade.Core.DataProvider;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Utils;
 
 namespace AlgoTrade.Core.Trading;
 
@@ -78,6 +79,13 @@ public class MultipleTrader
     public string MultipleTraderStatisticsCsvFileName { get; set; } = "MultipleTraderStatistics.csv";
     public bool SaveMultipleTraderStatisticsTxtEnabled { get; set; } = true;
     public bool SaveMultipleTraderStatisticsCsvEnabled { get; set; } = true;
+
+    // Grid versiyonlar: satir=trader/kolon=metrik yerine kolon=trader (Main + her child kendi
+    // dikey grid raporuyla yan yana) - bkz. WriteMultipleTraderStatistics.
+    public string MultipleTraderStatisticsGridTxtFileName { get; set; } = "MultipleTraderStatisticsGrid.txt";
+    public string MultipleTraderStatisticsMinimalGridTxtFileName { get; set; } = "MultipleTraderStatisticsMinimalGrid.txt";
+    public bool SaveMultipleTraderStatisticsGridTxtEnabled { get; set; } = true;
+    public bool SaveMultipleTraderStatisticsMinimalGridTxtEnabled { get; set; } = true;
 
     public bool PlotEnabled { get; set; } = false;
 
@@ -721,6 +729,74 @@ public class MultipleTrader
             LogManager.LogRaw($"\n\tSaving MultipleTrader statistics to {MultipleTraderStatisticsCsvFileName}...");
             WriteMultipleTraderStatisticsToCsv(logDir);
         }
+        if (this.SaveMultipleTraderStatisticsGridTxtEnabled)
+        {
+            LogManager.LogRaw($"\n\tSaving MultipleTrader statistics to {MultipleTraderStatisticsGridTxtFileName}...");
+            WriteMultipleTraderStatisticsGridToTxt(logDir, minimal: false);
+        }
+        if (this.SaveMultipleTraderStatisticsMinimalGridTxtEnabled)
+        {
+            LogManager.LogRaw($"\n\tSaving MultipleTrader statistics to {MultipleTraderStatisticsMinimalGridTxtFileName}...");
+            WriteMultipleTraderStatisticsGridToTxt(logDir, minimal: true);
+        }
+    }
+
+    /// <summary>
+    /// mainTrader + tum childTrader'larin KENDI (StatisticsMap/StatisticsMapMinimal - SaveToTxtGrid/
+    /// SaveToTxtMinimalGrid'in de kaynagi) haritalarini toplar. BuildStatisticsRows()'daki
+    /// GetOptimizationSummary()'den KASITLI olarak FARKLI bir kaynak: boylece buradaki her kolon,
+    /// o trader'in kendi MultipleTrader_Main_/Child{i}_StatisticsGrid.txt dosyasiyla BIREBIR ayni
+    /// degerleri gosterir (GridReportSections/GridMinimalReportSections zaten bu haritalardan
+    /// turetildigi icin key uyusmazligi riski yok).
+    /// </summary>
+    private List<(string Name, Dictionary<string, string> Map)> BuildGridStatisticsRows(bool minimal)
+    {
+        var rows = new List<(string Name, Dictionary<string, string> Map)>();
+
+        void Add(SingleTrader? trader)
+        {
+            if (trader == null) return;
+            if (minimal)
+            {
+                trader.statistics.AssignToMapMinimalForExport();
+                rows.Add((trader.Name, new Dictionary<string, string>(trader.statistics.StatisticsMapMinimal)));
+            }
+            else
+            {
+                trader.statistics.AssignToMapForExport();
+                rows.Add((trader.Name, new Dictionary<string, string>(trader.statistics.StatisticsMap)));
+            }
+        }
+
+        Add(_mainTrader);
+        foreach (var trader in Traders)
+            Add(trader);
+
+        return rows;
+    }
+
+    private void WriteMultipleTraderStatisticsGridToTxt(string logDir, bool minimal)
+    {
+        var rows = BuildGridStatisticsRows(minimal);
+        if (rows.Count == 0)
+            return;
+
+        if (!System.IO.Directory.Exists(logDir))
+            System.IO.Directory.CreateDirectory(logDir);
+
+        var fileName = minimal ? MultipleTraderStatisticsMinimalGridTxtFileName : MultipleTraderStatisticsGridTxtFileName;
+        var filePath = System.IO.Path.Combine(logDir, fileName);
+        var title = minimal
+            ? "MULTIPLE TRADER STATISTICS - MINIMAL GRID REPORT"
+            : "MULTIPLE TRADER STATISTICS - GRID REPORT";
+
+        var content = StatisticsExporter.BuildMultipleTraderGridReport(title, rows, minimal);
+
+        var fs = new System.IO.FileStream(filePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite);
+        using (var writer = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8))
+            writer.Write(content);
+
+        LogManager.LogRaw($"{fileName} written to: {filePath}");
     }
 
     private List<(string Name, Dictionary<string, string> Summary)> BuildStatisticsRows()

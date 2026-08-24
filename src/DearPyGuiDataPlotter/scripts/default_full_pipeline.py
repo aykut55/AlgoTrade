@@ -580,7 +580,8 @@ class App:
         gm.leftMenuPanel.refresh()
         gm.poolPanel.refresh()
         gm._refreshActivePanelCombo()  # Active Panel combosu da bu anda "None" gostersin
-        dpg.split_frame()
+        if dpg.is_dearpygui_running():
+            dpg.split_frame()
 
         self.buildPanels()
         

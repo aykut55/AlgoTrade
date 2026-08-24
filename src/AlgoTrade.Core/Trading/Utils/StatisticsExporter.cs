@@ -582,16 +582,16 @@ public class StatisticsExporter
         WriteAllTextShared(filePath, BuildDetailedReport());
     }
 
-    public void SaveToTxtGrid(string filePath)
+    public void SaveToTxtGrid(string filePath, bool isMultipleTraderMode = false)
     {
         _statistics.AssignToMapForExport();
-        WriteAllTextShared(filePath, BuildGridReport());
+        WriteAllTextShared(filePath, BuildGridReport(isMultipleTraderMode));
     }
 
-    public void SaveToTxtMinimalGrid(string filePath)
+    public void SaveToTxtMinimalGrid(string filePath, bool isMultipleTraderMode = false)
     {
         _statistics.AssignToMapMinimalForExport();
-        WriteAllTextShared(filePath, BuildMinimalGridReport());
+        WriteAllTextShared(filePath, BuildMinimalGridReport(isMultipleTraderMode));
     }
 
     public void SaveToTxtMinimalFormatted(string filePath)
@@ -1306,6 +1306,85 @@ public class StatisticsExporter
         sb.AppendLine();
     }
 
+    /// Builds the MultipleTrader grid report - unlike BuildGridReportGeneric (one trader, N columns
+    /// of PACKED SECTIONS), here each COLUMN is one trader (mainTrader, then each childTrader) and
+    /// every column stacks that trader's OWN full set of sections vertically (i.e. each column is
+    /// that trader's single-column grid report, placed side by side for comparison). Column count is
+    /// therefore however many traders were passed in, not a config setting. The "sections" list from
+    /// GridReportConfig.json's MultipleTrader.Full/Minimal node still controls which sections appear
+    /// and in what order within each column (its "columns" field is meaningless here and ignored).
+    public static string BuildMultipleTraderGridReport(
+        string reportTitle,
+        IReadOnlyList<(string Name, Dictionary<string, string> Map)> rows,
+        bool minimal)
+    {
+        var sections = minimal
+            ? GridMinimalReportSections
+            : GridReportSections;
+        IReadOnlyList<string> defaultOrder = minimal
+            ? GridMinimalReportDefaultOrder
+            : GridReportDefaultOrder;
+
+        var config = LoadGridReportConfig();
+        var sectionConfig = minimal ? config?.MultipleTrader?.Minimal : config?.MultipleTrader?.Full;
+        IReadOnlyList<string> order = sectionConfig?.sections != null && sectionConfig.sections.Count > 0
+            ? sectionConfig.sections
+            : defaultOrder;
+
+        var sectionsByTitle = new Dictionary<string, (string Label, string Key)[]>();
+        foreach (var s in sections)
+            sectionsByTitle[s.Title] = s.Rows;
+
+        var columnCount = Math.Max(1, rows.Count);
+        var totalWidth = GridTotalWidthForColumns(columnCount);
+
+        var sb = new StringBuilder();
+        AppendGridReportFrame(sb, reportTitle, totalWidth);
+
+        var columnLines = new List<List<string>>(columnCount);
+        foreach (var row in rows)
+        {
+            string GetValue(string key) => row.Map.TryGetValue(key, out var v) ? (v ?? "...") : "...";
+
+            var lines = new List<string>
+            {
+                $"┌{new string('─', GridColBoxWidth)}┐",
+                $"│{GridCenterText(row.Name, GridColBoxWidth)}│",
+                $"└{new string('─', GridColBoxWidth)}┘",
+                string.Empty
+            };
+            foreach (var title in order)
+            {
+                if (!sectionsByTitle.TryGetValue(title, out var sectionRows))
+                    continue; // unknown/typo'd section name in config - skip silently
+
+                lines.AddRange(BuildGridSectionBox(title, sectionRows, GetValue));
+                lines.Add(string.Empty);
+            }
+            columnLines.Add(lines);
+        }
+
+        var maxHeight = 0;
+        foreach (var col in columnLines)
+            maxHeight = Math.Max(maxHeight, col.Count);
+
+        for (int r = 0; r < maxHeight; r++)
+        {
+            var cells = new string[columnCount];
+            for (int c = 0; c < columnCount; c++)
+            {
+                var cell = r < columnLines[c].Count ? columnLines[c][r] : string.Empty;
+                cells[c] = c < columnCount - 1 ? cell.PadRight(GridColSlotWidth) : cell;
+            }
+            sb.AppendLine(string.Join(new string(' ', GridGap), cells).TrimEnd());
+        }
+
+        sb.AppendLine($"┌{new string('─', totalWidth - 2)}┐");
+        sb.AppendLine($"│{GridCenterText("END OF REPORT", totalWidth - 2)}│");
+        sb.AppendLine($"└{new string('─', totalWidth - 2)}┘");
+        return sb.ToString();
+    }
+
     /// Builds a grid report by packing each named section (in the given order) into
     /// whichever of N columns is currently shortest - this both supports an arbitrary
     /// column count (GridReportConfig.json "columns": 2 or 3) and keeps the leftover
@@ -1377,7 +1456,7 @@ public class StatisticsExporter
         return sb.ToString();
     }
 
-    private string BuildGridReport()
+    private string BuildGridReport(bool isMultipleTraderMode)
     {
         string GetValue(string key)
         {
@@ -1387,9 +1466,10 @@ public class StatisticsExporter
         }
 
         var config = LoadGridReportConfig();
+        var modeConfig = isMultipleTraderMode ? config?.MultipleTrader : config?.SingleTrader;
         return BuildGridReportGeneric(
             "SINGLE TRADER RUN RESULTS - GRID REPORT",
-            GridReportSections, GridReportDefaultOrder, config?.Full, GetValue);
+            GridReportSections, GridReportDefaultOrder, modeConfig?.Full, GetValue);
     }
 
     // Section rows for the minimal grid report - mirrors exactly what SaveToTxtMinimalFormatted
@@ -1541,7 +1621,7 @@ public class StatisticsExporter
         "PERFORMANCE & SCORE", "ASSET & POSITION INFO"
     };
 
-    private string BuildMinimalGridReport()
+    private string BuildMinimalGridReport(bool isMultipleTraderMode)
     {
         string GetValue(string key)
         {
@@ -1551,9 +1631,10 @@ public class StatisticsExporter
         }
 
         var config = LoadGridReportConfig();
+        var modeConfig = isMultipleTraderMode ? config?.MultipleTrader : config?.SingleTrader;
         return BuildGridReportGeneric(
             "SINGLE TRADER RUN RESULTS - MINIMAL GRID REPORT",
-            GridMinimalReportSections, GridMinimalReportDefaultOrder, config?.Minimal, GetValue);
+            GridMinimalReportSections, GridMinimalReportDefaultOrder, modeConfig?.Minimal, GetValue);
     }
 
     /// Loads inputs/configs/GridReportConfig.json (columns + section order/selection for the
@@ -1781,10 +1862,21 @@ public class StatisticsExporter
         };
     }
 
-    // inputs/configs/GridReportConfig.json root: "Full" configures SaveToTxtGrid,
-    // "Minimal" configures SaveToTxtMinimalGrid. Either node is optional - a missing
-    // node (or a missing file entirely) falls back to GridDefaultColumns/GridReportDefaultOrder.
+    // inputs/configs/GridReportConfig.json root: "SingleTrader" configures a plain single-trader
+    // run, "MultipleTrader" configures every MultipleTrader member (mainTrader + each childTrader -
+    // they all go through this same StatisticsExporter/SingleTrader plumbing, so the mode has to be
+    // told apart explicitly). SingleTrader.WriteStatisticsToFile passes its own
+    // MultipleTraderModeEnabled flag through SaveToTxtGrid/SaveToTxtMinimalGrid to pick the right
+    // one. Under each mode, "Full" configures SaveToTxtGrid and "Minimal" configures
+    // SaveToTxtMinimalGrid. Any node missing (or the file missing entirely) falls back to
+    // GridDefaultColumns/GridReportDefaultOrder.
     private sealed class GridReportConfig
+    {
+        public GridReportModeConfig? SingleTrader { get; set; }
+        public GridReportModeConfig? MultipleTrader { get; set; }
+    }
+
+    private sealed class GridReportModeConfig
     {
         public GridReportSectionConfig? Full { get; set; }
         public GridReportSectionConfig? Minimal { get; set; }

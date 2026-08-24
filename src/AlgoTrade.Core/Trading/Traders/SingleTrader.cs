@@ -2631,13 +2631,13 @@ public class SingleTrader : MarketDataProvider, IDisposable
         if (this.SaveGridStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {GridStatsTxtFileName}...");
-            statistics.SaveToTxtGrid(Path.Combine(outputDir, GridStatsTxtFileName));
+            statistics.SaveToTxtGrid(Path.Combine(outputDir, GridStatsTxtFileName), this.MultipleTraderModeEnabled);
         }
 
         if (this.SaveMinimalGridStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalGridStatsTxtFileName}...");
-            statistics.SaveToTxtMinimalGrid(Path.Combine(outputDir, MinimalGridStatsTxtFileName));
+            statistics.SaveToTxtMinimalGrid(Path.Combine(outputDir, MinimalGridStatsTxtFileName), this.MultipleTraderModeEnabled);
         }
 
         // Export (versiyonlu sütun tanımlarıyla çıktı)
