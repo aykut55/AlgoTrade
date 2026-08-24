@@ -534,7 +534,8 @@ class PanelManager:
             appliedY = True
 
         if appliedX or appliedY:
-            dpg.split_frame()
+            if dpg.is_dearpygui_running():
+                dpg.split_frame()
             if appliedX:
                 dpg.set_axis_limits_auto(xTag)
             if appliedY:
@@ -685,7 +686,8 @@ class PanelManager:
                     newMin, newMax = dataMax - span, dataMax
 
         dpg.set_axis_limits(xTag, newMin, newMax)
-        dpg.split_frame()
+        if dpg.is_dearpygui_running():
+            dpg.split_frame()
         dpg.set_axis_limits_auto(xTag)
         return newMin, newMax
 
@@ -727,7 +729,8 @@ class PanelManager:
         if not result:
             return None
 
-        dpg.split_frame()
+        if dpg.is_dearpygui_running():
+            dpg.split_frame()
         if "x" in result:
             dpg.set_axis_limits_auto(f"x_axis_{panelId}")
         if "y" in result:
@@ -791,7 +794,8 @@ class PanelManager:
         if not result:
             return None
 
-        dpg.split_frame()
+        if dpg.is_dearpygui_running():
+            dpg.split_frame()
         if "x" in result:
             dpg.set_axis_limits_auto(f"x_axis_{panelId}")
         if "y" in result:
@@ -831,7 +835,8 @@ class PanelManager:
 
         dpg.set_axis_limits(xTag, newMin, newMax)
         if not liveOnly:
-            dpg.split_frame()
+            if dpg.is_dearpygui_running():
+                dpg.split_frame()
             dpg.set_axis_limits_auto(xTag)
         return newMin, newMax
 
@@ -865,7 +870,8 @@ class PanelManager:
 
         dpg.set_axis_limits(xTag, newMin, newMax)
         if not liveOnly:
-            dpg.split_frame()
+            if dpg.is_dearpygui_running():
+                dpg.split_frame()
             dpg.set_axis_limits_auto(xTag)
         return newMin, newMax
 
@@ -947,7 +953,8 @@ class PanelManager:
         xMax = dataMin + offset + visible - 1 + pad
 
         dpg.set_axis_limits(xTag, xMin, xMax)
-        dpg.split_frame()
+        if dpg.is_dearpygui_running():
+            dpg.split_frame()
         dpg.set_axis_limits_auto(xTag)
         self.adjustYAxis(panelId, xLimits=(xMin, xMax))
         return xMin, xMax

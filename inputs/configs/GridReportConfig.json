@@ -1,0 +1,43 @@
+{
+  "// ": "SingleTraderStatisticsGrid.txt / SingleTraderStatisticsMinimalGrid.txt icin sutun sayisi + blok siralamasi.",
+  "// columns": "2 veya 3 (ya da baska bir sayi) - her blok, o an EN KISA olan sutuna yerlestirilir (bosluk azaltmak icin), sabit sol/sag esleme degil.",
+  "// sections": "sadece burada listelenen bloklar (bu sirayla) basilir - bir bloğu cikarmak icin listeden silin, sirasini degistirmek icin yerini degistirin. Bos/eksik birakilirsa kod-icindeki varsayilan sira/tum bloklar kullanilir.",
+
+  "Full": {
+    "columns": 3,
+    "sections": [
+      "TRADER & SYSTEM INFORMATION",
+      "EXECUTION INFORMATION",
+      "BAR INFORMATION",
+      "TIME STATISTICS",
+      "BALANCE & RETURNS",
+      "BALANCE MIN/MAX",
+      "TRADE COUNTS",
+      "COMMAND COUNTS",
+      "COMMISSION DETAILS",
+      "RISK METRICS",
+      "PROFIT & LOSS",
+      "SCORE",
+      "SIGNALS & EXECUTION STATUS",
+      "ASSET & POSITION INFO",
+      "PERIODIC RETURNS (PRICE)",
+      "PERIODIC RETURNS (POINTS)"
+    ]
+  },
+
+  "Minimal": {
+    "columns": 3,
+    "sections": [
+      "TRADER & SYSTEM INFORMATION",
+      "EXECUTION INFORMATION",
+      "BAR INFORMATION",
+      "TIME STATISTICS",
+      "BALANCE & RETURNS",
+      "BALANCE MIN/MAX",
+      "TRADE COUNTS",
+      "COMMISSION DETAILS",
+      "PERFORMANCE & SCORE",
+      "ASSET & POSITION INFO"
+    ]
+  }
+}

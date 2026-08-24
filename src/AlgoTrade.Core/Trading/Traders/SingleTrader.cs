@@ -264,6 +264,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public string MinimalListsCsvFileName { get; set; } = "SingleTraderListsMinimal.csv";
     public string FullStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsFormatted.txt";
     public string MinimalStatsTxtFormattedFileName { get; set; } = "SingleTraderStatisticsFormattedMinimal.txt";
+    public string GridStatsTxtFileName { get; set; } = "SingleTraderStatisticsGrid.txt";
+    public string MinimalGridStatsTxtFileName { get; set; } = "SingleTraderStatisticsMinimalGrid.txt";
 
     // Performans outputs
     public string PerformansTxtFileName { get; set; } = "SingleTraderPerformans.txt";
@@ -280,6 +282,8 @@ public class SingleTrader : MarketDataProvider, IDisposable
     public bool SaveMinimalListsCsvEnabled { get; set; } = true;
     public bool SaveFullStatsTxtFormattedEnabled { get; set; } = true;
     public bool SaveMinimalStatsTxtFormattedEnabled { get; set; } = true;
+    public bool SaveGridStatsTxtEnabled { get; set; } = true;
+    public bool SaveMinimalGridStatsTxtEnabled { get; set; } = true;
     public bool SavePerformansTxtEnabled { get; set; } = true;
     public bool SavePerformansCsvEnabled { get; set; } = true;
 
@@ -2622,6 +2626,18 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             Log($"\n\tSaving statistics to {MinimalStatsTxtFormattedFileName}...");
             statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, MinimalStatsTxtFormattedFileName));
+        }
+
+        if (this.SaveGridStatsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {GridStatsTxtFileName}...");
+            statistics.SaveToTxtGrid(Path.Combine(outputDir, GridStatsTxtFileName));
+        }
+
+        if (this.SaveMinimalGridStatsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {MinimalGridStatsTxtFileName}...");
+            statistics.SaveToTxtMinimalGrid(Path.Combine(outputDir, MinimalGridStatsTxtFileName));
         }
 
         // Export (versiyonlu sütun tanımlarıyla çıktı)

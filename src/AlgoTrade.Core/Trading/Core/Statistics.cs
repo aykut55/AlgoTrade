@@ -1257,6 +1257,16 @@ namespace AlgoTrade.Core.Trading.Statistics
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtFormatted(filePath);
         }
 
+        public void SaveToTxtGrid(string filePath)
+        {
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtGrid(filePath);
+        }
+
+        public void SaveToTxtMinimalGrid(string filePath)
+        {
+            new AlgoTrade.Core.Trading.Utils.StatisticsExporter(this).SaveToTxtMinimalGrid(filePath);
+        }
+
         private void AssignToMapMinimal()
         {
             int keyId = 0;

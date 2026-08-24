@@ -582,6 +582,18 @@ public class StatisticsExporter
         WriteAllTextShared(filePath, BuildDetailedReport());
     }
 
+    public void SaveToTxtGrid(string filePath)
+    {
+        _statistics.AssignToMapForExport();
+        WriteAllTextShared(filePath, BuildGridReport());
+    }
+
+    public void SaveToTxtMinimalGrid(string filePath)
+    {
+        _statistics.AssignToMapMinimalForExport();
+        WriteAllTextShared(filePath, BuildMinimalGridReport());
+    }
+
     public void SaveToTxtMinimalFormatted(string filePath)
     {
         _statistics.AssignToMapMinimalForExport();
@@ -1005,6 +1017,592 @@ public class StatisticsExporter
         return sb.ToString();
     }
 
+    // Section rows for the grid report, grouped in the same order used by BuildDetailedReport.
+    // Kept as a separate table (not shared with BuildDetailedReport) so the existing detailed
+    // report output is never touched by grid-layout changes.
+    private static readonly (string Title, (string Label, string Key)[] Rows)[] GridReportSections =
+    {
+        ("TRADER & SYSTEM INFORMATION", new (string Label, string Key)[]
+        {
+            ("Trader ID", "TraderId"),
+            ("Trader Name", "TraderName"),
+            ("Symbol Name", "SymbolName"),
+            ("Symbol Period", "SymbolPeriod"),
+            ("System ID", "SystemId"),
+            ("System Name", "SystemName"),
+            ("Strategy ID", "StrategyId"),
+            ("Strategy Name", "StrategyName")
+        }),
+        ("EXECUTION INFORMATION", new (string Label, string Key)[]
+        {
+            ("Last Execution ID", "LastExecutionId"),
+            ("Last Execution Time", "LastExecutionTime"),
+            ("Execution Start", "LastExecutionTimeStart"),
+            ("Execution Stop", "LastExecutionTimeStop"),
+            ("Execution Time (ms)", "LastExecutionTimeInMSec"),
+            ("Last Reset Time", "LastResetTime"),
+            ("Statistics Calc Time", "LastStatisticsCalculationTime")
+        }),
+        ("BAR INFORMATION", new (string Label, string Key)[]
+        {
+            ("Total Bars", "ToplamBarSayisi"),
+            ("Selected Bar Number", "SecilenBarNumarasi"),
+            ("Selected Bar DateTime", "SecilenBarTarihSaati"),
+            ("Selected Bar Date", "SecilenBarTarihi"),
+            ("Selected Bar Time", "SecilenBarSaati"),
+            ("First Bar DateTime", "IlkBarTarihSaati"),
+            ("First Bar Date", "IlkBarTarihi"),
+            ("First Bar Time", "IlkBarSaati"),
+            ("Last Bar DateTime", "SonBarTarihSaati"),
+            ("Last Bar Date", "SonBarTarihi"),
+            ("Last Bar Time", "SonBarSaati"),
+            ("First Bar Index", "IlkBarIndex"),
+            ("Last Bar Index", "SonBarIndex"),
+            ("Last Bar Open", "SonBarAcilisFiyati"),
+            ("Last Bar High", "SonBarYuksekFiyati"),
+            ("Last Bar Low", "SonBarDusukFiyati"),
+            ("Last Bar Close", "SonBarKapanisFiyati")
+        }),
+        ("TIME STATISTICS", new (string Label, string Key)[]
+        {
+            ("Total Months", "ToplamGecenSureAy"),
+            ("Total Days", "ToplamGecenSureGun"),
+            ("Total Hours", "ToplamGecenSureSaat"),
+            ("Total Minutes", "ToplamGecenSureDakika"),
+            ("Avg Monthly Trades", "OrtAylikIslemSayisi"),
+            ("Avg Weekly Trades", "OrtHaftalikIslemSayisi"),
+            ("Avg Daily Trades", "OrtGunlukIslemSayisi"),
+            ("Avg Hourly Trades", "OrtSaatlikIslemSayisi")
+        }),
+        ("BALANCE & RETURNS", new (string Label, string Key)[]
+        {
+            ("Initial Balance (Price)", "IlkBakiyeFiyat"),
+            ("Initial Balance (Points)", "IlkBakiyePuan"),
+            ("Final Balance (Price)", "BakiyeFiyat"),
+            ("Final Balance (Points)", "BakiyePuan"),
+            ("Gross Return (Price)", "GetiriFiyat"),
+            ("Gross Return (Points)", "GetiriPuan"),
+            ("Gross Return % (Price)", "GetiriFiyatYuzde"),
+            ("Gross Return % (Points)", "GetiriPuanYuzde"),
+            ("Commission", "KomisyonFiyat"),
+            ("Net Balance (Price)", "BakiyeFiyatNet"),
+            ("Net Balance (Points)", "BakiyePuanNet"),
+            ("Net Return (Price)", "GetiriFiyatNet"),
+            ("Net Return (Points)", "GetiriPuanNet"),
+            ("Net Return % (Price)", "GetiriFiyatYuzdeNet"),
+            ("Net Return % (Points)", "GetiriPuanYuzdeNet"),
+            ("Return Kz", "GetiriKz"),
+            ("Return Kz Net", "GetiriKzNet"),
+            ("Return Kz System", "GetiriKzSistem"),
+            ("Return Kz System %", "GetiriKzSistemYuzde"),
+            ("Return Kz Net System", "GetiriKzNetSistem"),
+            ("Return Kz Net System %", "GetiriKzNetSistemYuzde")
+        }),
+        ("BALANCE MIN/MAX", new (string Label, string Key)[]
+        {
+            ("Min Balance (Price)", "MinBakiyeFiyat"),
+            ("Max Balance (Price)", "MaxBakiyeFiyat"),
+            ("Min Balance (Points)", "MinBakiyePuan"),
+            ("Max Balance (Points)", "MaxBakiyePuan"),
+            ("Min Balance %", "MinBakiyeFiyatYuzde"),
+            ("Max Balance %", "MaxBakiyeFiyatYuzde"),
+            ("Min Balance Index", "MinBakiyeFiyatIndex"),
+            ("Max Balance Index", "MaxBakiyeFiyatIndex"),
+            ("Min Balance Net", "MinBakiyeFiyatNet"),
+            ("Max Balance Net", "MaxBakiyeFiyatNet"),
+            ("Min Balance Net Index", "MinBakiyeFiyatNetIndex"),
+            ("Max Balance Net Index", "MaxBakiyeFiyatNetIndex"),
+            ("Min Balance Net %", "MinBakiyeFiyatNetYuzde"),
+            ("Max Balance Net %", "MaxBakiyeFiyatNetYuzde")
+        }),
+        ("TRADE COUNTS", new (string Label, string Key)[]
+        {
+            ("Total Trades", "IslemSayisi"),
+            ("Buy Trades", "AlisSayisi"),
+            ("Sell Trades", "SatisSayisi"),
+            ("Flat Count", "FlatSayisi"),
+            ("Pass Count", "PassSayisi"),
+            ("Take Profit Count", "KarAlSayisi"),
+            ("Stop Loss Count", "ZararKesSayisi"),
+            ("Winning Trades", "KazandiranIslemSayisi"),
+            ("Losing Trades", "KaybettirenIslemSayisi"),
+            ("Neutral Trades", "NotrIslemSayisi"),
+            ("Winning Buys", "KazandiranAlisSayisi"),
+            ("Losing Buys", "KaybettirenAlisSayisi"),
+            ("Neutral Buys", "NotrAlisSayisi"),
+            ("Winning Sells", "KazandiranSatisSayisi"),
+            ("Losing Sells", "KaybettirenSatisSayisi"),
+            ("Neutral Sells", "NotrSatisSayisi")
+        }),
+        ("COMMAND COUNTS", new (string Label, string Key)[]
+        {
+            ("Buy Commands", "AlKomutSayisi"),
+            ("Sell Commands", "SatKomutSayisi"),
+            ("Pass Commands", "PasGecKomutSayisi"),
+            ("Take Profit Commands", "KarAlKomutSayisi"),
+            ("Stop Loss Commands", "ZararKesKomutSayisi"),
+            ("Flat Commands", "FlatOlKomutSayisi")
+        }),
+        ("COMMISSION DETAILS", new (string Label, string Key)[]
+        {
+            ("Commission Trades", "KomisyonIslemSayisi"),
+            ("Commission Asset Count", "KomisyonVarlikAdedSayisi"),
+            ("Commission Micro", "KomisyonVarlikAdedSayisiMicro"),
+            ("Commission Multiplier", "KomisyonCarpan"),
+            ("Total Commission", "KomisyonFiyat"),
+            ("Commission %", "KomisyonFiyatYuzde"),
+            ("Include Commission", "KomisyonuDahilEt")
+        }),
+        ("PROFIT & LOSS", new (string Label, string Key)[]
+        {
+            ("P&L (Price)", "KarZararFiyat"),
+            ("P&L % (Price)", "KarZararFiyatYuzde"),
+            ("P&L (Points)", "KarZararPuan"),
+            ("Total Profit (Price)", "ToplamKarFiyat"),
+            ("Total Loss (Price)", "ToplamZararFiyat"),
+            ("Net Profit (Price)", "NetKarFiyat"),
+            ("Total Profit (Points)", "ToplamKarPuan"),
+            ("Total Loss (Points)", "ToplamZararPuan"),
+            ("Net Profit (Points)", "NetKarPuan"),
+            ("Max Profit (Price)", "MaxKarFiyat"),
+            ("Max Loss (Price)", "MaxZararFiyat"),
+            ("Max Profit (Points)", "MaxKarPuan"),
+            ("Max Loss (Points)", "MaxZararPuan"),
+            ("Bars in Profit", "KardaBarSayisi"),
+            ("Bars in Loss", "ZarardaBarSayisi"),
+            ("Win Rate", "KarliIslemOrani")
+        }),
+        ("RISK METRICS", new (string Label, string Key)[]
+        {
+            ("Max Drawdown", "GetiriMaxDD"),
+            ("Max Drawdown Date", "GetiriMaxDDTarih"),
+            ("Max Loss", "GetiriMaxKayip"),
+            ("Profit Factor", "ProfitFactor"),
+            ("Profit Factor (Net)", "ProfitFactorNet"),
+            ("Profit Factor (System)", "ProfitFactorSistem")
+        }),
+        ("SCORE", new (string Label, string Key)[]
+        {
+            ("Score (Net Return / MaxDD)", "ScoreFiyatNet"),
+            ("Score (Gross Return / MaxDD)", "ScoreFiyat"),
+            ("Score (Score Return / MaxDD)", "ScorePuan")
+        }),
+        ("SIGNALS & EXECUTION STATUS", new (string Label, string Key)[]
+        {
+            ("Signal", "Sinyal"),
+            ("Last Direction", "SonYon"),
+            ("Previous Direction", "PrevYon"),
+            ("Last Price", "SonFiyat"),
+            ("Last Buy Price", "SonAFiyat"),
+            ("Last Sell Price", "SonSFiyat"),
+            ("Last Flat Price", "SonFFiyat"),
+            ("Last Pass Price", "SonPFiyat"),
+            ("Previous Price", "PrevFiyat"),
+            ("Last Bar Number", "SonBarNo"),
+            ("Last Buy Bar Number", "SonABarNo"),
+            ("Last Sell Bar Number", "SonSBarNo"),
+            ("Order Command", "EmirKomut"),
+            ("Order Status", "EmirStatus")
+        }),
+        ("ASSET & POSITION INFO", new (string Label, string Key)[]
+        {
+            ("Share Count", "HisseSayisi"),
+            ("Contract Count", "KontratSayisi"),
+            ("Asset Multiplier", "VarlikAdedCarpani"),
+            ("Asset Count", "VarlikAdedSayisi"),
+            ("Asset Count (Micro)", "VarlikAdedSayisiMicro"),
+            ("Slippage Amount", "KaymaMiktari"),
+            ("Include Slippage", "KaymayiDahilEt"),
+            ("Micro Lot Size Enabled", "MicroLotSizeEnabled"),
+            ("Pyramiding Enabled", "PyramidingEnabled"),
+            ("Max Position Size Enabled", "MaxPositionSizeEnabled"),
+            ("Max Position Size", "MaxPositionSize"),
+            ("Max Position Size (Micro)", "MaxPositionSizeMicro")
+        }),
+        ("PERIODIC RETURNS (PRICE)", new (string Label, string Key)[]
+        {
+            ("This Month", "GetiriFiyatBuAy"),
+            ("Last Month", "GetiriFiyatAy1"),
+            ("This Week", "GetiriFiyatBuHafta"),
+            ("Last Week", "GetiriFiyatHafta1"),
+            ("Today", "GetiriFiyatBuGun"),
+            ("Yesterday", "GetiriFiyatGun1"),
+            ("This Hour", "GetiriFiyatBuSaat"),
+            ("Last Hour", "GetiriFiyatSaat1")
+        }),
+        ("PERIODIC RETURNS (POINTS)", new (string Label, string Key)[]
+        {
+            ("This Month (Pts)", "GetiriPuanBuAy"),
+            ("Last Month (Pts)", "GetiriPuanAy1"),
+            ("This Week (Pts)", "GetiriPuanBuHafta"),
+            ("Last Week (Pts)", "GetiriPuanHafta1"),
+            ("Today (Pts)", "GetiriPuanBuGun"),
+            ("Yesterday (Pts)", "GetiriPuanGun1"),
+            ("This Hour (Pts)", "GetiriPuanBuSaat"),
+            ("Last Hour (Pts)", "GetiriPuanSaat1")
+        })
+    };
+
+    // Default section order for the full grid report (used when GridReportConfig.json is
+    // missing or has no "Full" node) - same reading order as the original hand-picked pairing,
+    // just flattened since layout is now a column-packing algorithm instead of fixed left/right pairs.
+    private static readonly string[] GridReportDefaultOrder =
+    {
+        "TRADER & SYSTEM INFORMATION", "EXECUTION INFORMATION",
+        "BAR INFORMATION", "TIME STATISTICS",
+        "BALANCE & RETURNS", "BALANCE MIN/MAX",
+        "TRADE COUNTS", "COMMAND COUNTS",
+        "COMMISSION DETAILS", "RISK METRICS",
+        "PROFIT & LOSS", "SCORE",
+        "SIGNALS & EXECUTION STATUS", "ASSET & POSITION INFO",
+        "PERIODIC RETURNS (PRICE)", "PERIODIC RETURNS (POINTS)"
+    };
+
+    // Shared grid box-drawing helpers, used by both BuildGridReport (full) and
+    // BuildMinimalGridReport (minimal) so the alignment formula lives in one place.
+    private const int GridColBoxWidth = 58; // per-column box width, same label/value formula as BuildDetailedReport
+    private const int GridColSlotWidth = GridColBoxWidth + 2; // includes the box's own border characters
+    private const int GridGap = 2;
+    private const int GridDefaultColumns = 2;
+
+    private static int GridTotalWidthForColumns(int columns) =>
+        columns * GridColSlotWidth + Math.Max(0, columns - 1) * GridGap;
+
+    private static string GridCenterText(string text, int width)
+    {
+        if (text.Length >= width)
+            return text[..width];
+
+        var leftPadding = (width - text.Length) / 2;
+        return new string(' ', leftPadding) + text.PadRight(width - leftPadding);
+    }
+
+    private static List<string> BuildGridSectionBox(string title, (string Label, string Key)[] rows, Func<string, string> getValue)
+    {
+        const int labelWidth = 30;
+        var valueWidth = GridColBoxWidth - labelWidth - 5; // "│ " + " : " + " │" so content rows match the border width exactly
+
+        var lines = new List<string>(rows.Length + 2);
+        var headerDashCount = Math.Max(0, GridColBoxWidth - title.Length - 3); // "┌─ " + title + " ─┐"
+        lines.Add($"┌─ {title} {new string('─', headerDashCount)}┐");
+        foreach (var row in rows)
+        {
+            var value = getValue(row.Key);
+            if (value.Length > valueWidth)
+                value = value[..valueWidth];
+
+            lines.Add($"│ {row.Label.PadRight(labelWidth)} : {value.PadRight(valueWidth)} │");
+        }
+        lines.Add($"└{new string('─', GridColBoxWidth)}┘");
+        return lines;
+    }
+
+    private static void AppendGridReportFrame(StringBuilder sb, string title, int totalWidth)
+    {
+        sb.AppendLine($"┌{new string('─', totalWidth - 2)}┐");
+        sb.AppendLine($"│{GridCenterText(title, totalWidth - 2)}│");
+        sb.AppendLine($"│{GridCenterText($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}", totalWidth - 2)}│");
+        sb.AppendLine($"└{new string('─', totalWidth - 2)}┘");
+        sb.AppendLine();
+    }
+
+    /// Builds a grid report by packing each named section (in the given order) into
+    /// whichever of N columns is currently shortest - this both supports an arbitrary
+    /// column count (GridReportConfig.json "columns": 2 or 3) and keeps the leftover
+    /// whitespace next to short boxes to a minimum (a fixed left/right pairing left large
+    /// gaps whenever two adjacent sections had very different row counts, e.g. BALANCE
+    /// MIN/MAX next to BALANCE & RETURNS). The section order itself - and which sections
+    /// are included at all - comes from the user's "sections" list in the config, so users
+    /// can both reorder/omit blocks and pick 2 vs 3 columns without touching code.
+    private string BuildGridReportGeneric(
+        string reportTitle,
+        (string Title, (string Label, string Key)[] Rows)[] allSections,
+        string[] defaultOrder,
+        GridReportSectionConfig? userConfig,
+        Func<string, string> getValue)
+    {
+        var columns = userConfig != null && userConfig.columns > 0 ? userConfig.columns : GridDefaultColumns;
+        columns = Math.Clamp(columns, 1, 6);
+
+        IReadOnlyList<string> order = userConfig?.sections != null && userConfig.sections.Count > 0
+            ? userConfig.sections
+            : defaultOrder;
+
+        var sectionsByTitle = new Dictionary<string, (string Label, string Key)[]>();
+        foreach (var s in allSections)
+            sectionsByTitle[s.Title] = s.Rows;
+
+        var totalWidth = GridTotalWidthForColumns(columns);
+        var sb = new StringBuilder();
+        AppendGridReportFrame(sb, reportTitle, totalWidth);
+
+        var columnLines = new List<List<string>>(columns);
+        for (int i = 0; i < columns; i++)
+            columnLines.Add(new List<string>());
+
+        foreach (var title in order)
+        {
+            if (!sectionsByTitle.TryGetValue(title, out var rows))
+                continue; // unknown/typo'd section name in config - skip silently rather than render an empty box
+
+            var box = BuildGridSectionBox(title, rows, getValue);
+
+            var target = 0;
+            for (int c = 1; c < columns; c++)
+                if (columnLines[c].Count < columnLines[target].Count)
+                    target = c;
+
+            columnLines[target].AddRange(box);
+            columnLines[target].Add(string.Empty);
+        }
+
+        var maxHeight = 0;
+        foreach (var col in columnLines)
+            maxHeight = Math.Max(maxHeight, col.Count);
+
+        for (int row = 0; row < maxHeight; row++)
+        {
+            var cells = new string[columns];
+            for (int c = 0; c < columns; c++)
+            {
+                var cell = row < columnLines[c].Count ? columnLines[c][row] : string.Empty;
+                cells[c] = c < columns - 1 ? cell.PadRight(GridColSlotWidth) : cell;
+            }
+            sb.AppendLine(string.Join(new string(' ', GridGap), cells).TrimEnd());
+        }
+
+        sb.AppendLine($"┌{new string('─', totalWidth - 2)}┐");
+        sb.AppendLine($"│{GridCenterText("END OF REPORT", totalWidth - 2)}│");
+        sb.AppendLine($"└{new string('─', totalWidth - 2)}┘");
+        return sb.ToString();
+    }
+
+    private string BuildGridReport()
+    {
+        string GetValue(string key)
+        {
+            if (_statistics.StatisticsMap.TryGetValue(key, out var value))
+                return value?.ToString() ?? "...";
+            return "...";
+        }
+
+        var config = LoadGridReportConfig();
+        return BuildGridReportGeneric(
+            "SINGLE TRADER RUN RESULTS - GRID REPORT",
+            GridReportSections, GridReportDefaultOrder, config?.Full, GetValue);
+    }
+
+    // Section rows for the minimal grid report - mirrors exactly what SaveToTxtMinimalFormatted
+    // prints (same keys, same StatisticsMapMinimal source), just grouped 2-per-row instead of one
+    // long vertical list. Labels are the raw keys themselves, same as the minimal report's own style
+    // (unlike the full report, the minimal report never had human-friendly labels).
+    private static readonly (string Title, (string Label, string Key)[] Rows)[] GridMinimalReportSections =
+    {
+        ("TRADER & SYSTEM INFORMATION", new (string Label, string Key)[]
+        {
+            ("TraderId", "TraderId"),
+            ("TraderName", "TraderName"),
+            ("SymbolName", "SymbolName"),
+            ("SymbolPeriod", "SymbolPeriod"),
+            ("SystemId", "SystemId"),
+            ("SystemName", "SystemName"),
+            ("StrategyId", "StrategyId"),
+            ("StrategyName", "StrategyName")
+        }),
+        ("EXECUTION INFORMATION", new (string Label, string Key)[]
+        {
+            ("LastExecutionId", "LastExecutionId"),
+            ("LastExecutionTime", "LastExecutionTime"),
+            ("LastExecutionTimeStart", "LastExecutionTimeStart"),
+            ("LastExecutionTimeStop", "LastExecutionTimeStop"),
+            ("LastExecutionTimeInMSec", "LastExecutionTimeInMSec"),
+            ("LastResetTime", "LastResetTime"),
+            ("LastStatisticsCalculationTime", "LastStatisticsCalculationTime")
+        }),
+        ("BAR INFORMATION", new (string Label, string Key)[]
+        {
+            ("ToplamBarSayisi", "ToplamBarSayisi"),
+            ("IlkBarTarihSaati", "IlkBarTarihSaati"),
+            ("IlkBarTarihi", "IlkBarTarihi"),
+            ("IlkBarSaati", "IlkBarSaati"),
+            ("SonBarTarihSaati", "SonBarTarihSaati"),
+            ("SonBarTarihi", "SonBarTarihi"),
+            ("SonBarSaati", "SonBarSaati"),
+            ("IlkBarIndex", "IlkBarIndex"),
+            ("SonBarIndex", "SonBarIndex")
+        }),
+        ("TIME STATISTICS", new (string Label, string Key)[]
+        {
+            ("ToplamGecenSureAy", "ToplamGecenSureAy"),
+            ("ToplamGecenSureHafta", "ToplamGecenSureHafta"),
+            ("ToplamGecenSureGun", "ToplamGecenSureGun"),
+            ("ToplamGecenSureSaat", "ToplamGecenSureSaat"),
+            ("ToplamGecenSureDakika", "ToplamGecenSureDakika"),
+            ("OrtAylikIslemSayisi", "OrtAylikIslemSayisi"),
+            ("OrtHaftalikIslemSayisi", "OrtHaftalikIslemSayisi"),
+            ("OrtGunlukIslemSayisi", "OrtGunlukIslemSayisi"),
+            ("OrtSaatlikIslemSayisi", "OrtSaatlikIslemSayisi")
+        }),
+        ("BALANCE & RETURNS", new (string Label, string Key)[]
+        {
+            ("IlkBakiyeFiyat", "IlkBakiyeFiyat"),
+            ("BakiyeFiyat", "BakiyeFiyat"),
+            ("GetiriFiyat", "GetiriFiyat"),
+            ("GetiriFiyatYuzde", "GetiriFiyatYuzde"),
+            ("KomisyonFiyat", "KomisyonFiyat"),
+            ("BakiyeFiyatNet", "BakiyeFiyatNet"),
+            ("GetiriFiyatNet", "GetiriFiyatNet"),
+            ("GetiriFiyatYuzdeNet", "GetiriFiyatYuzdeNet")
+        }),
+        ("BALANCE MIN/MAX", new (string Label, string Key)[]
+        {
+            ("MinBakiyeFiyat", "MinBakiyeFiyat"),
+            ("MaxBakiyeFiyat", "MaxBakiyeFiyat"),
+            ("MinBakiyeFiyatYuzde", "MinBakiyeFiyatYuzde"),
+            ("MaxBakiyeFiyatYuzde", "MaxBakiyeFiyatYuzde"),
+            ("MinBakiyePuanYuzde", "MinBakiyePuanYuzde"),
+            ("MaxBakiyePuanYuzde", "MaxBakiyePuanYuzde"),
+            ("MinBakiyeFiyatIndex", "MinBakiyeFiyatIndex"),
+            ("MaxBakiyeFiyatIndex", "MaxBakiyeFiyatIndex"),
+            ("MinBakiyeFiyatNet", "MinBakiyeFiyatNet"),
+            ("MaxBakiyeFiyatNet", "MaxBakiyeFiyatNet"),
+            ("MinBakiyeFiyatNetIndex", "MinBakiyeFiyatNetIndex"),
+            ("MaxBakiyeFiyatNetIndex", "MaxBakiyeFiyatNetIndex"),
+            ("MinBakiyeFiyatNetYuzde", "MinBakiyeFiyatNetYuzde"),
+            ("MaxBakiyeFiyatNetYuzde", "MaxBakiyeFiyatNetYuzde"),
+            ("MaxKarFiyat", "MaxKarFiyat"),
+            ("MaxZararFiyat", "MaxZararFiyat"),
+            ("MaxKarFiyatNet", "MaxKarFiyatNet"),
+            ("MaxZararFiyatNet", "MaxZararFiyatNet")
+        }),
+        ("TRADE COUNTS", new (string Label, string Key)[]
+        {
+            ("IslemSayisi", "IslemSayisi"),
+            ("AlisSayisi", "AlisSayisi"),
+            ("SatisSayisi", "SatisSayisi"),
+            ("FlatSayisi", "FlatSayisi"),
+            ("PassSayisi", "PassSayisi"),
+            ("KarAlSayisi", "KarAlSayisi"),
+            ("ZararKesSayisi", "ZararKesSayisi"),
+            ("KazandiranIslemSayisi", "KazandiranIslemSayisi"),
+            ("KaybettirenIslemSayisi", "KaybettirenIslemSayisi"),
+            ("NotrIslemSayisi", "NotrIslemSayisi")
+        }),
+        ("COMMISSION DETAILS", new (string Label, string Key)[]
+        {
+            ("KomisyonIslemSayisi", "KomisyonIslemSayisi"),
+            ("KomisyonVarlikAdedSayisi", "KomisyonVarlikAdedSayisi"),
+            ("KomisyonVarlikAdedSayisiMicro", "KomisyonVarlikAdedSayisiMicro"),
+            ("KomisyonCarpan", "KomisyonCarpan"),
+            ("KomisyonFiyat2", "KomisyonFiyat2"),
+            ("KomisyonFiyatYuzde", "KomisyonFiyatYuzde"),
+            ("KomisyonuDahilEt", "KomisyonuDahilEt")
+        }),
+        ("PERFORMANCE & SCORE", new (string Label, string Key)[]
+        {
+            ("KarliIslemOrani", "KarliIslemOrani"),
+            ("GetiriMaxDD", "GetiriMaxDD"),
+            ("GetiriMaxDDTarih", "GetiriMaxDDTarih"),
+            ("GetiriMaxKayip", "GetiriMaxKayip"),
+            ("ProfitFactor", "ProfitFactor"),
+            ("ProfitFactorPuan", "ProfitFactorPuan"),
+            ("ProfitFactorNet", "ProfitFactorNet"),
+            ("ScoreFiyatNet", "ScoreFiyatNet"),
+            ("ScoreFiyat", "ScoreFiyat"),
+            ("ScorePuan", "ScorePuan")
+        }),
+        ("ASSET & POSITION INFO", new (string Label, string Key)[]
+        {
+            ("HisseSayisi", "HisseSayisi"),
+            ("KontratSayisi", "KontratSayisi"),
+            ("VarlikAdedCarpani", "VarlikAdedCarpani"),
+            ("VarlikAdedSayisi", "VarlikAdedSayisi"),
+            ("VarlikAdedSayisiMicro", "VarlikAdedSayisiMicro"),
+            ("SonVarlikAdedSayisi", "SonVarlikAdedSayisi"),
+            ("SonVarlikAdedSayisiMicro", "SonVarlikAdedSayisiMicro"),
+            ("KaymaMiktari", "KaymaMiktari"),
+            ("KaymayiDahilEt", "KaymayiDahilEt"),
+            ("MicroLotSizeEnabled", "MicroLotSizeEnabled"),
+            ("PyramidingEnabled", "PyramidingEnabled"),
+            ("MaxPositionSizeEnabled", "MaxPositionSizeEnabled"),
+            ("MaxPositionSize", "MaxPositionSize"),
+            ("MaxPositionSizeMicro", "MaxPositionSizeMicro")
+        })
+    };
+
+    // Default section order for the minimal grid report (used when GridReportConfig.json is
+    // missing or has no "Minimal" node) - see GridReportDefaultOrder for the full-report equivalent.
+    private static readonly string[] GridMinimalReportDefaultOrder =
+    {
+        "TRADER & SYSTEM INFORMATION", "EXECUTION INFORMATION",
+        "BAR INFORMATION", "TIME STATISTICS",
+        "BALANCE & RETURNS", "BALANCE MIN/MAX",
+        "TRADE COUNTS", "COMMISSION DETAILS",
+        "PERFORMANCE & SCORE", "ASSET & POSITION INFO"
+    };
+
+    private string BuildMinimalGridReport()
+    {
+        string GetValue(string key)
+        {
+            if (_statistics.StatisticsMapMinimal.TryGetValue(key, out var value))
+                return value?.ToString() ?? "...";
+            return "...";
+        }
+
+        var config = LoadGridReportConfig();
+        return BuildGridReportGeneric(
+            "SINGLE TRADER RUN RESULTS - MINIMAL GRID REPORT",
+            GridMinimalReportSections, GridMinimalReportDefaultOrder, config?.Minimal, GetValue);
+    }
+
+    /// Loads inputs/configs/GridReportConfig.json (columns + section order/selection for the
+    /// grid reports). Returns null if the file is missing or fails to parse - callers fall back
+    /// to GridReportDefaultOrder/GridDefaultColumns in that case, so the grid reports keep
+    /// working even for setups that never created this optional config file.
+    private static GridReportConfig? LoadGridReportConfig()
+    {
+        try
+        {
+            var path = ResolveGridReportConfigPath();
+            if (path == null)
+                return null;
+
+            var json = File.ReadAllText(path);
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<GridReportConfig>(json, opts);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string? ResolveGridReportConfigPath()
+    {
+        const string fileName = "GridReportConfig.json";
+
+        // AppSettings.ConfigsDir = inputs/configs  (most reliable)
+        var appSettingsPath = Path.Combine(AlgoTrade.Core.AppSettings.ConfigsDir, fileName);
+        if (File.Exists(appSettingsPath))
+            return appSettingsPath;
+
+        // Walk up from cwd and base dir, checking both inputs/configs/ and inputs/
+        foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
+        {
+            var dir = new DirectoryInfo(start);
+            for (int i = 0; i < 8 && dir != null; i++, dir = dir.Parent)
+            {
+                var probe = Path.Combine(dir.FullName, "inputs", "configs", fileName);
+                if (File.Exists(probe)) return probe;
+                probe = Path.Combine(dir.FullName, "inputs", fileName);
+                if (File.Exists(probe)) return probe;
+            }
+        }
+
+        return null;
+    }
+
     private static string? ResolveStatisticsConfigPath()
     {
         const string fileName = "StatisticsExporterConfig.json";
@@ -1181,6 +1779,26 @@ public class StatisticsExporter
             "GetiriPuanYuzde" => row.GetiriPuanYuzde.ToString("F2"),
             _ => ""
         };
+    }
+
+    // inputs/configs/GridReportConfig.json root: "Full" configures SaveToTxtGrid,
+    // "Minimal" configures SaveToTxtMinimalGrid. Either node is optional - a missing
+    // node (or a missing file entirely) falls back to GridDefaultColumns/GridReportDefaultOrder.
+    private sealed class GridReportConfig
+    {
+        public GridReportSectionConfig? Full { get; set; }
+        public GridReportSectionConfig? Minimal { get; set; }
+    }
+
+    private sealed class GridReportSectionConfig
+    {
+        public int columns { get; set; } = GridDefaultColumns;
+
+        // Section title order AND selection - only titles listed here are rendered, in this
+        // order. Titles must match a section's Title exactly (see GridReportSections /
+        // GridMinimalReportSections); unknown titles are skipped silently. Omit/empty to use
+        // the built-in default order (all sections).
+        public List<string>? sections { get; set; }
     }
 
     private sealed class StatisticsExporterConfig
