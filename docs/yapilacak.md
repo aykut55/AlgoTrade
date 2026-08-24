@@ -86,6 +86,33 @@ konuşmada buradan devam edilecek.
 5. Kozmetik/küçük ince ayarlar (renk/yükseklik/etiket) — kullanıcı isterse tek tek istenebilir,
    mekanizmaların hepsi (color, yLabel, yFixedRange, height) artık view.json üzerinden dışarıdan
    set edilebilir durumda.
+6. ~~Menü `[6] Read Data + MultipleTrader`'a da yeni tip (DearPyGuiDataPlotter) çizim eklenecek~~ —
+   **YAPILDI**:
+   - `TradeDataBundleConverter.cs`: `ConvertSingleTrader`/yeni `ConvertMultipleTrader` artık ortak
+     `private static ConvertCore(SingleTrader trader, outputDir, fileBaseName, List<SingleTrader>
+     childTraders, bool includeChildReturnOverlays)`'a delege ediyor.
+   - **Düzeltme (ilk denemede yanlış anlaşılmıştı):** `multiple_data_plotter.py`'yi tekrar
+     incelendiğinde görüldü ki Signals/PnL Price/PnL % panelleri (1-2-3) eski tip plotta
+     `ShowChildsData`'dan BAĞIMSIZ, HER ZAMAN tüm trader'ları (main+child'lar) overlay gösteriyor;
+     SADECE Return/Return % panelleri (4-5) `ShowChildsData` ile gate'leniyor. Yeni converter artık
+     bunu birebir yansıtıyor: `ConvertMultipleTrader` her zaman `multipleTrader.Traders`'ı
+     `ConvertCore`'a veriyor, Signal/PnL/PnL % overlay'leri koşulsuz ekleniyor; sadece
+     Return/Net Return/Return %/Net Return % overlay'leri `SHOW_CHILD_TRADERS_IN_NEW_PLOTTER`
+     preprocessor sembolüyle gate'leniyor. Toggle `.csproj`'da DEĞİL, doğrudan
+     `TradeDataBundleConverter.cs`'in en başında `//#define SHOW_CHILD_TRADERS_IN_NEW_PLOTTER`
+     satırı olarak duruyor (C# kuralı: `#define` using'lerden önce olmalı) — açmak isteyen
+     geliştirici başındaki `//`'yi kaldırır (varsayılan: kapalı).
+   - Her child için `Signal`/`PnL`/`PnL %` (koşulsuz) + `Return`/`Net Return`/`Return %`/`Net Return %`
+     (koşullu) generic "indicator" serisi bundle'a ekleniyor (`ChildOverlaySeries` kaydı),
+     `BuildAndWriteView` bunları ilgili panellere (signals/pnl/pnlPct her zaman, returnCombo/
+     returnPctCombo sadece flag açıkken) ek seri olarak ekliyor — renk paleti (`TraderColors`)
+     `multiple_data_plotter.py:_TRADER_COLORS` ile birebir eşleşiyor.
+   - `Program.cs::runMultipleTraderAlgoTrade()`'e `[5]`'teki try/catch bloğunun birebir kopyası
+     eklendi (`ConvertMultipleTrader` çağırıyor). Build (`dotnet build AlgoTrade.Console`) hem
+     varsayılan hem `SHOW_CHILD_TRADERS_IN_NEW_PLOTTER` tanımlıyken hatasız geçti.
+   - **Kullanıcı gerçek bir MultipleTrader run'ı ile test etti**, ilk versiyonda Signals/PnL/PnL %
+     panellerinde sadece 1 sinyal görünmesi (main+2 child yerine) hatası bulundu ve yukarıdaki
+     düzeltmeyle giderildi. **Düzeltmeden sonraki hâli henüz tekrar test edilmedi** — sıradaki adım bu.
 
 ---
 

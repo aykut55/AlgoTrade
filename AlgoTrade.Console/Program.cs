@@ -878,6 +878,29 @@ async Task runMultipleTraderAlgoTrade()
                 await algoTrader.PlotMultipleTraderData(algoTrader.MultipleTrader);
             else
                 LogManager.LogError("Python setup failed. PlotMultipleTraderData skipped.");
+
+            // TODO: DearPyGuiDataPlotter converter/switch TESTİ - bkz. docs/yapilacak.md.
+            // Gerçek PlotBackend switch'i entegre olunca bu blok kaldırılıp yukarıdaki
+            // pythonnet/imgui_bundle çağrısıyla aynı yerde düzgünce (switch ile) sarılacak.
+            // Şimdilik pythonnet akışına dokunmadan, AYNI MultipleTrader'dan npz bundle
+            // üretip DearPyGuiDataPlotter'da da açıyor ([5]'teki SingleTrader test hook'unun aynısı).
+            try
+            {
+                var bundleConverter = new TradeDataBundleConverter();
+                string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+                var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(
+                    algoTrader.MultipleTrader, bundleOutDir);
+
+                dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                dearPyGuiTestPlotter.SetLogger(logger);
+                dearPyGuiTestPlotter.StartPlotter();
+                dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError($"[DearPyGuiDataPlotter] Converter test hatası: {ex.Message}", ex);
+            }
         }
 
         await writeTask;

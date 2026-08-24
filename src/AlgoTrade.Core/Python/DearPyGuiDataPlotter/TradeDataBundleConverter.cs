@@ -1,3 +1,10 @@
+// SHOW_CHILD_TRADERS_IN_NEW_PLOTTER: açmak için aşağıdaki satırın başındaki "//"yi kaldırın.
+// Açarsanız ConvertMultipleTrader, child trader'ları Return/Return % panellerine de overlay
+// olarak ekler (bkz. docs/yapilacak.md, inputs/python/multiple_data_plotter.py:ShowChildsData
+// ile aynı felsefe). #define using'lerden önce olmak zorunda (C# kuralı), bu yüzden dosyanın
+// en başında duruyor. Varsayılan: kapalı (sadece mainTrader).
+//#define SHOW_CHILD_TRADERS_IN_NEW_PLOTTER
+
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using Newtonsoft.Json;
@@ -22,6 +29,43 @@ public class TradeDataBundleConverter
     /// <returns>Yazılan .npz ve .view.json dosyalarının tam yolları.</returns>
     public (string bundlePath, string viewPath) ConvertSingleTrader(SingleTrader trader,
         string outputDir, string fileBaseName = "latest_bundle")
+        => ConvertCore(trader, outputDir, fileBaseName, childTraders: new List<SingleTrader>(),
+            includeChildReturnOverlays: false);
+
+    /// <summary>
+    /// MultipleTrader'ın mainTrader'ını (bkz. <see cref="MultipleTrader.GetMainTrader"/>)
+    /// ConvertSingleTrader'ın yaptığının aynısıyla bundle'a çevirir. Eski tip (pythonnet)
+    /// MultipleDataPlotter (inputs/python/multiple_data_plotter.py) ile BİREBİR aynı davranış:
+    /// Signals / PnL Price / PnL % panelleri her ZAMAN tüm trader'ları (main + tüm child'lar)
+    /// overlay olarak gösterir — koşulsuz. SADECE Return / Return % panelleri
+    /// inputs/python/multiple_data_plotter.py:ShowChildsData sabitiyle AYNI felsefedeki
+    /// SHOW_CHILD_TRADERS_IN_NEW_PLOTTER preprocessor sembolüyle kontrol edilir (varsayılan
+    /// kapalı — sadece mainTrader) — açmak için .csproj'daki &lt;DefineConstants&gt;'a ekleyin
+    /// (bkz. docs/yapilacak.md).
+    /// </summary>
+    /// <param name="multipleTrader">RunMultipleTraderWithProgressAsync() sonrası MultipleTrader instance'ı.</param>
+    /// <param name="outputDir">.npz/.view.json'ın yazılacağı klasör (örn. DearPyGuiDataPlotter/inputs).</param>
+    /// <param name="fileBaseName">Uzantısız dosya adı (varsayılan: her seferinde aynı isim, üzerine yazılır).</param>
+    /// <returns>Yazılan .npz ve .view.json dosyalarının tam yolları.</returns>
+    public (string bundlePath, string viewPath) ConvertMultipleTrader(MultipleTrader multipleTrader,
+        string outputDir, string fileBaseName = "latest_bundle")
+    {
+        if (multipleTrader == null)
+            throw new ArgumentNullException(nameof(multipleTrader));
+
+#if SHOW_CHILD_TRADERS_IN_NEW_PLOTTER
+        bool includeChildReturnOverlays = true;
+#else
+        bool includeChildReturnOverlays = false;
+#endif
+
+        return ConvertCore(multipleTrader.GetMainTrader(), outputDir, fileBaseName,
+            multipleTrader.Traders, includeChildReturnOverlays);
+    }
+
+    private static (string bundlePath, string viewPath) ConvertCore(SingleTrader trader,
+        string outputDir, string fileBaseName, List<SingleTrader> childTraders,
+        bool includeChildReturnOverlays)
     {
         if (trader == null)
             throw new ArgumentNullException(nameof(trader));
@@ -69,6 +113,41 @@ public class TradeDataBundleConverter
             }
         }
 
+        // Child trader overlay'leri (sadece ConvertMultipleTrader'dan gelir, childTraders SingleTrader
+        // için hep boş). Eski tip (multiple_data_plotter.py) ile birebir aynı davranış:
+        // Signal/PnL/PnL % HER ZAMAN eklenir (koşulsuz); Return/Net Return/Return %/Net Return %
+        // sadece includeChildReturnOverlays (SHOW_CHILD_TRADERS_IN_NEW_PLOTTER) açıkken eklenir.
+        // Hepsi generic "indicator" serisi olarak bundle'a yazılır, panel eşlemesi BuildAndWriteView'da.
+        var childOverlays = new List<ChildOverlaySeries>();
+        for (int c = 0; c < childTraders.Count; c++)
+        {
+            Lists? childLists = childTraders[c].lists;
+            if (childLists == null) continue;
+
+            string label = $"Child {c + 1}";
+            string signalName = $"{label} Signal";
+            string pnlName = $"{label} PnL";
+            string pnlPctName = $"{label} PnL %";
+            string returnName = $"{label} Return";
+            string netReturnName = $"{label} Net Return";
+            string returnPctName = $"{label} Return %";
+            string netReturnPctName = $"{label} Net Return %";
+
+            AddSeries(signalName, childLists.SinyalList);
+            AddSeries(pnlName, childLists.KarZararFiyatList);
+            AddSeries(pnlPctName, childLists.KarZararFiyatYuzdeList);
+            if (includeChildReturnOverlays)
+            {
+                AddSeries(returnName, childLists.GetiriFiyatList);
+                AddSeries(netReturnName, childLists.GetiriFiyatNetList);
+                AddSeries(returnPctName, childLists.GetiriFiyatYuzdeList);
+                AddSeries(netReturnPctName, childLists.GetiriFiyatYuzdeNetList);
+            }
+
+            childOverlays.Add(new ChildOverlaySeries(label, signalName, pnlName, pnlPctName,
+                returnName, netReturnName, returnPctName, netReturnPctName, ChildColor(c + 1)));
+        }
+
         // signal_codes: TradeSignalRenderer icin SEYREK (sadece degisim barlarinda) event kodu.
         // signal_steps: ayri "Signals" paneli icin YOGUN (her barda tekrar eden) durum kodu.
         var signalCodes = BuildSignalCodes(lists.SinyalList, n);
@@ -106,9 +185,30 @@ public class TradeDataBundleConverter
         string bundlePath = Path.Combine(outputDir, fileBaseName + ".npz");
         writer.Save(bundlePath);
 
-        string viewPath = BuildAndWriteView(outputDir, fileBaseName, trader.SymbolName, strategyIndicatorNames);
+        string viewPath = BuildAndWriteView(outputDir, fileBaseName, trader.SymbolName, strategyIndicatorNames,
+            childOverlays, includeChildReturnOverlays);
         return (bundlePath, viewPath);
     }
+
+    /// <summary>inputs/python/multiple_data_plotter.py:_TRADER_COLORS ile aynı palet (0-255 RGBA'ya çevrilmiş, index 0=mainTrader/beyaz).</summary>
+    private static readonly int[][] TraderColors =
+    {
+        new[] { 255, 255, 255, 255 }, // mainTrader — beyaz (şu an kullanılmıyor, index paritesi için duruyor)
+        new[] { 51, 204, 255, 255 },  // child 1 — cyan
+        new[] { 255, 204, 0, 255 },   // child 2 — sarı
+        new[] { 76, 255, 76, 255 },   // child 3 — yeşil
+        new[] { 255, 102, 102, 255 }, // child 4 — kırmızı
+        new[] { 255, 128, 0, 255 },   // child 5 — turuncu
+        new[] { 178, 102, 255, 255 }, // child 6 — mor
+        new[] { 0, 255, 204, 255 },   // child 7 — teal
+        new[] { 255, 51, 204, 255 },  // child 8 — pembe
+    };
+
+    private static int[] ChildColor(int traderColorIndex) => TraderColors[traderColorIndex % TraderColors.Length];
+
+    /// <summary>Bir child trader'ın Signals/PnL/PnL %/Return/Return % panellerine eklenecek overlay serileri (bkz. ConvertMultipleTrader).</summary>
+    private sealed record ChildOverlaySeries(string Label, string SignalName, string PnLName, string PnLPctName,
+        string ReturnName, string NetReturnName, string ReturnPctName, string NetReturnPctName, int[] Color);
 
     /// <summary>
     /// AlgoTrade'in SinyalList'i (SingleTrader.cs: SonYon=="A"→1.0, "S"→-1.0, "F"→0.0)
@@ -161,7 +261,8 @@ public class TradeDataBundleConverter
     /// ve (varsa) stratejinin kendi indikatörleri (örn. MOST+EXMOV).
     /// </summary>
     private static string BuildAndWriteView(string outputDir, string fileBaseName, string? symbol,
-        List<string> strategyIndicatorNames)
+        List<string> strategyIndicatorNames, List<ChildOverlaySeries> childOverlays,
+        bool includeChildReturnOverlays)
     {
         static Dictionary<string, object?> Series(string source, string? name = null, string? label = null,
             int? dataId = null, int[]? color = null)
@@ -179,6 +280,10 @@ public class TradeDataBundleConverter
         // ilk denemede magenta yazılmıştı ama referans görüntüde açık camgöbeği/cyan kullanılıyor.
         int[] cyan = new[] { 60, 200, 255, 255 };
         int[] yellow = new[] { 255, 255, 0, 255 };
+
+        // Child overlay'lerde gross (Return/Return %) soluk, net (Net Return/Net Return %) tam
+        // renkte çizilir — inputs/python/multiple_data_plotter.py'deki dim/color ayrımıyla aynı.
+        static int[] Dim(int[] color) => new[] { color[0] / 2, color[1] / 2, color[2] / 2, 178 };
 
         static Dictionary<string, object?> Panel(string id, string name, string caption, int height, int ySyncId,
             List<Dictionary<string, object?>> series, string? yLabel = null, double[]? yFixedRange = null)
@@ -215,6 +320,34 @@ public class TradeDataBundleConverter
             Panel("returnPctCombo", "Return %", "Return % / Net Return %", 220, 5,
                 new() { Series("indicator", "Return %", "Return %"), Series("indicator", "Net Return %", "Net Return %") }, yLabel: "Return %"),
         };
+
+        // multiple_data_plotter.py ile birebir aynı davranış:
+        // Signals/PnL/PnL % → child overlay'leri HER ZAMAN eklenir (koşulsuz).
+        var signalsPanelSeries = panels[1]["series"] as List<Dictionary<string, object?>>;
+        var pnlPanelSeries = panels[2]["series"] as List<Dictionary<string, object?>>;
+        var pnlPctPanelSeries = panels[3]["series"] as List<Dictionary<string, object?>>;
+        foreach (var child in childOverlays)
+        {
+            signalsPanelSeries!.Add(Series("indicator", child.SignalName, $"{child.Label} Signal", color: child.Color));
+            pnlPanelSeries!.Add(Series("indicator", child.PnLName, $"{child.Label} PnL", color: child.Color));
+            pnlPctPanelSeries!.Add(Series("indicator", child.PnLPctName, $"{child.Label} PnL %", color: child.Color));
+        }
+
+        // Return/Return % → child overlay'leri SADECE includeChildReturnOverlays
+        // (SHOW_CHILD_TRADERS_IN_NEW_PLOTTER) açıkken eklenir — multiple_data_plotter.py:ShowChildsData ile aynı.
+        if (includeChildReturnOverlays)
+        {
+            var returnPanelSeries = panels[4]["series"] as List<Dictionary<string, object?>>;
+            var returnPctPanelSeries = panels[5]["series"] as List<Dictionary<string, object?>>;
+            foreach (var child in childOverlays)
+            {
+                int[] dim = Dim(child.Color);
+                returnPanelSeries!.Add(Series("indicator", child.ReturnName, $"{child.Label} Gross", color: dim));
+                returnPanelSeries.Add(Series("indicator", child.NetReturnName, $"{child.Label} Net", color: child.Color));
+                returnPctPanelSeries!.Add(Series("indicator", child.ReturnPctName, $"{child.Label} Gross %", color: dim));
+                returnPctPanelSeries.Add(Series("indicator", child.NetReturnPctName, $"{child.Label} Net %", color: child.Color));
+            }
+        }
 
         if (strategyIndicatorNames.Count > 0)
         {
