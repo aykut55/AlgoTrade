@@ -212,6 +212,14 @@ public class PythonPlotter : IDisposable
 
     #region Plot Methods
 
+    // NOT (2026-08-25): PlotSingleTraderData/PlotMultipleTraderData (aşağıda) hâlâ TEK aktif/
+    // varsayılan yol — 01_RunSingleTraderWithProgressAsync.csx (Menü [5]), 02_RunMultipleTrader...
+    // (Menü [6]) ve tüm diğer menü/script'ler bunları çağırıyor. "Bundle Plot Methods" region'ındaki
+    // PlotBundleFile/PlotBundleFileFromDisk/SaveBundleToDisk EK/opsiyonel olarak eklendi (bkz.
+    // docs/todo.md "Geçmiş (Offline) Trader Verilerinden Hızlı Sinyal Plot'u") — hiçbir mevcut
+    // menü/script'in davranışını değiştirmiyor, sadece TestOldPlotterFromBundle.csx gibi yeni
+    // yazılan kodlardan çağrılıyor. Birini kullanmak istiyorsan açıkça o metodu çağırman gerekiyor.
+
     /// <summary>
     /// inputs/python/main.py içindeki hello() fonksiyonunu çağırır.
     /// Konsola "Hello Python" yazdırmak için basit bir test.
