@@ -1,4 +1,5 @@
 using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Indicators;
@@ -368,6 +369,221 @@ public class PythonPlotter : IDisposable
             _logger?.WriteRaw($"  [Plot] Window closed.");
         }
     }
+
+    #region Bundle Plot Methods (Offline Replay — .npz/.view.json'dan çizim)
+
+    /// <summary>
+    /// .npz/.view.json bundle dosyasından (TradeDataBundleConverter'ın ürettiği formatta)
+    /// SingleTrader'ı hiç yeniden çalıştırmadan çizim yapar. "Memory" yol: bundle C# tarafında
+    /// (<see cref="NpzReader"/> ile) belleğe okunur, sonra mevcut
+    /// <see cref="BuildPyTradeData"/>/<see cref="CallPlotDataImgBundleNew"/> render pipeline'ı
+    /// HİÇ değiştirilmeden reuse edilir. Şimdilik asıl kullanılan/aktif yol bu.
+    /// bkz. <see cref="PlotBundleFileFromDisk"/> — aynı işi Python tarafında numpy.load ile
+    /// yapan alternatif/karşılaştırma yolu.
+    /// Pencere kapanana dek bloklar.
+    /// </summary>
+    /// <param name="bundlePath">.npz bundle dosyasının yolu.</param>
+    /// <param name="viewPath">
+    /// .view.json dosyasının yolu (opsiyonel). Şu an KULLANILMIYOR — eski tip plotter'ın kendi
+    /// sabit panel yerleşimi var (bkz. inputs/python/data_plotter.py); ileride view.json'daki
+    /// panel/seri seçimini yansıtmak için ayrılmış bir parametre.
+    /// </param>
+    public void PlotBundleFile(string bundlePath, string? viewPath = null)
+    {
+        EnsureInitialized();
+
+        if (string.IsNullOrEmpty(bundlePath))
+            throw new ArgumentException("bundlePath boş olamaz.", nameof(bundlePath));
+        if (!File.Exists(bundlePath))
+            throw new FileNotFoundException($"Bundle dosyası bulunamadı: {bundlePath}", bundlePath);
+
+        _logger?.WriteRaw($"  [Plot] Bundle okunuyor (memory/NpzReader): {bundlePath}");
+
+        var reader = new NpzReader(bundlePath);
+        ExtractBundleData(reader);
+
+        var closes = _closes.ToArray();
+        var indicatorsToPlot = new Dictionary<string, double[]?>
+        {
+            ["ma5"] = _indicators?.MA.SMA(closes, 5),
+            ["ma8"] = _indicators?.MA.SMA(closes, 8),
+            ["ma13"] = _indicators?.MA.SMA(closes, 13),
+            ["ma21"] = _indicators?.MA.SMA(closes, 21),
+            ["ma34"] = _indicators?.MA.SMA(closes, 34),
+            ["ma50"] = _indicators?.MA.SMA(closes, 50),
+            ["ma100"] = _indicators?.MA.SMA(closes, 100),
+            ["ma200"] = _indicators?.MA.SMA(closes, 200),
+        };
+
+        _logger?.WriteRaw($"  [Plot] Bundle verisi hazır ({_closes.Count:N0} bar). Pencere açılıyor...");
+
+        using (Py.GIL())
+        {
+            dynamic tradeData = BuildPyTradeData();
+            SetPyIndicators(tradeData, indicatorsToPlot);
+
+            CallPlotDataImgBundleNew(tradeData);
+            _logger?.WriteRaw($"  [Plot] Pencere kapandı.");
+        }
+    }
+
+    /// <summary>
+    /// <see cref="PlotBundleFile"/> ile aynı sonucu üretir, ama okuma C# tarafında
+    /// (<see cref="NpzReader"/>) değil, Python tarafında numpy.load(...) ile yapılır
+    /// (inputs/python/bundle_loader.py: build_trade_data_from_bundle). NpzReader'a hiç ihtiyaç
+    /// duymayan, numpy'nin kendi .npz parser'ını kullanan alternatif/karşılaştırma yolu — MA5/8/...
+    /// gibi indikatör overlay'lerini HESAPLAMAZ (sadece bundle'da zaten var olan seriler doldurulur).
+    /// Pencere kapanana dek bloklar.
+    /// </summary>
+    /// <param name="bundlePath">.npz bundle dosyasının yolu.</param>
+    /// <param name="viewPath">.view.json dosyasının yolu (opsiyonel, şu an kullanılmıyor).</param>
+    public void PlotBundleFileFromDisk(string bundlePath, string? viewPath = null)
+    {
+        EnsureInitialized();
+
+        if (string.IsNullOrEmpty(bundlePath))
+            throw new ArgumentException("bundlePath boş olamaz.", nameof(bundlePath));
+        if (!File.Exists(bundlePath))
+            throw new FileNotFoundException($"Bundle dosyası bulunamadı: {bundlePath}", bundlePath);
+
+        _logger?.WriteRaw($"  [Plot] Bundle okunuyor (disk/numpy.load): {bundlePath}");
+
+        using (Py.GIL())
+        {
+            dynamic bundleLoader = Py.Import("bundle_loader");
+            dynamic tradeData = bundleLoader.build_trade_data_from_bundle(
+                new PyString(bundlePath),
+                viewPath != null ? new PyString(viewPath) : null);
+
+            _logger?.WriteRaw($"  [Plot] Bundle verisi hazır. Pencere açılıyor...");
+            CallPlotDataImgBundleNew(tradeData);
+            _logger?.WriteRaw($"  [Plot] Pencere kapandı.");
+        }
+    }
+
+    /// <summary>
+    /// SingleTrader sonuçlarını .npz/.view.json bundle çiftine yazar — DearPyGuiDataPlotter'ın
+    /// da okuyabildiği aynı format. Yazma mantığını burada TEKRARLAMAZ, mevcut
+    /// <see cref="TradeDataBundleConverter"/>'a ince bir sarmalayıcıdır; eski tip plotter'ın da
+    /// artık bundle üretebilmesi (sonradan <see cref="PlotBundleFile"/>/
+    /// <see cref="PlotBundleFileFromDisk"/> ile tekrar okunabilmesi) için eklendi.
+    /// </summary>
+    /// <param name="trader">Finalize() çağrılmış SingleTrader instance'ı.</param>
+    /// <param name="outputDir">.npz/.view.json'ın yazılacağı klasör.</param>
+    /// <param name="fileBaseName">Uzantısız dosya adı (varsayılan: "latest_bundle").</param>
+    /// <returns>Yazılan .npz ve .view.json dosyalarının tam yolları.</returns>
+    public (string bundlePath, string viewPath) SaveBundleToDisk(SingleTrader trader,
+        string outputDir, string fileBaseName = "latest_bundle")
+    {
+        var converter = new TradeDataBundleConverter();
+        var (bundlePath, viewPath) = converter.ConvertSingleTrader(trader, outputDir, fileBaseName);
+        _logger?.WriteRaw($"  [Plot] Bundle yazıldı: {bundlePath}");
+        return (bundlePath, viewPath);
+    }
+
+    /// <summary>MultipleTrader sonuçları için <see cref="SaveBundleToDisk(SingleTrader, string, string)"/> ile aynı işi yapar.</summary>
+    public (string bundlePath, string viewPath) SaveBundleToDisk(MultipleTrader multipleTrader,
+        string outputDir, string fileBaseName = "latest_bundle")
+    {
+        var converter = new TradeDataBundleConverter();
+        var (bundlePath, viewPath) = converter.ConvertMultipleTrader(multipleTrader, outputDir, fileBaseName);
+        _logger?.WriteRaw($"  [Plot] Bundle yazıldı: {bundlePath}");
+        return (bundlePath, viewPath);
+    }
+
+    /// <summary>
+    /// <see cref="ExtractTraderData"/>'nın bundle-tabanlı eşdeğeri: canlı bir SingleTrader yerine
+    /// bir .npz bundle'dan (<see cref="NpzReader"/> ile) okunan dizilerle aynı private field seti
+    /// doldurulur — sonrasında <see cref="BuildPyTradeData"/>/<see cref="CallPlotDataImgBundleNew"/>
+    /// hiç değişmeden reuse edilir.
+    /// </summary>
+    private void ExtractBundleData(NpzReader reader)
+    {
+        var timestamps = reader.ReadStringArray("timestamps");
+        int n = timestamps.Length;
+
+        _dateTimes = new List<DateTime>(n);
+        _dates     = new List<DateTime>(n);
+        _times     = new List<TimeSpan>(n);
+        foreach (var ts in timestamps)
+        {
+            var dt = DateTime.Parse(ts, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind);
+            _dateTimes.Add(dt);
+            _dates.Add(dt.Date);
+            _times.Add(dt.TimeOfDay);
+        }
+
+        _opens   = reader.ReadDoubleArray("open").ToList();
+        _highs   = reader.ReadDoubleArray("high").ToList();
+        _lows    = reader.ReadDoubleArray("low").ToList();
+        _closes  = reader.ReadDoubleArray("close").ToList();
+        _volumes = reader.ReadDoubleArray("volume").Select(v => (long)Math.Round(v)).ToList();
+        _lots    = reader.ReadLongArray("size").ToList();
+
+        _sinyalList = reader.ReadLongArray("signal_steps").Select(v => (double)v).ToList();
+
+        // indicator_names/indicator_values: TradeDataBundleConverter'ın yazdığı isimlendirilmiş
+        // seriler (PnL/PnL %/Return/Net Return/Return %/Net Return % + varsa strateji
+        // indikatörleri). Bilinen 6 isim kendi alanına, geri kalanı strategy_indicators'a gider.
+        _karZararFiyatList.Clear();
+        _karZararFiyatYuzdeList.Clear();
+        _getiriFiyatList.Clear();
+        _getiriFiyatNetList.Clear();
+        _getiriFiyatYuzdeList.Clear();
+        _getiriFiyatNetYuzdeList.Clear();
+        // NOT: bundle'da henüz bakiye/komisyon/net-bakiye serileri yok (bkz. docs/todo.md
+        // "Kapatılması gereken küçük boşluklar" — TradeDataBundleConverter'a eklenmesi gerekiyor).
+        // Eklenene kadar bu 3 seri boş kalır.
+        _bakiyeFiyatList.Clear();
+        _komisyonFiyatList.Clear();
+        _bakiyeFiyatNetList.Clear();
+
+        var strategyIndicators = new Dictionary<string, double[]>();
+        if (reader.Contains("indicator_names") && reader.Contains("indicator_values"))
+        {
+            var names = reader.ReadStringArray("indicator_names");
+            var matrix = reader.ReadDouble2DArray("indicator_values");
+
+            for (int r = 0; r < names.Length; r++)
+            {
+                var row = new double[n];
+                for (int c = 0; c < n; c++) row[c] = matrix[r, c];
+
+                switch (names[r])
+                {
+                    case "PnL":          _karZararFiyatList       = row.ToList(); break;
+                    case "PnL %":        _karZararFiyatYuzdeList  = row.ToList(); break;
+                    case "Return":       _getiriFiyatList         = row.ToList(); break;
+                    case "Net Return":   _getiriFiyatNetList      = row.ToList(); break;
+                    case "Return %":     _getiriFiyatYuzdeList    = row.ToList(); break;
+                    case "Net Return %": _getiriFiyatNetYuzdeList = row.ToList(); break;
+                    default:             strategyIndicators[names[r]] = row; break;
+                }
+            }
+        }
+        _strategyIndicators = strategyIndicators;
+
+        string title = "AlgoTrade";
+        string periyot = "1H";
+        if (reader.Contains("meta_json"))
+        {
+            try
+            {
+                var meta = Newtonsoft.Json.Linq.JObject.Parse(reader.ReadScalarString("meta_json"));
+                title   = meta.Value<string>("symbol")  ?? title;
+                periyot = meta.Value<string>("periyot") ?? periyot;
+            }
+            catch (Exception ex)
+            {
+                _logger?.WriteRaw($"  [Plot] meta_json parse edilemedi: {ex.Message}");
+            }
+        }
+        _title   = title;
+        _periyot = periyot;
+    }
+
+    #endregion
 
     private void ExtractTraderData(SingleTrader trader, Lists lists)
     {

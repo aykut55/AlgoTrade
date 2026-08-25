@@ -114,92 +114,153 @@ tablosunda görmek istiyor — hiçbirini yeniden çalıştırmadan.
 - Console'a yeni bir menü seçeneği: bir klasör/pattern seçtir → eşleşen dosyaları listele →
   konsolide rapor üret.
 
-## Yeni Özellik Fikri: Geçmiş (Offline) Trader Verilerinden Hızlı Sinyal Plot'u (2026-08-25, kullanıcı talebi)
+## Yeni Özellik Fikri: Geçmiş (Offline) Trader Verilerinden Hızlı Sinyal Plot'u (2026-08-25, kullanıcı talebi — 2026-08-25 revize edildi, bkz. altta "Revize plan")
 
 **Yukarıdaki "GEÇMİŞ (offline) Çalıştırmaların Karşılaştırılması" maddesinden farkı**: o madde
 **sayısal özet** (tek satırlık `SingleTraderStatistics.csv`) karşılaştırmasıyla ilgili; bu madde
 **bar-bar tam görsel replay** — önceden üretilmiş 1 veya daha fazla trader'ın sinyal/PnL/getiri
 verisini, trader'ı **hiç yeniden çalıştırmadan** hem eski tip (pythonnet/imgui_bundle) hem yeni
-tip (DearPyGuiDataPlotter) plotter'da çizdirmek. Kullanıcının somut istek cümlesi: "bir süre sonra
-önceden üretilmiş olan verileri işleyerek 1 veya daha fazla trader'in sinyal/sinyallerini
-çizdirmek", `05_RunDearPyGuiDataPlotterTest.csx`'in (bkz. yukarıdaki `[9]` demo menüsü tartışması)
-"tam trader çalıştırmadan hızlıca deneme" fikrinin doğal devamı olarak.
+tip (DearPyGuiDataPlotter) plotter'da çizdirmek.
+
+**Somut kullanım senaryosu (netleştirildi, 2026-08-25)**: kullanıcı bunu, **farklı zamanlarda ve
+farklı stratejilerle bağımsız çalıştırılmış N adet `SingleTrader` run'ının** verilerini **toplu**
+çizdirmek için kullanacak. Gerçek bir `MultipleTrader` koşumuna gerek yok — zaten
+`MultipleTrader.GetMainTrader()` de bir `SingleTrader`, yani N bağımsız run "main/child"
+hiyerarşisi olmadan eşit N girdi olarak overlay edilecek.
 
 ### Mevcut durum tespiti (araştırıldı, 2026-08-25)
 
-- Bir trader run'ı bittiğinde `Lists.csv`/`.txt` dosyası (`FullListsCsvFileName`/
-  `FullListsTxtFileName`, `StatisticsExporter.SaveListsToCsvFromConfig/SaveListsToTxtFromConfig`
-  ile yazılıyor) zaten `Lists.SinyalList`/`KarZararFiyatList(Yuzde)`/`GetiriFiyatList(Yuzde)(Net)`
-  gibi **bar-bar** dizileri içeriyor — yani `PlotSingleTraderData`/
-  `TradeDataBundleConverter.ConvertSingleTrader`'ın çizim için tükettiği TAM OLARAK bu veri.
-- **Ama** bu dosyalar OHLC (Open/High/Low/Close/Volume) barlarını içermiyor — o sadece
-  `trader.Data`'da (`StockData`) yaşıyor ve şu an yalnızca orijinal CSV'nin `StockDataReader` ile
-  yeniden okunmasıyla elde ediliyor.
-- Kod tabanında `Lists.csv`/`.txt`'yi geri okuyup bir `Lists` nesnesine dolduran **hiçbir
-  reader/importer yok** (grep'te sıfır sonuç) — bu, sıfırdan yazılması gereken yeni bir parça.
-- `Lists.csv`/`.txt`'nin kolon seti **sabit değil** — `StatisticsExporterConfig.json`'daki
-  versiyona (`v1`/`v2`/...) göre değişen, insan-okunur amaçlı seçilmiş bir alt küme. Bu, "mevcut
-  dosyayı geri oku" yaklaşımını kırılgan yapıyor: eğer o run'da kullanılan export versiyonu
-  plot için gereken bir alanı (örn. `SinyalList` veya `GetiriFiyatNetList`) içermiyorsa, replay
-  eksik/yanlış olur.
+- Bir trader run'ı bittiğinde `Lists.csv`/`.txt` (insan-odaklı, `StatisticsExporterConfig.json`
+  versiyonuna göre değişen kolon seti) yazılıyor ama OHLC içermiyor ve kod tabanında onu geri okuyan
+  bir reader yok.
+- **Ayrıca**, yeni tip plotter'ın (`DearPyGuiDataPlotter`) her plot öncesi ürettiği
+  `.npz`/`.view.json` bundle'ı (`TradeDataBundleConverter`) zaten OHLC + sinyal + PnL/Return +
+  strateji indikatörlerini TAM ve export-config'den BAĞIMSIZ olarak içeriyor.
+- **Yeni bulgu (2026-08-25)**: eski tip plotter (pythonnet) da in-process çalıştığı için (`Py.GIL()`
+  içinde) bu `.npz`'yi `numpy.load(...)` ile okuyup aynı `trade_data.TradeData()` PyDict'ini
+  doldurup mevcut `CallPlotDataImgBundleNew(tradeData)`'yı **hiç değiştirmeden** çağırabilir.
+  Yani `.npz` bundle, HER İKİ plotter için de ortak "ham dump" formatı olarak kullanılabilir.
 
-### İki tasarım seçeneği (henüz karar verilmedi)
+### Revize plan (2026-08-25): Option C — yeni format icat etme, `.npz` bundle'ı reuse et
 
-- **A) Ayrı, tam-sadakatli "ham dump" formatı (önerilen)**: `Lists`'e (ve gerekirse `StockData`'ya)
-  `StatisticsExporter`'ın insan-odaklı, konfigüre edilebilir kolon seçiminden BAĞIMSIZ, plot için
-  gereken TÜM alanları (Signal/PnL fiyat+yüzde/PnL net/Getiri fiyat+yüzde/Getiri net/strateji
-  indikatörleri) içeren kendi `Save()`/`Load()` çifti eklenir (CSV ya da basit binary). OHLC için
-  ayrı bir dump gerekmez — `stockDataFullFileName`'den `StockDataReader.ReadDataFast(...)` ile
-  ucuz ve deterministik şekilde yeniden okunabilir (strateji/indikatör kurulumu GEREKMİYOR, sadece
-  veri okuma). Avantaj: export config'in o günkü ayarından bağımsız, her zaman tam veri garantisi.
-- **B) Var olan `Lists.csv`/`.txt`'yi geri oku**: Yeni format eklemez, ama kırılgan (yukarıdaki
-  madde) — sadece o run'da export edilen kolonlar varsa çalışır.
+Aşağıdaki eski "Option A / Option B" tartışması (Lists için yeni bir Save/Load formatı icat etmek
+ya da Lists.csv'yi kırılgan şekilde geri okumak) **artık gündemde değil** — `.npz` bundle zaten
+tam-sadakatli bir dump, üstüne bir de OHLC içeriyor (Option A'nın "OHLC'yi CSV'den ayrıca oku"
+adımına bile gerek kalmıyor). Kapatılması gereken küçük boşluklar:
 
-### Reconstruction akışı (Option A ile, taslak — henüz implement edilmedi)
+1. **Bundle writer'da eksik 3 seri**: eski plotter `bakiye_fiyat_list`/`komisyon_fiyat_list`/
+   `bakiye_fiyat_net_list` bekliyor ama `TradeDataBundleConverter.AddSeries(...)` bunları yazmıyor
+   (satır 96-101) — `Lists`'te zaten mevcut alanlar, 3 satır ekleme.
+2. **`meta_json`'da `SymbolPeriod` yok** (sadece `symbol` var, satır 156-160) — küçük ekleme.
+3. **`fileBaseName` hep `"latest_bundle"`** — her run bir öncekini siliyor. Kalıcı depolama için
+   per-run benzersiz konum gerekiyor (bkz. aşağıdaki depolama planı).
 
-1. OHLC: `StockDataReader.ReadDataFast(stockDataFullFileName)` ile `StockData` yeniden okunur
-   (bar sayısı/tarihler orijinal run ile eşleşmeli — kullanıcı doğru dosyayı seçmekten sorumlu).
-2. Sinyal/PnL/Getiri verisi: yeni `Lists.Load(path)` ile diskten okunur (trader hiç `Run()`
-   edilmiyor — `Init()`/bar-loop/`Finalize()` YOK).
-3. Her trader için "sentetik" bir `SingleTrader` kabuğu kurulur: `new SingleTrader(id, name, data,
-   indicators: null, ...)`, `.Data` ve `.lists` doğrudan atanır — **mevcut**
-   `PlotSingleTraderData`/`TradeDataBundleConverter.ConvertSingleTrader` fonksiyonlarına HİÇ
-   dokunmadan, onları olduğu gibi besler (en düşük riskli yol — çizim kodunun kendisi
-   değişmiyor).
-4. N-trader overlay (yeni tip plotter zaten destekliyor, bkz. `docs/yapilacak.md` madde 6):
-   `TradeDataBundleConverter`'ın `ConvertCore(..., List<SingleTrader> childTraders, ...)` imzası
-   zaten bir `SingleTrader` listesi kabul ediyor — N sentetik trader bu listeye verilip
-   `ConvertMultipleTrader`-benzeri bir yol kullanılabilir. Eski tip plotter (`PlotMultipleTraderData`)
-   için gerçek bir `MultipleTrader` nesnesi gerekip gerekmediği (yoksa o da gevşetilebilir mi)
-   ayrıca incelenmeli.
-5. Yeni script(ler): bir klasör/dosya listesi (her biri `{stockDataPath, listsFilePath, label}`
-   üçlüsü) alıp sentetik trader'ları kurar, ardından **hem** eski tip (`SetupPython()` +
-   `PlotSingleTraderData`/`PlotMultipleTraderData`) **hem** yeni tip (`TradeDataBundleConverter` +
-   `DearPyGuiDataPlotter.StartPlotter()/LoadBundle()`, `05` script'indeki desenle) ile çizdirir —
-   `04`/`05` script çiftinin doğal devamı, farkı: `04` trader'ı GERÇEKTEN çalıştırıp bundle
-   üretiyor, bu yeni script hiç çalıştırmadan geçmiş veriyi okuyor.
+### Depolama: klasör-bazlı, sabit dosya adı
+
+Her run kendi klasörüne yazar (örn. `runs/2026-08-20_MOST_BTCUSDT-60/bundle.npz` +
+`bundle.view.json`), klasör içindeki dosya adı hep aynı kalır. Neden: klasör adı zaten doğal bir
+run-kimliği oluyor, dosya adı çakışması hiç sorun olmuyor (her klasör kendi namespace'i), ve run'a
+ait diğer çıktılar (`Lists.csv`, `Statistics.txt`) muhtemelen zaten aynı klasörde birlikte duruyor.
+
+### Playlist/index formatı — "hangi sinyal hangi plota" sorusunun cevabı
+
+Klasör/dosya isminden OTOMATİK çıkarmaya çalışmak kırılgan (isimlendirme kuralı değişirse kırılır).
+Bunun yerine bir playlist JSON'da her girdiye **açık `label` (+ `color`)** verilir:
+
+```json
+{
+  "entries": [
+    { "bundle": "runs/2026-08-20_MOST_BTCUSDT/bundle.npz",  "label": "MOST 2026-08-20",  "color": [51,204,255,255] },
+    { "bundle": "runs/2026-08-21_EXMOV_BTCUSDT/bundle.npz", "label": "EXMOV 2026-08-21", "color": [255,204,0,255] }
+  ]
+}
+```
+
+Girdilerde `view.json` yok — her kaynağın kendi panel yerleşimi değil, sadece verisi (OHLC/signal/
+PnL/indikatör) kullanılıyor; birleştirilmiş çıktının view'ı yeniden inşa edilecek.
+
+### Pipeline (taslak — adım 1 implement edildi ve doğrulandı, gerisi henüz değil)
+
+1. ~~`NpzReader` (C#) yazılmalı~~ — **YAPILDI ve DOĞRULANDI (2026-08-25)**:
+   `src/AlgoTrade.Core/Python/DearPyGuiDataPlotter/NpzReader.cs` yazıldı (`NpzWriter`'ın format
+   simetriği). Ayrıca eski tip plotter'a (`PythonPlotter.cs`) üç yeni metod eklendi:
+   - `PlotBundleFile(bundlePath, viewPath)` — memory/`NpzReader` yolu (aktif kullanılan).
+   - `PlotBundleFileFromDisk(bundlePath, viewPath)` — Python/`numpy.load` yolu (`inputs/python/
+     bundle_loader.py`, `default.py:stage2LoadPreparedData` ile kısmen örtüşüyor ama farklı hedef
+     objeye (`TradeData` vs `PreparedData`) map ettiği ve farklı sys.path'te olduğu için ayrı
+     tutuldu — bilinçli, küçük bir kod tekrarı).
+   - `SaveBundleToDisk(SingleTrader/MultipleTrader, outputDir, fileBaseName)` — `TradeDataBundleConverter`'a
+     ince sarmalayıcı.
+   **Uçtan uca doğrulandı**: `01_RunSingleTraderWithProgressAsync.csx`'in ([5]) ürettiği gerçek
+   `latest_bundle.npz`/`.view.json`, yeni test script'i (`inputs/scripts/TestOldPlotterFromBundle.csx`,
+   [8] Run Script ile) üzerinden eski tip plotter'a verildi — pencere açıldı, grafik doğru
+   göründü. Yani `.npz` bundle'ın gerçekten plotter-agnostic olduğu (Option C'nin temel önermesi)
+   kanıtlandı. `PlotBundleFileFromDisk` (Python/numpy.load alternatifi) henüz eski plotter
+   üzerinden GUI'de test edilmedi (sadece `python -c` ile izole smoke test edildi, bkz. commit
+   öncesi konuşma) — istenirse ayrı bir test script'iyle doğrulanabilir.
+2. Playlist okunur, her entry `NpzReader` ile geri okunur (open/high/low/close/volume/timestamps/
+   signal_steps/indicator_names+values).
+3. **Yeni tip plotter için**: N entry tek bir `combined.npz` + `combined.view.json`'a birleştirilir
+   — OHLC referans entry'den, her entry'nin sinyal/PnL serisi `"{label} Signal"` gibi isimlerle
+   indikatör matrisine eklenir (`ConvertMultipleTrader`'ın child overlay eklediği yöntemin aynısı,
+   ama kaynak canlı `SingleTrader` değil, diskten okunan npz).
+4. **Eski tip plotter için**: her entry'den bir `tradeData` PyDict kurulup `PlotMultipleTraderData`'nın
+   beklediği PyList'e eklenir (önceki inceleme: o fonksiyon sadece OHLC+Lists alanlarını kullanıyor,
+   gerçek `MultipleTrader` nesnesine ihtiyacı yok).
+5. Yeni script(ler): playlist dosyası verilip hem eski hem yeni tip plotter'da çizdiren script(ler)
+   — `04`/`05` script çiftinin doğal devamı, farkı: `04` trader'ı GERÇEKTEN çalıştırıp bundle
+   üretiyor, bu yeni script hiç çalıştırmadan geçmiş bundle'ları okuyup birleştiriyor.
+
+### Bu revizyonun elediği eski tasarım yükü
+
+- Eski "Option A" (Lists için yeni Save/Load formatı) ve "Option B" (Lists.csv'yi kırılgan şekilde
+  geri okuma) artık gündemde değil.
+- "Sentetik `SingleTrader` kabuğu kur" hack'ine gerek yok — her iki plotter da doğrudan npz/tradeData
+  PyDict üzerinden besleniyor.
 
 ### Açık kalan tasarım soruları (implementasyondan önce netleşmeli)
 
-- Option A mı B mi — A daha sağlam ama yeni bir dosya formatı/okuma-yazma kodu ekliyor.
-- ~~Eski tip plotter (`PlotMultipleTraderData`) gerçek bir `MultipleTrader` nesnesi mi bekliyor~~ —
-  **incelendi (2026-08-25)**: `PlotMultipleTraderData(MultipleTrader)` (`PythonPlotter.cs:311`)
-  içeride sadece `multipleTrader.GetMainTrader()` ve `.Traders` okuyor, her trader için de yalnızca
-  `Data`/`lists`/`GetClosePrices()`/`Strategy`/`SymbolName`/`SymbolPeriod` kullanıyor (`ExtractTraderData`,
-  satır 372-396) — kendisi sentetik `SingleTrader` ile sorunsuz çalışır. Ama `MultipleTrader` sınıfının
-  `_mainTrader` private field'ı için public setter yok: parametresiz ctor'da `_mainTrader` null kalıyor,
-  parametreli ctor'da da hep kendi gerçek `SingleTrader`'ını yaratıyor — sentetik main trader enjekte
-  edilemiyor. Bu yüzden Option A implementasyonuna küçük bir ek adım gerekiyor: ya `MultipleTrader`'a
-  `_mainTrader` enjekte edebilen bir constructor/setter eklenmeli, ya da `PlotMultipleTraderData`
-  `MultipleTrader` yerine doğrudan `(SingleTrader mainTrader, List<SingleTrader> children)` alacak
-  şekilde gevşetilmeli (ikincisi daha temiz — fonksiyon zaten `MultipleTrader`'ın sadece bu iki
-  parçasını kullanıyor).
-- N trader nasıl gruplanacak/seçilecek: script içine hardcoded liste mi, yoksa bir klasör +
-  glob pattern mi (offline-karşılaştırma maddesindeki gibi)?
+- Combined bundle'da OHLC hangi entry'den referans alınacak — farklı sembol/timeframe/tarih
+  aralığındaki run'lar overlay edilebilir mi, yoksa hep aynı sembol/timeframe varsayımı mı
+  yapılacak?
+- Playlist dosyasının konumu/adı ve nasıl üretileceği — elle mi yazılacak, yoksa bir klasörü
+  tarayıp otomatik playlist üreten bir script/menü mü olacak?
 - Ayrı bir console menü numarası mı (script-only mu kalsın) — muhtemelen script-only yeterli,
   bu bir geliştirici/analiz aracı, üretim akışının parçası değil.
 
-**Durum: sadece planlandı, implementasyona henüz başlanmadı.**
+**Durum: implementasyona başlandı (2026-08-25) — pipeline adım 1 (NpzReader + eski plotter'ın
+bundle'dan çizim yapabilmesi) yapıldı ve gerçek veriyle doğrulandı, adım 2-5 (playlist/merge/N-run
+overlay) henüz yapılmadı.**
+
+## Çok Uzun Vadeli Fikir: DearPyGuiDataPlotter'ı da In-Process (pythonnet) Çalıştırmak — Plotter Parity (2026-08-25, sadece not)
+
+> **ÇOK ÇOK İLERİDE yapılacak bir özellik — şu an sadece bir fikir/not, implementasyon YOK,
+> öncelik verilmiyor.** Amaç yalnızca iki plotter'ın davranış ve özelliklerini birbirine
+> yaklaştırmak (parity); acil bir ihtiyaçtan doğmuyor.
+
+Eski tip plotter (`PythonPlotter.cs`) pythonnet ile **in-process** çalışıyor — `Py.GIL()` içinde
+aynı .NET process'inin belleğinde bir Python yorumlayıcısı açılıyor, `imgui_bundle` doğrudan
+oradan çağrılıyor. Yeni tip plotter (`DearPyGuiDataPlotter.cs`) ise bilinçli olarak **ayrı bir OS
+process'i** olarak çalışıyor (`Process.Start`, proje kökündeki ortak `.venv`'i kullanarak), veri
+aktarımı dosya tabanlı (`.npz`/`.view.json` bundle + `inputs/runtime_commands/` altında JSON
+komutlar) — bkz. `DearPyGuiDataPlotter.cs` sınıf yorumu.
+
+**Fikir**: yeni tip plotter'ı da (mümkünse) pythonnet ile in-process çalışacak şekilde uyarlamak —
+eski tip ile aynı `Py.GIL()`/`Py.Import(...)` modeline geçmek, ayrı process + dosya tabanlı komut
+mekanizmasını (en azından opsiyonel bir mod olarak) ortadan kaldırmak.
+
+**Neden şimdi değil / dikkat edilmesi gerekenler (araştırılmadı, sadece ön-not)**:
+- Yeni tip plotter'ın ayrı process olması **kasıtlı bir tasarım kararı** gibi duruyor (class
+  yorumunda "pythonnet ile in-process çalışmaz" diye özellikle belirtilmiş) — muhtemelen DearPyGui
+  ile imgui_bundle'ın aynı process'te birlikte yaşayamaması (ikisi de kendi render/event loop'unu
+  istiyor) ya da bağımsız pencere/çökme izolasyonu gibi bir sebebi var; bu sebep doğrulanmadan
+  in-process'e geçmek riskli.
+- Bugün eklenen `blockUntilClosed`/`WaitForExit()` mekanizması (bkz. yukarıdaki "Geçmiş
+  (Offline)... Hızlı Sinyal Plot'u" maddesi) process-ayrılığını varsayarak tasarlandı — in-process'e
+  geçilirse muhtemelen gereksizleşir (eski tip zaten Python çağrısı doğal olarak senkron bloklar).
+- Kapsamı büyük: pythonnet entegrasyonu, GIL yönetimi, DearPyGui'nin pythonnet altında davranışı,
+  process-izolasyonunun kaybı (bir DearPyGui çökmesi artık tüm .NET process'ini düşürebilir) gibi
+  konular ayrıca araştırılmalı.
 
 ## Tarama Motorları — TAMAMLANDI (16/16, 2026-08-18)
 
