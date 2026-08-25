@@ -115,7 +115,15 @@ public class DearPyGuiDataPlotter : IDisposable
     /// </summary>
     /// <param name="bundlePath">.npz bundle dosyasının yolu (mutlak veya relative olabilir).</param>
     /// <param name="viewPath">.view.json dosyasının yolu (mutlak veya relative, opsiyonel).</param>
-    public void LoadBundle(string bundlePath, string? viewPath = null)
+    /// <param name="blockUntilClosed">
+    /// true ise, komut yazıldıktan sonra plotter process'i kapanana kadar (kullanıcı pencereyi
+    /// kapatana ya da <see cref="Shutdown"/> komutu işlenene kadar) bu çağrı bloklar — eski tip
+    /// pythonnet plotter'ın (<c>PythonPlotter.PlotSingleTraderData</c>/<c>PlotMultipleTraderData</c>)
+    /// davranışını taklit eder. false (varsayılan) ise komut yazılır yazılmaz hemen döner; process
+    /// arka planda çalışmaya devam eder ve üstüne <see cref="LoadBundle"/>/<see cref="ReloadCurrent"/>
+    /// ile başka komutlar gönderilebilir (hot-reload akışı).
+    /// </param>
+    public void LoadBundle(string bundlePath, string? viewPath = null, bool blockUntilClosed = false)
     {
         if (string.IsNullOrEmpty(bundlePath))
             throw new ArgumentException("bundlePath boş olamaz.", nameof(bundlePath));
@@ -129,6 +137,19 @@ public class DearPyGuiDataPlotter : IDisposable
             payload["viewPath"] = ToInputsRelativePath(viewPath);
 
         WriteCommand("load_bundle", payload);
+
+        if (blockUntilClosed)
+            WaitForExit();
+    }
+
+    /// <summary>
+    /// Çağıran thread'i, plotter process'i kapanana kadar bloklar (kullanıcı pencereyi kapatana
+    /// ya da <see cref="Shutdown"/> komutu işlenene kadar). Process hiç başlatılmadıysa
+    /// (<see cref="StartPlotter"/> çağrılmadıysa) hiçbir şey yapmadan hemen döner.
+    /// </summary>
+    public void WaitForExit()
+    {
+        _process?.WaitForExit();
     }
 
     /// <summary>

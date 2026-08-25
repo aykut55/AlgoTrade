@@ -182,8 +182,18 @@ tip (DearPyGuiDataPlotter) plotter'da çizdirmek. Kullanıcının somut istek c�
 ### Açık kalan tasarım soruları (implementasyondan önce netleşmeli)
 
 - Option A mı B mi — A daha sağlam ama yeni bir dosya formatı/okuma-yazma kodu ekliyor.
-- Eski tip plotter (`PlotMultipleTraderData`) gerçek bir `MultipleTrader` nesnesi mi bekliyor, yoksa
-  sentetik `SingleTrader` listesiyle de besleniyor mu — kod incelemesi gerekiyor.
+- ~~Eski tip plotter (`PlotMultipleTraderData`) gerçek bir `MultipleTrader` nesnesi mi bekliyor~~ —
+  **incelendi (2026-08-25)**: `PlotMultipleTraderData(MultipleTrader)` (`PythonPlotter.cs:311`)
+  içeride sadece `multipleTrader.GetMainTrader()` ve `.Traders` okuyor, her trader için de yalnızca
+  `Data`/`lists`/`GetClosePrices()`/`Strategy`/`SymbolName`/`SymbolPeriod` kullanıyor (`ExtractTraderData`,
+  satır 372-396) — kendisi sentetik `SingleTrader` ile sorunsuz çalışır. Ama `MultipleTrader` sınıfının
+  `_mainTrader` private field'ı için public setter yok: parametresiz ctor'da `_mainTrader` null kalıyor,
+  parametreli ctor'da da hep kendi gerçek `SingleTrader`'ını yaratıyor — sentetik main trader enjekte
+  edilemiyor. Bu yüzden Option A implementasyonuna küçük bir ek adım gerekiyor: ya `MultipleTrader`'a
+  `_mainTrader` enjekte edebilen bir constructor/setter eklenmeli, ya da `PlotMultipleTraderData`
+  `MultipleTrader` yerine doğrudan `(SingleTrader mainTrader, List<SingleTrader> children)` alacak
+  şekilde gevşetilmeli (ikincisi daha temiz — fonksiyon zaten `MultipleTrader`'ın sadece bu iki
+  parçasını kullanıyor).
 - N trader nasıl gruplanacak/seçilecek: script içine hardcoded liste mi, yoksa bir klasör +
   glob pattern mi (offline-karşılaştırma maddesindeki gibi)?
 - Ayrı bir console menü numarası mı (script-only mu kalsın) — muhtemelen script-only yeterli,

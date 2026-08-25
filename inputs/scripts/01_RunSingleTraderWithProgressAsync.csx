@@ -469,10 +469,14 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
         string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
         var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(singleTrader, bundleOutDir);
 
+        // true: eski tip plotter gibi, pencere kapanana kadar bloklar. false: hemen doner,
+        // process arka planda acik kalir (hot-reload akisi).
+        bool blockDearPyGuiPlotterUntilClosed = true;
+
         var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
         dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
         dearPyGuiTestPlotter.StartPlotter();
-        dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+        dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockDearPyGuiPlotterUntilClosed);
         Log($"[DearPyGuiDataPlotter] SingleTrader datasi yuklendi: {bundlePath}");
     }
     catch (Exception ex)
