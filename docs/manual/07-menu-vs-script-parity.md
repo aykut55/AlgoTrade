@@ -264,26 +264,43 @@ kombinasyon muhtemelen 0 işlemli/flat sonuç veriyor — optimizasyonun kendisi
 olabilir. **Bunu koda bir kombinasyon çalıştırıp `IslemSayisi`'ı kontrol ederek doğrulamanı
 öneririm** (script çıktısında `BEST RESULT` altındaki `IslemSayisi` alanı 0 ise teyit olur).
 
-**Fix (henüz uygulanmadı):** `Config_03_SingleTraderOpt.csx`'e 01 script'indeki `OnApplyUserFlags`
-ile aynı mantıkta bir Signals bloğu (AL/SAT/FlatOl/PasGec/KarAl/ZararKes enable flag'leri +
-StartDateTime/StopDateTime) eklenip, ana script'te `Initialize()`'dan önce
-`algoTrader.SetSingleTraderOptSignalsConfig(new SingleTraderSignalsConfig { ... })` çağrısı
-eklenmeli.
+**Fix (2026-08-25) — uygulandı:** `Config_03_SingleTraderOpt.csx`'e 01 script'indeki
+`OnApplyUserFlags` ile aynı mantıkta bir Signals bloğu eklendi (`alEnabled`/`satEnabled`/
+`flatOlEnabled`/`pasGecEnabled`/`karAlEnabled`/`zararKesEnabled`/`gunSonuPozKapatEnabled`/
+`timeFilteringEnabled`/`signalsStartDateTime`/`signalsStopDateTime`/
+`tradeStartBarIndexEnabled`/`tradeStartBarIndex`, varsayılanlar `SingleTraderSignalsConfig`'in
+kendi varsayılanlarıyla aynı). `03_RunSingleTraderOptWithProgressAsync.csx`'te `Initialize()`'dan
+önce (bölüm 3'ün sonu) `algoTrader.SetSingleTraderOptSignalsConfig(new SingleTraderSignalsConfig
+{ ... })` çağrısı eklendi — `AppConfigApplier.ApplySingleTraderOpt()` (satır 909-923) ile birebir
+aynı alan eşlemesi.
 
-### 🟡 Açık farklar — gerçek eksiklik (fonksiyonu etkiler)
+### ✅ Düzeltildi (2026-08-25)
 
-1. **CSV/TXT optimizasyon log dosyaları hiç yazılmıyor.** Script `SetSingleTraderOptLogConfig(...)`
-   ve `SetSingleTraderOptSortOutputConfig(...)` çağırmıyor, dolayısıyla
-   `SingleTraderOptimizer.CsvFileLoggingEnabled`/`TxtFileLoggingEnabled` varsayılan `false`,
-   `CsvFilePath`/`TxtFilePath`/`SortedCsvFilePath`/`SortedTxtFilePath` varsayılan `""` kalıyor
-   (`SingleTraderOptimizer.cs:120-134`). Sonuç: her kombinasyonun satırı hiçbir dosyaya
-   yazılmıyor, sıralı (best-to-worst) sonuç dosyası da hiç üretilmiyor — script sadece konsola
-   `Log(...)` ile en iyi sonucu basıyor, hiçbir kalıcı çıktı dosyası yok. Menü tarafında bunlar
-   `AppConfig.json`'daki `SingleTraderOptimizer.Save`/`Sort` bölümünden
-   `AppConfigApplier.ApplySingleTraderOpt()` (satır 926-944) ile otomatik geliyor.
-2. **Veri okuma filtreleme yok** — §1'de SingleTrader script'i için düzeltilen fix
-   (`readDataFilterMode`/`N1`/`N2`/`Dt1`/`Dt2`) henüz buraya taşınmadı;
-   `ReadDataFast(stockDataFullFileName)` hâlâ parametresiz çağrılıyor.
+- **CSV/TXT optimizasyon log dosyaları hiç yazılmıyordu.** Script `SetSingleTraderOptLogConfig(...)`
+  ve `SetSingleTraderOptSortOutputConfig(...)` çağırmıyordu, dolayısıyla
+  `SingleTraderOptimizer.CsvFileLoggingEnabled`/`TxtFileLoggingEnabled` varsayılan `false`,
+  `CsvFilePath`/`TxtFilePath`/`SortedCsvFilePath`/`SortedTxtFilePath` varsayılan `""` kalıyordu
+  (`SingleTraderOptimizer.cs:120-134`) — hiçbir kombinasyonun satırı dosyaya yazılmıyor, sıralı
+  (best-to-worst) sonuç dosyası da üretilmiyordu. Menü tarafında bunlar `AppConfig.json`'daki
+  `SingleTraderOptimizer.Save`/`Sort` bölümünden `AppConfigApplier.ApplySingleTraderOpt()`
+  (satır 926-944) ile otomatik geliyor. **Fix:** `Config_03_SingleTraderOpt.csx`'e Log bloğu
+  (`csvFileLoggingEnabled`/`csvFileName`/`txtFileLoggingEnabled`/`txtFileName`/`appendEnabled`/
+  `statisticsExporterConfigFileEnabled`/`statisticsExporterConfigFile`/`fileFlushIntervalMs`) ve
+  Sort bloğu (`sortField`/`sortedCsvFileName`/`sortedTxtFileName`) eklendi — varsayılanlar
+  `SingleTraderOptLogConfig`/`SingleTraderOptSortOutputConfig`'in kendi varsayılanlarıyla aynı
+  (`outputs/opt/singleTraderOptLog.csv` vb.). Ana script'te `SetSingleTraderOptLogConfig(...)` ve
+  `SetSingleTraderOptSortOutputConfig(...)` çağrıları eklendi (Signals çağrısının hemen ardına,
+  `Initialize()`'dan önce) — `AppConfigApplier.ApplySingleTraderOpt()` (satır 926-944) ile birebir
+  aynı alan eşlemesi. Dosyalar `AlgoTrader.cs:2822-2841`'de `AppSettings.OptLogsDir` altına
+  yazılıyor, script tarafında bu yol için ek bir şey gerekmiyor.
+- **Veri okuma filtreleme yoktu** — §1'de SingleTrader script'i için düzeltilen fix
+  (`readDataFilterMode`/`N1`/`N2`/`Dt1`/`Dt2`) buraya da taşındı. **Fix:**
+  `Config_03_SingleTraderOpt.csx`'e aynı 5 alan eklendi,
+  `03_RunSingleTraderOptWithProgressAsync.csx`'te `ReadDataFast(stockDataFullFileName)` çağrısı
+  §1'deki 6 parametreli haliyle (`filterMode`/`readDataN1`/`readDataN2`/`dt1`/`dt2`) değiştirildi.
+
+**§3 durumu: 🔴 kritik hata ve her iki 🟡 açık fark düzeltildi — kalan tek fark aşağıdaki ⚪
+(kasıtlı) config-kaynağı farkı ve altındaki "muhtemel dead code" notu.**
 
 ### ⚪ Kasıtlı/kozmetik farklar — ve bir "dead code" notu
 

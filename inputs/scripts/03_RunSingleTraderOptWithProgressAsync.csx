@@ -55,7 +55,11 @@ Log($"Sembol    : {symbolName}");
 Log($"Periyot   : {symbolPeriod}");
 Log($"Bar Count : {stockMetaData.GetValueOrDefault("BarCount", "N/A")}");
 
-stockDataReader.ReadDataFast(stockDataFullFileName);
+Enum.TryParse<StockDataReader.FilterMode>(readDataFilterMode, ignoreCase: true, out var filterMode);
+DateTime? dt1 = string.IsNullOrWhiteSpace(readDataDt1) ? null : DateTime.Parse(readDataDt1);
+DateTime? dt2 = string.IsNullOrWhiteSpace(readDataDt2) ? null : DateTime.Parse(readDataDt2);
+
+stockDataReader.ReadDataFast(stockDataFullFileName, filterMode, readDataN1, readDataN2, dt1, dt2);
 var data = stockDataReader.GetData();
 Log($"Okunan    : {data.Count} bar");
 
@@ -128,6 +132,46 @@ else
 {
     Log($"  FullOpt (tum kombinasyonlar)");
 }
+
+// Signals - AppConfigApplier.ApplySingleTraderOpt() ile ayni: her test trader'ina uygulanir,
+// eksik/false kalirsa ConfigureUserFlagsOnce() sinyalleri resetleyip hicbir kombinasyon islem
+// acmaz (bkz. Config_03_SingleTraderOpt.csx basindaki not).
+algoTrader.SetSingleTraderOptSignalsConfig(new SingleTraderSignalsConfig
+{
+    AlEnabled                 = alEnabled,
+    SatEnabled                = satEnabled,
+    FlatOlEnabled              = flatOlEnabled,
+    PasGecEnabled              = pasGecEnabled,
+    KarAlEnabled               = karAlEnabled,
+    ZararKesEnabled            = zararKesEnabled,
+    GunSonuPozKapatEnabled     = gunSonuPozKapatEnabled,
+    TimeFilteringEnabled       = timeFilteringEnabled,
+    StartDateTime              = signalsStartDateTime,
+    StopDateTime               = signalsStopDateTime,
+    TradeStartBarIndexEnabled  = tradeStartBarIndexEnabled,
+    TradeStartBarIndex         = tradeStartBarIndex,
+});
+
+// Optimizer log (CSV/TXT) - AppConfigApplier.ApplySingleTraderOpt() ile ayni.
+algoTrader.SetSingleTraderOptLogConfig(new SingleTraderOptLogConfig
+{
+    CsvFileLoggingEnabled               = csvFileLoggingEnabled,
+    CsvFileName                         = csvFileName,
+    TxtFileLoggingEnabled               = txtFileLoggingEnabled,
+    TxtFileName                         = txtFileName,
+    AppendEnabled                       = appendEnabled,
+    StatisticsExporterConfigFileEnabled = statisticsExporterConfigFileEnabled,
+    StatisticsExporterConfigFile        = statisticsExporterConfigFile,
+    FileFlushIntervalMs                 = fileFlushIntervalMs,
+});
+
+// Optimizer sort (best-to-worst siralanmis ek dosya) - AppConfigApplier.ApplySingleTraderOpt() ile ayni.
+algoTrader.SetSingleTraderOptSortOutputConfig(new SingleTraderOptSortOutputConfig
+{
+    SortField         = sortField,
+    SortedCsvFileName = sortedCsvFileName,
+    SortedTxtFileName = sortedTxtFileName,
+});
 
 // =============================================================================
 // 4. Initialize ve Run
