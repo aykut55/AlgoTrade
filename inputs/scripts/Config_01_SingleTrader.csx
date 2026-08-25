@@ -3,6 +3,37 @@
 // 04_GenerateDearPyGuiDataPlotterBundle.csx) icin Konfigurasyon Scripti
 // Strateji, sorgu, ECF, trade params ve diger ayarları burada tanimlayin
 // =============================================================================
+
+// =============================================================================
+// Parite Kontrol Listesi (docs/manual/07-menu-vs-script-parity.md SS1)
+// AppConfigApplier.ApplySingleTrader() (AppConfigApplier.cs:32-130) hangi config
+// bloklarini AppConfig.json'dan okuyup uyguluyorsa, bu dosyanin/scriptin bir karsiligi
+// olmali. AppConfig.json'a yeni bir alan eklenirse veya ApplySingleTrader() degisirse,
+// asagidaki liste ve karsiliklari da guncellenmeli - yoksa script sessizce menuden
+// geri kalir (SS3'teki SignalsConfig hatasi tam olarak boyle olmustu).
+//
+//   RunMode              -> selectedRunMode
+//   Strategy             -> strategyName + strategyParams
+//   Query (opsiyonel)    -> queryEnabled + queryName + queryParams
+//   EquityCurveFilter    -> ecfEnabled + ecfThresholdTypeIsPercent + ecfProfitThreshold +
+//                           ecfLossThreshold + ecfTrigger
+//   TradeParams          -> ilkBakiye + kontratSayisi + komisyonCarpan + kaymaMiktari
+//   Signals              -> BURADA DEGIL - 01_RunSingleTraderWithProgressAsync.csx'teki
+//                           OnApplyUserFlags(SingleTrader) local fonksiyonunda HARDCODED
+//                           (AlEnabled/SatEnabled/... + StartDateTime/StopDateTime)
+//   Optimization         -> BURADA DEGIL - ana scriptteki OnApplyUserFlags2() icinde
+//                           hardcoded (OptimizationEnabled=false)
+//   Save                 -> saveStatisticsToFile (yukarida) + ana scriptteki
+//                           OnApplyUserFlags2() icindeki hardcoded dosya adlari/enable flag'leri
+//   Plot                 -> KASITLI ATLANDI - script PlotEnabled'i hic kontrol etmiyor,
+//                           sadece selectedRunMode != QueryOnly bakiyor (bkz.
+//                           07-menu-vs-script-parity.md SS1)
+//   Export               -> exportEnabled + exportConfigFile + exportVersion (asagida)
+//
+// Not: Signals/Optimization/Save'in cogu burada degil, ANA SCRIPT dosyasinda
+// (01_RunSingleTraderWithProgressAsync.csx) hardcoded - bu Config dosyasi sadece "en sik
+// degisen" ayarlari disari cikarmis. Yeni bir alan eklerken hangi dosyada oldugunu unutmayin.
+// =============================================================================
 using System.Collections.Generic;
 using AlgoTrade.Core.Trading;
 

@@ -3,6 +3,50 @@
 // Parametre range'leri, strategy factory, optimization range ve diger ayarları
 // burada tanimlayin
 // =============================================================================
+
+// =============================================================================
+// Parite Kontrol Listesi (docs/manual/07-menu-vs-script-parity.md SS3)
+// AppConfigApplier.ApplySingleTraderOpt() (AppConfigApplier.cs:872-998) hangi config
+// bloklarini AppConfig.json'dan okuyup uyguluyorsa, bu dosyanin/scriptin bir karsiligi
+// olmali. AppConfig.json'a yeni bir alan eklenirse veya ApplySingleTraderOpt() degisirse,
+// asagidaki liste ve karsiliklari da guncellenmeli - SignalsConfig eksikligi (2026-08-25'te
+// duzeltildi) tam olarak boyle bir kacaktan kaynaklanmisti.
+//
+//   Strategy                 -> optimizationStrategyName (+ fixedParams, ana scriptteki
+//                              SetOptimizationStrategyFactory icinde range params ile merge edilir)
+//   Optimization (range)     -> optimizationRanges (script kendi range'lerini dogrudan tanimliyor,
+//                              AppConfig.json'daki gibi isimli bir "profil" dosyasindan yuklemiyor)
+//   Range (PartialOpt)       -> optimizationFrom + optimizationTo
+//   TradeParams (TAM, MarketType dahil) -> marketType/ilkBakiye/kontratSayisi/lotSayisi/
+//                              hisseSayisi/komisyonCarpan/kaymaMiktari/pyramidingEnabled
+//                              (yukarida) - 2026-08-25'te eklendi. Once BURADA DEGILDI:
+//                              SetSingleTraderTradeParams() hic cagrilmiyordu, bu yuzden
+//                              SingleTraderOptimizer.TradeParamsOverride null kaliyor ve
+//                              SingleTraderOptimizer.cs:236'daki "ViopEndex fallback"
+//                              (SetKontratParamsViopEndex) devreye giriyordu - MarketType
+//                              AppConfig.json'daki degerden BAGIMSIZ hep ViopEndex-tarzi
+//                              hesaplaniyordu. Artik ana scriptte
+//                              AppConfigApplier.BuildInitialTradeParams(new TradeParamsConfig
+//                              {...}) ile TAM InitialTradeParams olusturulup
+//                              SetSingleTraderTradeParams()'a veriliyor - menude
+//                              ApplySingleTraderOpt() (AppConfigApplier.cs:890) ile ayni yol.
+//   EquityCurveFilter (opsiyonel) -> ecfEnabled/ecfConfigFile/ecfVersion (yukarida) - 2026-08-25'te
+//                              eklendi (once BURADA DEGILDI, script hic ECF ayari yapmiyordu).
+//   Signals                  -> alEnabled/satEnabled/.../tradeStartBarIndex (yukarida) -
+//                              2026-08-25'te eklendi (once BURADA DEGILDI, kritik hataydi)
+//   Save (Log: Csv/Txt)      -> csvFileLoggingEnabled/.../fileFlushIntervalMs (yukarida) -
+//                              2026-08-25'te eklendi
+//   Sort                     -> sortField/sortedCsvFileName/sortedTxtFileName (yukarida) -
+//                              2026-08-25'te eklendi
+//   SingleTrader.Plot/Optimization/Save/Export ("Best trader" bloklari) -> KAPSANMIYOR, ama
+//                              docs/manual/07-menu-vs-script-parity.md SS3'e gore menu tarafinda
+//                              da fiilen olu kod olabilir (SingleTraderOptimizer bu config'leri
+//                              hic okumuyor) - script'in atlamasi bir eksiklik degil.
+//
+// Veri okuma filtreleme (ReadData: FilterMode/N1/N2/Dt1/Dt2) yukarida ayrica var - bu
+// AppConfigApplier.ApplySingleTraderOpt()'un DEGIL, menudeki readStockData()'nin (Program.cs)
+// karsiligi, SS1'deki gibi.
+// =============================================================================
 using System.Collections.Generic;
 using System.Globalization;
 using AlgoTrade.Core.Trading;
@@ -97,11 +141,42 @@ int optimizationTo = -1;
 
 // =============================================================================
 // Trade Params
+// MarketType/HisseSayisi/LotSayisi/PyramidingEnabled - AppConfigApplier.BuildInitialTradeParams()
+// (AppConfigApplier.cs:1370) ile ayni alanlar, TAM InitialTradeParams olusturup
+// SetSingleTraderTradeParams()'a veriliyor (asagida, ana scriptte). Bu olmadan
+// SingleTraderOptimizer "ViopEndex fallback"a duserdi (bkz. docs/manual/
+// 07-menu-vs-script-parity.md SS3, 2026-08-25 findings - artik duzeltildi).
+// Gecerli MarketType degerleri: BistEndex, BistHisse, BistParite, BistMetal,
+// ViopEndex, ViopHisse, ViopParite, ViopMetal, FxEndex, FxHisse, FxParite, FxMetal,
+// FxCrypto, Crypto.
 // =============================================================================
+string marketType = "ViopEndex";
 double ilkBakiye = 100000.0;
 int kontratSayisi = 1;
+double lotSayisi = 0.01;
+double hisseSayisi = 1000.0;
 double komisyonCarpan = 20.0;
 double kaymaMiktari = 0.5;
+bool pyramidingEnabled = false;
+
+// =============================================================================
+// Equity Curve Filter (opsiyonel) - AppConfig.json'daki SingleTraderOptimizer.EquityCurveFilter
+// bolumunun karsiligi (AppConfigApplier.ApplySingleTraderOpt() -> ConfigureEquityCurveFilterFromConfig
+// ile ayni yol). SS1/SS2'deki basit ecfEnabled/ecfThresholdTypeIsPercent/... alanlarindan FARKLI
+// bir mekanizma: optimizer her kombinasyon icin ECF'yi Id=0 uzerinden "stored config" olarak okuyor
+// (AlgoTrader.cs:2894-2896), bu yuzden degerler dogrudan degil, EquityCurveFilterConfig.txt
+// dosyasindan versiyon adiyla yukleniyor.
+// ecfEnabled=false (varsayilan): ECF hic yuklenmez, optimizasyon ECF'siz calisir - AppConfig.json'da
+// bu bolum bos/yoksa [7] (menu) da ayni sekilde davranir.
+// ecfVersion="v1" -> inputs/configs/EquityCurveFilterConfig.txt'deki "v1|Disabled|enabled:bool:false|..."
+// satirina karsilik gelir (yani ecfEnabled=true yapip ecfVersion'i "v1" birakirsaniz ECF YINE devre
+// disi kalir - dosyanin kendi "enabled" alani gecerli olur, buradaki ecfEnabled sadece "ECF config'i
+// hic yukle" / "yukleme" anahtaridir). Gercekten filtreli test etmek icin ecfVersion'i "v2"-"v7"
+// arasindan birine (bkz. inputs/configs/EquityCurveFilterConfig.txt) degistirin.
+// =============================================================================
+bool ecfEnabled = false;
+string ecfConfigFile = "EquityCurveFilterConfig.txt";
+string ecfVersion = "v1";
 
 // =============================================================================
 // Symbol Info

@@ -299,8 +299,44 @@ aynı alan eşlemesi.
   `03_RunSingleTraderOptWithProgressAsync.csx`'te `ReadDataFast(stockDataFullFileName)` çağrısı
   §1'deki 6 parametreli haliyle (`filterMode`/`readDataN1`/`readDataN2`/`dt1`/`dt2`) değiştirildi.
 
-**§3 durumu: 🔴 kritik hata ve her iki 🟡 açık fark düzeltildi — kalan tek fark aşağıdaki ⚪
-(kasıtlı) config-kaynağı farkı ve altındaki "muhtemel dead code" notu.**
+**§3 durumu: 🔴 kritik hata, her iki orijinal 🟡 açık fark, ve checklist sırasında bulunan iki YENİ
+fark (MarketType, EquityCurveFilter) — hepsi düzeltildi. Artık kalan tek fark ⚪ (kasıtlı)
+config-kaynağı farkı ve altındaki "muhtemel dead code" notu.**
+
+### ✅ Düzeltildi (2026-08-25, parite kontrol listesi eklenirken bulunup aynı gün kapatıldı)
+
+- **TradeParams'ın `MarketType`'ı dahil TAM hali script'e hiç aktarılmıyordu.** Menü tarafı
+  `AppConfigApplier.ApplySingleTraderOpt()` içinde hem `SetSingleTraderOptTradeParamsConfig(...)`
+  (sadece `IlkBakiye`/`KontratSayisi`/`KomisyonCarpan`/`KaymaMiktari`) HEM DE
+  `algoTrader.SetSingleTraderTradeParams(BuildInitialTradeParams(cfg.TradeParams))` (`MarketType`
+  dahil TAM `InitialTradeParams`) çağırıyor (`AppConfigApplier.cs:890,892-898`). Script sadece
+  birincisini yapıyordu — `SetSingleTraderTradeParams()` hiç çağrılmıyordu, dolayısıyla
+  `SingleTraderOptimizer.TradeParamsOverride` null kalıyor ve `SingleTraderOptimizer.cs:233-236`
+  içindeki **"ViopEndex fallback"** (`SetKontratParamsViopEndex`) devreye giriyordu —
+  `MarketType`/`HisseSayisi`/`PyramidingEnabled` AppConfig.json'daki değerden BAĞIMSIZ, script HER
+  ZAMAN ViopEndex-tarzı kontrat bazlı pozisyon büyüklüğü hesabı kullanıyordu. **Fix:**
+  `AppConfigApplier.BuildInitialTradeParams(TradeParamsConfig)` zaten `public static` olduğu için
+  script'ten doğrudan çağrılabiliyor — `Config_03_SingleTraderOpt.csx`'e `marketType`/`lotSayisi`/
+  `hisseSayisi`/`pyramidingEnabled` eklendi (varsayılan `marketType="ViopEndex"` — önceki fallback
+  davranışıyla aynı, yani varsayılan çalışma şekli DEĞİŞMEDİ, sadece artık config'ten kontrol
+  edilebiliyor), `03_RunSingleTraderOptWithProgressAsync.csx`'te
+  `algoTrader.SetSingleTraderTradeParams(AppConfigApplier.BuildInitialTradeParams(new
+  TradeParamsConfig { ... }))` çağrısı eklendi (`using AlgoTrade.Core.AppConfig;` ile) —
+  `AppConfigApplier.ApplySingleTraderOpt()` (satır 890) ile birebir aynı yol.
+
+- **EquityCurveFilter script'te hiç yoktu.** Menü tarafı `cfg.EquityCurveFilter is not null` ise
+  `ConfigureEquityCurveFilterFromConfig(...)` çağırıyor (`AppConfigApplier.cs:900-906`) — yani
+  `AppConfig.json`'da bu bölüm doluysa optimizasyon test trader'ları ECF filtreli çalışıyor.
+  Script'te ECF'e dair hiçbir kod yoktu — optimizasyon her zaman ECF'siz çalışıyordu. **Fix:**
+  `Config_03_SingleTraderOpt.csx`'e `ecfEnabled`/`ecfConfigFile`/`ecfVersion` eklendi (varsayılan
+  `ecfEnabled=false` — önceki davranışla aynı, ECF hiç yüklenmez).
+  `03_RunSingleTraderOptWithProgressAsync.csx`'te `ecfEnabled` ise
+  `ClearEquityCurveFilterConfigs()` + `ConfigureEquityCurveFilterFromConfig(ecfPath, ecfVersion,
+  id: 0)` çağrıları eklendi — `AppConfigApplier.ApplySingleTraderOpt()` (satır 900-906) ile birebir
+  aynı yol. Not: SS1/SS2'deki basit `ecfEnabled`/`ecfThresholdTypeIsPercent`/... alanlarından FARKLI
+  bir mekanizma — optimizer ECF'yi doğrudan değerlerden değil, `EquityCurveFilterConfig.txt`
+  dosyasından `Id=0` üzerinden "stored config" olarak okuyor (`AlgoTrader.cs:2894-2896`), bu yüzden
+  script de dosya+versiyon tabanlı yükleme kullanıyor.
 
 ### ⚪ Kasıtlı/kozmetik farklar — ve bir "dead code" notu
 

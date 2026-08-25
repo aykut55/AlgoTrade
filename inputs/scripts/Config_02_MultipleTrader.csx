@@ -2,6 +2,49 @@
 // Config_02_MultipleTrader.csx - 02_RunMultipleTraderWithProgressAsync.csx icin Konfigurasyon Scripti
 // Strategy, query, ECF listelerini ve diger ayarları burada tanimlayin
 // =============================================================================
+
+// =============================================================================
+// Parite Kontrol Listesi (docs/manual/07-menu-vs-script-parity.md SS2)
+// AppConfigApplier.ApplyMultipleTrader() (AppConfigApplier.cs:138-416) hangi config
+// bloklarini AppConfig.json'dan okuyup uyguluyorsa, bu dosyanin/scriptin bir karsiligi
+// olmali. AppConfig.json'a yeni bir alan eklenirse veya ApplyMultipleTrader() degisirse,
+// asagidaki liste ve karsiliklari da guncellenmeli - yoksa script sessizce menuden
+// geri kalir (bkz. SS2'deki iki 🔴 kritik hata: ApplyUserFlags eksikligi ve dosya adi
+// cakismasi - ikisi de tam olarak bu sekilde olustu).
+//
+//   RunMode                          -> selectedRunMode
+//   MultipleTrader (obje) Save        -> saveMainTraderStatistics + saveChildTraderStatistics +
+//                                        writeChildTradersDataToFiles (asagida)
+//   Consensus (Mode/MinNetCount)      -> KAPSANMIYOR - script'te hic set edilmiyor, MultipleTrader.
+//                                        ConsensusMode kendi sinif-varsayilanini ("Net") kullanir.
+//                                        AppConfig.json'da "Net" disinda bir Mode/MinNetCount
+//                                        secilmisse script bunu YANSITMAZ.
+//   MainTrader.TradeParams            -> ilkBakiye + kontratSayisi + komisyonCarpan + kaymaMiktari
+//   MainTrader.Signals                -> BURADA DEGIL - 02_RunMultipleTraderWithProgressAsync.csx'teki
+//                                        ApplyUserFlags(SingleTrader) local fonksiyonunda HARDCODED
+//                                        (mainTrader ve her childTrader icin AYNI degerler kullanilir -
+//                                        AppConfig.json'da child'lara farkli Signals verilebilir, script
+//                                        bunu ayirt etmiyor, bilerek sadelestirilmis)
+//   MainTrader.Optimization           -> BURADA DEGIL - script'te hep false (OptimizationEnabled
+//                                        set edilmiyor, sinif-varsayilani kullaniliyor)
+//   MainTrader.Plot                   -> KASITLI ATLANDI - SS1'deki gibi, script PlotEnabled'i
+//                                        kontrol etmiyor
+//   MainTrader.Export                 -> exportEnabled + exportConfigFile + exportVersion (tum
+//                                        trader'lar icin ORTAK - AppConfig.json'da per-trader farkli
+//                                        Export ayari olabilir, script tek ortak sete sadelestirmis)
+//   ChildTraders[].Strategy/Query/ECF -> strategyConfigs + queryConfigs (id bazli) + ecf* (ortak,
+//                                        tum child'lar icin tek ECF seti)
+//   ChildTraders[].Signals            -> ayni ApplyUserFlags() - mainTrader ile ayni sekilde ortak
+//   ChildTraders[].Save (FilePrefix)  -> filePrefix + ApplyFileNamesAndExport(trader, cp) local
+//                                        fonksiyonu (ana scriptte)
+//   ChildTraders[].Export             -> ayni ortak exportEnabled/exportConfigFile/exportVersion
+//
+// Not: Signals/Optimization/Plot'un cogu burada degil, ANA SCRIPT dosyasinda
+// (02_RunMultipleTraderWithProgressAsync.csx, ApplyUserFlags/ApplyFileNamesAndExport local
+// fonksiyonlari) hardcoded. Ayrica script, AppConfig.json'un per-child farkli Signals/Export
+// destekleyebilmesini KASITLI olarak tek ortak sete sadelestirmis (tum child'lar ayni degerleri
+// kullanir) - cok-farkli-child senaryosu test edilecekse bu bilerek atlanan bir esneklik.
+// =============================================================================
 using System.Collections.Generic;
 using AlgoTrade.Core.Trading;
 

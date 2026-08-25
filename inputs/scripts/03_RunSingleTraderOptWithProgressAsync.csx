@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using AlgoTrade.Core;
+using AlgoTrade.Core.AppConfig;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Trading;
@@ -117,6 +118,33 @@ algoTrader.SetSingleTraderOptTradeParamsConfig(new SingleTraderOptTradeParamsCon
     KomisyonCarpan = komisyonCarpan,
     KaymaMiktari   = kaymaMiktari,
 });
+
+// TAM InitialTradeParams (MarketType dahil) - AppConfigApplier.ApplySingleTraderOpt()
+// (AppConfigApplier.cs:890) ile ayni yol. Bu olmadan SingleTraderOptimizer.TradeParamsOverride
+// null kalip "ViopEndex fallback"a duserdi (bkz. Config_03_SingleTraderOpt.csx basindaki not /
+// docs/manual/07-menu-vs-script-parity.md SS3, 2026-08-25 findings).
+algoTrader.SetSingleTraderTradeParams(AppConfigApplier.BuildInitialTradeParams(new TradeParamsConfig
+{
+    MarketType        = marketType,
+    IlkBakiye         = ilkBakiye,
+    KontratSayisi     = kontratSayisi,
+    LotSayisi         = lotSayisi,
+    HisseSayisi       = hisseSayisi,
+    KomisyonCarpan    = komisyonCarpan,
+    KaymaMiktari      = kaymaMiktari,
+    PyramidingEnabled = pyramidingEnabled,
+}));
+
+// Equity Curve Filter (opsiyonel) - AppConfigApplier.ApplySingleTraderOpt()
+// (AppConfigApplier.cs:900-906) ile ayni yol. ecfEnabled=false ise hic yuklenmez (AppConfig.json'da
+// EquityCurveFilter bolumu tanimlanmamis olmasiyla ayni davranis).
+if (ecfEnabled)
+{
+    algoTrader.ClearEquityCurveFilterConfigs();
+    string ecfPath = Path.Combine(AppSettings.ConfigsDir, ecfConfigFile);
+    algoTrader.ConfigureEquityCurveFilterFromConfig(ecfPath, ecfVersion, id: 0);
+    Log($"  EquityCurveFilter: {ecfConfigFile} [{ecfVersion}]");
+}
 
 // Optimization range (PartialOpt)
 algoTrader.SetSingleTraderOptRangeConfig(new SingleTraderOptRangeConfig
