@@ -114,6 +114,83 @@ tablosunda görmek istiyor — hiçbirini yeniden çalıştırmadan.
 - Console'a yeni bir menü seçeneği: bir klasör/pattern seçtir → eşleşen dosyaları listele →
   konsolide rapor üret.
 
+## Yeni Özellik Fikri: Geçmiş (Offline) Trader Verilerinden Hızlı Sinyal Plot'u (2026-08-25, kullanıcı talebi)
+
+**Yukarıdaki "GEÇMİŞ (offline) Çalıştırmaların Karşılaştırılması" maddesinden farkı**: o madde
+**sayısal özet** (tek satırlık `SingleTraderStatistics.csv`) karşılaştırmasıyla ilgili; bu madde
+**bar-bar tam görsel replay** — önceden üretilmiş 1 veya daha fazla trader'ın sinyal/PnL/getiri
+verisini, trader'ı **hiç yeniden çalıştırmadan** hem eski tip (pythonnet/imgui_bundle) hem yeni
+tip (DearPyGuiDataPlotter) plotter'da çizdirmek. Kullanıcının somut istek cümlesi: "bir süre sonra
+önceden üretilmiş olan verileri işleyerek 1 veya daha fazla trader'in sinyal/sinyallerini
+çizdirmek", `05_RunDearPyGuiDataPlotterTest.csx`'in (bkz. yukarıdaki `[9]` demo menüsü tartışması)
+"tam trader çalıştırmadan hızlıca deneme" fikrinin doğal devamı olarak.
+
+### Mevcut durum tespiti (araştırıldı, 2026-08-25)
+
+- Bir trader run'ı bittiğinde `Lists.csv`/`.txt` dosyası (`FullListsCsvFileName`/
+  `FullListsTxtFileName`, `StatisticsExporter.SaveListsToCsvFromConfig/SaveListsToTxtFromConfig`
+  ile yazılıyor) zaten `Lists.SinyalList`/`KarZararFiyatList(Yuzde)`/`GetiriFiyatList(Yuzde)(Net)`
+  gibi **bar-bar** dizileri içeriyor — yani `PlotSingleTraderData`/
+  `TradeDataBundleConverter.ConvertSingleTrader`'ın çizim için tükettiği TAM OLARAK bu veri.
+- **Ama** bu dosyalar OHLC (Open/High/Low/Close/Volume) barlarını içermiyor — o sadece
+  `trader.Data`'da (`StockData`) yaşıyor ve şu an yalnızca orijinal CSV'nin `StockDataReader` ile
+  yeniden okunmasıyla elde ediliyor.
+- Kod tabanında `Lists.csv`/`.txt`'yi geri okuyup bir `Lists` nesnesine dolduran **hiçbir
+  reader/importer yok** (grep'te sıfır sonuç) — bu, sıfırdan yazılması gereken yeni bir parça.
+- `Lists.csv`/`.txt`'nin kolon seti **sabit değil** — `StatisticsExporterConfig.json`'daki
+  versiyona (`v1`/`v2`/...) göre değişen, insan-okunur amaçlı seçilmiş bir alt küme. Bu, "mevcut
+  dosyayı geri oku" yaklaşımını kırılgan yapıyor: eğer o run'da kullanılan export versiyonu
+  plot için gereken bir alanı (örn. `SinyalList` veya `GetiriFiyatNetList`) içermiyorsa, replay
+  eksik/yanlış olur.
+
+### İki tasarım seçeneği (henüz karar verilmedi)
+
+- **A) Ayrı, tam-sadakatli "ham dump" formatı (önerilen)**: `Lists`'e (ve gerekirse `StockData`'ya)
+  `StatisticsExporter`'ın insan-odaklı, konfigüre edilebilir kolon seçiminden BAĞIMSIZ, plot için
+  gereken TÜM alanları (Signal/PnL fiyat+yüzde/PnL net/Getiri fiyat+yüzde/Getiri net/strateji
+  indikatörleri) içeren kendi `Save()`/`Load()` çifti eklenir (CSV ya da basit binary). OHLC için
+  ayrı bir dump gerekmez — `stockDataFullFileName`'den `StockDataReader.ReadDataFast(...)` ile
+  ucuz ve deterministik şekilde yeniden okunabilir (strateji/indikatör kurulumu GEREKMİYOR, sadece
+  veri okuma). Avantaj: export config'in o günkü ayarından bağımsız, her zaman tam veri garantisi.
+- **B) Var olan `Lists.csv`/`.txt`'yi geri oku**: Yeni format eklemez, ama kırılgan (yukarıdaki
+  madde) — sadece o run'da export edilen kolonlar varsa çalışır.
+
+### Reconstruction akışı (Option A ile, taslak — henüz implement edilmedi)
+
+1. OHLC: `StockDataReader.ReadDataFast(stockDataFullFileName)` ile `StockData` yeniden okunur
+   (bar sayısı/tarihler orijinal run ile eşleşmeli — kullanıcı doğru dosyayı seçmekten sorumlu).
+2. Sinyal/PnL/Getiri verisi: yeni `Lists.Load(path)` ile diskten okunur (trader hiç `Run()`
+   edilmiyor — `Init()`/bar-loop/`Finalize()` YOK).
+3. Her trader için "sentetik" bir `SingleTrader` kabuğu kurulur: `new SingleTrader(id, name, data,
+   indicators: null, ...)`, `.Data` ve `.lists` doğrudan atanır — **mevcut**
+   `PlotSingleTraderData`/`TradeDataBundleConverter.ConvertSingleTrader` fonksiyonlarına HİÇ
+   dokunmadan, onları olduğu gibi besler (en düşük riskli yol — çizim kodunun kendisi
+   değişmiyor).
+4. N-trader overlay (yeni tip plotter zaten destekliyor, bkz. `docs/yapilacak.md` madde 6):
+   `TradeDataBundleConverter`'ın `ConvertCore(..., List<SingleTrader> childTraders, ...)` imzası
+   zaten bir `SingleTrader` listesi kabul ediyor — N sentetik trader bu listeye verilip
+   `ConvertMultipleTrader`-benzeri bir yol kullanılabilir. Eski tip plotter (`PlotMultipleTraderData`)
+   için gerçek bir `MultipleTrader` nesnesi gerekip gerekmediği (yoksa o da gevşetilebilir mi)
+   ayrıca incelenmeli.
+5. Yeni script(ler): bir klasör/dosya listesi (her biri `{stockDataPath, listsFilePath, label}`
+   üçlüsü) alıp sentetik trader'ları kurar, ardından **hem** eski tip (`SetupPython()` +
+   `PlotSingleTraderData`/`PlotMultipleTraderData`) **hem** yeni tip (`TradeDataBundleConverter` +
+   `DearPyGuiDataPlotter.StartPlotter()/LoadBundle()`, `05` script'indeki desenle) ile çizdirir —
+   `04`/`05` script çiftinin doğal devamı, farkı: `04` trader'ı GERÇEKTEN çalıştırıp bundle
+   üretiyor, bu yeni script hiç çalıştırmadan geçmiş veriyi okuyor.
+
+### Açık kalan tasarım soruları (implementasyondan önce netleşmeli)
+
+- Option A mı B mi — A daha sağlam ama yeni bir dosya formatı/okuma-yazma kodu ekliyor.
+- Eski tip plotter (`PlotMultipleTraderData`) gerçek bir `MultipleTrader` nesnesi mi bekliyor, yoksa
+  sentetik `SingleTrader` listesiyle de besleniyor mu — kod incelemesi gerekiyor.
+- N trader nasıl gruplanacak/seçilecek: script içine hardcoded liste mi, yoksa bir klasör +
+  glob pattern mi (offline-karşılaştırma maddesindeki gibi)?
+- Ayrı bir console menü numarası mı (script-only mu kalsın) — muhtemelen script-only yeterli,
+  bu bir geliştirici/analiz aracı, üretim akışının parçası değil.
+
+**Durum: sadece planlandı, implementasyona henüz başlanmadı.**
+
 ## Tarama Motorları — TAMAMLANDI (16/16, 2026-08-18)
 
 Kullanıcının 2026-08-18'de tarif ettiği 8 senaryoluk matris (Sembol × Strateji × Zaman Dilimi,
