@@ -25,6 +25,8 @@
 1. [SingleTrader — \[5\] vs 01_RunSingleTraderWithProgressAsync.csx](#1-singletrader--5-vs-01_runsingletraderwithprogressasynccsx)
 2. [MultipleTrader — \[6\] vs 02_RunMultipleTraderWithProgressAsync.csx](#2-multipletrader--6-vs-02_runmultipletraderwithprogressasynccsx)
 3. [SingleTraderOptimizer — \[7\] vs 03_RunSingleTraderOptWithProgressAsync.csx](#3-singletraderoptimizer--7-vs-03_runsingletraderoptwithprogressasynccsx)
+4. [ConfirmingSingleTrader — \[22\]/\[23\] vs 06_RunConfirmingSingleTraderWithProgressAsync.csx](#4-confirmingsingletrader--2223-vs-06_runconfirmingsingletraderwithprogressasynccsx)
+5. [ConfirmingMultipleTrader — \[24\]/\[25\] vs 07_RunConfirmingMultipleTraderWithProgressAsync.csx](#5-confirmingmultipletrader--2425-vs-07_runconfirmingmultipletraderwithprogressasynccsx)
 
 ---
 
@@ -353,3 +355,202 @@ config-kaynağı farkı ve altındaki "muhtemel dead code" notu.**
   kod** olabilir — script'in bunları atlaması bir "script eksikliği" değil, muhtemelen menünün
   kendisinde bitmemiş bir özellik. Doğrulamaya değer ama bu dosyanın kapsamı dışında (script↔menü
   paritesi değil, menünün kendi iç tutarlılığı).
+
+---
+
+## 4. ConfirmingSingleTrader — [22]/[23] vs 06_RunConfirmingSingleTraderWithProgressAsync.csx
+
+**Menü tarafı:** `handleConfirmingSingleTrader()` ([22]) / `handleReadData()` + `handleConfirmingSingleTrader()`
+([23]) → `runConfirmingSingleTraderAlgoTrade()` (`AlgoTrade.Console/Program.cs:917-976`), config
+uygulaması `AppConfigApplier.ApplyConfirmingSingleTrader()` (`AppConfigApplier.cs:433-614`),
+çalıştırma `algoTrader.RunConfirmingSingleTraderWithProgressAsync()` — tamamen kendine yeten bir
+sarmalayıcı: kendi içinde indicators/strateji/`ConfirmingSingleTrader` nesnesini kuruyor,
+`ApplyConfirmingSignalTraderFlagsConfigs`/`ApplySingleTraderFlagsConfigs`'i çağırıyor.
+
+**Script tarafı (eski hali):** `inputs/scripts/06_RunConfirmingSingleTraderWithProgressAsync.csx`,
+config'i eski `Config_06_ConfirmingSingleTrader.csx`'den alıyordu; `SignalTrader`+`MainTrader`'ı
+elle kurup elle bar-loop'la çalıştırıyordu (01/02'nin eski hali gibi, 03'ün zaten kullandığı
+sarmalayıcı-çağırma desenini kullanmıyordu).
+
+### 🔴 Kritik hata (gizli/dormant) — 2026-08-25
+
+**`ConfirmingSingleTraderConfirmationConfig` script'te hiç set edilmiyordu.**
+`SetConfirmingSingleTraderConfirmationConfig(...)` çağrısı yoktu, dolayısıyla
+`ThresholdIsPercentage`/`ProfitThreshold`/`LossThreshold`/`Trigger`/`ConflictMode`/
+`FlattenImmediatelyOnFlatSignal` hep sınıf varsayılanlarında kalıyordu — `AppConfig.json`'da farklı
+bir konfirmasyon eşiği ayarlansa bile script bunu hiç görmüyordu (varsayılanlar tesadüfen mantıklı
+değerler olduğu için sonuç "yanlış" değil ama AppConfig.json'daki her türlü ayar **sessizce
+yok sayılıyordu** — kritik, çünkü kullanıcı [22]'de bir eşik ayarlayıp script'i çalıştırdığında
+farklı sonuç bekler). **Fix:** yeni script `algoTrader.SetConfirmingSingleTraderConfirmationConfig(...)`
+çağırıyor, `Config_06_ConfirmingSingleTrader.csx`'e `thresholdIsPercentage`/`profitThreshold`/
+`lossThreshold`/`confirmationTrigger`/`conflictMode`/`flattenImmediatelyOnFlatSignal` eklendi.
+
+### 🔴 Kritik hata — Plot hiç yoktu
+
+Menü tarafı `runConfirmingSingleTraderAlgoTrade()` içinde `mainTrader.PlotEnabled` ise
+`algoTrader.SetupPython()` + `algoTrader.PlotSingleTraderData(mainTrader)` çağırıyor
+(`Program.cs:956-967`). Eski script'te plot'a dair hiçbir kod yoktu. **Fix:** yeni script'in
+"5. Plot" bölümü (satır 253-266) menüyle birebir aynı — sadece `mainTrader.PlotEnabled` kontrol
+ediliyor, `SetupPython()` başarısızsa hata loglanıyor.
+
+### 🟡 Açık fark — SignalTrader istatistikleri her zaman kapalıydı, config'ten açılamıyordu
+
+Eski script `signalTrader`'ın `SaveStatisticsToFile`'ını hiç kontrol etmiyordu (ya hep `false`
+ya da hiç ilgili kod yoktu) — [22] tarafında `AppConfig.json`'da SignalTrader istatistiklerini
+açmak mümkünken script'te bu imkansızdı. **Fix:** `Config_06_ConfirmingSingleTrader.csx`'e
+`saveSignalTraderStatistics` eklendi (varsayılan `false` — **eski script'in fiili davranışıyla
+aynı**, sadece artık config'ten açılabiliyor).
+
+### 🟡 Açık fark — FilePrefix yoktu, MainTrader/SignalTrader dosya çakışması riski
+
+Eski script'te main ve signal trader'ların dosya adları ayrıştırılmıyordu — §2'deki
+MultipleTrader main/child çakışmasıyla aynı risk sınıfı (ikisi de varsayılan
+`SingleTraderStatistics.txt` adına yazıp birbirinin üzerine yazabilirdi). **Fix:**
+`Config_06_ConfirmingSingleTrader.csx`'e `filePrefix = "ConfirmingSingleTrader"` eklendi, yeni
+script `{filePrefix}_Signal_{file}` / `{filePrefix}_Main_{file}` adlandırmasını kullanıyor
+(`AppConfigApplier.cs:460,503-517,576-589` ile aynı mantık).
+
+### 🟡 Açık fark — Signals bloğu eksikti / eski koda göre kırılgandı
+
+Eski script'te `AlEnabled`/`SatEnabled`/... sinyal flag'leri config'ten gelmiyor, elle
+kod içine yazılmış ya da eksikti — §2'deki "sinyaller hiç açılmıyor" hatasıyla aynı risk
+sınıfı. **Fix:** ortak `sharedSignals` (`SingleTraderSignalsConfig`) hem
+`SetConfirmingSignalTraderSignalsConfig` hem `SetSingleTraderSignalsConfig`'e veriliyor —
+`Config_06_ConfirmingSingleTrader.csx`'teki `alEnabled`/`satEnabled`/... 01/02/03 ile aynı alan
+seti.
+
+### 🟡 Açık fark — Export config yoktu
+
+§1/§2/§3'teki gibi `SingleTraderExportConfig` (`ExportEnabled`/`ExportConfigFile`/`ExportVersion`)
+hiç uygulanmıyordu. **Fix:** `Config_06_ConfirmingSingleTrader.csx`'e ortak `exportEnabled`/
+`exportConfigFile`/`exportVersion` eklendi (main + signal için ortak — Config_02'deki gibi
+kasıtlı sadeleştirme), her ikisine de uygulanıyor.
+
+### 🟡 Açık fark — ReadData filtreleme yoktu
+
+§1/§2/§3'teki gibi veri her zaman dosyanın tamamı okunuyordu, `FilterMode`/`N1`/`N2`/`Dt1`/`Dt2`
+uygulanamıyordu. **Fix:** aynı 5 alan + filtreli `ReadDataFast(...)` çağrısı eklendi.
+
+### 🟡 Açık fark — MarketType dahil TAM TradeParams yoktu
+
+§3'teki "ViopEndex fallback" riskiyle aynı kalıp: TradeParams'ın `MarketType`'ı dahil tam hali
+script'e geçirilmiyordu. **Fix:** `AppConfigApplier.BuildInitialTradeParams(...)` ile
+`sharedTradeParams` oluşturulup `algoTrader.SetSingleTraderTradeParams(...)`'e veriliyor
+(`AppConfigApplier.cs:539-540` ile aynı yol) — hem MainTrader hem SignalTrader için ortak.
+
+### ⚪ Kasıtlı/kozmetik farklar
+
+- **Config kaynağı** (canlı `AppConfig.json` vs hardcoded `Config_06_ConfirmingSingleTrader.csx`) —
+  §1'deki gerekçeyle aynı, kasıtlı.
+- **SignalTrader/MainTrader Signals ayrımı** — `AppConfig.json`'da ikisi ayrı ayarlanabilir, script
+  KASITLI olarak tek ortak `sharedSignals` seti kullanıyor (eski script de zaten ikisini ortak
+  kullanıyordu). Farklı ayar gerekiyorsa `Config_06_ConfirmingSingleTrader.csx` başındaki not
+  script'i nasıl bölüneceğini açıklıyor.
+- **Yeni tip DearPyGuiDataPlotter** — Confirming* için menüde de henüz yok (sadece eski
+  pythonnet/imgui_bundle plot var), script de aynı kapsamda kalıyor.
+
+**§4 durumu: tüm bulunan farklar (1 gizli/dormant 🔴 + 1 açık 🔴 + 5 🟡) 2026-08-25'te mimari
+yeniden yazımla (`AppConfigApplier`-eşdeğeri Set*Config çağrıları +
+`RunConfirmingSingleTraderWithProgressAsync()` sarmalayıcısı, 03 script'in kanıtlanmış desenini
+izleyerek) düzeltildi. Kalan farklar sadece ⚪ kasıtlı.**
+
+---
+
+## 5. ConfirmingMultipleTrader — [24]/[25] vs 07_RunConfirmingMultipleTraderWithProgressAsync.csx
+
+**Menü tarafı:** `handleConfirmingMultipleTrader()` ([24]) / `handleReadData()` +
+`handleConfirmingMultipleTrader()` ([25]) → `runConfirmingMultipleTraderAlgoTrade()`
+(`AlgoTrade.Console/Program.cs:978-1037`), config uygulaması
+`AppConfigApplier.ApplyConfirmingMultipleTrader()` (`AppConfigApplier.cs:622-867`), çalıştırma
+`algoTrader.RunConfirmingMultipleTraderWithProgressAsync()` — kendi içinde indicators/
+`ConfirmingMultipleTrader`/SignalChild'ları kuran, tamamen kendine yeten sarmalayıcı
+(`createConfirmingChildTraders()` dahil, `AlgoTrader.cs:1772`, çağrısı `:2579`).
+
+**Script tarafı (eski hali):** `inputs/scripts/07_RunConfirmingMultipleTraderWithProgressAsync.csx`,
+config'i eski `Config_07_ConfirmingMultipleTrader.csx`'den alıyordu; `MultipleTrader`+
+`SingleTrader`'ları elle kurup elle bar-loop'la çalıştırıyordu.
+
+### 🔴 Kritik hata (gizli/dormant) — Confirmation config hiç set edilmiyordu
+
+§4'teki ile birebir aynı kalıp: `SetConfirmingMultipleTraderConfirmationConfig(...)` çağrısı yoktu
+— `AppConfig.json`'daki eşik ayarları sessizce yok sayılıyordu. **Fix:** yeni script
+`algoTrader.SetConfirmingMultipleTraderConfirmationConfig(...)` çağırıyor,
+`Config_07_ConfirmingMultipleTrader.csx`'e aynı 6 alan eklendi.
+
+### 🔴 Kritik hata — Plot hiç yoktu
+
+`runConfirmingMultipleTraderAlgoTrade()` içinde `mainTrader.PlotEnabled` ise aynı
+`SetupPython()`+`PlotSingleTraderData(mainTrader)` çağrılıyor (`Program.cs:1017-1028`). Eski
+script'te yoktu. **Fix:** yeni script'in "7. Plot" bölümü (satır 276-289) menüyle birebir aynı.
+
+### 🔴 Kritik hata (gizli/dormant) — Consensus config hiç set edilmiyordu
+
+`MultipleTraderConsensusConfig` (`Mode`/`MinNetCount`) script'te hiç uygulanmıyordu — consensus
+her zaman sınıf varsayılanında (`Mode="Net"`, `MinNetCount=1`) kalıyordu, `AppConfig.json`'da farklı
+bir consensus modu ayarlansa bile script görmüyordu. **Fix:** yeni script
+`algoTrader.SetMultipleTraderConsensusConfig(...)` çağırıyor, `Config_07_ConfirmingMultipleTrader.csx`'e
+`consensusMode`/`consensusMinNetCount` eklendi.
+
+### 🟡 Açık fark — FilePrefix yoktu, MainTrader/SignalChild dosya çakışması riski
+
+§2'deki (MultipleTrader main/child) ve §4'teki (ConfirmingSingleTrader main/signal) ile aynı risk
+sınıfı, burada daha da geniş: MainTrader + N tane SignalChild hepsi varsayılan dosya adlarına
+yazıp üst üste biniyordu. **Fix:** `Config_07_ConfirmingMultipleTrader.csx`'e
+`filePrefix = "ConfirmingMultipleTrader"` eklendi, yeni script `{prefix}_Main_{file}` /
+`{prefix}_SignalChild{i}_{file}` adlandırmasını kullanıyor.
+
+### 🟡 Açık fark — SignalChild istatistiklerinin dosyaya yazılması "iç içe iki kapı" gerektiriyordu, hiçbiri açılmıyordu
+
+`WriteTraderDataToFilesAsync(ConfirmingMultipleTrader)` içinde SignalChild istatistiklerinin
+gerçekten dosyaya yazılması için HEM `ConfirmingMultipleTraderObjectSaveConfig.
+WriteSignalMultipleTraderListsToFiles` HEM `WriteSignalChildTradersDataToFiles` true olmalı
+(`AlgoTrader.cs:2705,2721`) — eski script ikisini de set etmiyordu (varsayılanları `false`,
+`AlgoTrader.cs:3302,3305`), yani child istatistikleri **hiçbir zaman** dosyaya yazılamıyordu,
+`saveChildTraderStatistics`/`SaveStatisticsToFile` ne olursa olsun. **Fix:**
+`Config_07_ConfirmingMultipleTrader.csx`'e `writeSignalMultipleTraderListsToFiles = true` /
+`writeSignalChildTradersDataToFiles = true` eklendi (bu "iç içe iki kapı" not olarak dosyanın
+başındaki parite listesine de yazıldı), `SetConfirmingMultipleTraderSaveConfig(...)`'e veriliyor.
+
+### 🟡 Açık fark — SignalChild'ların strateji+config yüklemesi 02 script'inin ("hiç işlem açmıyordu") eski hatasıyla aynı riski taşıyordu
+
+Eski script'te child stratejilerin `AddStrategyConfig`/`SetChildTraderCount` üzerinden değil elle
+kurulduğu, dolayısıyla Signals flag'lerinin (§2'deki `ConfigureUserFlagsOnce()` sonrası hiç
+`true` yapılmama hatasıyla aynı kalıp) eksik/yanlış olma riski vardı. **Fix:** yeni script 02
+script'iyle birebir aynı deseni kullanıyor: `ClearStrategyConfigs()` + her strateji için
+`AddStrategyConfig(...)`, ardından `SetChildTraderCount(strategyConfigs.Count, (entry, i) => {...})`
+içinde `entry.Signals = sharedSignals` (ortak `SingleTraderSignalsConfig`, 01/02/03/06 ile aynı
+alan seti) açıkça atanıyor.
+
+### 🟡 Açık fark — Export config yoktu (MainTrader ve SignalChild'lar için)
+
+**Fix:** `Config_07_ConfirmingMultipleTrader.csx`'e ortak `exportEnabled`/`exportConfigFile`/
+`exportVersion` eklendi, hem MainTrader (`SetSingleTraderExportConfig`) hem her SignalChild
+(`entry.Export`) için uygulanıyor.
+
+### 🟡 Açık fark — ReadData filtreleme yoktu
+
+§1/§2/§3/§4'teki gibi. **Fix:** aynı 5 alan + filtreli `ReadDataFast(...)` çağrısı eklendi.
+
+### 🟡 Açık fark — MarketType dahil TAM TradeParams yoktu (MainTrader + tüm SignalChild'lar için)
+
+§3/§4'teki "ViopEndex fallback" riskiyle aynı kalıp, burada MainTrader VE tüm SignalChild'lar
+için geçerli. **Fix:** `sharedTradeParams = AppConfigApplier.BuildInitialTradeParams(...)`
+oluşturulup MainTrader'a `SetSingleTraderTradeParams(...)` ile, her SignalChild'a
+`entry.TradeParams.ApplyFrom(sharedTradeParams)` ile uygulanıyor (`AppConfigApplier.cs:667-668`
+ile aynı yol).
+
+### ⚪ Kasıtlı/kozmetik farklar
+
+- **Config kaynağı** — §1'deki gerekçeyle aynı, kasıtlı.
+- **Signals ayrımı** — `AppConfig.json`'da MainTrader/her SignalChild ayrı ayarlanabilir, script
+  KASITLI olarak tek ortak `sharedSignals` seti kullanıyor (Config_02'deki gibi kasıtlı
+  sadeleştirme).
+- **Per-child EquityCurveFilter** — script'te sadece MainTrader için ECF var (`ecfEnabled`/
+  `ecfConfigFile`/`ecfVersion`, id=0), SignalChild'lar için per-child ECF desteklenmiyor — bu,
+  `strategyConfigs`'in basit `(id, name, parameters)` listesi olması ile tutarlı kasıtlı bir
+  sadeleştirme (§2'nin per-child ECF'i de desteklemediğiyle aynı gerekçe).
+- **Yeni tip DearPyGuiDataPlotter** — §4'teki gibi, Confirming* için menüde de henüz yok.
+
+**§5 durumu: tüm bulunan farklar (2 gizli/dormant 🔴 + 1 açık 🔴 + 6 🟡) 2026-08-25'te mimari
+yeniden yazımla (§4 ile aynı desen + 02 script'in `SetChildTraderCount` SignalChild kurulum
+mekanizması) düzeltildi. Kalan farklar sadece ⚪ kasıtlı.**

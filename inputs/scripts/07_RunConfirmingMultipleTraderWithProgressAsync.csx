@@ -1,34 +1,41 @@
 // =============================================================================
 // 07_RunConfirmingMultipleTraderWithProgressAsync.csx - ConfirmingMultipleTrader Inlined Execution
-// Config_07_ConfirmingMultipleTrader.csx'den gelen konfigurasyonu kullanarak
-// ConfirmingMultipleTrader'i calistirir. 02_RunMultipleTraderWithProgressAsync.csx'in
-// deseniyle aynidir (child olusturma burada dongu ile yapiliyor, cunku sayi degisken).
+// Config_07_ConfirmingMultipleTrader.csx'den gelen konfigurasyonu kullanarak calistirir.
+//
+// [24]/[25] menu handler'i (Program.cs::runConfirmingMultipleTraderAlgoTrade()) ile AYNI kod
+// yolunu izler: algoTrader'in Set*Config metodlariyla (AppConfigApplier.ApplyConfirmingMultipleTrader()
+// ile birebir ayni alan eslemesi) konfigure edilip algoTrader.RunConfirmingMultipleTraderWithProgressAsync()
+// (kendi icinde indicators/confirmingMultipleTrader/SignalChild'lari kuran, tamamen kendine yeten
+// sarmalayici) cagriliyor. SignalChild'larin strateji+config yuklemesi 02 script'iyle (plain
+// MultipleTrader) birebir ayni desen (SetChildTraderCount + AddStrategyConfig). Bkz.
+// docs/manual/07-menu-vs-script-parity.md SS5.
 // =============================================================================
 #load "Config_07_ConfirmingMultipleTrader.csx"
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using AlgoTrade.Core;
+using AlgoTrade.Core.AppConfig;
 using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
-using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Python;
+using AlgoTrade.Core.Timer;
 
 // =============================================================================
 // Degiskenler
 // =============================================================================
 StockDataReader? stockDataReader = null;
 ConcurrentDictionary<string, string>? stockMetaData = null;
-var sw = new Stopwatch();
+var timeManager = TimeManager.GetInstance();
 
 // =============================================================================
 // 1. Veri Oku
 // =============================================================================
-Log("=== 06_RunConfirmingMultipleTraderWithProgressAsync.csx ===");
+Log("=== 07_RunConfirmingMultipleTraderWithProgressAsync.csx ===");
 
 if (!File.Exists(stockDataFullFileName))
 {
@@ -53,7 +60,11 @@ Log($"Sembol    : {symbolName}");
 Log($"Periyot   : {symbolPeriod}");
 Log($"Bar Count : {stockMetaData.GetValueOrDefault("BarCount", "N/A")}");
 
-stockDataReader.ReadDataFast(stockDataFullFileName);
+Enum.TryParse<StockDataReader.FilterMode>(readDataFilterMode, ignoreCase: true, out var filterMode);
+DateTime? dt1 = string.IsNullOrWhiteSpace(readDataDt1) ? null : DateTime.Parse(readDataDt1);
+DateTime? dt2 = string.IsNullOrWhiteSpace(readDataDt2) ? null : DateTime.Parse(readDataDt2);
+
+stockDataReader.ReadDataFast(stockDataFullFileName, filterMode, readDataN1, readDataN2, dt1, dt2);
 var data = stockDataReader.GetData();
 Log($"Okunan    : {data.Count} bar");
 
@@ -64,158 +75,181 @@ if (data.Count == 0)
 }
 
 // =============================================================================
-// 2. AlgoTrader Configure Et
+// 2. AlgoTrader Konfigure Et
 // =============================================================================
 algoTrader.SetData(data);
 algoTrader.SymbolName = symbolName;
 algoTrader.SymbolPeriod = symbolPeriod;
 
+// ConfirmingMultipleTrader nesnesi kayit ayarlari
+algoTrader.SetConfirmingMultipleTraderSaveConfig(new ConfirmingMultipleTraderObjectSaveConfig
+{
+    SaveStatisticsToFile                        = saveConfirmingMultipleTraderLists,
+    SaveConfirmingMultipleTraderListsTxtEnabled = saveConfirmingMultipleTraderLists,
+    SaveConfirmingMultipleTraderListsCsvEnabled = saveConfirmingMultipleTraderLists,
+    FilePrefix                                   = filePrefix,
+    WriteSignalMultipleTraderListsToFiles       = writeSignalMultipleTraderListsToFiles,
+    WriteSignalChildTradersDataToFiles          = writeSignalChildTradersDataToFiles,
+});
+
+// Consensus ayarlari - MultipleTrader ile paylasilan slot
+algoTrader.SetMultipleTraderConsensusConfig(new MultipleTraderConsensusConfig
+{
+    Mode        = consensusMode,
+    MinNetCount = consensusMinNetCount,
+});
+
+// Sanal pozisyon konfirmasyon ayarlari
+algoTrader.SetConfirmingMultipleTraderConfirmationConfig(new ConfirmingMultipleTraderConfirmationConfig
+{
+    ThresholdIsPercentage          = thresholdIsPercentage,
+    ProfitThreshold                = profitThreshold,
+    LossThreshold                  = lossThreshold,
+    Trigger                        = confirmationTrigger,
+    ConflictMode                   = conflictMode,
+    FlattenImmediatelyOnFlatSignal = flattenImmediatelyOnFlatSignal,
+});
+
+// Ortak Signals bloğu (MainTrader ve tum SignalChild'lar icin - bkz. Config_07 basindaki not)
+var sharedSignals = new SingleTraderSignalsConfig
+{
+    AlEnabled                 = alEnabled,
+    SatEnabled                = satEnabled,
+    FlatOlEnabled              = flatOlEnabled,
+    PasGecEnabled              = pasGecEnabled,
+    KarAlEnabled               = karAlEnabled,
+    ZararKesEnabled            = zararKesEnabled,
+    GunSonuPozKapatEnabled     = gunSonuPozKapatEnabled,
+    TimeFilteringEnabled       = timeFilteringEnabled,
+    StartDateTime              = signalsStartDateTime,
+    StopDateTime               = signalsStopDateTime,
+    TradeStartBarIndexEnabled  = tradeStartBarIndexEnabled,
+    TradeStartBarIndex         = tradeStartBarIndex,
+};
+
+// TAM InitialTradeParams (MarketType dahil, MainTrader+SignalChild'lar icin ortak) -
+// AppConfigApplier.ApplyConfirmingMultipleTrader() (satir 667-668) ile ayni yol.
+var sharedTradeParams = AppConfigApplier.BuildInitialTradeParams(new TradeParamsConfig
+{
+    MarketType        = marketType,
+    IlkBakiye         = ilkBakiye,
+    KontratSayisi     = kontratSayisi,
+    LotSayisi         = lotSayisi,
+    HisseSayisi       = hisseSayisi,
+    KomisyonCarpan    = komisyonCarpan,
+    KaymaMiktari      = kaymaMiktari,
+    PyramidingEnabled = pyramidingEnabled,
+});
+algoTrader.SetSingleTraderTradeParams(sharedTradeParams);
+
+// --- MainTrader (konfirme edilmis consensus sinyaliyle gercek islem yapan trader) ---
+algoTrader.SetSingleTraderSignalsConfig(sharedSignals);
+
+algoTrader.SetSingleTraderSaveConfig(new SingleTraderSaveConfig
+{
+    SaveStatisticsToFile                = saveMainTraderStatistics,
+    FullStatsTxtFileName                = $"{filePrefix}_Main_SingleTraderStatistics.txt",
+    FullStatsCsvFileName                = $"{filePrefix}_Main_SingleTraderStatistics.csv",
+    MinimalStatsTxtFileName             = $"{filePrefix}_Main_SingleTraderStatisticsMinimal.txt",
+    MinimalStatsCsvFileName             = $"{filePrefix}_Main_SingleTraderStatisticsMinimal.csv",
+    FullListsTxtFileName                = $"{filePrefix}_Main_SingleTraderLists.txt",
+    FullListsCsvFileName                = $"{filePrefix}_Main_SingleTraderLists.csv",
+    MinimalListsTxtFileName             = $"{filePrefix}_Main_SingleTraderListsMinimal.txt",
+    MinimalListsCsvFileName             = $"{filePrefix}_Main_SingleTraderListsMinimal.csv",
+    FullStatsTxtFormattedFileName       = $"{filePrefix}_Main_SingleTraderStatisticsFormatted.txt",
+    MinimalStatsTxtFormattedFileName    = $"{filePrefix}_Main_SingleTraderStatisticsMinimalFormatted.txt",
+    GridStatsTxtFileName                = $"{filePrefix}_Main_SingleTraderStatisticsGrid.txt",
+    MinimalGridStatsTxtFileName         = $"{filePrefix}_Main_SingleTraderStatisticsMinimalGrid.txt",
+    PerformansTxtFileName               = $"{filePrefix}_Main_SingleTraderPerformans.txt",
+    PerformansCsvFileName               = $"{filePrefix}_Main_SingleTraderPerformans.csv",
+});
+
+algoTrader.SetSingleTraderPlotConfig(new SingleTraderPlotConfig { PlotEnabled = mainPlotEnabled });
+
+if (exportEnabled)
+{
+    algoTrader.SetSingleTraderExportConfig(new SingleTraderExportConfig
+    {
+        ExportEnabled    = exportEnabled,
+        ExportConfigFile = exportConfigFile,
+        ExportVersion    = exportVersion,
+    });
+}
+
+// MainTrader Equity Curve Filter (opsiyonel, id=0)
+algoTrader.ClearEquityCurveFilterConfigs();
+if (ecfEnabled)
+{
+    string ecfPath = Path.Combine(AppSettings.ConfigsDir, ecfConfigFile);
+    algoTrader.ConfigureEquityCurveFilterFromConfig(ecfPath, ecfVersion, id: 0);
+    Log($"  EquityCurveFilter: {ecfConfigFile} [{ecfVersion}]");
+}
+
+// =============================================================================
+// 3. SignalChild Stratejilerini Yukle (02 script - plain MultipleTrader - ile ayni desen)
+// =============================================================================
 algoTrader.ClearStrategyConfigs();
 foreach (var sc in strategyConfigs)
     algoTrader.AddStrategyConfig(sc.id, sc.name, sc.parameters);
 
+// =============================================================================
+// 4. SignalChild Trader Config'lerini Olustur
+// =============================================================================
+algoTrader.SetChildTraderCount(strategyConfigs.Count, (entry, i) =>
+{
+    var sc = strategyConfigs[i];
+    entry.StrategyId = sc.id;
+    entry.TradeParams.ApplyFrom(sharedTradeParams);
+    entry.Signals = sharedSignals;
+
+    string cp = $"{filePrefix}_SignalChild{sc.id}";
+    entry.Save = new SingleTraderSaveConfig
+    {
+        SaveStatisticsToFile                = saveChildTraderStatistics,
+        FullStatsTxtFileName                = $"{cp}_SingleTraderStatistics.txt",
+        FullStatsCsvFileName                = $"{cp}_SingleTraderStatistics.csv",
+        MinimalStatsTxtFileName             = $"{cp}_SingleTraderStatisticsMinimal.txt",
+        MinimalStatsCsvFileName             = $"{cp}_SingleTraderStatisticsMinimal.csv",
+        FullListsTxtFileName                = $"{cp}_SingleTraderLists.txt",
+        FullListsCsvFileName                = $"{cp}_SingleTraderLists.csv",
+        MinimalListsTxtFileName             = $"{cp}_SingleTraderListsMinimal.txt",
+        MinimalListsCsvFileName             = $"{cp}_SingleTraderListsMinimal.csv",
+        FullStatsTxtFormattedFileName       = $"{cp}_SingleTraderStatisticsFormatted.txt",
+        MinimalStatsTxtFormattedFileName    = $"{cp}_SingleTraderStatisticsMinimalFormatted.txt",
+        GridStatsTxtFileName                = $"{cp}_SingleTraderStatisticsGrid.txt",
+        MinimalGridStatsTxtFileName         = $"{cp}_SingleTraderStatisticsMinimalGrid.txt",
+        PerformansTxtFileName               = $"{cp}_SingleTraderPerformans.txt",
+        PerformansCsvFileName               = $"{cp}_SingleTraderPerformans.csv",
+    };
+
+    if (exportEnabled)
+    {
+        entry.Export = new SingleTraderExportConfig
+        {
+            ExportEnabled    = exportEnabled,
+            ExportConfigFile = exportConfigFile,
+            ExportVersion    = exportVersion,
+        };
+    }
+});
+
+// =============================================================================
+// 5. Initialize ve Run
+// =============================================================================
 algoTrader.Initialize();
 
 Log($"\n{algoTrader.GetDataInfo()}");
 
-// =============================================================================
-// 3. Indicators Olustur
-// =============================================================================
-Log("\nCreating indicators...");
-var indicators = algoTrader.CreateIndicators();
+await algoTrader.RunConfirmingMultipleTraderWithProgressAsync();
+
+var confirmingMultipleTrader = algoTrader.ConfirmingMultipleTrader!;
+var writeTask = algoTrader.WriteTraderDataToFilesAsync(confirmingMultipleTrader);
 
 // =============================================================================
-// 4. ConfirmingMultipleTrader Olustur
+// 6. Ozet
 // =============================================================================
-Log("\nCreating confirmingMultipleTrader...");
-
-var confirmingMultipleTrader = new ConfirmingMultipleTrader(0, data, indicators, null);
-confirmingMultipleTrader.Reset();
-
-confirmingMultipleTrader.ConsensusMode = consensusMode;
-confirmingMultipleTrader.ConsensusMinNetCount = consensusMinNetCount;
-
-confirmingMultipleTrader.ThresholdIsPercentage = thresholdIsPercentage;
-confirmingMultipleTrader.ProfitThreshold = profitThreshold;
-confirmingMultipleTrader.LossThreshold = lossThreshold;
-confirmingMultipleTrader.Trigger = confirmationTrigger;
-confirmingMultipleTrader.ConflictMode = conflictMode;
-confirmingMultipleTrader.FlattenImmediatelyOnFlatSignal = flattenImmediatelyOnFlatSignal;
-
 var mainTrader = confirmingMultipleTrader.GetMainTrader();
 
-mainTrader.initialTradeParams!.Reset()
-    .SetBakiyeParams(ilkBakiye: ilkBakiye)
-    .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
-    .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
-    .SetKaymaParams(kaymaMiktari: kaymaMiktari);
-
-mainTrader.SymbolName = symbolName;
-mainTrader.SymbolPeriod = symbolPeriod;
-mainTrader.RunMode = TraderRunMode.TradeOnly;
-mainTrader.ConfigureUserFlagsOnce();
-mainTrader.signals.AlEnabled = true;
-mainTrader.signals.SatEnabled = true;
-mainTrader.signals.FlatOlEnabled = true;
-algoTrader.SetSingleTraderConfigureEquityCurveFilter(mainTrader);
-mainTrader.SaveStatisticsToFile = saveMainTraderStatistics;
-
-confirmingMultipleTrader.SaveStatisticsToFile = saveConfirmingMultipleTraderLists;
-
-// Not: confirmingMultipleTrader.Init() cagrisi signalMain'in AlEnabled/SatEnabled/FlatOlEnabled
-// bayraklarini da acar (bkz. ConfirmingMultipleTrader.Init() - bu, gercek veride bulunan bir
-// hatanin duzeltmesiydi, bkz. docs/todo.md).
-confirmingMultipleTrader.Init();
-
-// =============================================================================
-// 5. Child Traders Olustur
-// =============================================================================
-Log("\nCreating child traders...");
-
-foreach (var sc in strategyConfigs)
-{
-    var childTrader = new SingleTrader(sc.id, $"childTrader_{sc.id}", data, indicators, null);
-
-    childTrader.RunMode = TraderRunMode.TradeOnly;
-
-    var strategy = algoTrader.GetStrategy(sc.id);
-    childTrader.SetStrategy(strategy);
-
-    childTrader.Reset();
-
-    childTrader.SymbolName = symbolName;
-    childTrader.SymbolPeriod = symbolPeriod;
-    childTrader.LastExecutionTime = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-    childTrader.LastExecutionTimeStart = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
-
-    childTrader.initialTradeParams!.Reset()
-        .SetBakiyeParams(ilkBakiye: ilkBakiye)
-        .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
-        .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
-        .SetKaymaParams(kaymaMiktari: kaymaMiktari);
-
-    childTrader.ConfigureUserFlagsOnce();
-    childTrader.signals.AlEnabled = true;
-    childTrader.signals.SatEnabled = true;
-    childTrader.signals.FlatOlEnabled = true;
-
-    childTrader.SaveStatisticsToFile = saveChildTraderStatistics;
-
-    childTrader.Init();
-
-    confirmingMultipleTrader.AddTrader(childTrader);
-    Log($"  childTrader_{sc.id} created (strategy={sc.id})");
-}
-
-Log($"Total child traders: {confirmingMultipleTrader.GetSignalMultipleTrader().Traders.Count}");
-
-// =============================================================================
-// 6. Run Loop
-// =============================================================================
-int totalBars = data.Count;
-
-Log($"\nRunning confirmingMultipleTrader... Total bars: {totalBars}");
-
-sw.Restart();
-
-confirmingMultipleTrader.IsStarted = true;
-confirmingMultipleTrader.IsRunning = true;
-confirmingMultipleTrader.IsStopped = false;
-confirmingMultipleTrader.IsStopRequested = false;
-
-int updateFreq = 5;
-
-for (int i = 0; i < totalBars; i++)
-{
-    if (IsCancellationRequested)
-    {
-        Log($"Script cancelled by ESC at bar {i}/{totalBars}");
-        break;
-    }
-
-    if (confirmingMultipleTrader.IsStopRequested)
-    {
-        Log($"ConfirmingMultipleTrader stopped by user request at bar {i}/{totalBars}");
-        break;
-    }
-
-    confirmingMultipleTrader.Run(i);
-
-    double percentage = (i + 1) / (double)totalBars * 100.0;
-    int prevPercentBucket = (int)(((i) / (double)totalBars * 100.0) / updateFreq);
-    int currPercentBucket = (int)(percentage / updateFreq);
-    if (currPercentBucket > prevPercentBucket || i + 1 >= totalBars)
-    {
-        Log($"Progress: {i + 1}/{totalBars} ({percentage:F1}%)");
-    }
-}
-
-sw.Stop();
-long runElapsed = sw.ElapsedMilliseconds;
-
-// =============================================================================
-// 7. Ozet
-// =============================================================================
 foreach (var childTrader in confirmingMultipleTrader.GetSignalMultipleTrader().Traders)
 {
     Log($"\nChild [{childTrader.GetId()}] screening: {childTrader.TaramaOzeti}");
@@ -240,48 +274,26 @@ Log($"VirtualSignals (consensus) : Buy={virtualBuy} Sell={virtualSell} (toplam {
 Log($"Signals (konfirme)         : Buy={mainBuy} Sell={mainSell} (toplam {confirmingMultipleTrader.Signals.Count} bar)");
 
 // =============================================================================
-// 8. Finalize
+// 7. Plot (pythonnet + imgui_bundle - menudeki gibi eski tip, sadece mainTrader.PlotEnabled
+// kontrol ediliyor - runConfirmingMultipleTraderAlgoTrade() (Program.cs:1017-1028) ile ayni)
 // =============================================================================
-Log("\nFinalizing confirmingMultipleTrader...");
-
-sw.Restart();
-
-confirmingMultipleTrader.Finalize();
-
-if (!IsCancellationRequested && !confirmingMultipleTrader.IsStopRequested)
+if (mainTrader.PlotEnabled)
 {
-    if (mainTrader.SaveStatisticsToFile)
-    {
-        Log("\nSaving mainTrader statistics to files...");
-        mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
-    }
+    Log("");
+    Log("[Plot] mainTrader'in gercek/konfirme edilmis sinyalleri ciziliyor.");
 
-    foreach (var childTrader in confirmingMultipleTrader.GetSignalMultipleTrader().Traders)
-    {
-        if (childTrader.SaveStatisticsToFile)
-            childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
-    }
+    if (algoTrader.SetupPython())
+        await algoTrader.PlotSingleTraderData(mainTrader);
+    else
+        Log("[HATA] Python setup failed. PlotSingleTraderData skipped.");
 }
 
-sw.Stop();
-long finalizeElapsed = sw.ElapsedMilliseconds;
+await writeTask;
+Log("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + ConfirmingMultipleTraderLists)");
 
 // =============================================================================
-// 9. Sonuc
+// 8. Temizle
 // =============================================================================
-confirmingMultipleTrader.IsRunning = false;
-confirmingMultipleTrader.IsStopped = true;
-
-Log($"\nt_run      = {runElapsed} msec.");
-Log($"t_finalize = {finalizeElapsed} msec.");
-Log($"t_total    = {runElapsed + finalizeElapsed} msec.");
-
-Log($"\nProcessed {totalBars} bars with {confirmingMultipleTrader.GetSignalMultipleTrader().Traders.Count} child traders.");
-
-// =============================================================================
-// 10. Temizle
-// =============================================================================
-confirmingMultipleTrader?.Dispose();
 stockDataReader?.Dispose();
 
 Log("=== Bitti ===");
