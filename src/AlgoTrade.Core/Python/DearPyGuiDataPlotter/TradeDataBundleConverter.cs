@@ -99,6 +99,12 @@ public class TradeDataBundleConverter
         AddSeries("Net Return", lists.GetiriFiyatNetList);
         AddSeries("Return %", lists.GetiriFiyatYuzdeList);
         AddSeries("Net Return %", lists.GetiriFiyatYuzdeNetList);
+        // Eski tip plotter'ın (PythonPlotter.ExtractTraderData/ExtractBundleData) beklediği ama
+        // önceden bundle'a yazılmayan 3 seri (bkz. docs/todo.md "Kapatılması gereken küçük
+        // boşluklar" — 2026-08-25 eklendi).
+        AddSeries("Balance", lists.BakiyeFiyatList);
+        AddSeries("Commission", lists.KomisyonFiyatList);
+        AddSeries("Net Balance", lists.BakiyeFiyatNetList);
 
         var strategyIndicatorNames = new List<string>();
         var strategyIndicators = trader.Strategy?.GetPlotIndicators();
@@ -156,6 +162,7 @@ public class TradeDataBundleConverter
         var meta = new Dictionary<string, object?>
         {
             ["symbol"] = trader.SymbolName ?? "AlgoTrade",
+            ["periyot"] = trader.SymbolPeriod ?? "1H",
             ["intraday"] = true,
         };
 

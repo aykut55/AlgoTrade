@@ -148,12 +148,19 @@ ya da Lists.csv'yi kırılgan şekilde geri okumak) **artık gündemde değil** 
 tam-sadakatli bir dump, üstüne bir de OHLC içeriyor (Option A'nın "OHLC'yi CSV'den ayrıca oku"
 adımına bile gerek kalmıyor). Kapatılması gereken küçük boşluklar:
 
-1. **Bundle writer'da eksik 3 seri**: eski plotter `bakiye_fiyat_list`/`komisyon_fiyat_list`/
-   `bakiye_fiyat_net_list` bekliyor ama `TradeDataBundleConverter.AddSeries(...)` bunları yazmıyor
-   (satır 96-101) — `Lists`'te zaten mevcut alanlar, 3 satır ekleme.
-2. **`meta_json`'da `SymbolPeriod` yok** (sadece `symbol` var, satır 156-160) — küçük ekleme.
+1. ~~Bundle writer'da eksik 3 seri~~ — **YAPILDI (2026-08-25)**: `TradeDataBundleConverter.
+   ConvertCore`'a `AddSeries("Balance", lists.BakiyeFiyatList)` / `AddSeries("Commission",
+   lists.KomisyonFiyatList)` / `AddSeries("Net Balance", lists.BakiyeFiyatNetList)` eklendi.
+   `PythonPlotter.ExtractBundleData`'daki switch ve `inputs/python/bundle_loader.py`'deki
+   `_KNOWN_SERIES` bu 3 ismi `bakiye_fiyat_list`/`komisyon_fiyat_list`/`bakiye_fiyat_net_list`'e
+   eşleyecek şekilde güncellendi (her iki okuma yolunda da — memory/`NpzReader` ve Python/
+   `numpy.load`). Henüz gerçek bir run ile ([5] → `TestOldPlotterFromBundle.csx`) uçtan uca
+   doğrulanmadı, sadece derleme+kod incelemesiyle doğrulandı.
+2. ~~`meta_json`'da `SymbolPeriod` yok~~ — **YAPILDI (2026-08-25)**: `meta["periyot"] =
+   trader.SymbolPeriod ?? "1H"` eklendi (`ExtractBundleData`/`bundle_loader.py` zaten bu alanı
+   okuyordu, sadece yazan taraf eksikti).
 3. **`fileBaseName` hep `"latest_bundle"`** — her run bir öncekini siliyor. Kalıcı depolama için
-   per-run benzersiz konum gerekiyor (bkz. aşağıdaki depolama planı).
+   per-run benzersiz konum gerekiyor (bkz. aşağıdaki depolama planı). **Henüz yapılmadı.**
 
 ### Depolama: klasör-bazlı, sabit dosya adı
 

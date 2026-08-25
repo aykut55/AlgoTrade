@@ -532,17 +532,16 @@ public class PythonPlotter : IDisposable
         _sinyalList = reader.ReadLongArray("signal_steps").Select(v => (double)v).ToList();
 
         // indicator_names/indicator_values: TradeDataBundleConverter'ın yazdığı isimlendirilmiş
-        // seriler (PnL/PnL %/Return/Net Return/Return %/Net Return % + varsa strateji
-        // indikatörleri). Bilinen 6 isim kendi alanına, geri kalanı strategy_indicators'a gider.
+        // seriler (PnL/PnL %/Return/Net Return/Return %/Net Return %/Balance/Commission/Net Balance
+        // + varsa strateji indikatörleri). Bilinen 9 isim kendi alanına, geri kalanı
+        // strategy_indicators'a gider. Bundle bu isimlerden birini içermiyorsa (örn. eski, bu alanlar
+        // eklenmeden ÖNCE üretilmiş bir bundle) o alan boş kalır — Clear() bunu garanti ediyor.
         _karZararFiyatList.Clear();
         _karZararFiyatYuzdeList.Clear();
         _getiriFiyatList.Clear();
         _getiriFiyatNetList.Clear();
         _getiriFiyatYuzdeList.Clear();
         _getiriFiyatNetYuzdeList.Clear();
-        // NOT: bundle'da henüz bakiye/komisyon/net-bakiye serileri yok (bkz. docs/todo.md
-        // "Kapatılması gereken küçük boşluklar" — TradeDataBundleConverter'a eklenmesi gerekiyor).
-        // Eklenene kadar bu 3 seri boş kalır.
         _bakiyeFiyatList.Clear();
         _komisyonFiyatList.Clear();
         _bakiyeFiyatNetList.Clear();
@@ -566,6 +565,9 @@ public class PythonPlotter : IDisposable
                     case "Net Return":   _getiriFiyatNetList      = row.ToList(); break;
                     case "Return %":     _getiriFiyatYuzdeList    = row.ToList(); break;
                     case "Net Return %": _getiriFiyatNetYuzdeList = row.ToList(); break;
+                    case "Balance":      _bakiyeFiyatList         = row.ToList(); break;
+                    case "Commission":   _komisyonFiyatList       = row.ToList(); break;
+                    case "Net Balance":  _bakiyeFiyatNetList      = row.ToList(); break;
                     default:             strategyIndicators[names[r]] = row; break;
                 }
             }

@@ -7,10 +7,11 @@ NpzReader.cs (C#) ile ayni isi yapan, ama okumayi Python/numpy tarafinda (np.loa
 alternatif/karsilastirma yolu - bkz. PythonPlotter.PlotBundleFile (memory/NpzReader) vs
 PlotBundleFileFromDisk (bu dosya).
 
-NOT: bundle'da henuz bakiye/komisyon/net-bakiye serileri yok (bkz. docs/todo.md
-"Kapatilmasi gereken kucuk bosluklar"), o yuzden bu 3 alan bos liste kalir. MA5/MA8/...
-gibi indikator overlay'leri de (PlotSingleTraderData/PlotBundleFile'daki gibi) burada
-HESAPLANMIYOR - sadece bundle'da zaten var olan seriler (OHLC/signal/PnL/Return/strateji
+NOT: bundle bu 3 alani (Balance/Commission/Net Balance -> bakiye/komisyon/net-bakiye) icermeyen
+ESKI bir surumse (TradeDataBundleConverter'a eklenmeden once uretilmisse) bu alanlar bos liste
+kalir - _KNOWN_SERIES'te olmayan bir isim gelirse zaten strategy_indicators'a duser, hata vermez.
+MA5/MA8/... gibi indikator overlay'leri de (PlotSingleTraderData/PlotBundleFile'daki gibi) burada
+HESAPLANMIYOR - sadece bundle'da zaten var olan seriler (OHLC/signal/PnL/Return/Balance/strateji
 indikatorleri) doldurulur.
 """
 import json
@@ -27,6 +28,9 @@ _KNOWN_SERIES = {
     "Net Return": "getiri_fiyat_net_list",
     "Return %": "getiri_fiyat_yuzde_list",
     "Net Return %": "getiri_fiyat_net_yuzde_list",
+    "Balance": "bakiye_fiyat_list",
+    "Commission": "komisyon_fiyat_list",
+    "Net Balance": "bakiye_fiyat_net_list",
 }
 
 
