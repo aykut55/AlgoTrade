@@ -154,6 +154,120 @@
   `TradeDataBundleConverter`'a bir `ConvertMultipleTrader(...)` overload'ı (mainTrader + her
   child için ayrı panel/bundle) eklenmesi gerekecek.
 
+## Strateji Kapsam Envanteri — Hangi İndikatörün `Simple*Strategy` Karşılığı Var/Yok (2026-08-26, kullanıcı talebi)
+
+`src/AlgoTrade.Core/Trading/Strategies/` altındaki 24 `Simple*Strategy` dosyasının hangi
+indikatöre göre isimlendirilip yazıldığını anlamak için `src/AlgoTrade.Core/Trading/Indicators/`
+altındaki tüm public indikatör metodlarıyla çapraz kontrol edildi. Sonuç: her kategori sınıfı
+(`MomentumIndicators.cs`, `TrendIndicators.cs`, ...) gezilip her metod için bir strateji
+yazılmaya çalışılmış, ama bazı kategoriler (özellikle `SupportResistance` ve `MovingAverages`)
+hiç/çoğunlukla atlanmış. Aşağıdaki tablolar "var" (hangi strateji sınıfı) / "yok" (ileride
+yapılacak) notuyla eksikleri işaretliyor.
+
+### Momentum (`MomentumIndicators.cs`)
+
+| İndikatör metodu | Simple*Strategy karşılığı |
+|---|---|
+| `RSI` | ✅ `SimpleRSIStrategy` |
+| `MACD` | ✅ `SimpleMACDStrategy` |
+| `Stochastic` | ✅ `SimpleStochasticStrategy` |
+| `ROC` | ✅ `SimpleMomentumStrategy` |
+| `CCI` | ❌ yok — ileride yapılacak |
+| `WilliamsR` | ❌ yok — ileride yapılacak |
+| `OTTO` | ❌ yok — ileride yapılacak |
+| `StochasticOTT` | ❌ yok — ileride yapılacak |
+
+### Trend (`TrendIndicators.cs`)
+
+| İndikatör metodu | Simple*Strategy karşılığı |
+|---|---|
+| `SuperTrend` | ✅ `SimpleSuperTrendStrategy` |
+| `MOST` | ✅ `SimpleMostStrategy` |
+| `ADXWithDI` | ✅ `SimpleADXStrategy` (ADX hattı) + `SimpleDIStrategy` (DI hattı, aynı metod) |
+| `ParabolicSAR` | ✅ `SimpleParabolicSARStrategy` |
+| `Ichimoku` | ✅ `SimpleIchimokuStrategy` |
+| `AlphaTrend` | ✅ `SimpleAlphaTrendStrategy` |
+| `OTT` | ✅ `SimpleOTTStrategy` |
+| `PMax` | ✅ `SimplePMaxStrategy` |
+| `MavilimW` | ✅ `SimpleMavilimWStrategy` |
+| `Aroon` | ❌ yok — ileride yapılacak |
+| `Vortex` | ❌ yok — ileride yapılacak |
+| `PTT` | ❌ yok — ileride yapılacak |
+| `HOTTLOTT` | ❌ yok — ileride yapılacak |
+
+### Volatility (`VolatilityIndicators.cs`)
+
+| İndikatör metodu | Simple*Strategy karşılığı |
+|---|---|
+| `ATR` | ✅ `SimpleATRStrategy` |
+| `BollingerBands` | ✅ `SimpleBollingerStrategy` |
+| `KeltnerChannel` | ❌ yok — ileride yapılacak |
+| `DonchianChannel` | ❌ yok — ileride yapılacak |
+
+### Volume (`VolumeIndicators.cs`)
+
+| İndikatör metodu | Simple*Strategy karşılığı |
+|---|---|
+| `MFI` | ✅ `SimpleMFIStrategy` |
+| `CMF` | ✅ `SimpleCMFStrategy` |
+| `OBV` | ❌ yok — ileride yapılacak |
+| `VWAP` | ❌ yok — ileride yapılacak |
+
+### PriceAction (`PriceActionIndicators.cs`)
+
+| İndikatör metodu | Simple*Strategy karşılığı |
+|---|---|
+| `HHV`/`LLV` (ham, `Indicators.Utils` üzerinden) | ✅ `SimpleHHVLLVStrategy`, `SimpleHYLYStrategy` (ikisi de elle `Utils.HHV`/`Utils.LLV` kullanıyor) |
+| `HigherHighLowerLow` (bool-flag versiyonu) | ❌ yok — ileride yapılacak |
+| `SwingPoints` | ❌ yok — ileride yapılacak |
+| `ZigZag` | ❌ yok — ileride yapılacak |
+| `Fractals` | ❌ yok — ileride yapılacak |
+
+### SupportResistance (`SupportResistanceIndicators.cs`) — **TÜM KATEGORİ EKSİK**
+
+13 metodun hiçbiri bir `Simple*Strategy`'ye sarmalanmamış — muhtemelen bilerek atlanmış, çünkü
+bunlar "seviye" indikatörleri (pivot/fibonacci), MA/RSI gibi doğrudan bar-bar cross mantığına
+oturmuyor (breakout/level-touch gibi farklı bir sinyal şekli gerektirir):
+
+`FibonacciRetracement`, `FibonacciRetracementAuto`, `ClassicPivotPoints`, `FibonacciPivotPoints`,
+`WoodiePivotPoints`, `DeMarkPivotPoints`, `FloorPivotPoints`, `CamarillaPivotPoints`,
+`CPRPivotPoints`, `ClassicExtendedPivotPoints`, `FibonacciExtensionPivotPoints`,
+`TraditionalFloorPivotPoints`, `AlternativeClassicPivotPoints`, `MidPivotPoints` — hepsi ❌ yok,
+ileride yapılacak.
+
+### MovingAverages (`MovingAverageCalculator.*.cs`) — 65 metoddan sadece 2'si kullanılıyor
+
+Sadece `SMA` (✅ `SimpleMAStrategy`, `SimpleMACrossStrategy`, `SimpleATRStrategy`,
+`SimpleKairiStrategy` — hepsi sabit/hardcoded SMA, seçilebilir değil) ve `T3`
+(✅ `SimpleTillsonT3Strategy`) fiilen kullanılıyor. Kalan 63 metodun hiçbiri hiçbir stratejide yok:
+
+- **Ana (`MovingAverageCalculator.cs`)**: `EMA`, `WMA`, `HullMA`, `DEMA`, `TEMA`, `VWMA`, `LSMA`,
+  `Triangular`, `Wilder`, `SMMA` (+ genel `Calculate(source, method, period)` dispatcher —
+  `MAMethod` enum'unu parametre alıp hepsini tek yerden çağırabiliyor)
+- **Advanced**: `KAMA`, `VIDYA`, `ZLEMA`, `ALMA`, `JMA`
+- **Advanced2**: `COVWMA`, `COVWEMA`, `FAMA`, `TIME_SERIES`
+- **Compound**: `DSMA`, `DWMA`, `DVWMA`, `DHULL`, `DZLEMA`, `DSMMA`, `DSSMA`, `TSMA`, `TWMA`,
+  `TVWMA`, `THULL`, `TZLEMA`, `TSMMA`, `TSSMA`
+- **Exotic**: `FRAMA`, `MAMA`, `MCGINLEY`, `VAMA`, `ADEMA`, `EDMA`, `EDSMA`, `AHMA`, `EHMA`,
+  `ALSMA`, `AARMA`, `MCMA`, `LEOMA`, `CMA`, `CORMA`, `AUTOL`, `XEMA`
+- **Specialized**: `SRWMA`, `SWMA`, `EVWMA`, `REGMA`, `REMA`, `REPMA`, `RSIMA`, `ETMA`, `TREMA`,
+  `TRSMA`, `THMA`
+- **Statistical**: `MEDIAN`, `GMA`, `ZSMA`
+
+❌ Hepsi ileride yapılacak — ama tek tek 63 ayrı strateji yazmak yerine, `SimpleMAStrategy`'nin
+`MAMethod` enum'unu parametre alacak şekilde genişletilip (zaten var olan
+`Indicators.MA.Calculate(source, method, period)` genel dispatcher'ı üzerinden) tek strateji
+içinde hepsinin denenebilmesi daha mantıklı görünüyor — kullanıcının planladığı "MA denemeleri"
+tam olarak bu ihtiyaç (2026-08-26 konuşması).
+
+### İsimlendirme notu (2026-08-26 konuşmasından)
+
+`SimpleMAStrategy` ile `SimpleMACrossStrategy` **birebir aynı mantığı** (fast/slow SMA
+golden/death cross) iki farklı isimle taşıyor — gerçek bir davranış farkı yok, muhtemelen kazara
+duplicate. Yeni bir indikatöre isim verirken ("Cross" gibi ekler eklerken) bu tekrara düşmemeye
+dikkat: "Cross" eki sadece gerçekten farklı bir sinyal mekanizmasını (örn. Donchian Channel'da
+fiyatın üst/alt bandı kırması) ifade ediyorsa kullanılmalı.
+
 ## Strateji Karşılaştırma — Getiri Eğrisi Görselleştirme (migration-guide.md Madde 10, 2026-08-21)
 
 `MultipleTrader` + yeni `WriteMultipleTraderStatistics()` (bkz. "Done" bölümü) sayesinde
