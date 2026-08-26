@@ -2,18 +2,34 @@
 
 ## Todo
 
-- [ ] **[7] SingleTraderOptimizer ↔ `03_RunSingleTraderOptWithProgressAsync.csx` senkronize
-  edilecek** (2026-08-24, bkz. [docs/manual/07-menu-vs-script-parity.md](manual/07-menu-vs-script-parity.md)
-  §3 — [5]/01 ve [6]/02 için aynı iş zaten yapıldı). İki bilinen açık madde:
-  1. **🔴 Kritik**: script `algoTrader.SetSingleTraderOptSignalsConfig(...)` çağırmıyor →
-     `SingleTraderOptimizer.ApplyConfigsToTrader()` içinde her test trader `ConfigureUserFlagsOnce()`
-     ile tüm AL/SAT sinyallerini `false`'a resetliyor ve bir daha `true` yapılmıyor →
-     optimizasyon muhtemelen hiçbir kombinasyonda işlem açmıyor (§2'de MultipleTrader script'inde
-     bulunup düzeltilen hatayla birebir aynı kalıp — orada gerçekten sıfır işlem olduğu doğrulanmıştı).
-  2. **🟡**: `SetSingleTraderOptLogConfig`/`SetSingleTraderOptSortOutputConfig` çağrılmadığı için
-     CSV/TXT optimizasyon log + sıralı sonuç dosyaları hiç yazılmıyor, script sadece konsola
-     en iyi sonucu basıyor.
-  Ayrıca §1/§2'de yapılan ReadData filtreleme senkronizasyonunun aynısı buraya da taşınabilir.
+- [ ] **O(n²) performans bug'ı — indikatör hesaplarında HHV/LLV/SMA/LSMA döngü İÇİNDE tekrar
+  tekrar hesaplanıyor (2026-08-26, `GenerateReplaySampleBundles.csx` ile 1.9M barlık veride
+  `SimpleStochasticStrategy` pratikte hiç bitmeyince bulundu).** `HHV(...)`/`LLV(...)` kendileri
+  zaten O(n) — tüm diziyi tek seferde hesaplayıp `double[]` döndürüyor — ama bazı fonksiyonlar
+  bunu bir döngünün İÇİNDE, her bar `i` için AYRI AYRI çağırıp `[i]` ile indeksliyordu →
+  O(n) × O(n) = O(n²). 1.9M bar için pratikte sonsuza kadar sürüyor.
+  - ✅ **Düzeltildi** (`MomentumIndicators.cs`, HHV/LLV çağrısı döngü dışına taşındı → O(n)):
+    `Stochastic()`, `WilliamsR()`, `StochasticOTT()`.
+  - 🔲 **Bulundu ama DÜZELTİLMEDİ** (period sabit olmadığı için basitçe döngü dışına taşınamıyor,
+    algoritmanın O(n) tek-geçişli yeniden yazılması gerekiyor — ayrı, daha dikkatli bir iş):
+    - `MovingAverageCalculator.Exotic.cs:375` — `ALSMA()` (Adaptive LSMA), her bar için farklı
+      bir "adaptive period" ile `LSMA(...)` çağırıyor.
+    - `MovingAverageCalculator.Specialized.cs:186` — `REGMA()`, `SMA(...)` çağrısını döngü
+      içinde yapıyor (`Math.Min(period, i + 1)` ile değişken period).
+  - **Tüm `src/AlgoTrade.Core/Trading/Indicators/` ağacında `grep -rn "\)\[i\]"` ile tarandı
+    (2026-08-26)** — yukarıdaki 5 yer (3 düzeltilen + 2 açık) dışında başka örnek çıkmadı. Ama bu
+    sadece "aynı satırda `)[i]`" kalıbını yakalıyor — döngü gövdesi birden fazla satıra
+    yayılmışsa (örn. sonucu değişkene atayıp birkaç satır sonra indekslemek) kaçırılmış olabilir,
+    o yüzden tam garanti değil.
+
+- [x] ~~[7] SingleTraderOptimizer ↔ `03_RunSingleTraderOptWithProgressAsync.csx` senkronize
+  edilecek~~ — **YAPILMIŞ, stale madde düzeltildi (doğrulandı 2026-08-26)**: bu satır 2026-08-24
+  tarihli bir kritik bug'ı ("script SignalsConfig çağırmıyor, optimizasyon 0 işlem üretiyor")
+  tarif ediyordu, ama fix aynı gün (`8341cab`, `eb4af58` commit'leri) yapılmış ve bu konuşma
+  başlamadan önce repoya girmişti — todo.md güncellenmemiş kalmıştı. `03_RunSingleTraderOptWithProgressAsync.csx`
+  şu an `SetSingleTraderOptSignalsConfig`/`SetSingleTraderOptLogConfig`/`SetSingleTraderOptSortOutputConfig`
+  üçünü de çağırıyor (kontrol edildi); `docs/manual/07-menu-vs-script-parity.md` §3 de "hepsi
+  düzeltildi, kalan tek fark ⚪ (kasıtlı) config-kaynağı farkı" diyor.
 
 - [x] ~~venv'ler merkezileştirilecek~~ — **YAPILMIŞ (doğrulandı 2026-08-25)**: `inputs/python/.venv`,
   `src/DearPyGuiDataPlotter/.venv`, `src/DearImGuiBundleDataPlotter/.venv` artık yok, sadece
@@ -62,7 +78,15 @@
 
 - [ ] `src/DearPyGuiDataPlotter` içinde AlgoTrade tarafında yapılan değişikliklerin (panelManager.py, guiManager.py, panel.py, scriptPanel.py, tradeSignalRenderer.py, scripts/default.py, ve yeni eklenen src/plotting/runtimeCommandManager.py) `D:\Aykut\Projects\Python ImGui Denemeleri\PythonImGuiProjects\DearPyGuiDataPlotter` tarafına da yansıtılması gerekiyor (kaynak proje geride kaldı, senkronize değil)
 
-- [ ] `inputs/python/` altındaki kodlar (data_plotter.py, data_plotter_img_bundle.py, panel.py, panel_data.py, plotter.py, trade_data.py, multiple_data_plotter.py, main.py) `src/` altında uygun bir klasöre taşınacak ve proje bu yeni dizindeki kodlarla çalışacak şekilde güncellenecek. Not: `data_plotter_img_bundle.py` (154 KB, imgui_bundle tabanlı tam gelişmiş multi-panel plotter) `src/DearImGuiBundleDataPlotter`'ın (şu an sadece boş "Hello World" iskeleti) hedeflediği içerik gibi duruyor.
+- [x] ~~`inputs/python/` altındaki kodlar `src/` altında uygun bir klasöre taşınacak~~ —
+  **YAPILDI (2026-08-26)**: 9 dosya (`main.py`, `trade_data.py`, `data_plotter.py`,
+  `data_plotter_img_bundle.py`, `multiple_data_plotter.py`, `panel.py`, `panel_data.py`,
+  `plotter.py`, `bundle_loader.py`) `git mv` ile `src/PythonPlotter/`'a taşındı,
+  `AppSettings.PythonScriptsDir` güncellendi, Menü [5] ile uçtan uca doğrulandı. `inputs/python/`
+  artık sadece runtime bundle çıktı klasörlerini içeriyor (yukarıdaki "çift ROOT" maddesine bkz.).
+  Not: `data_plotter_img_bundle.py` (154 KB, imgui_bundle tabanlı tam gelişmiş multi-panel plotter)
+  hâlâ `src/DearImGuiBundleDataPlotter`'ın (şu an boş "Hello World" iskeleti) hedeflediği içerik
+  gibi duruyor — bu ayrı madde (aşağıda `DearImGuiBundleDataPlotter` implementasyonu) hâlâ açık.
 
 - [ ] `inputs/python/` altındaki kodların orijinal olarak geliştirildiği ayrı Python projesi bulunacak ve buraya (bu maddeye) linklenecek. Şimdiye kadarki aramada kesin kaynak bulunamadı; `D:\Aykut\Projects\AlgoTradeWithPaython\src\data_plotter\data_plotter.py` aynı soydan ama birebir kaynak değil (imgui_bundle kullanmıyor, içerik farklı).
 

@@ -179,6 +179,14 @@ namespace AlgoTrade.Core.Trading.Indicators.Momentum
 
             var k = new double[closes.Length];
 
+            // HHV/LLV kendileri zaten O(n) - tum diziyi tek seferde hesaplayip donduruyor.
+            // Eskiden bu cagri asagidaki dongunun ICINDE, her bar icin ayri ayri yapiliyordu
+            // (O(n) * O(n) = O(n^2) - buyuk veri setlerinde (~1M+ bar) pratikte hic bitmiyordu,
+            // digerinin aksine strateji sadece bunu kullaniyor). Dongu disina alinip bir kere
+            // hesaplanarak O(n)'e indirildi (2026-08-26).
+            var hhvArray = _manager.Utils.HHV(highs, kPeriod);
+            var llvArray = _manager.Utils.LLV(lows, kPeriod);
+
             // Calculate %K
             for (int i = 0; i < closes.Length; i++)
             {
@@ -189,8 +197,8 @@ namespace AlgoTrade.Core.Trading.Indicators.Momentum
                 }
 
                 // Find highest high and lowest low in the period
-                var hhv = _manager.Utils.HHV(highs, kPeriod)[i];
-                var llv = _manager.Utils.LLV(lows, kPeriod)[i];
+                var hhv = hhvArray[i];
+                var llv = llvArray[i];
 
                 var range = hhv - llv;
                 if (range > 0)
@@ -310,12 +318,16 @@ namespace AlgoTrade.Core.Trading.Indicators.Momentum
                 williamsR[i] = double.NaN;
             }
 
+            // HHV/LLV dongu disina alindi - O(n^2) yerine O(n) (bkz. Stochastic() ayni fix, 2026-08-26).
+            var hhvArray = _manager.Utils.HHV(highs, period);
+            var llvArray = _manager.Utils.LLV(lows, period);
+
             // Calculate Williams %R
             for (int i = period - 1; i < closes.Length; i++)
             {
                 // Find highest high and lowest low in the period
-                var hhv = _manager.Utils.HHV(highs, period)[i];
-                var llv = _manager.Utils.LLV(lows, period)[i];
+                var hhv = hhvArray[i];
+                var llv = llvArray[i];
 
                 var range = hhv - llv;
                 if (range > 0)
@@ -484,6 +496,10 @@ namespace AlgoTrade.Core.Trading.Indicators.Momentum
             var lows = _manager.GetLowPrices();
             var length = closes.Length;
 
+            // HHV/LLV dongu disina alindi - O(n^2) yerine O(n) (bkz. Stochastic() ayni fix, 2026-08-26).
+            var hhvArray = _manager.Utils.HHV(highs, kPeriod);
+            var llvArray = _manager.Utils.LLV(lows, kPeriod);
+
             // Calculate raw stochastic %K
             var rawK = new double[length];
             for (int i = 0; i < length; i++)
@@ -494,8 +510,8 @@ namespace AlgoTrade.Core.Trading.Indicators.Momentum
                     continue;
                 }
 
-                var hhv = _manager.Utils.HHV(highs, kPeriod)[i];
-                var llv = _manager.Utils.LLV(lows, kPeriod)[i];
+                var hhv = hhvArray[i];
+                var llv = llvArray[i];
 
                 var range = hhv - llv;
                 if (range > 0)
