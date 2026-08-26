@@ -16,7 +16,7 @@ namespace AlgoTrade.Core.Python;
 
 /// <summary>
 /// pythonnet üzerinden Python tabanlı görselleştirme işlemlerini yönetir.
-/// inputs/python/ klasöründeki Python script'lerini çağırır.
+/// src/PythonPlotter/ klasöründeki Python script'lerini çağırır.
 /// </summary>
 public class PythonPlotter : IDisposable
 {
@@ -35,7 +35,7 @@ public class PythonPlotter : IDisposable
     /// <summary>
     /// Python script'lerinin bulunduÄŸu klasör.
     /// sys.path'e eklenir; buraya konan .py dosyaları import edilebilir.
-    /// Varsayılan: AppSettings.PythonScriptsDir (inputs/python/).
+    /// Varsayılan: AppSettings.PythonScriptsDir (src/PythonPlotter/).
     /// </summary>
     public string PythonScriptsDir { get; set; } = AppSettings.PythonScriptsDir;
 
@@ -221,7 +221,7 @@ public class PythonPlotter : IDisposable
     // yazılan kodlardan çağrılıyor. Birini kullanmak istiyorsan açıkça o metodu çağırman gerekiyor.
 
     /// <summary>
-    /// inputs/python/main.py içindeki hello() fonksiyonunu çağırır.
+    /// src/PythonPlotter/main.py içindeki hello() fonksiyonunu çağırır.
     /// Konsola "Hello Python" yazdırmak için basit bir test.
     /// </summary>
     public void RunHello()
@@ -235,7 +235,7 @@ public class PythonPlotter : IDisposable
 
     /// <summary>
     /// Optimizasyon sonuçlarını Python'a aktarıp görselleştirir.
-    /// inputs/python/plotter.py içindeki show_optimization_results(data) fonksiyonunu çağırır.
+    /// src/PythonPlotter/plotter.py içindeki show_optimization_results(data) fonksiyonunu çağırır.
     /// </summary>
     /// <param name="results">SingleTraderOptimizer.Results listesi.</param>
     public void PlotOptimizationResults(List<OptimizationResult> results)
@@ -268,7 +268,7 @@ public class PythonPlotter : IDisposable
 
     /// <summary>
     /// SingleTrader koşum sonuçlarını Python'a aktarıp görselleştirir.
-    /// inputs/python/plotter.py içindeki show_single_trader_data(data) fonksiyonunu çağırır.
+    /// src/PythonPlotter/plotter.py içindeki show_single_trader_data(data) fonksiyonunu çağırır.
     /// Pencere kapanana dek bloklar.
     /// </summary>
     /// <param name="trader">Finalize() çağrılmış SingleTrader instance'ı.</param>
@@ -393,7 +393,7 @@ public class PythonPlotter : IDisposable
     /// <param name="bundlePath">.npz bundle dosyasının yolu.</param>
     /// <param name="viewPath">
     /// .view.json dosyasının yolu (opsiyonel). Şu an KULLANILMIYOR — eski tip plotter'ın kendi
-    /// sabit panel yerleşimi var (bkz. inputs/python/data_plotter.py); ileride view.json'daki
+    /// sabit panel yerleşimi var (bkz. src/PythonPlotter/data_plotter.py); ileride view.json'daki
     /// panel/seri seçimini yansıtmak için ayrılmış bir parametre.
     /// </param>
     public void PlotBundleFile(string bundlePath, string? viewPath = null)
@@ -438,7 +438,7 @@ public class PythonPlotter : IDisposable
     /// <summary>
     /// <see cref="PlotBundleFile"/> ile aynı sonucu üretir, ama okuma C# tarafında
     /// (<see cref="NpzReader"/>) değil, Python tarafında numpy.load(...) ile yapılır
-    /// (inputs/python/bundle_loader.py: build_trade_data_from_bundle). NpzReader'a hiç ihtiyaç
+    /// (src/PythonPlotter/bundle_loader.py: build_trade_data_from_bundle). NpzReader'a hiç ihtiyaç
     /// duymayan, numpy'nin kendi .npz parser'ını kullanan alternatif/karşılaştırma yolu — MA5/8/...
     /// gibi indikatör overlay'lerini HESAPLAMAZ (sadece bundle'da zaten var olan seriler doldurulur).
     /// Pencere kapanana dek bloklar.

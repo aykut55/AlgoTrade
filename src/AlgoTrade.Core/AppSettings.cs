@@ -13,23 +13,36 @@ public static class AppSettings
     public static string InputsDir        => Path.Combine(_baseDir, "inputs");
     public static string ConfigsDir       => Path.Combine(InputsDir, "configs");
     public static string ScriptsDir       => Path.Combine(InputsDir, "scripts");
-    public static string PythonScriptsDir => Path.Combine(InputsDir, "python");
+    /// <summary>
+    /// Eski tip plotter'ın (PythonPlotter, pythonnet/imgui_bundle) Python KAYNAK KODU
+    /// (main.py/trade_data.py/data_plotter.py/...) — 2026-08-26'da inputs/python/'dan buraya
+    /// taşındı (bkz. docs/todo.md madde 29). sys.path'e eklenen klasör budur.
+    /// </summary>
+    public static string PythonScriptsDir => Path.Combine(_baseDir, "src", "PythonPlotter");
+
     public static string DearPyGuiDataPlotterDir => Path.Combine(_baseDir, "src", "DearPyGuiDataPlotter");
+
+    /// <summary>
+    /// inputs/python/ altındaki, kod TAŞINDIKTAN SONRA (2026-08-26) geriye kalan ve sadece
+    /// runtime bundle çıktısı için kullanılan alt klasörlerin ortak kökü.
+    /// </summary>
+    private static string PythonRuntimeDataDir => Path.Combine(InputsDir, "python");
 
     /// <summary>
     /// Yeni tip plotter'ın (DearPyGuiDataPlotter) AlgoTrade'e özgü, kendi runtime bundle
     /// kopyası için kullandığı klasör — "normal" konumun (<see cref="DearPyGuiDataPlotterDir"/>'ın
     /// altındaki inputs/, bağımsız projeden kalma) YANINDA, ek bir kopya (2026-08-26, bkz.
-    /// docs/todo.md "Kalıntı çift ROOT yapısı").
+    /// docs/todo.md "Kalıntı çift ROOT yapısı"). NOT: <see cref="PythonScriptsDir"/>'dan BAĞIMSIZ
+    /// tutulur — kod nereye taşınırsa taşınsın bu, runtime veri konumu olarak sabit kalır.
     /// </summary>
-    public static string DearPyGuiPlotterBundleDir => Path.Combine(PythonScriptsDir, "dearPyGuiDataPlotter");
+    public static string DearPyGuiPlotterBundleDir => Path.Combine(PythonRuntimeDataDir, "dearPyGuiDataPlotter");
 
     /// <summary>
     /// Eski tip plotter'ın (PythonPlotter, pythonnet/imgui_bundle) AlgoTrade'e özgü, kendi
     /// runtime bundle kopyası için kullandığı klasör (2026-08-26, bkz. docs/todo.md "Kalıntı
-    /// çift ROOT yapısı").
+    /// çift ROOT yapısı"). NOT: <see cref="PythonScriptsDir"/>'dan BAĞIMSIZ tutulur.
     /// </summary>
-    public static string PythonPlotterBundleDir => Path.Combine(PythonScriptsDir, "pythonPlotter");
+    public static string PythonPlotterBundleDir => Path.Combine(PythonRuntimeDataDir, "pythonPlotter");
 
     public static string OutputsDir       => Path.Combine(_baseDir, "outputs");
     public static string LogsDir          => Path.Combine(OutputsDir, "logs");

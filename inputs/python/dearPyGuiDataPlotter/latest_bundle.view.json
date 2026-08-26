@@ -31,28 +31,6 @@
             255,
             255
           ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 1 Signal",
-          "label": "Child 1 Signal",
-          "color": [
-            51,
-            204,
-            255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 2 Signal",
-          "label": "Child 2 Signal",
-          "color": [
-            255,
-            204,
-            0,
-            255
-          ]
         }
       ],
       "yLabel": "Signals",
@@ -78,28 +56,6 @@
             0,
             255
           ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 1 PnL",
-          "label": "Child 1 PnL",
-          "color": [
-            51,
-            204,
-            255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 2 PnL",
-          "label": "Child 2 PnL",
-          "color": [
-            255,
-            204,
-            0,
-            255
-          ]
         }
       ],
       "yLabel": "PnL Price"
@@ -118,28 +74,6 @@
           "color": [
             255,
             255,
-            0,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 1 PnL %",
-          "label": "Child 1 PnL %",
-          "color": [
-            51,
-            204,
-            255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 2 PnL %",
-          "label": "Child 2 PnL %",
-          "color": [
-            255,
-            204,
             0,
             255
           ]
@@ -186,6 +120,26 @@
         }
       ],
       "yLabel": "Return %"
+    },
+    {
+      "id": "strategyIndicators",
+      "name": "Strategy Indicators",
+      "caption": "MOST / EXMOV",
+      "height": 260,
+      "ySyncId": 6,
+      "series": [
+        {
+          "source": "indicator",
+          "name": "MOST",
+          "label": "MOST"
+        },
+        {
+          "source": "indicator",
+          "name": "EXMOV",
+          "label": "EXMOV"
+        }
+      ],
+      "yLabel": "Indicators"
     }
   ]
 }

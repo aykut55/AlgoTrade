@@ -1,6 +1,6 @@
 // SHOW_CHILD_TRADERS_IN_NEW_PLOTTER: açmak için aşağıdaki satırın başındaki "//"yi kaldırın.
 // Açarsanız ConvertMultipleTrader, child trader'ları Return/Return % panellerine de overlay
-// olarak ekler (bkz. docs/yapilacak.md, inputs/python/multiple_data_plotter.py:ShowChildsData
+// olarak ekler (bkz. docs/yapilacak.md, src/PythonPlotter/multiple_data_plotter.py:ShowChildsData
 // ile aynı felsefe). #define using'lerden önce olmak zorunda (C# kuralı), bu yüzden dosyanın
 // en başında duruyor. Varsayılan: kapalı (sadece mainTrader).
 //#define SHOW_CHILD_TRADERS_IN_NEW_PLOTTER
@@ -35,10 +35,10 @@ public class TradeDataBundleConverter
     /// <summary>
     /// MultipleTrader'ın mainTrader'ını (bkz. <see cref="MultipleTrader.GetMainTrader"/>)
     /// ConvertSingleTrader'ın yaptığının aynısıyla bundle'a çevirir. Eski tip (pythonnet)
-    /// MultipleDataPlotter (inputs/python/multiple_data_plotter.py) ile BİREBİR aynı davranış:
+    /// MultipleDataPlotter (src/PythonPlotter/multiple_data_plotter.py) ile BİREBİR aynı davranış:
     /// Signals / PnL Price / PnL % panelleri her ZAMAN tüm trader'ları (main + tüm child'lar)
     /// overlay olarak gösterir — koşulsuz. SADECE Return / Return % panelleri
-    /// inputs/python/multiple_data_plotter.py:ShowChildsData sabitiyle AYNI felsefedeki
+    /// src/PythonPlotter/multiple_data_plotter.py:ShowChildsData sabitiyle AYNI felsefedeki
     /// SHOW_CHILD_TRADERS_IN_NEW_PLOTTER preprocessor sembolüyle kontrol edilir (varsayılan
     /// kapalı — sadece mainTrader) — açmak için .csproj'daki &lt;DefineConstants&gt;'a ekleyin
     /// (bkz. docs/yapilacak.md).
@@ -197,7 +197,7 @@ public class TradeDataBundleConverter
         return (bundlePath, viewPath);
     }
 
-    /// <summary>inputs/python/multiple_data_plotter.py:_TRADER_COLORS ile aynı palet (0-255 RGBA'ya çevrilmiş, index 0=mainTrader/beyaz).</summary>
+    /// <summary>src/PythonPlotter/multiple_data_plotter.py:_TRADER_COLORS ile aynı palet (0-255 RGBA'ya çevrilmiş, index 0=mainTrader/beyaz).</summary>
     private static readonly int[][] TraderColors =
     {
         new[] { 255, 255, 255, 255 }, // mainTrader — beyaz (şu an kullanılmıyor, index paritesi için duruyor)
@@ -289,7 +289,7 @@ public class TradeDataBundleConverter
         int[] yellow = new[] { 255, 255, 0, 255 };
 
         // Child overlay'lerde gross (Return/Return %) soluk, net (Net Return/Net Return %) tam
-        // renkte çizilir — inputs/python/multiple_data_plotter.py'deki dim/color ayrımıyla aynı.
+        // renkte çizilir — src/PythonPlotter/multiple_data_plotter.py'deki dim/color ayrımıyla aynı.
         static int[] Dim(int[] color) => new[] { color[0] / 2, color[1] / 2, color[2] / 2, 178 };
 
         static Dictionary<string, object?> Panel(string id, string name, string caption, int height, int ySyncId,

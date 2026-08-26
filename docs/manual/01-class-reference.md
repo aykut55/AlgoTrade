@@ -316,7 +316,7 @@ tam olarak ele alınıyor (iki sınıf arasında birebir ortak olduğu için tek
 
 **Rolü**: `AlgoTrader`'ın eski/varsayılan plot yolu. pythonnet ile aynı process içinde gömülü
 bir Python yorumlayıcısı başlatır, `SingleTrader`/`MultipleTrader` koşum sonuçlarını doğrudan
-`PyList`/`PyDict` nesnelerine çevirip Python tarafında (`inputs/python/`) bir plot penceresi
+`PyList`/`PyDict` nesnelerine çevirip Python tarafında (`src/PythonPlotter/`) bir plot penceresi
 açtırır.
 
 **Ne zaman kullanılır**: `AppConfig.json`'da ilgili trader'ın `Plot.PlotEnabled=true` olduğunda,

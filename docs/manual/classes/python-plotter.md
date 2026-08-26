@@ -10,10 +10,10 @@
 ### Dosyalar
 
 - `src/AlgoTrade.Core/Python/PythonPlotter.cs` (692 satır)
-- `inputs/python/main.py` — `hello()`/`print_data_info(trade_data)`/`print_multiple_trader_data(trader_list)`
+- `src/PythonPlotter/main.py` — `hello()`/`print_data_info(trade_data)`/`print_multiple_trader_data(trader_list)`
   giriş noktaları (isimler yanıltıcı — ikisi de gerçekten PLOT açıyor, sadece isimlendirme eski)
-- `inputs/python/data_plotter.py` (`DataPlotter.plot()`), `inputs/python/multiple_data_plotter.py`
-  (`MultipleDataPlotter.plot()`), `inputs/python/trade_data.py` (`TradeData` — C#'tan doldurulan
+- `src/PythonPlotter/data_plotter.py` (`DataPlotter.plot()`), `src/PythonPlotter/multiple_data_plotter.py`
+  (`MultipleDataPlotter.plot()`), `src/PythonPlotter/trade_data.py` (`TradeData` — C#'tan doldurulan
   veri sözleşmesi) — Python tarafı, bu dokümanın kapsamı dışında.
 
 ### Rolü
@@ -184,7 +184,7 @@ public class PythonPlotter : IDisposable
   `AppSettings.ResolvePythonDll()` (proje kökündeki ortak `.venv`'in `pyvenv.cfg`'sinden — hangi
   Python sürümüyle kurulduysa otomatik onu bulur, sistem geneli kurulumlara BİLEREK bakmıyor —
   ABI uyuşmazlığı riskinden kaçınmak için, kod içi yorumda detaylı gerekçelendirilmiş).
-- `Py.GIL()` içinde: `sys.path`'e `PythonScriptsDir` (`inputs/python/`) + venv `site-packages`
+- `Py.GIL()` içinde: `sys.path`'e `PythonScriptsDir` (`src/PythonPlotter/`) + venv `site-packages`
   eklenir; `imgui_bundle` klasörü varsa `os.add_dll_directory(...)` ile native DLL arama yoluna
   eklenir (imgui_bundle'ın kendi native bağımlılıkları için).
 - `RunHello()` — `main.hello()`'yu çağırır (`SetupPython(runHello: true)`'nun varsayılan
@@ -199,7 +199,7 @@ public class PythonPlotter : IDisposable
    (`trader.Strategy?.GetPlotIndicators()`, stratejinin kendi çizilecek indikatörleri) +
    `_title`/`_periyot` (`SymbolName`/`SymbolPeriod`) alanlarını instance field'larına kopyalar.
 3. `BuildPyTradeData()` — `Py.GIL()` altında, her diziyi `PyList`/`PyFloat`/`PyString`'e çevirip
-   `inputs/python/trade_data.py`'daki `TradeData()` nesnesinin (`td.date_times`, `td.opens`, ...
+   `src/PythonPlotter/trade_data.py`'daki `TradeData()` nesnesinin (`td.date_times`, `td.opens`, ...
    19+ alan) property'lerine atar. `td.indicators` her zaman BOŞ `PyDict()` — asıl
    `IndicatorManager.GetCachedIndicators()`'tan gelen indikatörler **performans sorunu nedeniyle
    yorum satırı** (kod içi not: "Performans sorunu yasatır gibi duruyor, o yuzden commentledim").
@@ -215,7 +215,7 @@ public class PythonPlotter : IDisposable
 > gövdesindeki asıl plot satırları (`dynamic plotModule = Py.Import("plotDataImgBundleNew");
 > plotModule.plot_data_img_bundle_new(tradeData);`) **yorum satırı** (`PythonPlotter.cs:543-546`).
 > Fiilen çalışan satır `mainModule.print_data_info(tradeData)` — isim "print" olsa da, Python
-> tarafında (`inputs/python/main.py:4-6`) bu fonksiyon `DataPlotter(trade_data).plot()`'u
+> tarafında (`src/PythonPlotter/main.py:4-6`) bu fonksiyon `DataPlotter(trade_data).plot()`'u
 > çağırıyor, yani GERÇEKTEN bir plot penceresi açıyor — sadece C# tarafındaki metod/import
 > isimleri (`CallPlotDataImgBundleNew`, `plotDataImgBundleNew` modülü) artık kullanılmayan,
 > muhtemelen denenip vazgeçilmiş bir ALTERNATIF plot yoluna ait kalıntılar. `imgui_bundle`'ın
@@ -246,7 +246,7 @@ public void PlotOptimizationResults(List<OptimizationResult> results)
 > Kaynak](05-singletraderoptimizer.md#runsingletraderoptwithprogressasync--tam-kaynak-algotradercs2744-2934))
 > hiçbir yerinde `SetupPython()`/`PlotOptimizationResults(...)` çağrısı yok — optimizasyon
 > koşumu bittiğinde sonuçlar sadece Console'a loglanıyor ve dosyaya yazılıyor, hiçbir zaman
-> Python'a görselleştirme için gönderilmiyor. `inputs/python/plotter.py`'deki
+> Python'a görselleştirme için gönderilmiyor. `src/PythonPlotter/plotter.py`'deki
 > `show_optimization_results(data)` fonksiyonu da muhtemelen yazılmış ama entegre edilmemiş.
 
 ## Çağrı Zinciri — Menüden Çağrılma (Program.cs → AlgoTrader → PythonPlotter)
