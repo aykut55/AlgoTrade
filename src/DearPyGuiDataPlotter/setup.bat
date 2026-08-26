@@ -1,11 +1,37 @@
 @echo off
 REM ============================================================
-REM  PythonDataPlotter - ilk kurulum
-REM  dearpygui==2.3.1
-REM  imgui-bundle==1.92.801
-REM  .venv olusturur + requirements kurar + .vscode ayarlar + main.py + runMe.bat
-REM  Tekrar calistirilabilir (var olanlari atlar).
+REM  DEVRE DISI (2026-08-26) - bu script artik CALISTIRILMIYOR.
+REM
+REM  Neden: bu script, her alt-projenin KENDI lokal .venv'ini kurdugu
+REM  eski donemden kalma (bagimsiz "Python ImGui Denemeleri" projesinden
+REM  kopyalandi, bkz. docs/todo.md). AlgoTrade artik TEK, merkezi bir
+REM  .venv kullaniyor (D:\SageProjects\AlgoTrade\.venv), kok dizindeki
+REM  setupPythonEnvs.bat ile kurulur/guncellenir - venv merkezilestirme
+REM  2026-08-25'te tamamlandi (docs/todo.md'de dogrulandi/isaretlendi).
+REM
+REM  Bu script'i oldugu gibi calistirirsan: asagidaki [1/5] adiminda
+REM  burada YENI bir lokal .venv olusturur (merkezi karara aykiri),
+REM  [2/5] adiminda ise burada artik var olmayan requirements.txt'i
+REM  arayip HATA ile durur - yani yarim, kullanilmayan bir .venv
+REM  klasoru birakip basarisiz olur.
+REM
+REM  Asagidaki mantik SILINMEDI, sadece calistirilmiyor (referans/
+REM  ileride tekrar per-proje izole venv gerekirse geri acilabilir
+REM  diye). Gercek kurulum icin proje kokundeki setupPythonEnvs.bat'i
+REM  kullan; calistirmak icin src/DearPyGuiDataPlotter/runMe.bat yeter
+REM  (artik kok .venv'i kullaniyor).
 REM ============================================================
+echo Bu setup.bat devre disi - proje kokundeki setupPythonEnvs.bat'i kullanin.
+pause
+exit /b 0
+
+REM ------------------------------------------------------------
+REM  ASAGISI ARTIK CALISMIYOR (yukaridaki "exit /b 0" nedeniyle) -
+REM  sadece tarihsel referans icin birakildi, orijinal ilk kurulum
+REM  mantigi (PythonDataPlotter - dearpygui==2.3.1, imgui-bundle==
+REM  1.92.801 - .venv olusturur + requirements kurar + .vscode
+REM  ayarlar + main.py + runMe.bat, tekrar calistirilabilir).
+REM ------------------------------------------------------------
 setlocal
 cd /d "%~dp0"
 

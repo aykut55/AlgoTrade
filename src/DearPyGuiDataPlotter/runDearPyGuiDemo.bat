@@ -1,7 +1,8 @@
 @echo off
 setlocal
 
-set "PYTHON_EXE=%~dp0.venv\Scripts\python.exe"
+REM Proje kokundeki ortak .venv (setupPythonEnvs.bat ile kurulur).
+set "PYTHON_EXE=%~dp0..\..\.venv\Scripts\python.exe"
 
 if not exist "%PYTHON_EXE%" (
     echo Python venv bulunamadi: %PYTHON_EXE%
