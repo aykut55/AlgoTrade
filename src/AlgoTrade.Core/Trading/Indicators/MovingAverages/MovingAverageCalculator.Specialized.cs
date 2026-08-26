@@ -181,9 +181,17 @@ namespace AlgoTrade.Core.Trading.Indicators.MovingAverages
             // Apply regularized EMA
             for (int i = 1; i < source.Length; i++)
             {
-                // Regularization: pull towards simple mean
+                // Regularization: pull towards simple mean - SMA(source, ...)[i] yerine sadece
+                // bar i icin gereken pencere satir icinde hesaplaniyor (O(n) yerine O(period)) -
+                // pencere uzunlugu (Math.Min(period, i+1)) her bar'da degistigi icin SMA(...)'i
+                // dongu disina almak (HHV/LLV'deki gibi) mumkun degil.
                 var ema = (source[i] - result[i - 1]) * multiplier + result[i - 1];
-                var regularization = lambda * (SMA(source, Math.Min(period, i + 1))[i] - ema);
+                var smaPeriod = Math.Min(period, i + 1);
+                var smaSum = 0.0;
+                for (int j = 0; j < smaPeriod; j++)
+                    smaSum += source[i - j];
+                var smaAtI = smaSum / smaPeriod;
+                var regularization = lambda * (smaAtI - ema);
                 result[i] = ema + regularization;
             }
 

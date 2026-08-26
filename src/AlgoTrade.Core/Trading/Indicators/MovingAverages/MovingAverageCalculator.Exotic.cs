@@ -371,8 +371,26 @@ namespace AlgoTrade.Core.Trading.Indicators.MovingAverages
                 var adaptivePeriod = (int)(period * (1 - cv));
                 adaptivePeriod = Math.Max(5, Math.Min(period, adaptivePeriod));
 
-                // Calculate LSMA with adaptive period
-                result[i] = LSMA(source, adaptivePeriod)[i];
+                // Calculate LSMA with adaptive period - LSMA(source, adaptivePeriod)[i] yerine
+                // sadece bar i icin gereken pencere satir icinde hesaplaniyor (O(n) yerine
+                // O(adaptivePeriod)) - adaptivePeriod her bar'da degistigi icin LSMA(...)'i
+                // dongu disina almak (HHV/LLV'deki gibi) mumkun degil.
+                var sumX = 0.0;
+                var sumY = 0.0;
+                var sumXY = 0.0;
+                var sumX2 = 0.0;
+                for (int j = 0; j < adaptivePeriod; j++)
+                {
+                    var x = j;
+                    var y = source[i - adaptivePeriod + 1 + j];
+                    sumX += x;
+                    sumY += y;
+                    sumXY += x * y;
+                    sumX2 += x * x;
+                }
+                var slope = (adaptivePeriod * sumXY - sumX * sumY) / (adaptivePeriod * sumX2 - sumX * sumX);
+                var intercept = (sumY - slope * sumX) / adaptivePeriod;
+                result[i] = intercept + slope * (adaptivePeriod - 1);
             }
 
             return result;

@@ -27,7 +27,7 @@
   STATİK (önceden view.json üreten) yaklaşımı öncelikli istedi — bu madde o ilk taslağın
   fikrini kaybetmemek için not olarak duruyor, implementasyon henüz yok/kullanılmıyor.
 
-- [ ] **O(n²) performans bug'ı — indikatör hesaplarında HHV/LLV/SMA/LSMA döngü İÇİNDE tekrar
+- [x] **O(n²) performans bug'ı — indikatör hesaplarında HHV/LLV/SMA/LSMA döngü İÇİNDE tekrar
   tekrar hesaplanıyor (2026-08-26, `GenerateReplaySampleBundles.csx` ile 1.9M barlık veride
   `SimpleStochasticStrategy` pratikte hiç bitmeyince bulundu).** `HHV(...)`/`LLV(...)` kendileri
   zaten O(n) — tüm diziyi tek seferde hesaplayıp `double[]` döndürüyor — ama bazı fonksiyonlar
@@ -35,14 +35,17 @@
   O(n) × O(n) = O(n²). 1.9M bar için pratikte sonsuza kadar sürüyor.
   - ✅ **Düzeltildi** (`MomentumIndicators.cs`, HHV/LLV çağrısı döngü dışına taşındı → O(n)):
     `Stochastic()`, `WilliamsR()`, `StochasticOTT()`.
-  - 🔲 **Bulundu ama DÜZELTİLMEDİ** (period sabit olmadığı için basitçe döngü dışına taşınamıyor,
-    algoritmanın O(n) tek-geçişli yeniden yazılması gerekiyor — ayrı, daha dikkatli bir iş):
-    - `MovingAverageCalculator.Exotic.cs:375` — `ALSMA()` (Adaptive LSMA), her bar için farklı
-      bir "adaptive period" ile `LSMA(...)` çağırıyor.
-    - `MovingAverageCalculator.Specialized.cs:186` — `REGMA()`, `SMA(...)` çağrısını döngü
-      içinde yapıyor (`Math.Min(period, i + 1)` ile değişken period).
+  - ✅ **Düzeltildi (2026-08-26)** — bu ikisinde period bar'a göre değiştiği için HHV/LLV'deki
+    gibi "döngü dışına taşı" çözümü işlemiyordu; onun yerine tam diziyi yeniden hesaplayan
+    çağrı (`LSMA(...)[i]`, `SMA(...)[i]`) kaldırılıp, sadece o bar için gereken pencere
+    (adaptivePeriod/smaPeriod uzunluğunda) döngü içinde doğrudan hesaplandı → O(n) × O(n) yerine
+    O(n × period):
+    - `MovingAverageCalculator.Exotic.cs` — `ALSMA()` (Adaptive LSMA), her bar için farklı bir
+      "adaptive period" ile `LSMA(...)` çağırıyordu.
+    - `MovingAverageCalculator.Specialized.cs` — `REGMA()`, `SMA(...)` çağrısını döngü içinde
+      yapıyordu (`Math.Min(period, i + 1)` ile değişken period).
   - **Tüm `src/AlgoTrade.Core/Trading/Indicators/` ağacında `grep -rn "\)\[i\]"` ile tarandı
-    (2026-08-26)** — yukarıdaki 5 yer (3 düzeltilen + 2 açık) dışında başka örnek çıkmadı. Ama bu
+    (2026-08-26)** — yukarıdaki 5 yer (hepsi düzeltildi) dışında başka örnek çıkmadı. Ama bu
     sadece "aynı satırda `)[i]`" kalıbını yakalıyor — döngü gövdesi birden fazla satıra
     yayılmışsa (örn. sonucu değişkene atayıp birkaç satır sonra indekslemek) kaçırılmış olabilir,
     o yüzden tam garanti değil.
