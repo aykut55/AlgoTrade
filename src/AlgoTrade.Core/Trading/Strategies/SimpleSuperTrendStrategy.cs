@@ -96,19 +96,29 @@ namespace AlgoTrade.Core.Trading.Strategies
             int currentDirection = _superTrendResult.Direction[currentIndex];
             int prevDirection = _superTrendResult.Direction[currentIndex - 1];
 
-            // AL Sinyali: Direction -1'den 1'e değişiyor (trend dönüşü: düşüşten yükselişe)
-            // Fiyat SuperTrend'i yukarı kırıyor
-            if (prevDirection == -1 && currentDirection == 1)
+            // ************************************************************************************************************************
+            // choice: 0 = SuperTrend direction reversal, 1 = (İleride eklenecek)
+            if (_choice == 0)
             {
-                buy = true;
-            }
+                // AL Sinyali: Direction -1'den 1'e değişiyor (trend dönüşü: düşüşten yükselişe)
+                // Fiyat SuperTrend'i yukarı kırıyor
+                if (prevDirection == -1 && currentDirection == 1)
+                {
+                    buy = true;
+                }
 
-            // SAT Sinyali: Direction 1'den -1'e değişiyor (trend dönüşü: yükselişten düşüşe)
-            // Fiyat SuperTrend'i aşağı kırıyor
-            if (prevDirection == 1 && currentDirection == -1)
-            {
-                sell = true;
+                // SAT Sinyali: Direction 1'den -1'e değişiyor (trend dönüşü: yükselişten düşüşe)
+                // Fiyat SuperTrend'i aşağı kırıyor
+                if (prevDirection == 1 && currentDirection == -1)
+                {
+                    sell = true;
+                }
             }
+            else
+            {
+                // İleride eklenecek alternatif sinyal mantığı
+            }
+            // ************************************************************************************************************************
 
             // ÖRNEK: Trader referansını kullanarak kar al / zarar kes hesaplama
             // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir

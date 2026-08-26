@@ -83,17 +83,27 @@ namespace AlgoTrade.Core.Trading.Strategies
             double prevFastMA = _fastMA[currentIndex - 1];
             double prevSlowMA = _slowMA[currentIndex - 1];
 
-            // Golden Cross (Hızlı MA yukarı kesiyor) - AL sinyali
-            if (prevFastMA <= prevSlowMA && currentFastMA > currentSlowMA)
+            // ************************************************************************************************************************
+            // choice: 0 = Fast/Slow MA crossover, 1 = (İleride eklenecek)
+            if (_choice == 0)
             {
-                buy = true;
-            }
+                // Golden Cross (Hızlı MA yukarı kesiyor) - AL sinyali
+                if (prevFastMA <= prevSlowMA && currentFastMA > currentSlowMA)
+                {
+                    buy = true;
+                }
 
-            // Death Cross (Hızlı MA aşağı kesiyor) - SAT sinyali
-            if (prevFastMA >= prevSlowMA && currentFastMA < currentSlowMA)
-            {
-                sell = true;
+                // Death Cross (Hızlı MA aşağı kesiyor) - SAT sinyali
+                if (prevFastMA >= prevSlowMA && currentFastMA < currentSlowMA)
+                {
+                    sell = true;
+                }
             }
+            else
+            {
+                // İleride eklenecek alternatif sinyal mantığı
+            }
+            // ************************************************************************************************************************
 
             // ÖRNEK: Trader referansını kullanarak kar al / zarar kes hesaplama
             // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir
