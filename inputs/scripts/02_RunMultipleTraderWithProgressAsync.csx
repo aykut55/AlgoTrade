@@ -518,6 +518,12 @@ if (!IsCancellationRequested && !multipleTrader.IsStopRequested && selectedRunMo
         bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
         Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\MultipleTraderBundle.npz'e de yazildi.");
 
+        // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
+        // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
+        bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+        bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
+
         // true: eski tip plotter gibi, pencere kapanana kadar bloklar. false: hemen doner,
         // process arka planda acik kalir (hot-reload akisi).
         bool blockDearPyGuiPlotterUntilClosed = true;

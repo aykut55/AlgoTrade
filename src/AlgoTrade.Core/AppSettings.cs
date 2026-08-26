@@ -15,6 +15,22 @@ public static class AppSettings
     public static string ScriptsDir       => Path.Combine(InputsDir, "scripts");
     public static string PythonScriptsDir => Path.Combine(InputsDir, "python");
     public static string DearPyGuiDataPlotterDir => Path.Combine(_baseDir, "src", "DearPyGuiDataPlotter");
+
+    /// <summary>
+    /// Yeni tip plotter'ın (DearPyGuiDataPlotter) AlgoTrade'e özgü, kendi runtime bundle
+    /// kopyası için kullandığı klasör — "normal" konumun (<see cref="DearPyGuiDataPlotterDir"/>'ın
+    /// altındaki inputs/, bağımsız projeden kalma) YANINDA, ek bir kopya (2026-08-26, bkz.
+    /// docs/todo.md "Kalıntı çift ROOT yapısı").
+    /// </summary>
+    public static string DearPyGuiPlotterBundleDir => Path.Combine(PythonScriptsDir, "dearPyGuiDataPlotter");
+
+    /// <summary>
+    /// Eski tip plotter'ın (PythonPlotter, pythonnet/imgui_bundle) AlgoTrade'e özgü, kendi
+    /// runtime bundle kopyası için kullandığı klasör (2026-08-26, bkz. docs/todo.md "Kalıntı
+    /// çift ROOT yapısı").
+    /// </summary>
+    public static string PythonPlotterBundleDir => Path.Combine(PythonScriptsDir, "pythonPlotter");
+
     public static string OutputsDir       => Path.Combine(_baseDir, "outputs");
     public static string LogsDir          => Path.Combine(OutputsDir, "logs");
     public static string OptLogsDir       => Path.Combine(OutputsDir, "opt");

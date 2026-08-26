@@ -35,6 +35,27 @@
   (`inputs/python/`'un `src/` altına taşınması) ile birlikte ele alınmalı — muhtemelen ikisi de aynı
   büyük "proje yapısını sadeleştirme" refactor'ünün parçası.
 
+  **Kullanıcı denemesi (2026-08-26) → karar verildi, implement edildi**: `inputs/python/
+  dearImGuiBundleDataPlotter/`, `inputs/python/dearPyGuiDataPlotter/`, `inputs/python/
+  pythonPlotter/` klasörleri her plotter'ın **kendi AlgoTrade-native runtime bundle klasörü**
+  olacak (Python kaynak kodu taşınmıyor — sadece runtime çıktısı; `dearImGuiBundleDataPlotter/`
+  şimdilik boş, o plotter henüz implement edilmedi). Netleşen kararlar:
+  - **Ek 3. kopya** (önceki maddedeki "yerine mi geçsin" sorusunun cevabı) — `src/DearPyGuiDataPlotter/
+    inputs/` (bağımsız projeden kalma "normal" konum, DOKUNULMADI) hâlâ yazılıyor, `outputs/logs/`
+    (görünürlük) hâlâ yazılıyor, bunlara EK olarak artık `inputs/python/dearPyGuiDataPlotter/` ve
+    `inputs/python/pythonPlotter/`'a da yazılıyor — her run'da toplam 4 konum.
+  - **Ayrı fiziksel kopyalar** — `dearPyGuiDataPlotter/` ve `pythonPlotter/` aynı içeriğin iki ayrı
+    kopyasını tutuyor (sembolik link/paylaşım YOK), her plotter kendi klasöründen bağımsız okuyor.
+  - `AppSettings.cs`'e `DearPyGuiPlotterBundleDir`/`PythonPlotterBundleDir` eklendi
+    (`inputs/python/{dearPyGuiDataPlotter,pythonPlotter}`).
+  - `01_RunSingleTraderWithProgressAsync.csx`, `02_RunMultipleTraderWithProgressAsync.csx`,
+    `Program.cs` (Menü [5]/[6]) — hepsi bu 2 yeni konuma da `fileBaseName: "latest_bundle"` ile
+    yazacak şekilde güncellendi (4 script/menü noktası, hepsi paralel).
+  - `TestOldPlotterFromBundle.csx` artık `AppSettings.PythonPlotterBundleDir`'den okuyor (eskiden
+    `src/DearPyGuiDataPlotter/inputs/`'tan okuyordu).
+  - Dış-proje senkron riski (madde 27) hâlâ geçerli ama SADECE runtime veri kopyası olduğu için
+    (kaynak kod değil) etkisi sınırlı — dış projenin kendi `inputs/` klasörüyle bir çakışma yok.
+
 - [ ] `D:\Aykut\Projects\Python ImGui Denemeleri\PythonImGuiProjects` ayrı bir Python projesi ve VS Code ile geliştiriliyor. Bu projedeki şu klasörler AlgoTrade'e kopyalanmış:
   - `DearImGuiBundleDataPlotter` → `src/DearImGuiBundleDataPlotter` (birebir aynı, hiç değiştirilmemiş)
   - `DearPyGuiDataPlotter` → `src/DearPyGuiDataPlotter` (kopyalandıktan sonra AlgoTrade tarafında üzerine geliştirme yapılmış)

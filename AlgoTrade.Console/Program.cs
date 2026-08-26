@@ -817,6 +817,13 @@ async Task runSingleTraderAlgoTrade()
                 bundleConverter.ConvertSingleTrader(
                     algoTrader.SingleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
 
+                // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri
+                // fiziksel kopyalar - bkz. docs/todo.md "Kalıntı çift ROOT yapısı"). 01.csx ile parity.
+                bundleConverter.ConvertSingleTrader(
+                    algoTrader.SingleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+                bundleConverter.ConvertSingleTrader(
+                    algoTrader.SingleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+
                 dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
                 dearPyGuiTestPlotter.SetLogger(logger);
                 dearPyGuiTestPlotter.StartPlotter();
@@ -900,6 +907,13 @@ async Task runMultipleTraderAlgoTrade()
                 // ayni klasor) - gorunurluk icin, "normal" konumun yaninda. 02.csx ile parity.
                 bundleConverter.ConvertMultipleTrader(
                     algoTrader.MultipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
+
+                // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri
+                // fiziksel kopyalar - bkz. docs/todo.md "Kalıntı çift ROOT yapısı"). 02.csx ile parity.
+                bundleConverter.ConvertMultipleTrader(
+                    algoTrader.MultipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+                bundleConverter.ConvertMultipleTrader(
+                    algoTrader.MultipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
 
                 dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
                 dearPyGuiTestPlotter.SetLogger(logger);
