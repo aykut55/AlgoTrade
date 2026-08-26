@@ -1,0 +1,14 @@
+{
+  "entries": [
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleMostStrategy/bundle.npz",        "label": "MOST",         "color": [255, 255, 255, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleRSIStrategy/bundle.npz",         "label": "RSI",          "color": [51, 204, 255, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleMACDStrategy/bundle.npz",        "label": "MACD",         "color": [255, 204, 0, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleBollingerStrategy/bundle.npz",   "label": "Bollinger",    "color": [76, 255, 76, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleADXStrategy/bundle.npz",         "label": "ADX",          "color": [255, 102, 102, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleATRStrategy/bundle.npz",         "label": "ATR",          "color": [255, 128, 0, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleStochasticStrategy/bundle.npz",  "label": "Stochastic",   "color": [178, 102, 255, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleSuperTrendStrategy/bundle.npz",  "label": "SuperTrend",   "color": [0, 255, 204, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleMAStrategy/bundle.npz",          "label": "MA",           "color": [255, 51, 204, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleParabolicSARStrategy/bundle.npz","label": "ParabolicSAR", "color": [200, 200, 200, 255] }
+  ]
+}

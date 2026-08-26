@@ -1,0 +1,4 @@
+{
+  "bundle": "inputs/python/offlineReplay/combined.npz",
+  "view": "inputs/python/offlineReplay/combined.view.json"
+}

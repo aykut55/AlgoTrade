@@ -470,6 +470,49 @@ public class PythonPlotter : IDisposable
     }
 
     /// <summary>
+    /// N farklı bundle'ı (playlist — bkz. docs/todo.md "Offline Replay") TEK pencerede,
+    /// <see cref="PlotMultipleTraderData"/>'nın kullandığı aynı multi-trader render yoluyla
+    /// (main+child overlay) çizdirir. Disk'e ara bir "combined" dosya yazmadan, her bundle'dan
+    /// bağımsız bir tradeData PyDict kurup doğrudan <c>CallPlotMultipleTraderData</c>'ya verir —
+    /// gerçek bir <see cref="MultipleTrader"/> nesnesine ihtiyaç YOK (önceki inceleme:
+    /// <see cref="PlotMultipleTraderData"/> zaten sadece OHLC+Lists kullanıyordu, bu metod o
+    /// bulgunun doğal sonucu). Pencere kapanana dek bloklar.
+    /// </summary>
+    /// <param name="bundlePaths">.npz bundle dosyalarının yolları (playlist sırasıyla).</param>
+    public void PlotBundlePlaylist(IEnumerable<string> bundlePaths)
+    {
+        EnsureInitialized();
+
+        var paths = bundlePaths?.ToList() ?? new List<string>();
+        if (paths.Count == 0)
+            throw new ArgumentException("bundlePaths boş olamaz.", nameof(bundlePaths));
+
+        _logger?.WriteRaw($"  [Plot] Playlist okunuyor ({paths.Count} bundle, memory/NpzReader)...");
+
+        using (Py.GIL())
+        {
+            var pyTraderList = new PyList();
+            foreach (var bundlePath in paths)
+            {
+                if (!File.Exists(bundlePath))
+                {
+                    _logger?.WriteRaw($"  [Plot] [ATLANDI] Bundle bulunamadı: {bundlePath}");
+                    continue;
+                }
+
+                var reader = new NpzReader(bundlePath);
+                ExtractBundleData(reader);
+                dynamic tradeData = BuildPyTradeData();
+                pyTraderList.Append(tradeData);
+            }
+
+            _logger?.WriteRaw($"  [Plot] Playlist verisi hazır. Pencere açılıyor...");
+            CallPlotMultipleTraderData(pyTraderList);
+            _logger?.WriteRaw($"  [Plot] Pencere kapandı.");
+        }
+    }
+
+    /// <summary>
     /// SingleTrader sonuçlarını .npz/.view.json bundle çiftine yazar — DearPyGuiDataPlotter'ın
     /// da okuyabildiği aynı format. Yazma mantığını burada TEKRARLAMAZ, mevcut
     /// <see cref="TradeDataBundleConverter"/>'a ince bir sarmalayıcıdır; eski tip plotter'ın da

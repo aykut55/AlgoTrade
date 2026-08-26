@@ -44,6 +44,12 @@ public static class AppSettings
     /// </summary>
     public static string PythonPlotterBundleDir => Path.Combine(PythonRuntimeDataDir, "pythonPlotter");
 
+    /// <summary>
+    /// "Offline Replay" özelliğinin (bkz. docs/todo.md) ORTAK klasörü — hiçbir plotter'a ait değil,
+    /// ikisinin de paylaştığı playlist.json + birleştirilmiş (merge) bundle çıktısı burada.
+    /// </summary>
+    public static string OfflineReplayDir => Path.Combine(PythonRuntimeDataDir, "offlineReplay");
+
     public static string OutputsDir       => Path.Combine(_baseDir, "outputs");
     public static string LogsDir          => Path.Combine(OutputsDir, "logs");
     public static string OptLogsDir       => Path.Combine(OutputsDir, "opt");

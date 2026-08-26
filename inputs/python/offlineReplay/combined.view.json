@@ -1,0 +1,262 @@
+{
+  "panels": [
+    {
+      "id": "ohlc",
+      "name": "OHLC",
+      "caption": "OHLC",
+      "height": 380,
+      "ySyncId": 0,
+      "series": [
+        {
+          "source": "ohlc",
+          "name": "OHLC",
+          "dataId": 0
+        }
+      ]
+    },
+    {
+      "id": "signals",
+      "name": "Signals",
+      "caption": "Signals (Playlist)",
+      "height": 220,
+      "ySyncId": 1,
+      "series": [
+        {
+          "source": "indicator",
+          "name": "MOST Signal",
+          "label": "MOST",
+          "color": [
+            255,
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "RSI Signal",
+          "label": "RSI",
+          "color": [
+            51,
+            204,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "MACD Signal",
+          "label": "MACD",
+          "color": [
+            255,
+            204,
+            0,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "Bollinger Signal",
+          "label": "Bollinger",
+          "color": [
+            76,
+            255,
+            76,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ADX Signal",
+          "label": "ADX",
+          "color": [
+            255,
+            102,
+            102,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ATR Signal",
+          "label": "ATR",
+          "color": [
+            255,
+            128,
+            0,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "Stochastic Signal",
+          "label": "Stochastic",
+          "color": [
+            178,
+            102,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "SuperTrend Signal",
+          "label": "SuperTrend",
+          "color": [
+            0,
+            255,
+            204,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "MA Signal",
+          "label": "MA",
+          "color": [
+            255,
+            51,
+            204,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ParabolicSAR Signal",
+          "label": "ParabolicSAR",
+          "color": [
+            200,
+            200,
+            200,
+            255
+          ]
+        }
+      ],
+      "yLabel": "Signals",
+      "yFixedRange": [
+        -2.0,
+        2.0
+      ]
+    },
+    {
+      "id": "pnl",
+      "name": "PnL",
+      "caption": "PnL (Playlist)",
+      "height": 260,
+      "ySyncId": 2,
+      "series": [
+        {
+          "source": "indicator",
+          "name": "MOST PnL",
+          "label": "MOST",
+          "color": [
+            255,
+            255,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "RSI PnL",
+          "label": "RSI",
+          "color": [
+            51,
+            204,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "MACD PnL",
+          "label": "MACD",
+          "color": [
+            255,
+            204,
+            0,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "Bollinger PnL",
+          "label": "Bollinger",
+          "color": [
+            76,
+            255,
+            76,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ADX PnL",
+          "label": "ADX",
+          "color": [
+            255,
+            102,
+            102,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ATR PnL",
+          "label": "ATR",
+          "color": [
+            255,
+            128,
+            0,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "Stochastic PnL",
+          "label": "Stochastic",
+          "color": [
+            178,
+            102,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "SuperTrend PnL",
+          "label": "SuperTrend",
+          "color": [
+            0,
+            255,
+            204,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "MA PnL",
+          "label": "MA",
+          "color": [
+            255,
+            51,
+            204,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ParabolicSAR PnL",
+          "label": "ParabolicSAR",
+          "color": [
+            200,
+            200,
+            200,
+            255
+          ]
+        }
+      ],
+      "yLabel": "PnL"
+    }
+  ]
+}
