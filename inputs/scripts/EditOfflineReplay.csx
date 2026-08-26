@@ -64,45 +64,97 @@ for (int i = 0; i < trader.Count; i++)
 
 // =============================================================================
 // 2. ------------------------- BURADAN ASAGISINI DUZENLEYIN -------------------------
-// trader[i]'leri istediginiz panele, istediginiz sirada ekleyin. Hardcoded secim, dongu,
-// veri uzerinde hesaplama/donusturme (orn. trader[i].Signal.Select(v => v * 2).ToArray())
-// - hepsi serbest, bu tamamen C# kodu. AddSeries ile HESAPLANMIS bir diziyi de
-// ekleyebilirsiniz - script sonunda YENI bir .npz'ye o hesaplanmis veri de yazilacak.
+// choice degerini 0-5 arasinda secin - her deger asagida ayri bir panel duzeni kurar
+// (BuildChoiceN local fonksiyonlari). Kendi duzeninizi eklemek/degistirmek isterseniz
+// ilgili BuildChoiceN fonksiyonunun icini duzenleyin - hepsi ayni trader[] dizisinden
+// besleniyor, AddSignal/AddPnL/AddSeries hepsi serbest (AddSeries ile HESAPLANMIS bir
+// diziyi de ekleyebilirsiniz, orn. trader[i].Signal.Select(v => v * 2).ToArray()).
 //
-// Ornek: sadece trader[0], trader[5], trader[8], trader[2]'yi TEK panelde (olduğu gibi) gormek:
-//
-//   var panel1 = new ViewPanelBuilder("panel1", "Panel 1", height: 300);
-//   panel1.AddSignal(trader[0]).AddSignal(trader[5]).AddSignal(trader[8]).AddSignal(trader[2]);
-//   var customPanels = new List<ViewPanelBuilder> { panel1 };
-//
-// Ornek: 10 trader'i 2'serli 5 panelde gormek:
-//
-//   var customPanels = new List<ViewPanelBuilder>();
-//   for (int i = 0; i < trader.Count; i += 2)
-//   {
-//       var p = new ViewPanelBuilder($"panel{i / 2}", $"Panel {i / 2 + 1}", height: 220);
-//       p.AddSignal(trader[i]);
-//       if (i + 1 < trader.Count) p.AddSignal(trader[i + 1]);
-//       customPanels.Add(p);
-//   }
-//
-// Ornek: trader[0]'in sinyalini 2 ile carpip ozel bir seri olarak eklemek:
-//
-//   var panel2 = new ViewPanelBuilder("panel2", "Carpilmis Sinyal");
-//   var carpilmis = trader[0].Signal.Select(v => v * 2).ToArray();
-//   panel2.AddSeries("MOST Signal x2", "MOST x2", trader[0].Color, carpilmis);
+//   0 = varsayilan   : sinyaller TEK panelde + PnL'ler TEK panelde (tum trader'lar)
+//   1 = splitSignals : sinyaller 2-3'erli gruplarla ayri panellere bolunur (PnL yok)
+//   2 = splitPnL     : PnL'ler 2-3'erli gruplarla ayri panellere bolunur (Signal yok)
+//   3 = mixed        : 2 sinyal paneli + 2 PnL paneli, secili bir alt kume ile (10 yerine)
+//   4 = (henuz tanimlanmadi - TODO, simdilik 0'a duser)
+//   5 = (henuz tanimlanmadi - TODO, simdilik 0'a duser)
 //
 // OHLC panelindeki AL/SAT isaretleri (asagidaki ohlcSignal/includeOhlcSignal degiskenleri):
 // varsayilan (ohlcSignal=null, includeOhlcSignal=true) combined.npz'deki (playlist'teki ILK
-// entry'nin sinyali) ile AYNI kalir. Degistirmek isterseniz:
+// entry'nin sinyali ya da MergeOfflineReplayPlaylist.csx'teki useMajorityConsensusSignal'a
+// gore bileske sinyal) ile AYNI kalir. Degistirmek isterseniz:
 //   ohlcSignal = trader[3].Signal;          // OHLC'de trader[3]'un sinyalini goster
 //   includeOhlcSignal = false;              // OHLC'de HICBIR AL/SAT gostermeyi (duz mum grafigi)
 // =============================================================================
 
-var panel1 = new ViewPanelBuilder("panel1", "Panel 1", height: 300);
-panel1.AddSignal(trader[0]).AddSignal(trader[5]).AddSignal(trader[8]).AddSignal(trader[2]);
+int choice = 0;
 
-var customPanels = new List<ViewPanelBuilder> { panel1 };
+List<ViewPanelBuilder> BuildChoice0()
+{
+    var signalsPanel = new ViewPanelBuilder("signals", "Signals", height: 260);
+    var pnlPanel = new ViewPanelBuilder("pnl", "PnL", height: 260);
+    foreach (var t in trader)
+    {
+        signalsPanel.AddSignal(t);
+        pnlPanel.AddPnL(t);
+    }
+    return new List<ViewPanelBuilder> { signalsPanel, pnlPanel };
+}
+
+List<ViewPanelBuilder> BuildChoice1()
+{
+    var panels = new List<ViewPanelBuilder>();
+    const int perPanel = 3;
+    for (int i = 0; i < trader.Count; i += perPanel)
+    {
+        var p = new ViewPanelBuilder($"signals{i / perPanel}", $"Signals {i / perPanel + 1}", height: 200);
+        for (int j = i; j < Math.Min(i + perPanel, trader.Count); j++)
+            p.AddSignal(trader[j]);
+        panels.Add(p);
+    }
+    return panels;
+}
+
+List<ViewPanelBuilder> BuildChoice2()
+{
+    var panels = new List<ViewPanelBuilder>();
+    const int perPanel = 3;
+    for (int i = 0; i < trader.Count; i += perPanel)
+    {
+        var p = new ViewPanelBuilder($"pnl{i / perPanel}", $"PnL {i / perPanel + 1}", height: 200);
+        for (int j = i; j < Math.Min(i + perPanel, trader.Count); j++)
+            p.AddPnL(trader[j]);
+        panels.Add(p);
+    }
+    return panels;
+}
+
+List<ViewPanelBuilder> BuildChoice3()
+{
+    // 10 yerine secili 4 trader, 2'serli 2 sinyal + 2 PnL paneli
+    var selected = new[] { trader[0], trader[5], trader[8], trader[2] };
+
+    var sig1 = new ViewPanelBuilder("signals1", "Signals 1", height: 200);
+    var sig2 = new ViewPanelBuilder("signals2", "Signals 2", height: 200);
+    sig1.AddSignal(selected[0]).AddSignal(selected[1]);
+    sig2.AddSignal(selected[2]).AddSignal(selected[3]);
+
+    var pnl1 = new ViewPanelBuilder("pnl1", "PnL 1", height: 200);
+    var pnl2 = new ViewPanelBuilder("pnl2", "PnL 2", height: 200);
+    pnl1.AddPnL(selected[0]).AddPnL(selected[1]);
+    pnl2.AddPnL(selected[2]).AddPnL(selected[3]);
+
+    return new List<ViewPanelBuilder> { sig1, sig2, pnl1, pnl2 };
+}
+
+List<ViewPanelBuilder> customPanels = choice switch
+{
+    0 => BuildChoice0(),
+    1 => BuildChoice1(),
+    2 => BuildChoice2(),
+    3 => BuildChoice3(),
+    4 => BuildChoice0(), // TODO: henuz tanimlanmadi
+    5 => BuildChoice0(), // TODO: henuz tanimlanmadi
+    _ => BuildChoice0(),
+};
 
 double[]? ohlcSignal = null;      // null = varsayilan (combined.npz'deki ile ayni) kalsin
 bool includeOhlcSignal = true;    // false = OHLC'de hic AL/SAT gosterme
