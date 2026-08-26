@@ -186,9 +186,25 @@ public static class OfflineReplayPlaylist
     /// <param name="panels">Kullanıcının ViewPanelBuilder ile kurduğu panel listesi (OHLC hariç).</param>
     /// <param name="outputDir">.npz/.view.json'ın yazılacağı klasör (AppSettings.OfflineReplayDir).</param>
     /// <param name="fileBaseName">Uzantısız dosya adı — combined ile ÇAKIŞMAMALI.</param>
+    /// <param name="ohlcSignal">
+    /// OHLC panelindeki AL/SAT işaretlerini (TradeSignalRenderer) neyin belirleyeceği:
+    /// (1) verilmezse (null, varsayılan) VE <paramref name="includeOhlcSignal"/> true ise:
+    /// kaynak combined.npz'deki signal_codes/signal_steps OLDUĞU GİBİ kopyalanır. (2) bir dizi
+    /// verilirse (örn. trader[3].Signal, ya da hesaplanmış/bileşke bir sinyal): AL/SAT işaretleri
+    /// BUNDAN üretilir. NOT: signal_codes/steps alanları npz'de HER DURUMDA yazılır (2026-08-26'da
+    /// bu alanların eksikliği X ekseni senkron sorununa yol açmıştı) — "gösterme" isteği
+    /// <paramref name="includeOhlcSignal"/>=false ile, alanı SİLEREK değil, hep-FLAT (anlamsız)
+    /// bir sinyal yazarak karşılanır.
+    /// </param>
+    /// <param name="includeOhlcSignal">
+    /// false verilirse OHLC panelinde AL/SAT ANLAMLI olarak gösterilmez — <paramref name="ohlcSignal"/>
+    /// yok sayılır, bunun yerine hep-FLAT bir sinyal yazılır (alan npz'de var olmaya devam eder,
+    /// sync fix'i bozulmaz). Varsayılan true.
+    /// </param>
     /// <returns>Yazılan .npz ve .view.json'ın tam yolları.</returns>
     public static (string bundlePath, string viewPath) WriteCustomBundle(string sourceCombinedBundlePath,
-        List<ViewPanelBuilder> panels, string outputDir, string fileBaseName)
+        List<ViewPanelBuilder> panels, string outputDir, string fileBaseName,
+        double[]? ohlcSignal = null, bool includeOhlcSignal = true)
     {
         if (panels == null || panels.Count == 0)
             throw new ArgumentException("panels boş olamaz — en az bir panel kurup ekleyin.", nameof(panels));
@@ -217,12 +233,31 @@ public static class OfflineReplayPlaylist
         writer.AddIntArray("size", sizes);
         writer.AddStringArray("timestamps", timestamps);
 
-        // signal_codes/signal_steps'i kaynak combined.npz'den olduğu gibi kopyala (TradeSignalRenderer/
-        // OHLC paneli bunları bekliyor — bkz. MergeToBundle'daki aynı ekleme, 2026-08-26).
-        if (sourceReader.Contains("signal_codes"))
-            writer.AddIntArray("signal_codes", sourceReader.ReadLongArray("signal_codes"));
-        if (sourceReader.Contains("signal_steps"))
-            writer.AddIntArray("signal_steps", sourceReader.ReadLongArray("signal_steps"));
+        if (!includeOhlcSignal)
+        {
+            // "AL/SAT gösterme" isteniyor - ama alanları npz'den TAMAMEN çıkarmak senkron fix'ini
+            // (2026-08-26, bkz. MergeToBundle) bozma riski tasiyor. Bunun yerine hep-FLAT (0)
+            // bir sinyal yaziliyor - alan HER ZAMAN var, sadece anlamli bir AL/SAT üretmiyor
+            // (BuildSignalCodes ilk barda bir kere FLAT kodu üretir, onun disinda sessiz kalir).
+            var flat = new long[n];
+            writer.AddIntArray("signal_codes", BuildSignalCodes(flat, n));
+            writer.AddIntArray("signal_steps", flat);
+        }
+        else if (ohlcSignal != null)
+        {
+            // Kullanıcının EditOfflineReplay.csx'te verdiği özel/hesaplanmış sinyal.
+            var steps = PadOrTrim(ohlcSignal, n).Select(v => (long)v).ToArray();
+            writer.AddIntArray("signal_codes", BuildSignalCodes(steps, n));
+            writer.AddIntArray("signal_steps", steps);
+        }
+        else
+        {
+            // Varsayılan: kaynak combined.npz'den olduğu gibi kopyala (senkron fix'i BOZMAZ).
+            if (sourceReader.Contains("signal_codes"))
+                writer.AddIntArray("signal_codes", sourceReader.ReadLongArray("signal_codes"));
+            if (sourceReader.Contains("signal_steps"))
+                writer.AddIntArray("signal_steps", sourceReader.ReadLongArray("signal_steps"));
+        }
 
         var seriesNames = new List<string>();
         var seriesRows = new List<double[]>();
@@ -297,8 +332,16 @@ public static class OfflineReplayPlaylist
     /// overlay etmek şu an desteklenmiyor, bkz. docs/todo.md açık soru). Her entry'nin
     /// Signal/PnL serisi "{label} Signal"/"{label} PnL" adıyla eklenir.
     /// </summary>
+    /// <param name="useMajorityConsensusSignal">
+    /// true (varsayılan): OHLC panelindeki AL/SAT işaretleri tüm entry'lerin bar-bar ÇOĞUNLUK
+    /// OYUNDAN (kaç tanesi AL/SAT/FLAT demiş, en çok oyu alan kazanır — eşitlikte
+    /// AL &gt; SAT &gt; FLAT önceliği var) üretilen bir "bileşke" sinyalden gelir —
+    /// MultipleTrader.BuildConsensusSignal'daki "Majority" moduyla aynı fikir.
+    /// false: OHLC panelinde İLK entry'nin sinyali gösterilir.
+    /// </param>
     public static (string bundlePath, string viewPath) MergeToBundle(
-        List<PlaylistEntry> entries, string outputDir, string fileBaseName = "combined")
+        List<PlaylistEntry> entries, string outputDir, string fileBaseName = "combined",
+        bool useMajorityConsensusSignal = true)
     {
         if (entries == null || entries.Count == 0)
             throw new ArgumentException("entries boş olamaz.", nameof(entries));
@@ -326,6 +369,7 @@ public static class OfflineReplayPlaylist
         var seriesRows = new List<double[]>();
         var panelSeries = new List<(string Label, string SignalName, string? PnLName, int[] Color)>();
         long[]? referenceSignalSteps = null;
+        var allSignalStepsPadded = new List<long[]>(); // bileske/consensus icin, asagidaki YORUMLU ornege bkz.
 
         foreach (var entry in entries)
         {
@@ -335,6 +379,7 @@ public static class OfflineReplayPlaylist
             if (entry == entries[0])
                 referenceSignalSteps = signalSteps;
             var signalRow = PadOrTrim(signalSteps.Select(v => (double)v).ToArray(), n);
+            allSignalStepsPadded.Add(signalRow.Select(v => (long)v).ToArray());
             string signalName = $"{entry.Label} Signal";
             seriesNames.Add(signalName);
             seriesRows.Add(signalRow);
@@ -368,9 +413,29 @@ public static class OfflineReplayPlaylist
 
         // "Gerçek" (TradeDataBundleConverter'ın ürettiği) bundle'larda hep var olan
         // signal_codes/signal_steps alanları — combined.npz'de EKSİKTİ (2026-08-26'da bulundu,
-        // TradeSignalRenderer/OHLC paneli bunları kullanıyor olabilir). Referans (ilk) entry'nin
-        // sinyalinden, TradeDataBundleConverter.BuildSignalCodes ile AYNI mantıkla dolduruluyor —
-        // OHLC de zaten referans entry'den geliyor, tutarlı.
+        // TradeSignalRenderer/OHLC paneli bunları kullanıyor olabilir). Varsayılan (useMajorityConsensusSignal
+        // =false): referans (ilk) entry'nin sinyali kullanılır (OHLC de zaten referans entry'den
+        // geliyor, tutarlı). true ise tüm entry'lerin bar-bar ÇOĞUNLUK OYUNDAN bir "bileşke"
+        // sinyal üretilir (MultipleTrader.BuildConsensusSignal'daki "Majority" moduyla aynı fikir).
+        if (useMajorityConsensusSignal)
+        {
+            var majoritySignal = new long[n];
+            for (int bar = 0; bar < n; bar++)
+            {
+                int alCount = 0, satCount = 0, flatCount = 0;
+                foreach (var steps in allSignalStepsPadded)
+                {
+                    if (steps[bar] == 1) alCount++;
+                    else if (steps[bar] == -1) satCount++;
+                    else flatCount++;
+                }
+                majoritySignal[bar] = (alCount >= satCount && alCount >= flatCount) ? 1
+                    : (satCount >= alCount && satCount >= flatCount) ? -1
+                    : 0;
+            }
+            referenceSignalSteps = majoritySignal;
+        }
+
         if (referenceSignalSteps != null)
         {
             var refSteps = PadOrTrim(referenceSignalSteps.Select(v => (double)v).ToArray(), n)

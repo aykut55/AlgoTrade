@@ -65,10 +65,15 @@ if (missing.Count > 0)
     return;
 }
 
+// OHLC panelindeki AL/SAT isaretleri icin: true = tum entry'lerin bar-bar COGUNLUK OYUNDAN
+// bileske sinyal (varsayilan), false = playlist'teki ILK entry'nin sinyali.
+bool useMajorityConsensusSignal = true;
+
 try
 {
     var (bundlePath, viewPath) = OfflineReplayPlaylist.MergeToBundle(
-        entries, AppSettings.OfflineReplayDir, fileBaseName: "combined");
+        entries, AppSettings.OfflineReplayDir, fileBaseName: "combined",
+        useMajorityConsensusSignal: useMajorityConsensusSignal);
     Log($"Combined bundle yazildi: {bundlePath}");
     Log($"Combined view yazildi  : {viewPath}");
 

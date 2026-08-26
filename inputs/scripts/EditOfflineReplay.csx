@@ -91,12 +91,21 @@ for (int i = 0; i < trader.Count; i++)
 //   var panel2 = new ViewPanelBuilder("panel2", "Carpilmis Sinyal");
 //   var carpilmis = trader[0].Signal.Select(v => v * 2).ToArray();
 //   panel2.AddSeries("MOST Signal x2", "MOST x2", trader[0].Color, carpilmis);
+//
+// OHLC panelindeki AL/SAT isaretleri (asagidaki ohlcSignal/includeOhlcSignal degiskenleri):
+// varsayilan (ohlcSignal=null, includeOhlcSignal=true) combined.npz'deki (playlist'teki ILK
+// entry'nin sinyali) ile AYNI kalir. Degistirmek isterseniz:
+//   ohlcSignal = trader[3].Signal;          // OHLC'de trader[3]'un sinyalini goster
+//   includeOhlcSignal = false;              // OHLC'de HICBIR AL/SAT gostermeyi (duz mum grafigi)
 // =============================================================================
 
 var panel1 = new ViewPanelBuilder("panel1", "Panel 1", height: 300);
 panel1.AddSignal(trader[0]).AddSignal(trader[5]).AddSignal(trader[8]).AddSignal(trader[2]);
 
 var customPanels = new List<ViewPanelBuilder> { panel1 };
+
+double[]? ohlcSignal = null;      // null = varsayilan (combined.npz'deki ile ayni) kalsin
+bool includeOhlcSignal = true;    // false = OHLC'de hic AL/SAT gosterme
 
 // =============================================================================
 // ------------------------- DUZENLEME BURADA BITTI -----------------------------
@@ -112,7 +121,8 @@ string customBundlePath, customViewPath;
 try
 {
     (customBundlePath, customViewPath) = OfflineReplayPlaylist.WriteCustomBundle(
-        combinedBundlePath, customPanels, AppSettings.OfflineReplayDir, fileBaseName);
+        combinedBundlePath, customPanels, AppSettings.OfflineReplayDir, fileBaseName,
+        ohlcSignal, includeOhlcSignal);
 }
 catch (Exception ex)
 {
