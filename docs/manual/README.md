@@ -42,6 +42,11 @@
    (`inputs/scripts/0N_RunXxxWithProgressAsync.csx`) arasındaki davranış farklarının
    (plot, dosya yazımı, veri filtreleme vb.) takip listesi — hangisi düzeltildi, hangisi
    hâlâ açık.
+8. **[08-offline-replay.md](08-offline-replay.md)** — Offline Replay. Farklı zamanlarda
+   çalıştırılmış strateji run'larının (`.npz` bundle) Signal/PnL serilerini tek bir grafikte
+   overlay etmek için 4 script'lik sıralı pipeline (`GenerateReplaySampleBundles` →
+   `playlist.json` → `MergeOfflineReplayPlaylist` → opsiyonel `EditOfflineReplay` →
+   `RunOfflineReplay`) — menü karşılığı bilinçli olarak yok.
 
 ## Bu Setin Kapsamadığı Şeyler (bilerek — başka dokümanlarda zaten var)
 

@@ -29,6 +29,7 @@
 - §12 — [StrategyRegistry / QueryRegistry — Auto-Discovery](#12-strategyregistry--queryregistry--auto-discovery)
 - §13 — [Scanner Ailesi (12 sınıf) — Toplu Tarama](#13-scanner-ailesi-12-sınıf--toplu-tarama)
 - §14 — [Script'ler — Numaralı Envanter](#14-scriptler--numaralı-envanter)
+- §15 — [Offline Replay — Playlist/Merge Pipeline](#15-offline-replay--playlistmerge-pipeline) — özet burada, tam referans [ayrı sayfada](08-offline-replay.md)
 
 ---
 
@@ -520,6 +521,28 @@ Numaralanmamış diğer script'ler (`Config_*.csx`, `mainScript*.csx`, `paramSwe
 `console_scripts.csx`, `test_hello.csx`) için kategorize liste:
 [inputs/scripts/readme.txt](../../inputs/scripts/readme.txt) ve
 [03-scripting-guide.md §6](03-scripting-guide.md#6-mevcut-script-envanteri).
+
+---
+
+## 15. Offline Replay — Playlist/Merge Pipeline
+
+**Dosyalar**: `src/AlgoTrade.Core/Python/DearPyGuiDataPlotter/OfflineReplayPlaylist.cs`,
+`inputs/scripts/{GenerateReplaySampleBundles,MergeOfflineReplayPlaylist,EditOfflineReplay,RunOfflineReplay}.csx`
+(numaralanmamış — [§14](#14-scriptler--numaralı-envanter)'teki `01-19` envanterinin dışında).
+
+**Rolü**: Birden fazla **farklı zamanlarda çalıştırılmış** `SingleTrader` run'ının (`.npz`
+bundle) Signal/PnL serilerini tek bir OHLC grafiği üzerinde overlay olarak çizmek — gerçek bir
+`MultipleTrader` run'ı gerekmez, elde var olan bundle'lar birleştirilip çizilir. 4 script sıralı
+çalışır (üret → elle playlist.json → merge → opsiyonel edit → çiz), her biri tek bir iş yapar.
+
+**Ne zaman kullanılır**: `[8] Run Script` ile elle, sırayla. Menü karşılığı yok (bilinçli — workflow
+henüz oturmadı, bkz. ayrı sayfa §6).
+
+**Detaylı referans** — pipeline'ın 4 adımı, dosya yerleşimi, `playlist.json` formatı,
+`EditOfflineReplay.csx`'teki panel düzeni seçenekleri (choice 0-5), menüde olmama gerekçesi,
+bilinen sınırlamalar:
+
+**[→ Offline Replay (ayrı sayfa)](08-offline-replay.md)**
 
 ---
 
