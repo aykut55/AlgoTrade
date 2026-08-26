@@ -15,10 +15,25 @@
      en iyi sonucu basıyor.
   Ayrıca §1/§2'de yapılan ReadData filtreleme senkronizasyonunun aynısı buraya da taşınabilir.
 
-- [ ] venv'ler merkezileştirilecek. Şu an projede 3 ayrı `.venv` klasörü var, toplam ~624 MB:
-  - `inputs/python/.venv` — 356 MB — Ana AlgoTrade Python entegrasyonu (pythonnet vb.)
-  - `src/DearPyGuiDataPlotter/.venv` — 134 MB — Aktif kullanılan DearPyGui plotter alt-projesi
-  - `src/DearImGuiBundleDataPlotter/.venv` — 134 MB — Terk edilmiş imgui_bundle prototipi (hiçbir yerden çağrılmıyor)
+- [x] ~~venv'ler merkezileştirilecek~~ — **YAPILMIŞ (doğrulandı 2026-08-25)**: `inputs/python/.venv`,
+  `src/DearPyGuiDataPlotter/.venv`, `src/DearImGuiBundleDataPlotter/.venv` artık yok, sadece
+  proje kökünde tek `D:\SageProjects\AlgoTrade\.venv` var (`AppSettings.VenvDir`). Bu satır
+  stale kalmıştı, düzeltildi.
+
+- [ ] **Kalıntı "çift ROOT" yapısı (2026-08-25 tespit edildi, bkz. altta madde 23-25'in geçmişi)**:
+  `src/DearPyGuiDataPlotter` bağımsız bir projeden kopyalandığı için, o projede kendi ROOT'u olan
+  `inputs/` klasörü hâlâ AYNEN duruyor (`src/DearPyGuiDataPlotter/inputs/input.json`,
+  `latest_bundle.npz`, `latest_bundle.view.json`) — AlgoTrade'in KENDİ kök `inputs/`'undan
+  (`D:\SageProjects\AlgoTrade\inputs\`, `python/`/`scripts/`/`configs/` içeren) TAMAMEN AYRI ve
+  paralel bir yapı. Somut asimetri: eski tip plotter'ın yeni Python kodu (`bundle_loader.py`,
+  2026-08-25'te "Geçmiş (Offline)... Hızlı Sinyal Plot'u" işi sırasında eklendi) AlgoTrade'in kendi
+  `inputs/python/`'una gitti, ama okuduğu/yazdığı bundle dosyaları hâlâ
+  `src/DearPyGuiDataPlotter/inputs/`'ta — iki farklı "inputs" kökü bir arada kullanılıyor.
+  Path çözümleme (`ROOT_DIR`, bkz. `src/DearPyGuiDataPlotter/docs/InputConfig.md`) zaten AlgoTrade'in
+  DIŞ köküne (`AlgoTrade.sln`'in olduğu yer) göre çözülüyor — yani mantıksal olarak tek ROOT kabul
+  ediliyor, sadece fiziksel dosya konumu hâlâ eski (nested) klasörde kalmış. Aşağıdaki madde 29
+  (`inputs/python/`'un `src/` altına taşınması) ile birlikte ele alınmalı — muhtemelen ikisi de aynı
+  büyük "proje yapısını sadeleştirme" refactor'ünün parçası.
 
 - [ ] `D:\Aykut\Projects\Python ImGui Denemeleri\PythonImGuiProjects` ayrı bir Python projesi ve VS Code ile geliştiriliyor. Bu projedeki şu klasörler AlgoTrade'e kopyalanmış:
   - `DearImGuiBundleDataPlotter` → `src/DearImGuiBundleDataPlotter` (birebir aynı, hiç değiştirilmemiş)

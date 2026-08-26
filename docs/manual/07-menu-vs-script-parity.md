@@ -55,6 +55,16 @@ sarmalayıcısını kullanmıyor).
   Gate şartı menüdekiyle aynı mantık: `selectedRunMode != TraderRunMode.QueryOnly` (menüde ayrıca
   `singleTrader.PlotEnabled` de kontrol ediliyor — script bunu bilerek atlıyor, bkz. aşağıdaki not).
 
+### ✅ Düzeltildi (2026-08-26)
+
+- **Bundle sadece `DearPyGuiDataPlotter/inputs`'a yazılıyordu, `outputs/logs`'a değil.** Hem
+  `01_RunSingleTraderWithProgressAsync.csx` hem `Program.cs:793-825` (Menü [5]) aynı anda
+  güncellendi: `bundleConverter.ConvertSingleTrader(...)` çağrısının yanına ikinci bir çağrı
+  eklendi — `bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.LogsDir,
+  fileBaseName: "SingleTraderBundle")`. Artık `SingleTraderLists.csv`/`Statistics.txt` ile aynı
+  klasörde `SingleTraderBundle.npz`/`.view.json` de duruyor. "Normal" konum (`DearPyGuiDataPlotter/
+  inputs/latest_bundle.npz`) değişmedi, bu ekstra bir kopya.
+
 - **Veri okuma filtreleme yoktu.** Menü tarafı `readStockData()`
   (`Program.cs:610-692`, özellikle satır 665) `AppConfig.json`'daki `ReadData` bölümünden
   (`FilterMode`, `N1`, `N2`, `Dt1`, `Dt2`) gelen parametrelerle
@@ -217,6 +227,16 @@ eklendi.
 
 **§2 durumu: artık tüm 🔴/🟡 farklar kapatıldı — [6] ile 02 script'i arasında sadece ⚪ (kasıtlı/
 kozmetik) farklar kaldı.**
+
+### ✅ Düzeltildi (2026-08-26)
+
+- **Bundle sadece `DearPyGuiDataPlotter/inputs`'a yazılıyordu, `outputs/logs`'a değil.** §1'deki
+  aynı fix buraya da uygulandı: hem `02_RunMultipleTraderWithProgressAsync.csx` hem
+  `Program.cs:872-904` (Menü [6]) aynı anda güncellendi —
+  `bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.LogsDir, fileBaseName:
+  "MultipleTraderBundle")` ikinci çağrısı eklendi. `MultipleTraderLists.csv`/
+  `MultipleTraderStatisticsGrid.txt` ile aynı klasörde artık `MultipleTraderBundle.npz`/
+  `.view.json` de var.
 
 ### ⚪ Kasıtlı/kozmetik farklar
 

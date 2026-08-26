@@ -469,6 +469,11 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
         string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
         var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(singleTrader, bundleOutDir);
 
+        // Ayni bundle'i outputs/logs'a da yaz (SingleTraderLists.csv/Statistics.txt ile ayni
+        // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
+        bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
+        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\SingleTraderBundle.npz'e de yazildi.");
+
         // true: eski tip plotter gibi, pencere kapanana kadar bloklar. false: hemen doner,
         // process arka planda acik kalir (hot-reload akisi).
         bool blockDearPyGuiPlotterUntilClosed = true;

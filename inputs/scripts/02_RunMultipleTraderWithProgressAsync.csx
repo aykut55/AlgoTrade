@@ -513,6 +513,11 @@ if (!IsCancellationRequested && !multipleTrader.IsStopRequested && selectedRunMo
         string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
         var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(multipleTrader, bundleOutDir);
 
+        // Ayni bundle'i outputs/logs'a da yaz (MultipleTraderLists.csv/Statistics.txt ile ayni
+        // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
+        bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
+        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\MultipleTraderBundle.npz'e de yazildi.");
+
         // true: eski tip plotter gibi, pencere kapanana kadar bloklar. false: hemen doner,
         // process arka planda acik kalir (hot-reload akisi).
         bool blockDearPyGuiPlotterUntilClosed = true;

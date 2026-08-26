@@ -812,6 +812,11 @@ async Task runSingleTraderAlgoTrade()
                 var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(
                     algoTrader.SingleTrader, bundleOutDir);
 
+                // Ayni bundle'i outputs/logs'a da yaz (SingleTraderLists.csv/Statistics.txt ile
+                // ayni klasor) - gorunurluk icin, "normal" konumun yaninda. 01.csx ile parity.
+                bundleConverter.ConvertSingleTrader(
+                    algoTrader.SingleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
+
                 dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
                 dearPyGuiTestPlotter.SetLogger(logger);
                 dearPyGuiTestPlotter.StartPlotter();
@@ -890,6 +895,11 @@ async Task runMultipleTraderAlgoTrade()
                 string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
                 var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(
                     algoTrader.MultipleTrader, bundleOutDir);
+
+                // Ayni bundle'i outputs/logs'a da yaz (MultipleTraderLists.csv/Statistics.txt ile
+                // ayni klasor) - gorunurluk icin, "normal" konumun yaninda. 02.csx ile parity.
+                bundleConverter.ConvertMultipleTrader(
+                    algoTrader.MultipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
 
                 dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
                 dearPyGuiTestPlotter.SetLogger(logger);
