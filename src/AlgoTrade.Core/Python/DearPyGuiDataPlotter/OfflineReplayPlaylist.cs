@@ -217,6 +217,13 @@ public static class OfflineReplayPlaylist
         writer.AddIntArray("size", sizes);
         writer.AddStringArray("timestamps", timestamps);
 
+        // signal_codes/signal_steps'i kaynak combined.npz'den olduğu gibi kopyala (TradeSignalRenderer/
+        // OHLC paneli bunları bekliyor — bkz. MergeToBundle'daki aynı ekleme, 2026-08-26).
+        if (sourceReader.Contains("signal_codes"))
+            writer.AddIntArray("signal_codes", sourceReader.ReadLongArray("signal_codes"));
+        if (sourceReader.Contains("signal_steps"))
+            writer.AddIntArray("signal_steps", sourceReader.ReadLongArray("signal_steps"));
+
         var seriesNames = new List<string>();
         var seriesRows = new List<double[]>();
         foreach (var p in panels)
@@ -318,12 +325,15 @@ public static class OfflineReplayPlaylist
         var seriesNames = new List<string>();
         var seriesRows = new List<double[]>();
         var panelSeries = new List<(string Label, string SignalName, string? PnLName, int[] Color)>();
+        long[]? referenceSignalSteps = null;
 
         foreach (var entry in entries)
         {
             var reader = entry == entries[0] ? referenceReader : new NpzReader(entry.BundlePath);
 
             var signalSteps = reader.ReadLongArray("signal_steps");
+            if (entry == entries[0])
+                referenceSignalSteps = signalSteps;
             var signalRow = PadOrTrim(signalSteps.Select(v => (double)v).ToArray(), n);
             string signalName = $"{entry.Label} Signal";
             seriesNames.Add(signalName);
@@ -356,6 +366,19 @@ public static class OfflineReplayPlaylist
                 matrixOut[r, c] = seriesRows[r][c];
         writer.AddFloat2DArray("indicator_values", matrixOut);
 
+        // "Gerçek" (TradeDataBundleConverter'ın ürettiği) bundle'larda hep var olan
+        // signal_codes/signal_steps alanları — combined.npz'de EKSİKTİ (2026-08-26'da bulundu,
+        // TradeSignalRenderer/OHLC paneli bunları kullanıyor olabilir). Referans (ilk) entry'nin
+        // sinyalinden, TradeDataBundleConverter.BuildSignalCodes ile AYNI mantıkla dolduruluyor —
+        // OHLC de zaten referans entry'den geliyor, tutarlı.
+        if (referenceSignalSteps != null)
+        {
+            var refSteps = PadOrTrim(referenceSignalSteps.Select(v => (double)v).ToArray(), n)
+                .Select(v => (long)v).ToArray();
+            writer.AddIntArray("signal_codes", BuildSignalCodes(refSteps, n));
+            writer.AddIntArray("signal_steps", refSteps);
+        }
+
         var meta = new Dictionary<string, object?>
         {
             ["symbol"] = $"Offline Replay Playlist ({entries.Count} run)",
@@ -369,6 +392,35 @@ public static class OfflineReplayPlaylist
 
         string viewPath = BuildAndWriteView(outputDir, fileBaseName, panelSeries);
         return (bundlePath, viewPath);
+    }
+
+    /// <summary>
+    /// TradeDataBundleConverter.BuildSignalCodes ile AYNI mantık: sinyal SEYREK (sadece
+    /// değişim barlarında) event koduna çevrilir — TradeSignalRenderer'ın beklediği format
+    /// (1=AL, -1=SAT, 2=FLAT, 0=değişim yok).
+    /// </summary>
+    private static long[] BuildSignalCodes(long[] signalSteps, int n)
+    {
+        var codes = new long[n];
+        long? previous = null;
+
+        for (int i = 0; i < n && i < signalSteps.Length; i++)
+        {
+            long current = signalSteps[i];
+            if (previous == null || current != previous.Value)
+            {
+                codes[i] = current switch
+                {
+                    1 => 1,   // AL
+                    -1 => -1, // SAT
+                    0 => 2,   // FLAT
+                    _ => 0,
+                };
+            }
+            previous = current;
+        }
+
+        return codes;
     }
 
     private static double[] PadOrTrim(double[] values, int n)
