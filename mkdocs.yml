@@ -50,6 +50,8 @@ nav:
       - Varyant Kataloğu: manual/04-variant-catalog.md
       - Findings: manual/05-findings.md
       - Sınıf Dokümantasyon Yöntemi: manual/06-class-doc-method.md
+      - Menü ↔ Script Paritesi: manual/07-menu-vs-script-parity.md
+      - Offline Replay: manual/08-offline-replay.md
   - Proje Durumu:
       - Project Analysis: PROJECT_ANALYSIS.md
       - Migration Guide: migration-guide.md

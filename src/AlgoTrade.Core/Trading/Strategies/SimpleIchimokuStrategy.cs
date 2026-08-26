@@ -127,13 +127,21 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             if (Trader != null)
             {
+                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
                 takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
             }
 
             if (Trader != null)
             {
+                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
                 stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
             }
+
+            // Flat olma durumu burada incelenir ve flat flag'i setlenir
+            flat = false;
+
+            // Skip olma durumu burada incelenir ve skip flag'i setlenir
+            skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
