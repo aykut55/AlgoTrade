@@ -2,6 +2,17 @@
 
 ## Todo
 
+- [x] ~~Offline Replay — yeni tip plotter'da OHLC panelinde AL/SAT harfleri/level çizgileri
+  MAX_SIGNAL_EVENTS eşiğini aştığı için çizilmiyor olabilir~~ — **HİPOTEZ ÇÜRÜTÜLDÜ, SORUN YOK
+  (doğrulandı 2026-08-26)**: `RunOfflineReplay.csx` ile `combined.npz` (10 run, 1911603 bar)
+  gerçek çalıştırmasında konsolda `[TradeSignalRenderer] panel=0 data=0: 13057 signals, 13057
+  runs, colorBars=True` çıktı — 13057, aktif sınıfın (`tradeSignalRenderer.py:284
+  TradeSignalRenderer`) eşiği olan `MAX_SIGNAL_EVENTS = 50000`'in çok altında, `skipped` uyarısı
+  hiç çıkmadı. Kullanıcı pencerede harf/çizgileri görsel olarak da teyit etti ("çizgiler
+  görünüyor"). Not: dosyada `MAX_SIGNAL_EVENTS = 20000` olan ikinci bir sınıf
+  (`_DeprecatedTradeSignalRenderer`) var ama o KULLANILMIYOR (deprecated, hiçbir yerden
+  import edilmiyor) — kafa karıştırmasın diye burada not düşüldü.
+
 - [ ] **Offline Replay — yeni tip plotter'da panellerin X ekseni senkron olmayabiliyor
   (2026-08-26, öncelik değil — kullanıcı "genel olarak sıkıntı yoktu" dedi, gözlem notu)**:
   `RunOfflineReplay.csx` açtığında eski tip plotter'da panellerin X ekseni senkronken, yeni tip
