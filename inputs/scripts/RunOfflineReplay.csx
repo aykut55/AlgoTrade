@@ -1,44 +1,20 @@
 // =============================================================================
-// RunOfflineReplay.csx - "Offline Replay" ozelliginin ANA/asil script'i.
-//
-// AMAC: onceden (farkli zamanlarda, farkli stratejilerle) calistirilmis N adet SingleTrader
-// run'inin sonucunu, trader'lari HIC YENIDEN CALISTIRMADAN, tek pencerede ust uste (overlay)
-// gosterip karsilastirmak - hem eski tip (pythonnet/imgui_bundle) hem yeni tip
-// (DearPyGuiDataPlotter) plotter'da. bkz. docs/todo.md "Yeni Ozellik Fikri: Gecmis (Offline)
-// Trader Verilerinden Hizli Sinyal Plot'u" > Option C.
-//
-// TUM AKIS (bu script'i calistirmadan ONCE asagidaki adimlarin tamamlanmis olmasi lazim):
-//
-//   1) Ornek/gercek bundle'lari elde et.
-//      - Test/gelistirme icin: GenerateReplaySampleBundles.csx calistir - Config_01'deki veriyi
-//        N farkli stratejiyle (SingleTrader'i pencere/Python ACMADAN, arka planda) calistirip
-//        her birini outputs/logs/replay_samples/<StrategyName>/bundle.npz olarak yazar.
-//      - Gercek kullanimda: herhangi bir [5]/[6] run'inin urettigi bundle (bkz.
-//        AppSettings.DearPyGuiPlotterBundleDir/PythonPlotterBundleDir) de kullanilabilir.
-//
-//   2) Bu bundle'lari (outputs/logs/replay_samples/... ELLE, kalici degil - bkz. asagidaki NOT)
-//      inputs/python/offlineReplay/samples/<StrategyName>/bundle.npz altina KOPYALA. Bu, playlist
-//      icin kullanilacak "kalici/gercek" konum - GenerateReplaySampleBundles.csx BILINCLI olarak
-//      buraya YAZMIYOR (tekrar tekrar denerken playlist'in kullandigi veriyi bozmasin diye),
-//      kopyalama islemi kullanicinin (senin) sorumlulugunda.
-//
-//   3) inputs/python/offlineReplay/playlist.json'i duzenle - hangi bundle'lar (samples/ altindaki),
-//      hangi etiket/renkle overlay edilecek (bkz. dosyanin kendisi, format: entries: [{bundle,
-//      label, color}, ...]). Zaten 10 ornek strateji ile dolu, degistirmek istersen elle duzenle.
-//
-//   4) MergeOfflineReplayPlaylist.csx calistir - playlist.json'daki N bundle'i OKUYUP, yeni tip
-//      plotter'in dogrudan acabildigi TEK bir "combined" bundle'a birlestirir
-//      (inputs/python/offlineReplay/combined.npz + combined.view.json).
-//
-//   5) BU SCRIPT (RunOfflineReplay.csx) - playlist.json + combined.npz'i (ikisi de ONCEDEN
-//      hazir olmali, bu script UretMEZ/BirlestirMEZ) okuyup HEM yeni tip plotter'i
-//      (LoadBundle ile combined.npz) HEM eski tip plotter'i (PlotBundlePlaylist ile playlist'teki
-//      N bundle'i bellekte ayri ayri okuyup) acar - iki ayri pencere, ayni 10 stratejiyi
-//      overlay gosteriyor olmali.
-//
-// KISACA SIRA: GenerateReplaySampleBundles.csx (uret) -> elle kopyala (samples/) ->
-//              playlist.json (duzenle, opsiyonel) -> MergeOfflineReplayPlaylist.csx (birlestir) ->
-//              RunOfflineReplay.csx (bu script - sadece CIZER, hicbir sey uretmez/birlestirmez).
+// Offline Replay pipeline'i - sirali:
+//   1) GenerateReplaySampleBundles.csx - N stratejiyi arka planda calistirip
+//      outputs/logs/replay_samples/<Strateji>/bundle.npz uretir (sadece test verisi).
+//   2) (elle adim) outputs/logs/replay_samples/* -> inputs/python/offlineReplay/samples/'e
+//      elle kopyalanir (bilerek otomatik degil - tekrar deneme kalici veriyi bozmasin diye).
+//   3) inputs/python/offlineReplay/playlist.json - hangi bundle'lar, hangi etiket/renkle
+//      overlay edilecek (elle duzenlenebilir config, script degil).
+//   4) MergeOfflineReplayPlaylist.csx - playlist.json'i okuyup N bundle'i combined.npz +
+//      combined.view.json + input.json'a birlestirir (uretir, hicbir sey cizmez).
+//   5) EditOfflineReplay.csx (opsiyonel) - combined.npz'i okuyup ozel bir .npz + .view.json +
+//      guncel input.json uretir (istediginiz alt kume/duzende, hatta HESAPLANMIS/DONUSTURULMUS
+//      veriyle panel kurmak icin - uretir, cizmez).
+//   6) RunOfflineReplay.csx (BU SCRIPT) - input.json'i okuyup hem yeni tip (DearPyGuiDataPlotter)
+//      hem eski tip (PythonPlotter) plotter'i acar, hepsini overlay gosterir (sadece cizer,
+//      hicbir sey uretmez/birlestirmez). 5. adim atlanirsa MergeOfflineReplayPlaylist.csx'in
+//      urettigi varsayilan (tum N trader'i tek panelde gosteren) combined.npz/view'i cizer.
 // =============================================================================
 using System;
 using System.IO;

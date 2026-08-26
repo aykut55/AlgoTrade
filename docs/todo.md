@@ -2,6 +2,31 @@
 
 ## Todo
 
+- [ ] **Offline Replay — yeni tip plotter'da panellerin X ekseni senkron olmayabiliyor
+  (2026-08-26, öncelik değil — kullanıcı "genel olarak sıkıntı yoktu" dedi, gözlem notu)**:
+  `RunOfflineReplay.csx` açtığında eski tip plotter'da panellerin X ekseni senkronken, yeni tip
+  plotter'da (DearPyGuiDataPlotter) bazen değil — `[5]`/`[6]` (SingleTrader/MultipleTrader)
+  akışlarında bu gözlemlenmemiş. Karşılaştırma yapıldı: `src/DearPyGuiDataPlotter/inputs/
+  latest_bundle.view.json`'daki (çalışan) "Signals" panelinin TEKİL sinyal serisi
+  `"source": "signalsteps"` (özel tip) kullanıyor; `OfflineReplayPlaylist.BuildAndWriteView`'ın
+  ürettiği `combined.view.json`'da ise hepsi `"source": "indicator"` — ama bu MultipleTrader'ın
+  child overlay'lerinde de zaten "indicator" olduğu için tek başına kesin sebep değil, sadece bir
+  ipucu. `panelManager.py:_maybeApplyDefaultViewOnLoad`/`applyViewMode`'ın "FitToScreen" hesabı
+  panel'in o anki piksel genişliğine (`_plotPixelWidth`, ölçülemezse 800px varsayılan) bağlı —
+  paneller farklı zamanlarda layout'lanırsa farklı X-aralığı hesaplanabilir, bu da bir başka
+  olası neden. Derinlemesine araştırılmadı, sadece gözlem+ilk bulgular not edildi.
+
+- [ ] **Offline Replay — panelleri RUNTIME'DA dinamik değiştirme (2026-08-26, ÖNCELİK DEĞİL —
+  kullanıcı şu an bunu istemiyor, ileride)**: `DearPyGuiDataPlotter.ClearPanel(panelId)` +
+  `AddSeriesFromBundle(panelId, "indicator", "{label} Signal")` komutlarını kullanarak,
+  `RunOfflineReplay.csx`'in açtığı pencere AÇIKKEN, dosyaya hiç dokunmadan, Signals/PnL
+  panellerini anlık olarak seçilen bir alt kümeyle (örn. sadece 4 strateji) yeniden doldurmak.
+  Panel id'leri view.json'daki panel SIRASINA göre (0=OHLC, 1=Signals, 2=PnL) sabit —
+  `default.py:stage3BuildPanelsFromView` + `panelManager.py:createPanel` ile doğrulandı.
+  İlk taslak `EditOfflineReplay.csx`'te bu şekilde yazılmıştı ama kullanıcı bunun yerine
+  STATİK (önceden view.json üreten) yaklaşımı öncelikli istedi — bu madde o ilk taslağın
+  fikrini kaybetmemek için not olarak duruyor, implementasyon henüz yok/kullanılmıyor.
+
 - [ ] **O(n²) performans bug'ı — indikatör hesaplarında HHV/LLV/SMA/LSMA döngü İÇİNDE tekrar
   tekrar hesaplanıyor (2026-08-26, `GenerateReplaySampleBundles.csx` ile 1.9M barlık veride
   `SimpleStochasticStrategy` pratikte hiç bitmeyince bulundu).** `HHV(...)`/`LLV(...)` kendileri

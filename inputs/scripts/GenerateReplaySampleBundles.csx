@@ -1,4 +1,21 @@
 // =============================================================================
+// Offline Replay pipeline'i - sirali:
+//   1) GenerateReplaySampleBundles.csx (BU SCRIPT) - N stratejiyi arka planda calistirip
+//      outputs/logs/replay_samples/<Strateji>/bundle.npz uretir (sadece test verisi).
+//   2) (elle adim) outputs/logs/replay_samples/* -> inputs/python/offlineReplay/samples/'e
+//      elle kopyalanir (bilerek otomatik degil - tekrar deneme kalici veriyi bozmasin diye).
+//   3) inputs/python/offlineReplay/playlist.json - hangi bundle'lar, hangi etiket/renkle
+//      overlay edilecek (elle duzenlenebilir config, script degil).
+//   4) MergeOfflineReplayPlaylist.csx - playlist.json'i okuyup N bundle'i combined.npz +
+//      combined.view.json + input.json'a birlestirir (uretir, hicbir sey cizmez).
+//   5) EditOfflineReplay.csx (opsiyonel) - combined.npz'i okuyup ozel bir .npz + .view.json +
+//      guncel input.json uretir (istediginiz alt kume/duzende, hatta HESAPLANMIS/DONUSTURULMUS
+//      veriyle panel kurmak icin - uretir, cizmez).
+//   6) RunOfflineReplay.csx - input.json'i okuyup hem yeni tip (DearPyGuiDataPlotter) hem
+//      eski tip (PythonPlotter) plotter'i acar, hepsini overlay gosterir (sadece cizer,
+//      hicbir sey uretmez/birlestirmez). 5. adim atlanirsa MergeOfflineReplayPlaylist.csx'in
+//      urettigi varsayilan (tum N trader'i tek panelde gosteren) combined.npz/view'i cizer.
+// =============================================================================
 // GenerateReplaySampleBundles.csx - Offline Replay (playlist/merge) ozelligini
 // gelistirmek/test etmek icin, FARKLI stratejilerle calistirilmis birden fazla
 // SingleTrader run'ini, HER BIRINI AYRI bir klasore bundle olarak yazar.

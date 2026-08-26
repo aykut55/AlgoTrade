@@ -7,6 +7,68 @@ namespace AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 public record PlaylistEntry(string BundlePath, string Label, int[] Color);
 
 /// <summary>
+/// combined.npz'den okunan, TEK bir run'a ait ham veri — EditOfflineReplay.csx'in "trader[]"
+/// dizisindeki her eleman bu tip. Signal/PnL dizileri doğrudan erişilebilir (kullanıcı kendi
+/// script'inde üzerinde hesaplama/dönüştürme yapabilir — <see cref="ViewPanelBuilder.AddSeries"/>
+/// SONUCU dizinin KENDİSİNİ alır, isimle referans değil — bu yüzden dönüştürülmüş veri de
+/// sorunsuz çalışır), Color/Label ise view.json üretirken kullanılıyor.
+/// </summary>
+public record ReplaySource(string Label, int[] Color, double[] Signal, double[]? PnL);
+
+/// <summary>
+/// EditOfflineReplay.csx'in kullanıcı-düzenlenebilir bölümünde kullanılan, tek bir panelin
+/// içeriğini elle kuran yardımcı sınıf — <see cref="OfflineReplayPlaylist.WriteCustomBundle"/>'a
+/// verilir. OHLC paneli otomatik eklendiği için burada tekrar eklemeye gerek yok.
+///
+/// ÖNEMLİ: Add* metodları serinin verisini (double[]) DOĞRUDAN TAŞIR — sadece bir isim referansı
+/// DEĞİL. Yani trader[i].Signal'i olduğu gibi ya da üzerinde hesaplama yaptıktan SONRA
+/// (örn. trader[i].Signal.Select(v => v * 2).ToArray()) ekleyebilirsiniz; WriteCustomBundle bu
+/// diziyi YENİ bir .npz'ye yazar, plotter'ın göremediği "hayalet" seri sorunu oluşmaz.
+/// </summary>
+public class ViewPanelBuilder
+{
+    public string Id { get; }
+    public string Name { get; }
+    public string Caption { get; }
+    public int Height { get; set; } = 220;
+    public string? YLabel { get; set; }
+    public double[]? YFixedRange { get; set; }
+
+    private readonly List<(string SeriesName, string Label, int[] Color, double[] Data)> _series = new();
+    internal IReadOnlyList<(string SeriesName, string Label, int[] Color, double[] Data)> SeriesList => _series;
+
+    public ViewPanelBuilder(string id, string? name = null, string? caption = null, int height = 220)
+    {
+        Id = id;
+        Name = name ?? id;
+        Caption = caption ?? Name;
+        Height = height;
+    }
+
+    /// <summary>trader[i]'nin Signal dizisini (olduğu gibi) bu panele ekler.</summary>
+    public ViewPanelBuilder AddSignal(ReplaySource source)
+        => AddSeries($"{source.Label} Signal", source.Label, source.Color, source.Signal);
+
+    /// <summary>trader[i]'nin PnL dizisini (olduğu gibi) bu panele ekler (PnL yoksa sessizce atlar).</summary>
+    public ViewPanelBuilder AddPnL(ReplaySource source)
+    {
+        if (source.PnL != null)
+            AddSeries($"{source.Label} PnL", source.Label, source.Color, source.PnL);
+        return this;
+    }
+
+    /// <summary>
+    /// Herhangi bir diziyi (trader[]'dan hesaplanmış/dönüştürülmüş olabilir) elle, kendi
+    /// isim/etiket/rengiyle ekler — ileri düzey/özel seri kullanımı için.
+    /// </summary>
+    public ViewPanelBuilder AddSeries(string seriesName, string label, int[] color, double[] data)
+    {
+        _series.Add((seriesName, label, color, data));
+        return this;
+    }
+}
+
+/// <summary>
 /// inputs/python/offlineReplay/playlist.json'ı okuyup, N farklı SingleTrader run'ının .npz
 /// bundle'ını (docs/todo.md "Yeni Özellik Fikri: Geçmiş (Offline)... Hızlı Sinyal Plot'u" —
 /// Option C) tek bir "combined" bundle'a birleştirir. Yeni tip plotter (DearPyGuiDataPlotter)
@@ -72,6 +134,138 @@ public static class OfflineReplayPlaylist
             : Path.GetFullPath(Path.Combine(rootDirForRelativePaths, raw));
 
         return (Resolve(bundleRaw), Resolve(viewRaw));
+    }
+
+    /// <summary>
+    /// combined.npz'i (MergeToBundle'ın ürettiği) okuyup, playlist.json'daki her entry için bir
+    /// <see cref="ReplaySource"/> döndürür — EditOfflineReplay.csx'in "trader[]" dizisi bu.
+    /// combined.npz'e HİÇ yazmaz, sadece okur.
+    /// </summary>
+    /// <param name="combinedBundlePath">combined.npz'in tam yolu.</param>
+    /// <param name="playlistEntries">Etiket/renk sırası için playlist.json'dan Load(...) ile okunan liste.</param>
+    public static List<ReplaySource> ReadSources(string combinedBundlePath, List<PlaylistEntry> playlistEntries)
+    {
+        var reader = new NpzReader(combinedBundlePath);
+        var names = reader.ReadStringArray("indicator_names");
+        var matrix = reader.ReadDouble2DArray("indicator_values");
+        int n = matrix.GetLength(1);
+
+        double[]? RowFor(string name)
+        {
+            int idx = Array.IndexOf(names, name);
+            if (idx < 0) return null;
+            var row = new double[n];
+            for (int c = 0; c < n; c++) row[c] = matrix[idx, c];
+            return row;
+        }
+
+        var sources = new List<ReplaySource>();
+        foreach (var entry in playlistEntries)
+        {
+            var signal = RowFor($"{entry.Label} Signal")
+                ?? throw new InvalidDataException(
+                    $"combined.npz içinde '{entry.Label} Signal' serisi yok — playlist.json ile combined.npz uyuşmuyor olabilir, MergeOfflineReplayPlaylist.csx'i tekrar çalıştırın.");
+            var pnl = RowFor($"{entry.Label} PnL");
+            sources.Add(new ReplaySource(entry.Label, entry.Color, signal, pnl));
+        }
+        return sources;
+    }
+
+    /// <summary>
+    /// EditOfflineReplay.csx'in kullanıcı-düzenlenebilir bölümünde kurulan panelleri
+    /// (<see cref="ViewPanelBuilder"/> listesi, gerçek veri dizileriyle birlikte) YENİ bir
+    /// .npz + .view.json çiftine yazar — combined.npz/combined.view.json'a (MergeOfflineReplayPlaylist.csx'in
+    /// ürettiği "tam/varsayılan" görünüm) ASLA dokunmaz. OHLC/timestamps
+    /// <paramref name="sourceCombinedBundlePath"/>'ten (değişmeden) kopyalanır; panellerdeki her
+    /// seri KENDİ verisiyle (olduğu gibi ya da kullanıcı tarafından hesaplanmış/dönüştürülmüş
+    /// olabilir — <see cref="ViewPanelBuilder"/>'a bkz.) yeni npz'ye yazılır, böylece plotter'ın
+    /// "isim var ama veri yok" sorunu yaşaması mümkün değildir. OHLC paneli (dataId=0) otomatik
+    /// en başa eklenir, kullanıcının ayrıca eklemesi gerekmez.
+    /// </summary>
+    /// <param name="sourceCombinedBundlePath">OHLC/timestamps'in kopyalanacağı combined.npz'in tam yolu.</param>
+    /// <param name="panels">Kullanıcının ViewPanelBuilder ile kurduğu panel listesi (OHLC hariç).</param>
+    /// <param name="outputDir">.npz/.view.json'ın yazılacağı klasör (AppSettings.OfflineReplayDir).</param>
+    /// <param name="fileBaseName">Uzantısız dosya adı — combined ile ÇAKIŞMAMALI.</param>
+    /// <returns>Yazılan .npz ve .view.json'ın tam yolları.</returns>
+    public static (string bundlePath, string viewPath) WriteCustomBundle(string sourceCombinedBundlePath,
+        List<ViewPanelBuilder> panels, string outputDir, string fileBaseName)
+    {
+        if (panels == null || panels.Count == 0)
+            throw new ArgumentException("panels boş olamaz — en az bir panel kurup ekleyin.", nameof(panels));
+        if (fileBaseName.Equals("combined", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException(
+                "fileBaseName 'combined' olamaz — MergeOfflineReplayPlaylist.csx'in ürettiği " +
+                "combined.npz/combined.view.json'ın üzerine yazılmasını önlemek için farklı bir isim seçin.",
+                nameof(fileBaseName));
+
+        var sourceReader = new NpzReader(sourceCombinedBundlePath);
+        var opens = sourceReader.ReadDoubleArray("open");
+        var highs = sourceReader.ReadDoubleArray("high");
+        var lows = sourceReader.ReadDoubleArray("low");
+        var closes = sourceReader.ReadDoubleArray("close");
+        var volumes = sourceReader.ReadDoubleArray("volume");
+        var sizes = sourceReader.ReadLongArray("size");
+        var timestamps = sourceReader.ReadStringArray("timestamps");
+        int n = timestamps.Length;
+
+        var writer = new NpzWriter();
+        writer.AddFloatArray("open", opens);
+        writer.AddFloatArray("high", highs);
+        writer.AddFloatArray("low", lows);
+        writer.AddFloatArray("close", closes);
+        writer.AddFloatArray("volume", volumes);
+        writer.AddIntArray("size", sizes);
+        writer.AddStringArray("timestamps", timestamps);
+
+        var seriesNames = new List<string>();
+        var seriesRows = new List<double[]>();
+        foreach (var p in panels)
+            foreach (var s in p.SeriesList)
+            {
+                seriesNames.Add(s.SeriesName);
+                seriesRows.Add(PadOrTrim(s.Data, n));
+            }
+
+        if (seriesNames.Count > 0)
+        {
+            writer.AddStringArray("indicator_names", seriesNames);
+            var matrixOut = new double[seriesNames.Count, n];
+            for (int r = 0; r < seriesNames.Count; r++)
+                for (int c = 0; c < n; c++)
+                    matrixOut[r, c] = seriesRows[r][c];
+            writer.AddFloat2DArray("indicator_values", matrixOut);
+        }
+
+        var meta = new Dictionary<string, object?>
+        {
+            ["symbol"] = $"Offline Replay - Custom ({fileBaseName})",
+            ["intraday"] = true,
+        };
+        writer.AddScalarString("meta_json", JsonConvert.SerializeObject(meta));
+
+        Directory.CreateDirectory(outputDir);
+        string bundlePath = Path.Combine(outputDir, fileBaseName + ".npz");
+        writer.Save(bundlePath);
+
+        var panelDicts = new List<Dictionary<string, object?>>
+        {
+            // dataId=0 ZORUNLU: TradeSignalRenderer.draw() OHLC panelinin candle serisini
+            // hep dataId=0 varsayarak arıyor.
+            Panel("ohlc", "OHLC", "OHLC", 380, 0, new() { Series("ohlc", "OHLC", dataId: 0) }),
+        };
+
+        int ySyncId = 1;
+        foreach (var p in panels)
+        {
+            var seriesDicts = p.SeriesList.Select(s => Series("indicator", s.SeriesName, s.Label, color: s.Color)).ToList();
+            panelDicts.Add(Panel(p.Id, p.Name, p.Caption, p.Height, ySyncId++, seriesDicts, p.YLabel, p.YFixedRange));
+        }
+
+        var view = new Dictionary<string, object?> { ["panels"] = panelDicts };
+        string viewPath = Path.Combine(outputDir, fileBaseName + ".view.json");
+        File.WriteAllText(viewPath, JsonConvert.SerializeObject(view, Formatting.Indented));
+
+        return (bundlePath, viewPath);
     }
 
     /// <summary>
@@ -189,37 +383,37 @@ public static class OfflineReplayPlaylist
         return result;
     }
 
+    private static Dictionary<string, object?> Series(string source, string? name = null, string? label = null,
+        int? dataId = null, int[]? color = null)
+    {
+        var s = new Dictionary<string, object?> { ["source"] = source };
+        if (name != null) s["name"] = name;
+        if (label != null) s["label"] = label;
+        if (dataId.HasValue) s["dataId"] = dataId.Value;
+        if (color != null) s["color"] = color;
+        return s;
+    }
+
+    private static Dictionary<string, object?> Panel(string id, string name, string caption, int height, int ySyncId,
+        List<Dictionary<string, object?>> ser, string? yLabel = null, double[]? yFixedRange = null)
+    {
+        var p = new Dictionary<string, object?>
+        {
+            ["id"] = id,
+            ["name"] = name,
+            ["caption"] = caption,
+            ["height"] = height,
+            ["ySyncId"] = ySyncId,
+            ["series"] = ser,
+        };
+        if (yLabel != null) p["yLabel"] = yLabel;
+        if (yFixedRange != null) p["yFixedRange"] = yFixedRange;
+        return p;
+    }
+
     private static string BuildAndWriteView(string outputDir, string fileBaseName,
         List<(string Label, string SignalName, string? PnLName, int[] Color)> series)
     {
-        static Dictionary<string, object?> Series(string source, string? name = null, string? label = null,
-            int? dataId = null, int[]? color = null)
-        {
-            var s = new Dictionary<string, object?> { ["source"] = source };
-            if (name != null) s["name"] = name;
-            if (label != null) s["label"] = label;
-            if (dataId.HasValue) s["dataId"] = dataId.Value;
-            if (color != null) s["color"] = color;
-            return s;
-        }
-
-        static Dictionary<string, object?> Panel(string id, string name, string caption, int height, int ySyncId,
-            List<Dictionary<string, object?>> ser, string? yLabel = null, double[]? yFixedRange = null)
-        {
-            var p = new Dictionary<string, object?>
-            {
-                ["id"] = id,
-                ["name"] = name,
-                ["caption"] = caption,
-                ["height"] = height,
-                ["ySyncId"] = ySyncId,
-                ["series"] = ser,
-            };
-            if (yLabel != null) p["yLabel"] = yLabel;
-            if (yFixedRange != null) p["yFixedRange"] = yFixedRange;
-            return p;
-        }
-
         var signalSeries = series.Select(s => Series("indicator", s.SignalName, s.Label, color: s.Color)).ToList();
         var pnlSeries = series.Where(s => s.PnLName != null)
             .Select(s => Series("indicator", s.PnLName, s.Label, color: s.Color)).ToList();
