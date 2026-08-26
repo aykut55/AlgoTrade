@@ -65,18 +65,17 @@ namespace AlgoTrade.Core.Trading.Strategies
             try
             {
                 // MOST indicator'ı hesapla
-                // NOT: MOST henüz TrendIndicators.cs içinde implement edilmemiş
-                // Implement edildikten sonra bu satır çalışacak
                 (_most, _exmov) = Indicators.Trend.MOST(_period, _percent);
 
                 //Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
             }
             catch (NotImplementedException)
             {
-                LogWarning("MOST indicator not yet implemented! Strategy will not generate signals.");
-                LogWarning("To implement MOST, edit src/Trading/Indicators/Trend/TrendIndicators.cs");
+                // MOST implement edilmiş durumda (TrendIndicators.cs), bu blok normalde tetiklenmez -
+                // savunma amaçlı bırakıldı, indikatör ileride kaldırılır/bozulursa sessizce crash yerine uyarı verir.
+                LogWarning("MOST indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/Trend/TrendIndicators.cs — MOST() implementation may be missing/broken.");
 
-                // MOST henüz implement edilmemiş, boş arrayler oluştur
                 int barCount = Indicators.BarCount;
                 _most = new double[barCount];
                 _exmov = new double[barCount];
@@ -97,11 +96,10 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (currentIndex < _period)
                 return TradeSignals.None;
 
-            // MOST implement edilmemişse sinyal üretme
+            // OnInit'teki catch bloğu tetiklenip boş array birakmışsa sinyal üretme
             if (_most == null || _most.Length == 0)
                 return TradeSignals.None;
 
-            // EXMOV implement edilmemişse sinyal üretme
             if (_exmov == null || _exmov.Length == 0)
                 return TradeSignals.None;
             // ************************************************************************************************************************
