@@ -71,14 +71,14 @@ algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, obj
 {
     ["period"]  = 21,
     ["percent"] = 1.0,
-    ["choice"]  = 0
+    ["signalModeIndex"] = 0
 });
 
 algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
 {
     ["period"]  = 14,
     ["percent"] = 0.5,
-    ["choice"]  = 0
+    ["signalModeIndex"] = 0
 });
 
 // 4. Query listesi

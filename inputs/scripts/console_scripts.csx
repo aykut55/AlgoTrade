@@ -10,7 +10,7 @@
 // =============================================================================
 // algoTrader.SetData(stockData);
 // algoTrader.Initialize();
-// algoTrader.ConfigureStrategy("SimpleMostStrategy", new Dictionary<string, object> { ["period"] = 21, ["percent"] = 1.0, ["choice"] = 0 });
+// algoTrader.ConfigureStrategy("SimpleMostStrategy", new Dictionary<string, object> { ["period"] = 21, ["percent"] = 1.0, ["signalModeIndex"] = 0 });
 // algoTrader.SingleTraderRunMode = TraderRunMode.TradeOnly;
 // await algoTrader.RunSingleTraderWithProgressAsync();
 // Log($"Trader: {Trader?.Name ?? "yok"}");

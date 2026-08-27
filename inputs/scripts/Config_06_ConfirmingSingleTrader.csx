@@ -74,7 +74,7 @@ var strategyParameters = new Dictionary<string, object>
 {
     ["period"] = 21,
     ["percent"] = 1.0,
-    ["choice"] = 0
+    ["signalModeIndex"] = 0
 };
 
 // =============================================================================

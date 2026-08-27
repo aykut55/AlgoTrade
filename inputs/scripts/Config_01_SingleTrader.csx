@@ -67,7 +67,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 1;
+int strategyChoice = 0;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -79,7 +79,7 @@ if (strategyChoice == 0)
     {
         ["period"]  = 21,
         ["percent"] = 1.0,
-        ["choice"]  = 0
+        ["signalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 1)

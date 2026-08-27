@@ -105,7 +105,7 @@ void ConfigureStrategy()
         {
             ["period"] = 21,
             ["percent"] = 1.0,
-            ["choice"] = 0
+            ["signalModeIndex"] = 0
         });
         LogManager.LogRaw("\nStrategy config file not found, fallback strategy configured from in-code parameters.");
     }

@@ -15,7 +15,7 @@ string strategyName   = "SimpleMostStrategy";
 
 int[]    periods  = new[] { 10, 15, 21, 30, 50 };
 double[] percents = new[] { 0.5, 1.0, 1.5, 2.0 };
-int      choice   = 0;
+int      signalModeIndex = 0;
 // -----------------------------------------------------------------------------
 
 Log($"=== paramSweep.csx ===");
@@ -83,7 +83,7 @@ foreach (var p in periods)
         {
             ["period"]  = p,
             ["percent"] = pct,
-            ["choice"]  = choice
+            ["signalModeIndex"] = signalModeIndex
         });
 
         if (meta != null)

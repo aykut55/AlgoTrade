@@ -136,7 +136,7 @@ if (optChoice == 0)
     };
     fixedParams = new Dictionary<string, object>
     {
-        ["choice"] = 0
+        ["signalModeIndex"] = 0
     };
 }
 else if (optChoice == 1)

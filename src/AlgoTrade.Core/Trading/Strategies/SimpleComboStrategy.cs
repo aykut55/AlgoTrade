@@ -32,8 +32,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///
     /// - ruleModeIndex   : buy/sell koşulunun ICERIGI ne? (hangi indikatorler, hangi karsilastirma -
     ///                     BuildSignals()'daki hangi else-if dali). AKTIF.
-    /// - signalModeIndex : ruleModeIndex'in urettigi koşul NE ZAMAN sinyale donusur? 0: siralama/
-    ///                     seviye bazli (koşul true oldugu surece HER barda buy/sell tekrarlanir),
+    /// - signalModeIndex : ruleModeIndex'in urettigi koşul NE ZAMAN sinyale donusur? 
+    ///                     0: siralama/seviye bazli (koşul true oldugu surece HER barda buy/sell tekrarlanir),
     ///                     1: kesisim bazli (sadece false->true GECIS aninda, bir kere). AKTIF,
     ///                     OnStep'te dallanan tek parametre bu.
     /// - exitModeIndex   : takeProfit/stopLoss NE ZAMAN tetiklensin (seviye/kesisim gibi bir ayrim).
@@ -127,12 +127,12 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
+            bool buy        = false;
+            bool sell       = false;
             bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool stopLoss   = false;
+            bool flat       = false;
+            bool skip       = false;
             // ************************************************************************************************************************
 
             // Ilk barlarda yeterli veri yok

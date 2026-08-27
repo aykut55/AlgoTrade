@@ -69,13 +69,13 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
     {
         ["period"] = 21,
         ["percent"] = 1.0,
-        ["choice"] = 0
+        ["signalModeIndex"] = 0
     }),
     (1, "SimpleMostStrategy", new Dictionary<string, object>
     {
         ["period"] = 14,
         ["percent"] = 0.5,
-        ["choice"] = 0
+        ["signalModeIndex"] = 0
     })
 };
 

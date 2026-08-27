@@ -19,39 +19,69 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// Parametreler:
     /// - period: MOST periyodu (varsayılan 21)
     /// - percent: MOST yüzde sapması (varsayılan 1.0)
+    /// - signalModeIndex: buy/sell kategorisinin dispatch parametresi - 0: Fiyat-MOST kırılımı,
+    ///                     1: MOST-EXMOV kesişimi (eskiden choice)
+    /// - exitModeIndex: takeProfit/stopLoss kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
+    /// - flatModeIndex: flat kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
+    /// - skipModeIndex: skip kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
+    /// - ruleModeIndex: PLACEHOLDER, henuz okunmuyor - ileride ihtiyaç halinde kullanilacak ekstra eksen
     /// </summary>
     public class SimpleMostStrategy : BaseStrategy
     {
         public override string Name => "Simple MOST Strategy";
 
-        private readonly int _period;
-        private readonly double _percent;
-        private readonly int _choice; // 0: Price-MOST cross, 1: EXMOV-MOST cross
-        private double[]? _most;
-        private double[]? _exmov;
+        private int barCount;
+        private readonly int period;
+        private readonly double percent;
+        private readonly int signalModeIndex; // eskiden choice: 0: Price-MOST cross, 1: EXMOV-MOST cross
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+        private double[]? most;
+        private double[]? exmov;
 
         // Parametresiz constructor (eski kullanımlar için)
-        public SimpleMostStrategy(int period = 21, double percent = 1.0, int choice = 0)
+        public SimpleMostStrategy(int period = 21, double percent = 1.0,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _percent = percent;
-            _choice = choice;
+            this.period          = period;
+            this.percent         = percent;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["Period"] = period;
-            Parameters["Percent"] = percent;
-            Parameters["Choice"] = choice;
+            Parameters["Period"]          = period;
+            Parameters["Percent"]         = percent;
+            Parameters["RuleModeIndex"]   = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]   = exitModeIndex;
+            Parameters["FlatModeIndex"]   = flatModeIndex;
+            Parameters["SkipModeIndex"]   = skipModeIndex;
         }
 
         // Parametreli constructor (yeni kullanım)
-        public SimpleMostStrategy(List<StockData> data, IndicatorManager indicators, int period = 21, double percent = 1.0, int choice = 0)
+        public SimpleMostStrategy(List<StockData> data, IndicatorManager indicators,
+            int period = 21, double percent = 1.0,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _percent = percent;
-            _choice = choice;
+            this.period          = period;
+            this.percent         = percent;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["Period"] = period;
-            Parameters["Percent"] = percent;
-            Parameters["Choice"] = choice;
+            Parameters["Period"]          = period;
+            Parameters["Percent"]         = percent;
+            Parameters["RuleModeIndex"]   = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]   = exitModeIndex;
+            Parameters["FlatModeIndex"]   = flatModeIndex;
+            Parameters["SkipModeIndex"]   = skipModeIndex;
 
             // Initialize base strategy
             Initialize(data, indicators);
@@ -65,9 +95,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             try
             {
                 // MOST indicator'ı hesapla
-                (_most, _exmov) = Indicators.Trend.MOST(_period, _percent);
+                (most, exmov) = Indicators.Trend.MOST(period, percent);
 
-                //Log($"SimpleMostStrategy initialized: Period={_period}, Percent={_percent}, Choice={_choice}");
+                //Log($"SimpleMostStrategy initialized: Period={period}, Percent={percent}, SignalModeIndex={signalModeIndex}");
             }
             catch (NotImplementedException)
             {
@@ -76,45 +106,45 @@ namespace AlgoTrade.Core.Trading.Strategies
                 LogWarning("MOST indicator threw NotImplementedException! Strategy will not generate signals.");
                 LogWarning("Check src/Trading/Indicators/Trend/TrendIndicators.cs — MOST() implementation may be missing/broken.");
 
-                int barCount = Indicators.BarCount;
-                _most = new double[barCount];
-                _exmov = new double[barCount];
+                barCount = Indicators.BarCount;
+                most = new double[barCount];
+                exmov = new double[barCount];
             }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
+            bool buy        = false;
+            bool sell       = false;
             bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool stopLoss   = false;
+            bool flat       = false;
+            bool skip       = false;
             // ************************************************************************************************************************
 
             // İlk barlarda yeterli veri yok
-            if (currentIndex < _period)
+            if (currentIndex < period)
                 return TradeSignals.None;
 
             // OnInit'teki catch bloğu tetiklenip boş array birakmışsa sinyal üretme
-            if (_most == null || _most.Length == 0)
+            if (most == null || most.Length == 0)
                 return TradeSignals.None;
 
-            if (_exmov == null || _exmov.Length == 0)
+            if (exmov == null || exmov.Length == 0)
                 return TradeSignals.None;
             // ************************************************************************************************************************
 
             // Geçerli ve önceki değerler
             double currentPrice = Data[currentIndex].Close;
-            double prevPrice = Data[currentIndex - 1].Close;
-            double currentMost = _most[currentIndex];
-            double prevMost = _most[currentIndex - 1];
-            double currentExmov = _exmov[currentIndex];
-            double prevExmov = _exmov[currentIndex - 1];
+            double prevPrice    = Data[currentIndex - 1].Close;
+            double currentMost  = most[currentIndex];
+            double prevMost     = most[currentIndex - 1];
+            double currentExmov = exmov[currentIndex];
+            double prevExmov    = exmov[currentIndex - 1];
 
             // ************************************************************************************************************************
             // choice: 0 = Fiyat MOST kırılımı, 1 = EXMOV-MOST kesişimi (configurable via constructor)
-            if (_choice == 0)
+            if (signalModeIndex == 0)
             {
                 // MOST AL Sinyali: Fiyat MOST'u yukarı kırıyor (trend değişimi: düşüşten yükselişe)
                 // Önceki bar: fiyat <= MOST
@@ -158,22 +188,35 @@ namespace AlgoTrade.Core.Trading.Strategies
             // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
+                    takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
             }
             
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
+                    stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
             }
             // ************************************************************************************************************************
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-            
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir            
-            skip = false;
+            if (flatModeIndex == 0)
+            {
+                // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                flat = false;
+            }
+            // ************************************************************************************************************************
+
+            if (skipModeIndex == 0)
+            {
+                // Skip olma durumu burada incelenir ve skip flag'i setlenir            
+                skip = false;
+            }
             // ************************************************************************************************************************
 
             // ************************************************************************************************************************
@@ -217,22 +260,22 @@ namespace AlgoTrade.Core.Trading.Strategies
         /// <summary>
         /// MOST değerlerini al (plotting veya analiz için)
         /// </summary>
-        public double[]? GetMOST() => _most;
+        public double[]? GetMOST() => most;
 
         /// <summary>
         /// EXMOV değerlerini al (plotting veya analiz için)
         /// </summary>
-        public double[]? GetEXMOV() => _exmov;
+        public double[]? GetEXMOV() => exmov;
 
         /// <summary>
         /// Period parametresini al
         /// </summary>
-        public int Period => _period;
+        public int Period => period;
 
         /// <summary>
         /// Percent parametresini al
         /// </summary>
-        public double Percent => _percent;
+        public double Percent => percent;
 
         /// <summary>
         /// Get indicators for plotting (IStrategy implementation)
@@ -241,11 +284,11 @@ namespace AlgoTrade.Core.Trading.Strategies
         {
             var indicators = new Dictionary<string, double[]>();
 
-            if (_most != null && _most.Length > 0)
-                indicators["MOST"] = _most;
+            if (most != null && most.Length > 0)
+                indicators["MOST"] = most;
 
-            if (_exmov != null && _exmov.Length > 0)
-                indicators["EXMOV"] = _exmov;
+            if (exmov != null && exmov.Length > 0)
+                indicators["EXMOV"] = exmov;
 
             return indicators.Count > 0 ? indicators : null;
         }

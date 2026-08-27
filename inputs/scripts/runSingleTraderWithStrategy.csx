@@ -14,12 +14,12 @@ string dataFile       = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
 string strategyName   = "SimpleMostStrategy";
 int    period         = 21;
 double percent        = 1.0;
-int    choice         = 0;
+int    signalModeIndex = 0;
 // -----------------------------------------------------------------------------
 
 Log($"=== runStrategy.csx ===");
 Log($"Data file : {dataFile}");
-Log($"Strategy  : {strategyName} (period={period}, percent={percent}, choice={choice})");
+Log($"Strategy  : {strategyName} (period={period}, percent={percent}, signalModeIndex={signalModeIndex})");
 
 // 1. Veri oku
 if (!File.Exists(dataFile))
@@ -67,7 +67,7 @@ algoTrader.ConfigureStrategy(strategyName, new Dictionary<string, object>
 {
     ["period"]  = period,
     ["percent"] = percent,
-    ["choice"]  = choice
+    ["signalModeIndex"] = signalModeIndex
 });
 
 if (meta != null)

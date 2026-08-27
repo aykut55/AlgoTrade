@@ -89,7 +89,7 @@ void ConfigureStrategies()
     {
         ["period"] = 21,
         ["percent"] = 1.0,
-        ["choice"] = 0
+        ["signalModeIndex"] = 0
     });
 
     // Id=1 : SimpleMostStrategy (farklı parametrelerle)
@@ -97,7 +97,7 @@ void ConfigureStrategies()
     {
         ["period"] = 14,
         ["percent"] = 0.5,
-        ["choice"] = 0
+        ["signalModeIndex"] = 0
     });
 }
 
