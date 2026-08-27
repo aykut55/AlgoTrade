@@ -147,7 +147,7 @@ if (ecfEnabled)
 }
 
 // Optimization range (PartialOpt)
-algoTrader.SetSingleTraderOptRangeConfig(new SingleTraderOptRangeConfig
+algoTrader.SetSingleTraderOptRangeConfig(new AlgoTrade.Core.Trading.SingleTraderOptRangeConfig
 {
     OptimizationFrom = optimizationFrom,
     OptimizationTo   = optimizationTo,

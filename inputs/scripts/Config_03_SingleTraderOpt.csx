@@ -110,26 +110,52 @@ string sortedCsvFileName = "singleTraderOptLog_sorted.csv";
 string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 
 // =============================================================================
-// Optimization Parameter Ranges
+// Optimization Strategy Configuration
+// optChoice ile hangi strateji + hangi parametre range'lerinin taranacagi secilir - her deneme
+// icin bu blok degistirilir, boylece Optimization Ranges / Fixed Params / Strategy Name uctan uca
+// birlikte kalir (Config_01_SingleTrader.csx'teki strategyChoice ile ayni desen).
+//
+// optimizationRanges/fixedParams'daki key'ler, secilen optimizationStrategyName'in constructor
+// parametre adlarina birebir (case-insensitive) eslesmeli (bkz. StrategyRegistry.
+// CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
+// parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-var optimizationRanges = new List<(string name, double min, double max, double step)>
-{
-    ("period",  10, 50, 10),
-    ("percent", 1.0, 3.0, 1.0)
-};
+int optChoice = 0;
 
-// =============================================================================
-// Fixed Parameters (optimize edilmeyen sabit degerler)
-// =============================================================================
-var fixedParams = new Dictionary<string, object>
-{
-    ["choice"] = 0
-};
+string optimizationStrategyName;
+List<(string name, double min, double max, double step)> optimizationRanges;
+Dictionary<string, object> fixedParams;
 
-// =============================================================================
-// Strategy Factory Configuration
-// =============================================================================
-string optimizationStrategyName = "SimpleMostStrategy";
+if (optChoice == 0)
+{
+    optimizationStrategyName = "SimpleMostStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period",  10, 50, 10),
+        ("percent", 1.0, 3.0, 1.0),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["choice"] = 0
+    };
+}
+else if (optChoice == 1)
+{
+    // SimpleComboStrategy'nin tek parametresi ruleIndex (BuildRuleCatalog() - su an 3 eleman: 0-2).
+    // Yeni bir kural eklersen ust siniri (max) da guncellemen gerekir.
+    optimizationStrategyName = "SimpleComboStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("ruleIndex", 0, 2, 1),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+    };
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(optChoice), $"Bilinmeyen optChoice: {optChoice}");
+}
 
 // =============================================================================
 // Optimization Range (PartialOpt)
