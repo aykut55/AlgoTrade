@@ -60,26 +60,80 @@ bool addHeadTailInfo = false;
 
 // =============================================================================
 // Strategy Configuration
+
+// strategyParams'daki key'ler, secilen strategyName'in constructor parametre adlarina
+// birebir (case-insensitive) eslesmeli (bkz. StrategyRegistry.CreateFromBestMatchingConstructor).
+// Eslesmeyen bir key (orn. baska bir stratejiye ait "ruleIndex") HATA VERMEZ, sessizce yok
+// sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
+// sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-string strategyName = "SimpleMostStrategy";
-var strategyParams = new Dictionary<string, object>
+int strategyChoice = 0;
+
+string strategyName;
+Dictionary<string, object> strategyParams;
+
+if (strategyChoice == 0)
 {
-    ["period"]  = 21,
-    ["percent"] = 1.0,
-    ["choice"]  = 0
-};
+    strategyName = "SimpleMostStrategy";
+    strategyParams = new Dictionary<string, object>
+    {
+        ["period"]  = 21,
+        ["percent"] = 1.0,
+        ["choice"]  = 0
+    };
+}
+else if (strategyChoice == 1)
+{
+    strategyName = "SimpleComboStrategy";
+    strategyParams = new Dictionary<string, object>
+    {
+        ["ruleIndex"] = 0
+    };
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(strategyChoice), $"Bilinmeyen strategyChoice: {strategyChoice}");
+}
 
 // =============================================================================
 // Query Configuration
+
+// queryParams'daki key'ler, secilen queryName'in constructor parametre adlarina birebir
+// (case-insensitive) eslesmeli (bkz. QueryRegistry.CreateFromBestMatchingConstructor).
+// Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o parametre kendi varsayilan
+// degerine duser. Yani yanlis key yazarsan calisir ama sessizce yanlis calisir - once
+// ilgili Query sinifinin constructor'ina bak.
 // =============================================================================
+int queryChoice = 0;
+
 bool queryEnabled = true;
-string queryName = "SimpleQuery1";
-var queryParams = new Dictionary<string, object>
+string queryName;
+Dictionary<string, object> queryParams;
+
+if (queryChoice == 0)
 {
-    ["ma8Period"]   = 8,
-    ["ma200Period"] = 200,
-    ["choice"]      = 0
-};
+    queryName = "SimpleQuery1";
+    queryParams = new Dictionary<string, object>
+    {
+        ["ma8Period"]   = 8,
+        ["ma200Period"] = 200,
+        ["choice"]      = 0
+    };
+}
+else if (queryChoice == 1)
+{
+    queryName = "SimpleQuery1";
+    queryParams = new Dictionary<string, object>
+    {
+        ["ma8Period"]   = 21,
+        ["ma200Period"] = 200,
+        ["choice"]      = 1
+    };
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(queryChoice), $"Bilinmeyen queryChoice: {queryChoice}");
+}
 
 // =============================================================================
 // Equity Curve Filter Configuration
