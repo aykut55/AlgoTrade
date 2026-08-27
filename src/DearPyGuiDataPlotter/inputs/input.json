@@ -1,4 +1,4 @@
 {
-  "bundle": "inputs/python/offlineReplay/combined.npz",
-  "view": "inputs/python/offlineReplay/combined.view.json"
+  "bundle": "src/DearPyGuiDataPlotter/inputs/latest_bundle.npz",
+  "view": "src/DearPyGuiDataPlotter/inputs/latest_bundle.view.json"
 }

@@ -141,15 +141,17 @@ if (optChoice == 0)
 }
 else if (optChoice == 1)
 {
-    // SimpleComboStrategy'nin tek parametresi ruleIndex (BuildRuleCatalog() - su an 3 eleman: 0-2).
-    // Yeni bir kural eklersen ust siniri (max) da guncellemen gerekir.
+    // SimpleComboStrategy'de taranan parametre ruleModeIndex (BuildSignals() - su an 3 eleman: 0-2).
+    // Yeni bir kural eklersen ust siniri (max) da guncellemen gerekir. signalModeIndex (seviye/kesisim)
+    // burada sabit tutuluyor - o da taranmak istenirse ikinci bir range olarak eklenir.
     optimizationStrategyName = "SimpleComboStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("ruleIndex", 0, 2, 1),
+        ("ruleModeIndex", 0, 2, 1),
     };
     fixedParams = new Dictionary<string, object>
     {
+        ["signalModeIndex"] = 0
     };
 }
 else

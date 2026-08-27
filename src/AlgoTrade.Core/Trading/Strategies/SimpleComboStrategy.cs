@@ -2,52 +2,110 @@ using AlgoTrade.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Strategy;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 using System;
 using System.Collections.Generic;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
     /// <summary>
-    /// Combo Stratejisi (ISKELET) - Sabit bir "seri katalogu" (MA/RSI/MACD/SuperTrend...) uzerinden,
-    /// farkli AL/SAT kurallarini (Comparison listeleri) ruleIndex ile secip calistirir.
+    /// Combo Stratejisi - Sabit bir "seri katalogu" (MA/RSI/MACD/SuperTrend...) uzerinden,
+    /// AL/SAT sinyallerini ruleModeIndex ile secilen kurala gore ONCEDEN (OnInit sirasinda, bir kere)
+    /// hesaplayip bool[] dizilerine (buySignals/sellSignals/flatSignals) yazar. OnStep sadece bu
+    /// dizilerden okur, hicbir hesaplama yapmaz - SimpleMostStrategy'nin _most/_exmov deseniyle ayni.
+    ///
+    /// Karsilastirmalar AlgoTrade.Core.Trading.Utils.Utils'teki hazir fonksiyonlarla yapiliyor
+    /// (Buyuk/Kucuk/BuyukEsit/KucukEsit/YukarıKesti/AsagiKesti - using static ile onek gerekmeden
+    /// cagriliyor). Bu fonksiyonlar ayni bar'da IKI FARKLI diziyi kiyaslar; ayni dizinin farkli
+    /// lag'lerini (orn. Rsi[-3] vs Rsi[-1]) kiyaslamak icin uygun degiller, o durumlarda ham
+    /// (i-3]/[i-1] gibi) karsilastirma yapiliyor, kendi sinir kontrolumuzle.
     ///
     /// Tasarim amaci: yeni bir indikator veya yeni bir kural denemek icin ne constructor imzasi
     /// ne de yeni bir Strategy sinifi gerekiyor:
-    /// - Yeni indikator eklemek  -> BuildSeriesCatalog()'a bir satir eklenir.
-    /// - Yeni kural denemek      -> BuildRuleCatalog()'a bir (Buy, Sell) elemani eklenir.
-    /// Optimizer sadece ruleIndex'i tarar (AddOptimizationParameterRange("ruleIndex", 0, N-1, 1)).
+    /// - Yeni indikator eklemek -> BuildSeriesCatalog()'a bir satir eklenir.
+    /// - Yeni kural denemek     -> BuildSignals()'a bir else-if dali eklenir.
     ///
-    /// Comparison, hem farkli serileri ayni bar'da (MA5 vs MA8) hem de ayni serinin farkli
-    /// lag'lerini (Rsi[-3] vs Rsi[-1]) tek bir mekanizmayla karsilastirir - ozel durum yok.
+    /// =====================================================================================
+    /// "...ModeIndex" PARAMETRELERI (2026-08-27 karari) - OnStep'in urettigi 4 sinyal kategorisine
+    /// (buy/sell, takeProfit/stopLoss, flat, skip) birebir karsilik gelen, birbirinden BAGIMSIZ
+    /// 5 parametre var. Her biri farkli bir soruya cevap veriyor, biri digerinin yerini tutmuyor:
     ///
-    /// Parametreler:
-    /// - ruleIndex: BuildRuleCatalog()'daki hangi kural setinin kullanilacagi (varsayilan 0)
+    /// - ruleModeIndex   : buy/sell koşulunun ICERIGI ne? (hangi indikatorler, hangi karsilastirma -
+    ///                     BuildSignals()'daki hangi else-if dali). AKTIF.
+    /// - signalModeIndex : ruleModeIndex'in urettigi koşul NE ZAMAN sinyale donusur? 0: siralama/
+    ///                     seviye bazli (koşul true oldugu surece HER barda buy/sell tekrarlanir),
+    ///                     1: kesisim bazli (sadece false->true GECIS aninda, bir kere). AKTIF,
+    ///                     OnStep'te dallanan tek parametre bu.
+    /// - exitModeIndex   : takeProfit/stopLoss NE ZAMAN tetiklensin (seviye/kesisim gibi bir ayrim).
+    ///                     PLACEHOLDER - şu an exit, bizim mantigimizdan degil Trader.karAlZararKes'in
+    ///                     hazir fonksiyonundan geliyor, bu parametrenin henuz hicbir etkisi yok.
+    /// - flatModeIndex   : flat'e gecis NE ZAMAN tetiklensin. PLACEHOLDER - şu an flat icin hicbir
+    ///                     kural tanimli degil (flatSignals hep false), bu parametrenin henuz
+    ///                     hicbir etkisi yok.
+    /// - skipModeIndex   : skip NE ZAMAN tetiklensin. PLACEHOLDER - şu an skip icin hicbir kural
+    ///                     tanimli degil (OnStep'te hep false), bu parametrenin henuz hicbir
+    ///                     etkisi yok.
+    ///
+    /// exitModeIndex/flatModeIndex/skipModeIndex BILEREK, henuz hicbir mantik onlari okumadigi
+    /// halde eklendi - amac, ileride o kategoriye gercek bir kural yazildiginda constructor imzasini
+    /// (ve dolayisiyla tum Config_01/03 script'lerini, StrategyConfig.txt kayitlarini) DEGISTIRMEK
+    /// ZORUNDA KALMAMAK. Yeri/ismi bastan belli, sadece OnStep icinde ilgili yerde bu parametreye
+    /// gore dallanma eklenecek (signalModeIndex'in su an yaptigi gibi).
+    /// =====================================================================================
+    ///
+    /// VERSIYONLAMA KARARI (2026-08-27): ruleModeIndex/BuildSignals() yaklasimi (ayni sinif icinde
+    /// birden fazla kural setini index ile secmek) periyot gibi surekli/sayisal parametreleri
+    /// taramak icin uygun degil (opt sonuclari "hangi ruleModeIndex" bazinda anlamsiz geliyor) -
+    /// onun yerine periyotlar (ma1Period/ma2Period/ma3Period/rsiPeriod gibi) dogrudan constructor
+    /// parametresi yapiliyor, boylece optimizer bunlari AddOptimizationParameterRange ile
+    /// gercekten tarayabiliyor.
+    ///
+    /// Yeni bir indikator/kural KOMBINASYONU denerken (orn. "3 MA siralamasi" -> "3 MA + RSI
+    /// filtresi") bu sinifi elle degistirmek YERINE, YENI BIR SINIF acilir: ComboStrategy0001,
+    /// ComboStrategy0002, ... (numaralandirilmis, immutable denemeler). Sebep: ayni sinifi
+    /// surekli degistirmek onceki denemeleri bozuyor/kayboluyor; her deneme kendi dosyasinda
+    /// sabit kalirsa hicbiri kaybolmaz, git gecmisi de zaten versiyon farkini tutar.
+    ///
+    /// StrategyRegistry.AutoRegister() yeni ComboStrategyNNNN sinifini OTOMATIK bulur (ayri bir
+    /// kayit adimi gerekmez, sadece optimizationStrategyName/strategyName string'ine yeni sinif
+    /// adini yazmak yeterli). OTOMATIK OLMAYAN kisim: Config_01_SingleTrader.csx /
+    /// Config_03_SingleTraderOpt.csx'teki strategyChoice/optChoice bloguna, o yeni sinifa ozel
+    /// parametre/range setiyle yeni bir else-if dali eklemek HALA ELLE yapiliyor - her
+    /// ComboStrategyNNNN'in constructor'i farkli oldugu icin bu otomatiklesemiyor.
     /// </summary>
     public class SimpleComboStrategy : BaseStrategy
     {
         public override string Name => "Simple Combo Strategy";
 
-        // =========================================================================
-        // Rule primitives - tum karsilastirmalar bu iki tip uzerinden ifade edilir
-        // =========================================================================
+        private readonly int ruleModeIndex;
+        private readonly int signalModeIndex; // 0: siralama (level) bazli - kural true oldugu surece sinyal, 1: kesisim (crossover) bazli - sadece false->true gecis aninda sinyal
+        private readonly int exitModeIndex;   // PLACEHOLDER - henuz okunmuyor, bkz. sinif basi doc comment
+        private readonly int flatModeIndex;   // PLACEHOLDER - henuz okunmuyor, bkz. sinif basi doc comment
+        private readonly int skipModeIndex;   // PLACEHOLDER - henuz okunmuyor, bkz. sinif basi doc comment
+        private Dictionary<string, double[]>? series;
+        private int barCount;
+        private bool[]? buySignals;
+        private bool[]? sellSignals;
+        private bool[]? flatSignals;
 
-        /// <summary>Bir seriye (indikator adi) ve bar lag'ine referans. Lag=0 -> currentIndex.</summary>
-        public readonly record struct SeriesRef(string SeriesName, int Lag = 0);
-
-        public enum CompareOp { GT, LT, GTE, LTE }
-
-        /// <summary>Iki SeriesRef arasindaki tek bir karsilastirma (AND'lenerek kural olusturur).</summary>
-        public readonly record struct Comparison(SeriesRef Left, CompareOp Op, SeriesRef Right);
-
-        private readonly int _ruleIndex;
-        private Dictionary<string, double[]>? _series;
-        private List<Comparison>? _buyRule;
-        private List<Comparison>? _sellRule;
-
-        public SimpleComboStrategy(List<StockData> data, IndicatorManager indicators, int ruleIndex = 0)
+        // Parametreli constructor (yeni kullanim) - field'lar underscore'suz oldugu icin, ayni
+        // isimdeki constructor parametresinden ayirt etmek amaciyla burada "this." kullanmak
+        // ZORUNLU (this. olmadan "ruleModeIndex = ruleModeIndex;" parametreyi kendine atar,
+        // field hep 0 kalir - digger metotlarda boyle bir isim çakışması olmadigi icin "this."
+        // gerekmiyor).
+        public SimpleComboStrategy(List<StockData> data, IndicatorManager indicators,
+            int ruleModeIndex = 0, int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
         {
-            _ruleIndex = ruleIndex;
-            Parameters["RuleIndex"] = ruleIndex;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
+            Parameters["RuleModeIndex"]   = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]   = exitModeIndex;
+            Parameters["FlatModeIndex"]   = flatModeIndex;
+            Parameters["SkipModeIndex"]   = skipModeIndex;
 
             Initialize(data, indicators);
         }
@@ -57,19 +115,136 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            _series = BuildSeriesCatalog(Indicators);
+            series = BuildSeriesCatalog(Indicators);
 
-            var ruleCatalog = BuildRuleCatalog();
-            if (_ruleIndex < 0 || _ruleIndex >= ruleCatalog.Count)
-                throw new ArgumentOutOfRangeException(nameof(_ruleIndex),
-                    $"ruleIndex {_ruleIndex} gecersiz (0-{ruleCatalog.Count - 1} arasinda olmali).");
+            barCount    = series["Close"].Length;
+            buySignals  = new bool[barCount];
+            sellSignals = new bool[barCount];
+            flatSignals = new bool[barCount];
 
-            (_buyRule, _sellRule) = ruleCatalog[_ruleIndex];
+            BuildSignals(ruleModeIndex);
+        }
+
+        public override TradeSignals OnStep(int currentIndex)
+        {
+            bool buy = false;
+            bool sell = false;
+            bool takeProfit = false;
+            bool stopLoss = false;
+            bool flat = false;
+            bool skip = false;
+            // ************************************************************************************************************************
+
+            // Ilk barlarda yeterli veri yok
+            if (currentIndex < 1)
+                return TradeSignals.None;
+
+            // OnInit henuz calismamis / kural kurulmamissa sinyal uretme
+            if (series == null || buySignals == null || sellSignals == null || flatSignals == null)
+                return TradeSignals.None;
+            // ************************************************************************************************************************
+
+            // Gecerli ve onceki degerler
+            double currentPrice = Data[currentIndex].Close;
+            double prevPrice = Data[currentIndex - 1].Close;
+            // ************************************************************************************************************************
+
+            if (signalModeIndex == 0)
+            {
+                // Siralama (level) bazli: sinyal true oldugu her barda tekrarlanir
+                if (buySignals[currentIndex])
+                    buy = true;
+
+                if (sellSignals[currentIndex])
+                    sell = true;
+            }
+            else
+            {
+                // Kesisim (crossover) bazli: sadece false->true gecis aninda (bir kere) sinyal
+                if (buySignals[currentIndex] && !buySignals[currentIndex - 1])
+                    buy = true;
+
+                if (sellSignals[currentIndex] && !sellSignals[currentIndex - 1])
+                    sell = true;
+            }
+            // ************************************************************************************************************************
+
+            // ORNEK: Trader referansini kullanarak kar al / zarar kes hesaplama
+            // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir
+            if (Trader != null)
+            {
+                if (exitModeIndex == 0)
+                {
+                    // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
+                    takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+            }
+
+            if (Trader != null)
+            {
+                if (exitModeIndex == 0)
+                {
+                    // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
+                    stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+            }
+            // ************************************************************************************************************************
+
+            if (flatModeIndex == 0)
+            {
+                // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                flat = flatSignals[currentIndex];
+            }
+            // ************************************************************************************************************************
+
+            if (skipModeIndex == 0)
+            {
+                // Skip olma durumu burada incelenir ve skip flag'i setlenir            
+                skip = false;
+            }
+            // ************************************************************************************************************************   
+
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // Sinyal onceliklendirmesi
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            if (skip)
+            {
+                return TradeSignals.Skip;
+            }
+            else if (flat)
+            {
+                return TradeSignals.Flat;
+            }
+            else if (takeProfit)
+            {
+                return TradeSignals.TakeProfit;
+            }
+            else if (stopLoss)
+            {
+                return TradeSignals.StopLoss;
+            }
+            else if (buy)
+            {
+                return TradeSignals.Buy;
+            }
+            else if (sell)
+            {
+                return TradeSignals.Sell;
+            }
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+
+            return TradeSignals.None;
         }
 
         // =========================================================================
         // 1) SERI KATALOGU - TODO: kendi indikator setini burada tanimla
-        //    (periyotlar burada SABIT kalir, optimizer bunlari degil ruleIndex'i tarar)
+        //    (periyotlar burada SABIT kalir, optimizer bunlari degil ruleModeIndex'i tarar)
         // =========================================================================
         private static Dictionary<string, double[]> BuildSeriesCatalog(IndicatorManager ind)
         {
@@ -97,99 +272,63 @@ namespace AlgoTrade.Core.Trading.Strategies
         }
 
         // =========================================================================
-        // 2) KURAL KATALOGU - TODO: kendi AL/SAT kurallarini burada listele
-        //    ruleIndex bu listedeki elemanlardan birini secer
+        // 2) KURAL SECIMI - TODO: kendi AL/SAT kuralini burada tanimla
+        //    ruleModeIndex hangi else-if dalinin calisacagini secer, her dal buySignals/sellSignals'i
+        //    (butun barlar icin onceden hesaplanmis bool[]) dolduruyor.
         // =========================================================================
-        private static List<(List<Comparison> Buy, List<Comparison> Sell)> BuildRuleCatalog()
+        private void BuildSignals(int ruleModeIndex)
         {
-            return new List<(List<Comparison>, List<Comparison>)>
+            if (ruleModeIndex == 0)
             {
-                // ruleIndex = 0: Golden/Death cross (MA5 x MA8)
-                (
-                    new List<Comparison> { new(new SeriesRef("MA5"), CompareOp.GT, new SeriesRef("MA8")) },
-                    new List<Comparison> { new(new SeriesRef("MA5"), CompareOp.LT, new SeriesRef("MA8")) }
-                ),
+                // Golden/Death cross (MA5 x MA8)
+                var ma5 = series!["MA5"];
+                var ma8 = series!["MA8"];
 
-                // ruleIndex = 1: MA5 > MA8 > MA13 siralamasi + RSI'de yukselen momentum (Rsi[-3] > Rsi[-1])
-                (
-                    new List<Comparison>
-                    {
-                        new(new SeriesRef("MA5"), CompareOp.GT, new SeriesRef("MA8")),
-                        new(new SeriesRef("MA8"), CompareOp.GT, new SeriesRef("MA13")),
-                        new(new SeriesRef("RSI", 3), CompareOp.GT, new SeriesRef("RSI", 1)),
-                    },
-                    new List<Comparison>
-                    {
-                        new(new SeriesRef("MA5"), CompareOp.LT, new SeriesRef("MA8")),
-                        new(new SeriesRef("MA8"), CompareOp.LT, new SeriesRef("MA13")),
-                        new(new SeriesRef("RSI", 3), CompareOp.LT, new SeriesRef("RSI", 1)),
-                    }
-                ),
-
-                // ruleIndex = 2: MACD sinyal cizgisini kesiyor + SuperTrend fiyatin altinda/ustunde
-                (
-                    new List<Comparison>
-                    {
-                        new(new SeriesRef("MACD"), CompareOp.GT, new SeriesRef("MACDSignal")),
-                        new(new SeriesRef("SuperTrend"), CompareOp.LT, new SeriesRef("Close")),
-                    },
-                    new List<Comparison>
-                    {
-                        new(new SeriesRef("MACD"), CompareOp.LT, new SeriesRef("MACDSignal")),
-                        new(new SeriesRef("SuperTrend"), CompareOp.GT, new SeriesRef("Close")),
-                    }
-                ),
-            };
-        }
-
-        // =========================================================================
-        // 3) EVALUATOR - cross-series ve ayni-seri-farkli-lag karsilastirmalari
-        //    ayni yoldan gecer, ozel durum yok
-        // =========================================================================
-        private bool EvaluateRule(List<Comparison> rule, int currentIndex)
-        {
-            foreach (var c in rule)
-            {
-                int li = currentIndex - c.Left.Lag;
-                int ri = currentIndex - c.Right.Lag;
-                if (li < 0 || ri < 0)
-                    return false;
-
-                double left  = _series![c.Left.SeriesName][li];
-                double right = _series![c.Right.SeriesName][ri];
-                if (double.IsNaN(left) || double.IsNaN(right))
-                    return false;
-
-                bool ok = c.Op switch
+                for (int i = 0; i < barCount; i++)
                 {
-                    CompareOp.GT  => left > right,
-                    CompareOp.LT  => left < right,
-                    CompareOp.GTE => left >= right,
-                    CompareOp.LTE => left <= right,
-                    _ => false
-                };
-
-                if (!ok)
-                    return false;
+                    buySignals![i]  = Buyuk(i, ma5, ma8);
+                    sellSignals![i] = Kucuk(i, ma5, ma8);
+                }
             }
+            else if (ruleModeIndex == 1)
+            {
+                // MA5 > MA8 > MA13 siralamasi + RSI'de yukselen momentum (Rsi[-3] > Rsi[-1])
+                var ma5  = series!["MA5"];
+                var ma8  = series!["MA8"];
+                var ma13 = series!["MA13"];
+                var rsi  = series!["RSI"];
 
-            return true;
+                for (int i = 0; i < barCount; i++)
+                {
+                    // RSI[-3] / RSI[-1]: ayni dizinin farkli lag'leri - Buyuk/Kucuk ayni index'te
+                    // iki FARKLI diziyi kiyasladigi icin burada uygun degil, ham karsilastirma yapiyoruz.
+                    bool rsiUp   = i >= 3 && rsi[i - 3] > rsi[i - 1];
+                    bool rsiDown = i >= 3 && rsi[i - 3] < rsi[i - 1];
+
+                    buySignals![i]  = Buyuk(i, ma5, ma8) && Buyuk(i, ma8, ma13) && rsiUp;
+                    sellSignals![i] = Kucuk(i, ma5, ma8) && Kucuk(i, ma8, ma13) && rsiDown;
+                }
+            }
+            else if (ruleModeIndex == 2)
+            {
+                // MACD sinyal cizgisini kesiyor + SuperTrend fiyatin altinda/ustunde
+                var macd       = series!["MACD"];
+                var macdSignal = series!["MACDSignal"];
+                var superTrend = series!["SuperTrend"];
+                var close      = series!["Close"];
+
+                for (int i = 0; i < barCount; i++)
+                {
+                    buySignals![i]  = Buyuk(i, macd, macdSignal) && Kucuk(i, superTrend, close);
+                    sellSignals![i] = Kucuk(i, macd, macdSignal) && Buyuk(i, superTrend, close);
+                }
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(ruleModeIndex), $"ruleModeIndex {ruleModeIndex} gecersiz (0-2 arasinda olmali).");
+            }
         }
 
-        public override TradeSignals OnStep(int currentIndex)
-        {
-            if (_series == null || _buyRule == null || _sellRule == null)
-                return TradeSignals.None;
-
-            if (EvaluateRule(_buyRule, currentIndex))
-                return TradeSignals.Buy;
-
-            if (EvaluateRule(_sellRule, currentIndex))
-                return TradeSignals.Sell;
-
-            return TradeSignals.None;
-        }
-
-        public override Dictionary<string, double[]>? GetPlotIndicators() => _series;
+        public override Dictionary<string, double[]>? GetPlotIndicators() => series;
     }
 }
