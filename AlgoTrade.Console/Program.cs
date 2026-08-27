@@ -379,13 +379,25 @@ void reloadAppConfig()
     LogManager.LogRaw("[AppConfig] Reloaded.", ConsoleColor.Green);
 }
 
-void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectories = false)
+void DeleteFilesInGivenDirectory(string directoryPath, bool includeSubdirectories = true)
 {
     if (!Directory.Exists(directoryPath)) return;
+
     var option = includeSubdirectories ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
     foreach (var file in Directory.GetFiles(directoryPath, "*.*", option))
     {
-        try { File.Delete(file); } catch { }
+        try { File.Delete(file); }
+        catch (Exception ex) { LogManager.LogRaw($"[DeleteFilesInGivenDirectory] Silinemedi: {file} ({ex.Message})", ConsoleColor.Yellow); }
+    }
+
+    if (includeSubdirectories)
+    {
+        // Bos kalan alt klasorleri de temizle (dosyalar yukarida silindi).
+        foreach (var dir in Directory.GetDirectories(directoryPath, "*", SearchOption.AllDirectories)
+                                      .OrderByDescending(d => d.Length))
+        {
+            try { Directory.Delete(dir); } catch { }
+        }
     }
 }
 
