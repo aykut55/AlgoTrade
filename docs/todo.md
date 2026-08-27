@@ -1,5 +1,28 @@
 # TODO
 
+## İndikatör Kütüphanesi Bug'ı — MACD signalLine NaN Zehirlenmesi (2026-08-27)
+
+- [ ] **`MomentumIndicators.MACD()` — signalLine sonsuza kadar NaN kalabiliyor** (bulunma şekli:
+  `SimpleComboStrategyRule003` optimizer testinde 60/60 parametre kombinasyonu 0 trade üretince
+  fark edildi). Sebep: `signalLine = EMA(macdLine, signalPeriod)` çağrısı yapılıyor, ama
+  `macdLine`'ın kendi warmup NaN bölgesi (`slowPeriod-1` bar) `signalPeriod`'dan (pratikte hep)
+  daha uzun — `EMA()`'nın SMA-seed penceresi (ilk `signalPeriod` bar) tamamen bu NaN bölgesine
+  denk geliyor, seed `NaN` oluyor, `EMA()`'nın recursive formülü (`result[i] =
+  (source[i]-result[i-1])*mult + result[i-1]`) bu NaN'ı SONSUZA kadar taşıyor. Yani `macdSignal`
+  dizisi pratikte hiç gerçek değere dönmüyor, `Buyuk`/`Kucuk` karşılaştırmaları (`NaN > x`/`NaN <
+  x`) hep `false` dönüyor → sıfır sinyal.
+  - Etkilenen yerler: `MACD()` kullanan her strateji — `SimpleComboStrategy` (ruleModeIndex==2),
+    `SimpleComboStrategyRule003`; `SimpleMACDStrategy`'nin de aynı bug'dan etkilenip
+    etkilenmediği kontrol edilmedi.
+  - Fix önerisi: `EMA()`'nın seed penceresi kaynak dizideki ilk GEÇERLİ (NaN olmayan) indeksten
+    başlamalı, ya da `MACD()` `signalLine` hesaplarken `macdLine`'ın NaN olmayan alt-dizisini
+    kullanmalı. Henüz düzeltilmedi.
+  - **Yöntem notu**: bu bug sınıfını (bir indikatörün NaN-warmup'lı çıktısının başka bir
+    indikatöre kaynak olup "NaN zehirlenmesi" yaratması) sistematik yakalamak için, tüm
+    `IndicatorManager` metodlarını sentetik/uzun bir veri setinde çalıştırıp makul bir
+    warmup'tan (örn. en büyük periyot parametresinin 2-3 katı bar) sonra hâlâ NaN/Infinity
+    üreteni işaretleyen bir diagnostic script yazılması önerildi — henüz yazılmadı.
+
 ## Todo
 
 - [x] ~~Offline Replay — yeni tip plotter'da OHLC panelinde AL/SAT harfleri/level çizgileri

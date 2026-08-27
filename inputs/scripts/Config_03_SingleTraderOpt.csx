@@ -154,6 +154,61 @@ else if (optChoice == 1)
         ["signalModeIndex"] = 0
     };
 }
+else if (optChoice == 2)
+{
+    // SimpleComboStrategyRule001 - SimpleComboStrategy'nin ruleModeIndex==0 dalinin (MA1 x MA2 kesisimi)
+    // periyotlari gercek constructor parametresi yapilmis hali (bkz. sinifin basindaki doc
+    // comment'teki "VERSIYONLAMA KARARI"). ruleModeIndex burada yok - taranacak olan dogrudan
+    // periyotlar. signalModeIndex (seviye/kesisim) burada sabit tutuluyor.
+    optimizationStrategyName = "SimpleComboStrategyRule001";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("ma1Period", 3, 21, 2),
+        ("ma2Period", 5, 55, 5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        // seviye (0) yerine kesisim (1): MA siralamasi uzun bar araliklarinda sabit kaldigi icin
+        // seviye modu her barda ayni yonde sinyal tekrarlayip asiri islem/komisyona yol aciyordu.
+        ["signalModeIndex"] = 1
+    };
+}
+else if (optChoice == 3)
+{
+    // SimpleComboStrategyRule002 - SimpleComboStrategy'nin ruleModeIndex==1 dalinin (MA1>MA2>MA3
+    // siralamasi + RSI momentum) periyotlari gercek constructor parametresi yapilmis hali.
+    optimizationStrategyName = "SimpleComboStrategyRule002";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("ma1Period",  3, 13, 2),
+        ("ma2Period",  8, 34, 4),
+        ("ma3Period", 13, 55, 6),
+        ("rsiPeriod",  7, 21, 7),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        // ayni gerekce (bkz. optChoice==2): seviye yerine kesisim
+        ["signalModeIndex"] = 1
+    };
+}
+else if (optChoice == 4)
+{
+    // SimpleComboStrategyRule003 - SimpleComboStrategy'nin ruleModeIndex==2 dalinin (MACD +
+    // SuperTrend) periyotlari gercek constructor parametresi yapilmis hali.
+    optimizationStrategyName = "SimpleComboStrategyRule003";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("macdFastPeriod",   8, 16, 2),
+        ("macdSlowPeriod",  20, 32, 4),
+        ("superTrendPeriod", 7, 21, 7),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["macdSignalPeriod"]     = 9,
+        ["superTrendMultiplier"] = 3.0,
+        ["signalModeIndex"]      = 0
+    };
+}
 else
 {
     throw new ArgumentOutOfRangeException(nameof(optChoice), $"Bilinmeyen optChoice: {optChoice}");
