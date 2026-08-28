@@ -195,7 +195,16 @@
   4+ farklı yeri elle güncellemek gerekiyor (bu oturumda tam olarak bu yapıldı). Kök neden
   düzeltmesi (`AppConfigApplier` + menü handler'ları + script config yüklemenin merkezi bir
   kaynağa bağlanması) ayrı, daha büyük bir refactor — bu oturumda ELE ALINMADI, sadece not
-  düşüldü.
+  düşüldü. **Durum: sonra bakılacak, bu oturumda uygulanmadı.**
+  - **Çözüm önerisi (2 seviye)**:
+    1. **Küçük çözüm (önce bu)**: GUI gerektirmez — tüm menü/script akışlarının tek bir "aktif
+       strateji" kaynağına (örn. `AppConfigApplier` üzerinden okunan tek bir `Name`/`Version`
+       alanı) bağlanacağı şekilde refactor. Asıl acıyı (4+ yeri elle güncelleme zorunluluğu)
+       GUI olmadan çözer.
+    2. **Büyük çözüm (ayrı, aceleye getirilmemeli)**: Gerçek bir desktop config/control app —
+       bkz. [[user_no_gui_friction]] (memory) — DearPyGuiDataPlotter grafik tarafında var ama
+       config/control tarafında yok. Küçük çözümden çok daha büyük bir proje, ayrı bir kararla
+       ele alınmalı.
 
 ## Strateji Kapsam Envanteri — Hangi İndikatörün `Simple*Strategy` Karşılığı Var/Yok (2026-08-26, kullanıcı talebi)
 
