@@ -2,6 +2,7 @@ using AlgoTrade.Core;
 using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Strategy;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 using System;
 using System.Collections.Generic;
 
@@ -31,6 +32,17 @@ namespace AlgoTrade.Core.Trading.Strategies
         public override string Name => "Simple MOST Strategy";
 
         private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
+
         private readonly int period;
         private readonly double percent;
         private readonly int signalModeIndex; // eskiden choice: 0: Price-MOST cross, 1: EXMOV-MOST cross
@@ -94,8 +106,46 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             try
             {
+                // verileri oku
+                barCount    = Indicators.GetDataCount();
+                openPrices  = Indicators.GetOpenPrices();
+                highPrices  = Indicators.GetHighPrices();
+                lowPrices   = Indicators.GetLowPrices();
+                closePrices = Indicators.GetClosePrices();
+                volumes     = Indicators.GetVolume();
+                lotSizes    = Indicators.GetLotSizes();
+                dateTimes   = Indicators.GetDateTimes();
+                dates       = Indicators.GetDates();
+                times       = Indicators.GetTimes();
+                epochTimes  = Indicators.GetEpochTimes();
+
                 // MOST indicator'ı hesapla
                 (most, exmov) = Indicators.Trend.MOST(period, percent);
+
+                // Tüm seriler OnStep'te aynı index ile birlikte okunuyor - uzunlukları uyuşmazsa
+                // (örn. biri filtrelenmiş/kırpılmış gelirse) IndexOutOfRange yerine burada net hata ver
+                bool allSeriesLengthsMatch = true;
+                allSeriesLengthsMatch &= most.Length        == barCount;
+                allSeriesLengthsMatch &= exmov.Length       == barCount;
+                allSeriesLengthsMatch &= openPrices.Length  == barCount;
+                allSeriesLengthsMatch &= highPrices.Length  == barCount;
+                allSeriesLengthsMatch &= lowPrices.Length   == barCount;
+                allSeriesLengthsMatch &= closePrices.Length == barCount;
+                allSeriesLengthsMatch &= volumes.Length     == barCount;
+                allSeriesLengthsMatch &= lotSizes.Length    == barCount;
+                allSeriesLengthsMatch &= dateTimes.Length   == barCount;
+                allSeriesLengthsMatch &= dates.Length       == barCount;
+                allSeriesLengthsMatch &= times.Length       == barCount;
+                allSeriesLengthsMatch &= epochTimes.Length  == barCount;
+
+                if (!allSeriesLengthsMatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                        $"most={most.Length}, exmov={exmov.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
+                        $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
+                        $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
+                }
 
                 //Log($"SimpleMostStrategy initialized: Period={period}, Percent={percent}, SignalModeIndex={signalModeIndex}");
             }
@@ -109,6 +159,16 @@ namespace AlgoTrade.Core.Trading.Strategies
                 barCount = Indicators.BarCount;
                 most = new double[barCount];
                 exmov = new double[barCount];
+                openPrices  = new double[barCount];
+                highPrices  = new double[barCount];
+                lowPrices   = new double[barCount];
+                closePrices = new double[barCount];
+                volumes     = new long[barCount];
+                lotSizes    = new long[barCount];
+                dateTimes   = new DateTime[barCount];
+                dates       = new DateOnly[barCount];
+                times       = new TimeOnly[barCount];
+                epochTimes  = new long[barCount];
             }
         }
 
@@ -132,6 +192,9 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             if (exmov == null || exmov.Length == 0)
                 return TradeSignals.None;
+
+            if (closePrices == null || closePrices.Length == 0)
+                return TradeSignals.None;
             // ************************************************************************************************************************
 
             // Geçerli ve önceki değerler
@@ -147,37 +210,33 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (signalModeIndex == 0)
             {
                 // MOST AL Sinyali: Fiyat MOST'u yukarı kırıyor (trend değişimi: düşüşten yükselişe)
-                // Önceki bar: fiyat <= MOST
-                // Şimdiki bar: fiyat > MOST
-                if (prevPrice <= prevMost && currentPrice > currentMost)
+                // Önceki bar: fiyat <= MOST, şimdiki bar: fiyat > MOST
+                if (YukarıKesti(currentIndex, closePrices, most))
                 {
                     buy = true;
                 }
 
                 // MOST SAT Sinyali: Fiyat MOST'u aşağı kırıyor (trend değişimi: yükselişten düşüşe)
-                // Önceki bar: fiyat >= MOST
-                // Şimdiki bar: fiyat < MOST
-                if (prevPrice >= prevMost && currentPrice < currentMost)
+                // Önceki bar: fiyat >= MOST, şimdiki bar: fiyat < MOST
+                if (AsagiKesti(currentIndex, closePrices, most))
                 {
                     sell = true;
                 }
             }
             else
             {
-                // ExMov, MOST çizgisini yukarı kestiğinde BUY
+                // EXMOV, MOST çizgisini yukarı kestiğinde BUY
                 // (EXMOV alttan yukarı doğru MOST'u geçer: MOST üstte → EXMOV üstte)
-                // Önceki bar: MOST >= EXMOV
-                // Şimdiki bar: MOST < EXMOV
-                if (prevMost >= prevExmov && currentMost < currentExmov)
+                // Önceki bar: EXMOV <= MOST, şimdiki bar: EXMOV > MOST
+                if (YukarıKesti(currentIndex, exmov, most))
                 {
                     buy = true;
                 }
 
-                // ExMov, MOST çizgisini aşağı kestiğinde SELL
+                // EXMOV, MOST çizgisini aşağı kestiğinde SELL
                 // (EXMOV üstten aşağı doğru MOST'u geçer: EXMOV üstte → MOST üstte)
-                // Önceki bar: MOST <= EXMOV
-                // Şimdiki bar: MOST > EXMOV
-                if (prevMost <= prevExmov && currentMost > currentExmov)
+                // Önceki bar: EXMOV >= MOST, şimdiki bar: EXMOV < MOST
+                if (AsagiKesti(currentIndex, exmov, most))
                 {
                     sell = true;
                 }
