@@ -166,7 +166,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 0;
+int optChoice = 1;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -191,6 +191,24 @@ if (optChoice == 0)
 }
 else if (optChoice == 1)
 {
+    // SimpleMAStrategy - fast/slow MA periyotlari ve MA tipleri taraniyor (MOST'taki mostMaMethod
+    // range deseniyle ayni). priceSource + signalModeIndex burada sabit tutuluyor.
+    optimizationStrategyName = "SimpleMAStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("fastPeriod",   5, 20, 5),
+        ("slowPeriod",  20, 60, 10),
+        ("fastMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+        ("slowMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 2)
+{
     // SimpleComboStrategy'de taranan parametre ruleModeIndex (BuildSignals() - su an 3 eleman: 0-2).
     // Yeni bir kural eklersen ust siniri (max) da guncellemen gerekir. signalModeIndex (seviye/kesisim)
     // burada sabit tutuluyor - o da taranmak istenirse ikinci bir range olarak eklenir.
@@ -204,7 +222,7 @@ else if (optChoice == 1)
         ["signalModeIndex"] = 0
     };
 }
-else if (optChoice == 2)
+else if (optChoice == 3)
 {
     // SimpleComboStrategyRule001 - SimpleComboStrategy'nin ruleModeIndex==0 dalinin (MA1 x MA2 kesisimi)
     // periyotlari gercek constructor parametresi yapilmis hali (bkz. sinifin basindaki doc
@@ -223,7 +241,7 @@ else if (optChoice == 2)
         ["signalModeIndex"] = 1
     };
 }
-else if (optChoice == 3)
+else if (optChoice == 4)
 {
     // SimpleComboStrategyRule002 - SimpleComboStrategy'nin ruleModeIndex==1 dalinin (MA1>MA2>MA3
     // siralamasi + RSI momentum) periyotlari gercek constructor parametresi yapilmis hali.
@@ -237,11 +255,11 @@ else if (optChoice == 3)
     };
     fixedParams = new Dictionary<string, object>
     {
-        // ayni gerekce (bkz. optChoice==2): seviye yerine kesisim
+        // ayni gerekce (bkz. optChoice==3): seviye yerine kesisim
         ["signalModeIndex"] = 1
     };
 }
-else if (optChoice == 4)
+else if (optChoice == 5)
 {
     // SimpleComboStrategyRule003 - SimpleComboStrategy'nin ruleModeIndex==2 dalinin (MACD +
     // SuperTrend) periyotlari gercek constructor parametresi yapilmis hali.
