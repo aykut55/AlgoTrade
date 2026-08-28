@@ -157,20 +157,19 @@ namespace AlgoTrade.Core.Trading.Indicators.Trend
         }
 
         /// <summary>
-        /// MOST (Moving Stop Loss) Indicator
+        /// MOSTLegacy - MOST'un eski/sabit sürümü. Kaynak HEP close, MA HEP EMA.
+        /// Parametrik kaynak/MA tipi isteyen yeni <see cref="MOST"/> metodunu kullan;
+        /// bu metot geriye dönük uyumluluk için bırakıldı.
         ///
-        /// MOST is a trend-following indicator that acts as a trailing stop loss:
-        /// - In uptrend: MOST stays below price (support)
-        /// - In downtrend: MOST stays above price (resistance)
-        ///
-        /// Trading Logic:
-        /// - Buy when price crosses MOST upward (trend changes from down to up)
-        /// - Sell when price crosses MOST downward (trend changes from up to down)
+        /// MOST bir trailing stop loss trend indikatörüdür:
+        /// - Yükselişte: MOST fiyatın altında (destek)
+        /// - Düşüşte: MOST fiyatın üstünde (direnç)
+        /// - Fiyat MOST'u yukarı kırınca AL, aşağı kırınca SAT
         /// </summary>
-        /// <param name="period">EMA period (default: 21)</param>
-        /// <param name="percent">Band percentage (default: 1.0)</param>
-        /// <returns>MOSTResult containing most and exmov arrays</returns>
-        public MOSTResult MOST(int period = 21, double percent = 1.0)
+        /// <param name="period">EMA periyodu (varsayılan: 21)</param>
+        /// <param name="percent">Bant yüzdesi (varsayılan: 1.0)</param>
+        /// <returns>most ve exmov dizilerini içeren MOSTResult</returns>
+        public MOSTResult MOSTLegacy(int period = 21, double percent = 1.0)
         {
             int barCount = _manager.BarCount;
             if (barCount == 0)
@@ -234,6 +233,115 @@ namespace AlgoTrade.Core.Trading.Indicators.Trend
             }
 
             return new MOSTResult(most, exmov, period, percent);
+        }
+
+        /// <summary>
+        /// MOST (Moving Stop Loss) - trailing stop loss trend indikatörü.
+        /// - Yükselişte MOST fiyatın altında (destek), düşüşte üstünde (direnç)
+        /// - Fiyat MOST'u yukarı kırınca AL, aşağı kırınca SAT
+        ///
+        /// EXMOV hesabı iki noktada parametrik (varsayılanlarla çıktı <see cref="MOSTLegacy"/> ile birebir aynı):
+        /// - <paramref name="source"/>: EXMOV'un besleneceği fiyat serisi (close/open/hl2/hlc3/ohlc4...) - varsayılan Close
+        /// - <paramref name="maMethod"/>: EXMOV'un MA tipi (EMA/SMA/WMA/HULL/DEMA/TEMA/VIDYA/ZLEMA...) - varsayılan EMA
+        ///   (Anıl Özekşi'nin orijinal MOST'undaki MAvType seçeneği).
+        ///
+        /// Bantlar ve trend/trailing-stop mantığı klasik MOST ile birebir aynı.
+        /// </summary>
+        /// <param name="period">EXMOV periyodu (varsayılan: 21)</param>
+        /// <param name="percent">Bant yüzdesi (varsayılan: 1.0)</param>
+        /// <param name="maMethod">EXMOV hareketli ortalama tipi (varsayılan: EMA)</param>
+        /// <param name="source">Fiyat kaynağı (varsayılan: Close)</param>
+        /// <returns>most ve exmov dizilerini içeren MOSTResult</returns>
+        public MOSTResult MOST(int period = 21, double percent = 1.0, MAMethod maMethod = MAMethod.EMA, PriceSource source = PriceSource.Close)
+        {
+            int barCount = _manager.BarCount;
+            if (barCount == 0)
+                return new MOSTResult(new double[0], new double[0], period, percent);
+
+            // Kaynak seri + seçilen MA tipiyle EXMOV
+            double[] src = ResolvePriceSource(source);
+            double[] exmov = _manager.MA.Calculate(src, maMethod, period);
+
+            // Bantlar
+            double[] fark = new double[barCount];
+            double[] up = new double[barCount];
+            double[] down = new double[barCount];
+
+            for (int i = 0; i < barCount; i++)
+            {
+                fark[i] = exmov[i] * (percent / 100.0);
+                up[i] = exmov[i] - fark[i];
+                down[i] = exmov[i] + fark[i];
+            }
+
+            double[] trendUp = new double[barCount];
+            double[] trendDown = new double[barCount];
+            int[] trend = new int[barCount];
+            double[] most = new double[barCount];
+
+            trendUp[0] = up[0];
+            trendDown[0] = down[0];
+            trend[0] = 1;
+            most[0] = trendUp[0];
+
+            for (int i = 1; i < barCount; i++)
+            {
+                if (exmov[i - 1] > trendUp[i - 1])
+                    trendUp[i] = Math.Max(up[i], trendUp[i - 1]);
+                else
+                    trendUp[i] = up[i];
+
+                if (exmov[i - 1] < trendDown[i - 1])
+                    trendDown[i] = Math.Min(down[i], trendDown[i - 1]);
+                else
+                    trendDown[i] = down[i];
+
+                if (exmov[i] > trendDown[i - 1])
+                    trend[i] = 1;
+                else if (exmov[i] < trendUp[i - 1])
+                    trend[i] = -1;
+                else
+                    trend[i] = trend[i - 1];
+
+                most[i] = trend[i] == 1 ? trendUp[i] : trendDown[i];
+            }
+
+            return new MOSTResult(most, exmov, period, percent);
+        }
+
+        /// <summary>
+        /// <see cref="PriceSource"/> enum'unu bar-bar fiyat dizisine çevirir.
+        /// </summary>
+        public double[] ResolvePriceSource(PriceSource source)
+        {
+            switch (source)
+            {
+                case PriceSource.Close: return _manager.GetClosePrices();
+                case PriceSource.Open:  return _manager.GetOpenPrices();
+                case PriceSource.High:  return _manager.GetHighPrices();
+                case PriceSource.Low:   return _manager.GetLowPrices();
+            }
+
+            double[] o = _manager.GetOpenPrices();
+            double[] h = _manager.GetHighPrices();
+            double[] l = _manager.GetLowPrices();
+            double[] c = _manager.GetClosePrices();
+            int n = c.Length;
+            double[] result = new double[n];
+
+            for (int i = 0; i < n; i++)
+            {
+                result[i] = source switch
+                {
+                    PriceSource.Median   => (h[i] + l[i]) / 2.0,                // HL2
+                    PriceSource.Typical  => (h[i] + l[i] + c[i]) / 3.0,         // HLC3
+                    PriceSource.Weighted => (h[i] + l[i] + c[i] + c[i]) / 4.0,  // HLCC4
+                    PriceSource.Average  => (o[i] + h[i] + l[i] + c[i]) / 4.0,  // OHLC4
+                    _ => c[i]
+                };
+            }
+
+            return result;
         }
 
         /// <summary>

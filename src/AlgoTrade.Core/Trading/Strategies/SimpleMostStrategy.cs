@@ -1,10 +1,11 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Indicators.Base;
 using AlgoTrade.Core.Trading.Strategy;
-using static AlgoTrade.Core.Trading.Utils.Utils;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -20,8 +21,15 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// Parametreler:
     /// - period: MOST periyodu (varsayılan 21)
     /// - percent: MOST yüzde sapması (varsayılan 1.0)
-    /// - signalModeIndex: buy/sell kategorisinin dispatch parametresi - 0: Fiyat-MOST kırılımı,
-    ///                     1: MOST-EXMOV kesişimi (eskiden choice)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: Fiyat-MOST kırılımı        (fiyat MOST'u yukarı/aşağı kesince)
+    ///     1: MOST-EXMOV kesişimi        (EXMOV MOST'u yukarı/aşağı kesince)
+    ///     2: MOST slope flip           (MOST'un kendi yönü dönünce)
+    ///     3: MOST state                (fiyatın MOST'a göre konumu - kesişim değil, koşul sürdükçe her bar)
+    ///     4: Band / uzaklık filtresi   (fiyat MOST'tan %bandThreshold'dan fazla uzaklaşınca)
+    ///     5: Breakout + retest         (MOST kırılıp fiyat geri gelip retest tutunca)
+    ///     6: Confirmation bars         (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: EXMOV eğimi + MOST state  (rejim: fiyat-MOST konumu + momentum: EXMOV N-bar eğimi)
     /// - exitModeIndex: takeProfit/stopLoss kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
     /// - flatModeIndex: flat kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
     /// - skipModeIndex: skip kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
@@ -45,11 +53,19 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int period;
         private readonly double percent;
-        private readonly int signalModeIndex; // eskiden choice: 0: Price-MOST cross, 1: EXMOV-MOST cross
+        private readonly int signalModeIndex; // buy/sell yöntemi - bkz. sınıf başı doc comment (0-7)
         private readonly int exitModeIndex;
         private readonly int flatModeIndex;
         private readonly int skipModeIndex;
         private readonly int ruleModeIndex;
+
+        // MOST EXMOV hesabı - DENEYSEL, ctor parametresi DEĞİL, elle değiştirilir
+        // (varsayılanlar EMA + Close => klasik MOST ile birebir aynı sonuç)
+        // priceSource hem MOST'un EXMOV beslemesini hem OnStep sinyal kaynağını sürer
+        private readonly PriceSource priceSource  = PriceSource.Close;
+        private readonly MAMethod    mostMaMethod = MAMethod.EMA;
+
+        private double[]? source;   // priceSource'un çözülmüş hali - OnInit'te bir kez, OnStep bundan okur
         private double[]? most;
         private double[]? exmov;
 
@@ -118,15 +134,17 @@ namespace AlgoTrade.Core.Trading.Strategies
                 dates       = Indicators.GetDates();
                 times       = Indicators.GetTimes();
                 epochTimes  = Indicators.GetEpochTimes();
+                source      = Indicators.Trend.ResolvePriceSource(priceSource);
 
-                // MOST indicator'ı hesapla
-                (most, exmov) = Indicators.Trend.MOST(period, percent);
+                // MOST indicator'ı hesapla (mostMaMethod / priceSource ile EXMOV parametrik)
+                (most, exmov) = Indicators.Trend.MOST(period, percent, mostMaMethod, priceSource);
 
                 // Tüm seriler OnStep'te aynı index ile birlikte okunuyor - uzunlukları uyuşmazsa
                 // (örn. biri filtrelenmiş/kırpılmış gelirse) IndexOutOfRange yerine burada net hata ver
                 bool allSeriesLengthsMatch = true;
                 allSeriesLengthsMatch &= most.Length        == barCount;
                 allSeriesLengthsMatch &= exmov.Length       == barCount;
+                allSeriesLengthsMatch &= source.Length      == barCount;
                 allSeriesLengthsMatch &= openPrices.Length  == barCount;
                 allSeriesLengthsMatch &= highPrices.Length  == barCount;
                 allSeriesLengthsMatch &= lowPrices.Length   == barCount;
@@ -142,7 +160,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 {
                     throw new InvalidOperationException(
                         $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
-                        $"most={most.Length}, exmov={exmov.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
+                        $"most={most.Length}, exmov={exmov.Length}, source={source.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
                         $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
                         $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
                 }
@@ -156,9 +174,10 @@ namespace AlgoTrade.Core.Trading.Strategies
                 LogWarning("MOST indicator threw NotImplementedException! Strategy will not generate signals.");
                 LogWarning("Check src/Trading/Indicators/Trend/TrendIndicators.cs — MOST() implementation may be missing/broken.");
 
-                barCount = Indicators.BarCount;
-                most = new double[barCount];
-                exmov = new double[barCount];
+                barCount    = Indicators.BarCount;
+                most        = new double[barCount];
+                exmov       = new double[barCount];
+                source      = new double[barCount];
                 openPrices  = new double[barCount];
                 highPrices  = new double[barCount];
                 lowPrices   = new double[barCount];
@@ -193,52 +212,117 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (exmov == null || exmov.Length == 0)
                 return TradeSignals.None;
 
-            if (closePrices == null || closePrices.Length == 0)
+            if (source == null || source.Length == 0)
                 return TradeSignals.None;
             // ************************************************************************************************************************
 
-            // Geçerli ve önceki değerler
-            double currentPrice = Data[currentIndex].Close;
-            double prevPrice    = Data[currentIndex - 1].Close;
+            // Geçerli ve önceki değerler (source = OnInit'te priceSource'tan çözülen seri)
+            double currentPrice = source[currentIndex];
+            double prevPrice    = source[currentIndex - 1];
             double currentMost  = most[currentIndex];
             double prevMost     = most[currentIndex - 1];
             double currentExmov = exmov[currentIndex];
             double prevExmov    = exmov[currentIndex - 1];
-
             // ************************************************************************************************************************
-            // choice: 0 = Fiyat MOST kırılımı, 1 = EXMOV-MOST kesişimi (configurable via constructor)
+
+            // signalModeIndex ile buy/sell yöntemi seçilir - detay için sınıf başı doc comment (0-7)
             if (signalModeIndex == 0)
             {
-                // MOST AL Sinyali: Fiyat MOST'u yukarı kırıyor (trend değişimi: düşüşten yükselişe)
-                // Önceki bar: fiyat <= MOST, şimdiki bar: fiyat > MOST
-                if (YukarıKesti(currentIndex, closePrices, most))
+                // 0: Fiyat-MOST kırılımı - fiyat MOST'u yukarı kesince AL, aşağı kesince SAT
+                if (YukarıKesti(currentIndex, source, most)) buy  = true;
+                if (AsagiKesti(currentIndex, source, most))  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: EXMOV-MOST kesişimi - EXMOV, MOST'u yukarı kesince AL, aşağı kesince SAT
+                if (YukarıKesti(currentIndex, exmov, most)) buy  = true;
+                if (AsagiKesti(currentIndex, exmov, most))  sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: MOST slope flip - MOST'un kendi yönü dönüyor (düşen/düz → yükselen = AL)
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // MOST SAT Sinyali: Fiyat MOST'u aşağı kırıyor (trend değişimi: yükselişten düşüşe)
-                // Önceki bar: fiyat >= MOST, şimdiki bar: fiyat < MOST
-                if (AsagiKesti(currentIndex, closePrices, most))
-                {
-                    sell = true;
+                    double slopeNow  = most[currentIndex]     - most[currentIndex - 1];
+                    double slopePrev = most[currentIndex - 1] - most[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // EXMOV, MOST çizgisini yukarı kestiğinde BUY
-                // (EXMOV alttan yukarı doğru MOST'u geçer: MOST üstte → EXMOV üstte)
-                // Önceki bar: EXMOV <= MOST, şimdiki bar: EXMOV > MOST
-                if (YukarıKesti(currentIndex, exmov, most))
+                // 3: MOST state - fiyatın MOST'a göre konumu (kesişim değil, koşul sürdükçe her bar)
+                if (Buyuk(currentIndex, source, most)) buy  = true;
+                if (Kucuk(currentIndex, source, most)) sell = true;
+            }
+            else if (signalModeIndex == 4)
+            {
+                // 4: Band / uzaklık filtresi - fiyat MOST'tan %bandThreshold'dan fazla uzaklaşınca (trend-following)
+                const double bandThreshold = 0.01; // %1
+                if (currentMost != 0.0)
                 {
-                    buy = true;
+                    double distanceRatio = (currentPrice - currentMost) / currentMost;
+                    if (distanceRatio >  bandThreshold) buy  = true;
+                    if (distanceRatio < -bandThreshold) sell = true;
                 }
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest - son retestLookback bar içinde MOST kırıldı, şimdi fiyat
+                //    MOST'a geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
+                const int retestLookback = 10;
+                double barLow  = Data[currentIndex].Low;
+                double barHigh = Data[currentIndex].High;
 
-                // EXMOV, MOST çizgisini aşağı kestiğinde SELL
-                // (EXMOV üstten aşağı doğru MOST'u geçer: EXMOV üstte → MOST üstte)
-                // Önceki bar: EXMOV >= MOST, şimdiki bar: EXMOV < MOST
-                if (AsagiKesti(currentIndex, exmov, most))
+                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
                 {
-                    sell = true;
+                    if (k < 1) continue;
+
+                    if (!buy && YukarıKesti(k, source, most)
+                        && barLow <= currentMost          // bu bar MOST'a geri dokundu (retest)
+                        && currentPrice > currentMost)    // ama üstünde kapattı (retest tuttu)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(k, source, most)
+                        && barHigh >= currentMost
+                        && currentPrice < currentMost)
+                    {
+                        sell = true;
+                    }
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri fiyat
+                //    hep MOST'un aynı tarafında kaldıysa gir
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, source, most);
+                    bool stayedBelow = AsagiKesti(crossBar, source, most);
+                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    {
+                        stayedAbove &= source[k] > most[k];
+                        stayedBelow &= source[k] < most[k];
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: EXMOV eğimi + MOST state - rejim (fiyat-MOST konumu) + momentum (EXMOV N-bar eğimi)
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool exmovRising  = exmov[currentIndex] > exmov[currentIndex - slopeLookback];
+                    bool exmovFalling = exmov[currentIndex] < exmov[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, source, most) && exmovRising)  buy  = true;
+                    if (Kucuk(currentIndex, source, most) && exmovFalling) sell = true;
                 }
             }
             // ************************************************************************************************************************
