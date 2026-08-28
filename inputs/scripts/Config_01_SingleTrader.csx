@@ -47,12 +47,58 @@ TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
 // FilterMode: All, LastN, FirstN, IndexRange, AfterDateTime, BeforeDateTime, DateTimeRange
 // Dt1/Dt2 formati: "yyyy.MM.dd HH:mm:ss" (bos string = kullanilmiyor)
+//
+// readDataChoice: 0=All, 1=LastN, 2=FirstN, 3=IndexRange,
+//                 4=AfterDateTime, 5=BeforeDateTime, 6=DateTimeRange
 // =============================================================================
-string readDataFilterMode = "All";
+int readDataChoice = 0;
+
+string readDataFilterMode;
 int readDataN1 = 0;
 int readDataN2 = 0;
 string readDataDt1 = "";
 string readDataDt2 = "";
+
+if (readDataChoice == 0)
+{
+    readDataFilterMode = "All";
+}
+else if (readDataChoice == 1)
+{
+    readDataFilterMode = "LastN";
+    readDataN1 = 5000;
+}
+else if (readDataChoice == 2)
+{
+    readDataFilterMode = "FirstN";
+    readDataN1 = 5000;
+}
+else if (readDataChoice == 3)
+{
+    readDataFilterMode = "IndexRange";
+    readDataN1 = 0;
+    readDataN2 = 5000;
+}
+else if (readDataChoice == 4)
+{
+    readDataFilterMode = "AfterDateTime";
+    readDataDt1 = "2020.01.01 00:00:00";
+}
+else if (readDataChoice == 5)
+{
+    readDataFilterMode = "BeforeDateTime";
+    readDataDt1 = "2020.01.01 00:00:00";
+}
+else if (readDataChoice == 6)
+{
+    readDataFilterMode = "DateTimeRange";
+    readDataDt1 = "2020.01.01 00:00:00";
+    readDataDt2 = "2024.01.01 00:00:00";
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(readDataChoice), $"Bilinmeyen readDataChoice: {readDataChoice}");
+}
 
 // Head/Tail log - [5] menusundeki addHeadTailInfo karsiligi (menude de varsayilan/hep kapali,
 // bkz. Program.cs:52 - orada hicbir zaman true yapilmiyor). Debug icin script'te acilabilir.
