@@ -76,11 +76,12 @@ algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, obj
     ["signalModeIndex"] = 0
 });
 
-algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
+algoTrader.AddStrategyConfig(1, "SimpleMAStrategy", new Dictionary<string, object>
 {
-    ["period"]  = 14,
-    ["percent"] = 0.5,
-    ["mostMaMethod"] = "EMA",
+    ["fastPeriod"] = 10,
+    ["slowPeriod"] = 20,
+    ["fastMaMethod"] = "EMA",
+    ["slowMaMethod"] = "EMA",
     ["priceSource"] = "Close",
     ["signalModeIndex"] = 0
 });

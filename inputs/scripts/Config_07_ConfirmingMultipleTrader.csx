@@ -73,11 +73,12 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     }),
-    (1, "SimpleMostStrategy", new Dictionary<string, object>
+    (1, "SimpleMAStrategy", new Dictionary<string, object>
     {
-        ["period"] = 14,
-        ["percent"] = 0.5,
-        ["mostMaMethod"] = "EMA",
+        ["fastPeriod"] = 10,
+        ["slowPeriod"] = 20,
+        ["fastMaMethod"] = "EMA",
+        ["slowMaMethod"] = "EMA",
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     })

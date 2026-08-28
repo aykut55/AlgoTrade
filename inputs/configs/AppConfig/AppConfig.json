@@ -291,8 +291,8 @@
         "ChildId": 1,
         "Strategy": {
           "ConfigFile": "StrategyConfig.txt",
-          "Name": "SimpleMostStrategy",
-          "Version": "v2"
+          "Name": "SimpleMAStrategy",
+          "Version": "v1"
         },
         "Query": {
           "ConfigFile": "QueryConfig.txt",
@@ -683,8 +683,8 @@
         "ChildId": 1,
         "Strategy": {
           "ConfigFile": "StrategyConfig.txt",
-          "Name": "SimpleMostStrategy",
-          "Version": "v2"
+          "Name": "SimpleMAStrategy",
+          "Version": "v1"
         },
         "Signals": {
           "AlEnabled": true,
@@ -1263,8 +1263,8 @@
           "ChildId": 1,
           "Strategy": {
             "ConfigFile": "StrategyConfig.txt",
-            "Name": "SimpleMostStrategy",
-            "Version": "v2"
+            "Name": "SimpleMAStrategy",
+            "Version": "v1"
           },
           "EquityCurveFilter": {
             "ConfigFile": "EquityCurveFilterConfig.txt",
@@ -1550,8 +1550,8 @@
           "ChildId": 1,
           "Strategy": {
             "ConfigFile": "StrategyConfig.txt",
-            "Name": "SimpleMostStrategy",
-            "Version": "v2"
+            "Name": "SimpleMAStrategy",
+            "Version": "v1"
           },
           "EquityCurveFilter": {
             "ConfigFile": "EquityCurveFilterConfig.txt",
@@ -1794,8 +1794,8 @@
           "ChildId": 1,
           "Strategy": {
             "ConfigFile": "StrategyConfig.txt",
-            "Name": "SimpleMostStrategy",
-            "Version": "v2"
+            "Name": "SimpleMAStrategy",
+            "Version": "v1"
           },
           "EquityCurveFilter": {
             "ConfigFile": "EquityCurveFilterConfig.txt",

@@ -56,7 +56,7 @@ if (data.Count == 0)
 }
 
 // =============================================================================
-// 1. Indicators + iki child strateji (farkli periyotlarla SimpleMostStrategy)
+// 1. Indicators + iki child strateji (SimpleMostStrategy + SimpleMAStrategy)
 // =============================================================================
 var indicators = new IndicatorManager(data);
 
@@ -70,8 +70,8 @@ algoTrader.Initialize();
 
 var childStrategy0 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMostStrategy",
     new Dictionary<string, object> { ["period"] = 21, ["percent"] = 1.0, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
-var childStrategy1 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMostStrategy",
-    new Dictionary<string, object> { ["period"] = 14, ["percent"] = 0.5, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy1 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMAStrategy",
+    new Dictionary<string, object> { ["fastPeriod"] = 10, ["slowPeriod"] = 20, ["fastMaMethod"] = "EMA", ["slowMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
 
 // =============================================================================
 // 2. MultipleTrader'i manuel kur (mainTrader + 2 child)

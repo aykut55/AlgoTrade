@@ -177,6 +177,26 @@
   `TradeDataBundleConverter`'a bir `ConvertMultipleTrader(...)` overload'ı (mainTrader + her
   child için ayrı panel/bundle) eklenmesi gerekecek.
 
+- [ ] **`SimpleMAStrategy` — tek-stratejili menü/config bölümleri hâlâ MOST'ta kaldı, MA ile
+  denenmedi (2026-08-28)**: `SimpleMAStrategy`, `SimpleMostStrategy` mimarisine göre yeniden
+  yazılıp Menu[5]/[6]/[8] ve `Config_01`-`Config_03`/ensemble script'lerinde test edildi (çalışıyor).
+  Ama `AppConfig.json`'daki tek-stratejili bölümler (`ConfirmingSingleTrader`, `SymbolScan`,
+  `TimeframeScan`, ve diğer tek-strateji tarama modları) bilinçli olarak MOST'ta bırakıldı —
+  bunlar da MA ile denenmeli.
+
+- [ ] **⚠️ ÇOK ÖNEMLİ — Aktif stratejiyi değiştirmek çok fazla dağınık config yüzeyine dokunmayı
+  gerektiriyor (2026-08-28, kullanıcı gözlemi — "böyle karışık olmasını hayal etmemiştim")**: `SimpleMAStrategy`'yi
+  farklı menülerden çalıştırırken ortaya çıktı — `AppConfig.json`'un 20'den fazla bağımsız bölümü
+  var (`SingleTrader`, `MultipleTrader`, `SingleTraderOptimizer`, `ConfirmingSingleTrader`,
+  `ConfirmingMultipleTrader`, her tarama modu...), her biri kendi `Strategy.Name`/`Version`'ını
+  ayrı ayrı tutuyor; ayrıca `StrategyConfig.txt`, `OptimizationConfig.txt` ve `.csx`
+  script'lerindeki (`Config_01`/`Config_03` vb.) `strategyChoice`/`optChoice` sabitleri de bunlardan
+  bağımsız. Tek bir "aktif strateji" kaynağı yok — bir stratejiyi tüm akışlarda denemek için
+  4+ farklı yeri elle güncellemek gerekiyor (bu oturumda tam olarak bu yapıldı). Kök neden
+  düzeltmesi (`AppConfigApplier` + menü handler'ları + script config yüklemenin merkezi bir
+  kaynağa bağlanması) ayrı, daha büyük bir refactor — bu oturumda ELE ALINMADI, sadece not
+  düşüldü.
+
 ## Strateji Kapsam Envanteri — Hangi İndikatörün `Simple*Strategy` Karşılığı Var/Yok (2026-08-26, kullanıcı talebi)
 
 `src/AlgoTrade.Core/Trading/Strategies/` altındaki 24 `Simple*Strategy` dosyasının hangi
