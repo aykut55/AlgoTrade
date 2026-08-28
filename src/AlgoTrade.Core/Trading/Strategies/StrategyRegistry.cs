@@ -229,7 +229,9 @@ public sealed class StrategyRegistry
         {
             if (value is string enumString)
                 return Enum.Parse(nonNullableTarget, enumString, true);
-            return Enum.ToObject(nonNullableTarget, value);
+            // Sayısal değer (örn. optimizer range'i double üretir: 2.0) -> Enum.ToObject double kabul
+            // etmez, önce integral'e çevir. int/long zaten sorunsuz geçer.
+            return Enum.ToObject(nonNullableTarget, Convert.ToInt64(value, CultureInfo.InvariantCulture));
         }
 
         if (nonNullableTarget == typeof(Guid))

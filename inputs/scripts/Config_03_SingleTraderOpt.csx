@@ -131,11 +131,15 @@ if (optChoice == 0)
     optimizationStrategyName = "SimpleMostStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("period",  10, 50, 10),
-        ("percent", 1.0, 3.0, 1.0),
+        ("period",       10, 50, 10),
+        ("percent",      1.0, 3.0, 1.0),
+        ("mostMaMethod", 0, 2, 1),     // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+                                       // (registry Convert.ToInt64 + Enum.ToObject ile enum'a çevirir)
     };
     fixedParams = new Dictionary<string, object>
     {
+        // priceSource enum - taranmadığı için string sabit (registry Enum.Parse, case-insensitive).
+        ["priceSource"]     = "Close",
         ["signalModeIndex"] = 0
     };
 }

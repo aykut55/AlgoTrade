@@ -15,6 +15,8 @@ string strategyName   = "SimpleMostStrategy";
 
 int[]    periods  = new[] { 10, 15, 21, 30, 50 };
 double[] percents = new[] { 0.5, 1.0, 1.5, 2.0 };
+string   mostMaMethod   = "EMA";
+string   priceSource    = "Close";
 int      signalModeIndex = 0;
 // -----------------------------------------------------------------------------
 
@@ -83,6 +85,8 @@ foreach (var p in periods)
         {
             ["period"]  = p,
             ["percent"] = pct,
+            ["mostMaMethod"] = mostMaMethod,
+            ["priceSource"] = priceSource,
             ["signalModeIndex"] = signalModeIndex
         });
 

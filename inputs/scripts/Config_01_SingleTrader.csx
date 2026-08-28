@@ -79,6 +79,8 @@ if (strategyChoice == 0)
     {
         ["period"]  = 21,
         ["percent"] = 1.0,
+        ["mostMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     };
 }

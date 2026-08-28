@@ -98,6 +98,8 @@ void ConfigureStrategies()
     {
         ["period"] = 21,
         ["percent"] = 1.0,
+        ["mostMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     });
 
@@ -106,6 +108,8 @@ void ConfigureStrategies()
     {
         ["period"] = 14,
         ["percent"] = 0.5,
+        ["mostMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     });
 }

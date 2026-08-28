@@ -14,6 +14,8 @@ string dataFile       = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
 string strategyName   = "SimpleMostStrategy";
 int    period         = 21;
 double percent        = 1.0;
+string mostMaMethod   = "EMA";
+string priceSource    = "Close";
 int    signalModeIndex = 0;
 // -----------------------------------------------------------------------------
 
@@ -67,6 +69,8 @@ algoTrader.ConfigureStrategy(strategyName, new Dictionary<string, object>
 {
     ["period"]  = period,
     ["percent"] = percent,
+    ["mostMaMethod"] = mostMaMethod,
+    ["priceSource"] = priceSource,
     ["signalModeIndex"] = signalModeIndex
 });
 
