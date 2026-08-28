@@ -10,22 +10,55 @@ using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
-string dataFile       = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
-string strategyName   = "SimpleMostStrategy";
+string dataFile        = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+int    strategyChoice  = 0; // 0=SimpleMostStrategy (period x percent), 1=SimpleMAStrategy (fastPeriod x slowPeriod)
 
-int[]    periods  = new[] { 10, 15, 21, 30, 50 };
-double[] percents = new[] { 0.5, 1.0, 1.5, 2.0 };
-string   mostMaMethod   = "EMA";
-string   priceSource    = "Close";
-int      signalModeIndex = 0;
+string strategyName;
+string sweepParam1Name, sweepParam2Name;
+object[] sweepParam1Values, sweepParam2Values;
+Dictionary<string, object> fixedParams;
+
+if (strategyChoice == 0)
+{
+    strategyName = "SimpleMostStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 10, 15, 21, 30, 50 };
+    sweepParam2Name   = "percent";
+    sweepParam2Values = new object[] { 0.5, 1.0, 1.5, 2.0 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["mostMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 1)
+{
+    strategyName = "SimpleMAStrategy";
+    sweepParam1Name   = "fastPeriod";
+    sweepParam1Values = new object[] { 5, 10, 15, 20 };
+    sweepParam2Name   = "slowPeriod";
+    sweepParam2Values = new object[] { 20, 30, 50, 100 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["fastMaMethod"] = "EMA",
+        ["slowMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(strategyChoice), $"Bilinmeyen strategyChoice: {strategyChoice}");
+}
 // -----------------------------------------------------------------------------
 
 Log($"=== paramSweep.csx ===");
 Log($"Data file : {dataFile}");
 Log($"Strategy  : {strategyName}");
-Log($"Periods   : [{string.Join(", ", periods)}]");
-Log($"Percents  : [{string.Join(", ", percents)}]");
-Log($"Toplam kombinasyon: {periods.Length * percents.Length}");
+Log($"{sweepParam1Name,-12}: [{string.Join(", ", sweepParam1Values)}]");
+Log($"{sweepParam2Name,-12}: [{string.Join(", ", sweepParam2Values)}]");
+Log($"Toplam kombinasyon: {sweepParam1Values.Length * sweepParam2Values.Length}");
 
 // 1. Veri oku (bir kez)
 if (!File.Exists(dataFile))
@@ -66,29 +99,27 @@ algoTrader.RegisterLogger(LogManager.GetInstance());
 algoTrader.RegisterTimer(TimeManager.GetInstance());
 
 // 2. Parametre taramasi
-var results = new List<(int period, double percent, string ozet)>();
+var results = new List<(object param1, object param2, string ozet)>();
 int runNo = 0;
-int totalRuns = periods.Length * percents.Length;
+int totalRuns = sweepParam1Values.Length * sweepParam2Values.Length;
 
-foreach (var p in periods)
+foreach (var v1 in sweepParam1Values)
 {
-    foreach (var pct in percents)
+    foreach (var v2 in sweepParam2Values)
     {
         runNo++;
-        Log($"[{runNo}/{totalRuns}] period={p}, percent={pct}");
+        Log($"[{runNo}/{totalRuns}] {sweepParam1Name}={v1}, {sweepParam2Name}={v2}");
 
         algoTrader.Reset();
         algoTrader.SetData(data);
         algoTrader.SingleTraderRunMode = TraderRunMode.TradeOnly;
 
-        algoTrader.ConfigureStrategy(strategyName, new Dictionary<string, object>
+        var strategyParams = new Dictionary<string, object>(fixedParams)
         {
-            ["period"]  = p,
-            ["percent"] = pct,
-            ["mostMaMethod"] = mostMaMethod,
-            ["priceSource"] = priceSource,
-            ["signalModeIndex"] = signalModeIndex
-        });
+            [sweepParam1Name] = v1,
+            [sweepParam2Name] = v2
+        };
+        algoTrader.ConfigureStrategy(strategyName, strategyParams);
 
         if (meta != null)
         {
@@ -101,7 +132,7 @@ foreach (var p in periods)
 
         var trader = algoTrader.SingleTrader;
         var ozet = trader?.TaramaOzeti ?? "N/A";
-        results.Add((p, pct, ozet));
+        results.Add((v1, v2, ozet));
 
         Log($"         -> {ozet}");
     }
@@ -109,12 +140,12 @@ foreach (var p in periods)
 
 // 3. Ozet tablo
 Log($"\n{"=== SONUC TABLOSU ===",50}");
-Log($"{"Period",8} {"Percent",8} {"Ozet"}");
+Log($"{sweepParam1Name,8} {sweepParam2Name,8} {"Ozet"}");
 Log($"{"------",8} {"-------",8} {"----"}");
 
 foreach (var r in results)
 {
-    Log($"{r.period,8} {r.percent,8:F1} {r.ozet}");
+    Log($"{r.param1,8} {r.param2,8} {r.ozet}");
 }
 
 reader.Dispose();

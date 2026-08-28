@@ -177,10 +177,11 @@ if (optChoice == 0)
     optimizationStrategyName = "SimpleMostStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("period",       10, 50, 10),
-        ("percent",      1.0, 3.0, 1.0),
         ("mostMaMethod", 0, 2, 1),     // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
                                        // (registry Convert.ToInt64 + Enum.ToObject ile enum'a çevirir)
+                                       // En dış döngüde - mostMaMethod sabit kalirken period/percent taranir.
+        ("period",       10, 50, 10),
+        ("percent",      1.0, 3.0, 1.0),
     };
     fixedParams = new Dictionary<string, object>
     {
@@ -196,10 +197,11 @@ else if (optChoice == 1)
     optimizationStrategyName = "SimpleMAStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("fastPeriod",   5, 20, 5),
-        ("slowPeriod",  20, 60, 10),
+        // MA method'lar en dışta - sabit kalirken fastPeriod/slowPeriod taranir.
         ("fastMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
         ("slowMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+        ("fastPeriod",   5, 20, 5),
+        ("slowPeriod",  20, 60, 10),
     };
     fixedParams = new Dictionary<string, object>
     {

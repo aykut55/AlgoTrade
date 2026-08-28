@@ -69,15 +69,40 @@ string filePrefix = "ConfirmingSingleTrader";
 // =============================================================================
 // SignalTrader Stratejisi (ham Al/Sat/Flat sinyalini uretir)
 // =============================================================================
-string strategyName = "SimpleMostStrategy";
-var strategyParameters = new Dictionary<string, object>
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy
+
+string strategyName;
+Dictionary<string, object> strategyParameters;
+
+if (strategyChoice == 0)
 {
-    ["period"] = 21,
-    ["percent"] = 1.0,
-    ["mostMaMethod"] = "EMA",
-    ["priceSource"] = "Close",
-    ["signalModeIndex"] = 0
-};
+    strategyName = "SimpleMostStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 21,
+        ["percent"] = 1.0,
+        ["mostMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 1)
+{
+    strategyName = "SimpleMAStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["fastPeriod"] = 10,
+        ["slowPeriod"] = 20,
+        ["fastMaMethod"] = "EMA",
+        ["slowMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(strategyChoice), $"Bilinmeyen strategyChoice: {strategyChoice}");
+}
 
 // =============================================================================
 // Sanal Pozisyon Konfirmasyon Ayarlari - bkz. docs/todo.md, "Getiri Egrisi /

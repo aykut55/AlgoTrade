@@ -25,7 +25,7 @@
     "RunMode": "TradeOnly",
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
-      "Name": "SimpleMostStrategy",
+      "Name": "SimpleMAStrategy",
       "Version": "v1"
     },
     "Query": {
@@ -738,12 +738,12 @@
   "SingleTraderOptimizer": {
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
-      "Name": "SimpleMostStrategy",
+      "Name": "SimpleMAStrategy",
       "Version": "v1"
     },
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
-      "Name": "SimpleMostStrategy",
+      "Name": "SimpleMAStrategy",
       "Version": "v1"
     },
     "Range": {

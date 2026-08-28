@@ -93,29 +93,57 @@ void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, do
     // Not: Her yeni run oncesi _progressStartTime = null yapilmali.
 }
 
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy
+
 void ConfigureStrategy()
 {
     if (algoTrader is null)
         throw new InvalidOperationException("AlgoTrader instance is null.");
 
-    string configPath = Path.Combine(AppSettings.ConfigsDir, "StrategyConfig.txt");
+    string strategyName;
+    Dictionary<string, object> strategyParams;
 
-    if (File.Exists(configPath))
+    if (strategyChoice == 0)
     {
-        algoTrader.ConfigureStrategyFromConfig(configPath, "SimpleMostStrategy", "v1-Default");
-        LogManager.LogRaw($"\nStrategy loaded from config: {configPath}");
-    }
-    else
-    {
-        LogManager.LogRaw($"\nStrategy config file not found: {configPath}");
-        algoTrader.ConfigureStrategy("SimpleMostStrategy", new Dictionary<string, object>
+        strategyName = "SimpleMostStrategy";
+        strategyParams = new Dictionary<string, object>
         {
             ["period"] = 21,
             ["percent"] = 1.0,
             ["mostMaMethod"] = "EMA",
             ["priceSource"] = "Close",
             ["signalModeIndex"] = 0
-        });
+        };
+    }
+    else if (strategyChoice == 1)
+    {
+        strategyName = "SimpleMAStrategy";
+        strategyParams = new Dictionary<string, object>
+        {
+            ["fastPeriod"] = 10,
+            ["slowPeriod"] = 20,
+            ["fastMaMethod"] = "EMA",
+            ["slowMaMethod"] = "EMA",
+            ["priceSource"] = "Close",
+            ["signalModeIndex"] = 0
+        };
+    }
+    else
+    {
+        throw new ArgumentOutOfRangeException(nameof(strategyChoice), $"Bilinmeyen strategyChoice: {strategyChoice}");
+    }
+
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "StrategyConfig.txt");
+
+    if (File.Exists(configPath))
+    {
+        algoTrader.ConfigureStrategyFromConfig(configPath, strategyName, "v1-Default");
+        LogManager.LogRaw($"\nStrategy loaded from config: {configPath}");
+    }
+    else
+    {
+        LogManager.LogRaw($"\nStrategy config file not found: {configPath}");
+        algoTrader.ConfigureStrategy(strategyName, strategyParams);
         LogManager.LogRaw("\nStrategy config file not found, fallback strategy configured from in-code parameters.");
     }
 }

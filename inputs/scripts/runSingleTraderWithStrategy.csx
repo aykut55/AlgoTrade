@@ -10,18 +10,46 @@ using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
-string dataFile       = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
-string strategyName   = "SimpleMostStrategy";
-int    period         = 21;
-double percent        = 1.0;
-string mostMaMethod   = "EMA";
-string priceSource    = "Close";
-int    signalModeIndex = 0;
+string dataFile        = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+int    strategyChoice  = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy
+
+string strategyName;
+Dictionary<string, object> strategyParams;
+
+if (strategyChoice == 0)
+{
+    strategyName = "SimpleMostStrategy";
+    strategyParams = new Dictionary<string, object>
+    {
+        ["period"] = 21,
+        ["percent"] = 1.0,
+        ["mostMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 1)
+{
+    strategyName = "SimpleMAStrategy";
+    strategyParams = new Dictionary<string, object>
+    {
+        ["fastPeriod"] = 10,
+        ["slowPeriod"] = 20,
+        ["fastMaMethod"] = "EMA",
+        ["slowMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else
+{
+    throw new ArgumentOutOfRangeException(nameof(strategyChoice), $"Bilinmeyen strategyChoice: {strategyChoice}");
+}
 // -----------------------------------------------------------------------------
 
 Log($"=== runStrategy.csx ===");
 Log($"Data file : {dataFile}");
-Log($"Strategy  : {strategyName} (period={period}, percent={percent}, signalModeIndex={signalModeIndex})");
+Log($"Strategy  : {strategyName}");
 
 // 1. Veri oku
 if (!File.Exists(dataFile))
@@ -65,14 +93,7 @@ algoTrader.RegisterTimer(TimeManager.GetInstance());
 
 algoTrader.SingleTraderRunMode = TraderRunMode.TradeOnly;
 
-algoTrader.ConfigureStrategy(strategyName, new Dictionary<string, object>
-{
-    ["period"]  = period,
-    ["percent"] = percent,
-    ["mostMaMethod"] = mostMaMethod,
-    ["priceSource"] = priceSource,
-    ["signalModeIndex"] = signalModeIndex
-});
+algoTrader.ConfigureStrategy(strategyName, strategyParams);
 
 if (meta != null)
 {
