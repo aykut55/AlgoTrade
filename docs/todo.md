@@ -138,6 +138,11 @@ yap" dediğinde durmadan hepsi yapılır)
 - Kullanıcının hızlı test yolu sabit: **Menu[8]→1** ve **Menu[8]→3** — bunlar hep en son yazılan
   stratejiye aktif tutulmalı (`Config_01`/`Config_03`'teki `strategyChoice`/`optChoice`).
 
+> **GÜNCELLEME (2026-08-31)**: Bu node'daki "Ortak mimari"/"Turnkey rollout deseni"/hazır prompt,
+> kalıcı bir referans olarak [`docs/manual/09-new-strategy-guide.md`](manual/09-new-strategy-guide.md)'ye
+> taşındı (bu node zaten silinecekti, tarihsiz/kalıcı bir rehber için yanlış yerdi). Yeni bir
+> strateji yazarken BUNDAN SONRA o dosyaya bakılmalı — aşağıdaki blok artık sadece tarihsel kayıt.
+
 ### RESUME PROMPT (görev fiilen bitti — bu sadece ileride yeni bir Simple*Strategy eklenirse kullanılacak şablon)
 
 ```

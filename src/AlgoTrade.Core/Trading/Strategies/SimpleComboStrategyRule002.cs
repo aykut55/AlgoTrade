@@ -17,7 +17,9 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///
     /// RSI momentum kosulu (rsi[i-3] vs rsi[i-1]) SimpleComboStrategy'deki orijinal kurala sadik
     /// kalinarak SABIT birakildi (lag=3 parametrelestirilmedi) - sadece periyotlar (ma1Period/
-    /// ma2Period/ma3Period/rsiPeriod) taranabilir yapildi.
+    /// ma2Period/ma3Period/rsiPeriod) taranabilir yapildi. NOT (2026-08-31): bu "sadik kalindi"
+    /// iddiasi bir sure yanlisti - karsilastirma yonu SimpleComboStrategy'nin ruleModeIndex==1
+    /// dalinin TERSIYDI, simdi duzeltildi (bkz. BuyLevel/SellLevel'daki yorum).
     ///
     /// ruleModeIndex burada YOK (bkz. SimpleComboStrategyRule001'deki ayni gerekce - tek kural sabit).
     ///
@@ -84,10 +86,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             rsi = Indicators.Momentum.RSI(closes, rsiPeriod).Values;
         }
 
-        // MA1>MA2>MA3 siralamasi + RSI[-3] vs RSI[-1] momentum - SEVIYE kosulu, ZAMANLAMA
-        // OnStep'te signalModeIndex'e gore uygulanir.
-        private bool BuyLevel(int i) => i >= 3 && Buyuk(i, ma1!, ma2!) && Buyuk(i, ma2!, ma3!) && rsi![i - 3] < rsi![i - 1];
-        private bool SellLevel(int i) => i >= 3 && Kucuk(i, ma1!, ma2!) && Kucuk(i, ma2!, ma3!) && rsi![i - 3] > rsi![i - 1];
+        // MA1>MA2>MA3 siralamasi + RSI[i-3] vs RSI[i-1] - SEVIYE kosulu, ZAMANLAMA OnStep'te
+        // signalModeIndex'e gore uygulanir. RSI[i-3] > RSI[i-1] (RSI o aralikta DUSMUS, "sogumus
+        // momentum" pullback filtresi) buy tarafinda, tersi (RSI[i-3] < RSI[i-1], RSI o aralikta
+        // YUKSELMIS) sell tarafinda kullaniliyor - SimpleComboStrategy'nin ruleModeIndex==1
+        // dalindaki rsiUp/rsiDown ile AYNI yon (2026-08-31'de duzeltildi - onceden ters yondeydi,
+        // "orijinal kurala sadik" iddiasi dogru degildi).
+        private bool BuyLevel(int i) => i >= 3 && Buyuk(i, ma1!, ma2!) && Buyuk(i, ma2!, ma3!) && rsi![i - 3] > rsi![i - 1];
+        private bool SellLevel(int i) => i >= 3 && Kucuk(i, ma1!, ma2!) && Kucuk(i, ma2!, ma3!) && rsi![i - 3] < rsi![i - 1];
 
         public override TradeSignals OnStep(int currentIndex)
         {

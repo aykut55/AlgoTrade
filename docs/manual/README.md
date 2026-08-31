@@ -47,6 +47,11 @@
    overlay etmek için 4 script'lik sıralı pipeline (`GenerateReplaySampleBundles` →
    `playlist.json` → `MergeOfflineReplayPlaylist` → opsiyonel `EditOfflineReplay` →
    `RunOfflineReplay`) — menü karşılığı bilinçli olarak yok.
+9. **[09-new-strategy-guide.md](09-new-strategy-guide.md)** — Yeni Strateji Rehberi.
+   `Strategies/` altına yeni bir `Simple*Strategy` yazarken (ya da eskisini ortak mimariye
+   taşırken) izlenecek "ortak mimari" (signalModeIndex/exitModeIndex/priceSource) + kopyala-
+   yapıştır hazır prompt + tam rollout (Config_01-03/06/07, mainScript'ler, StrategyConfig.txt
+   vb.) adım listesi.
 
 ## Bu Setin Kapsamadığı Şeyler (bilerek — başka dokümanlarda zaten var)
 

@@ -125,6 +125,20 @@ namespace AlgoTrade.Core.Trading.Strategies
             sellSignals = new bool[barCount];
             flatSignals = new bool[barCount];
 
+            // Tüm seriler BuildSignals()/OnStep'te aynı index ile birlikte okunuyor - uzunlukları
+            // uyuşmazsa (örn. biri filtrelenmiş/kırpılmış gelirse) IndexOutOfRange yerine burada
+            // net hata ver. Diğer 21 stratejideki allSeriesLengthsMatch guard'ının dictionary
+            // üzerinden döngüyle yazılmış hali - burada seri sayısı sabit değil (BuildSeriesCatalog
+            // genişleyebilir), o yüzden isim isim AND zinciri yerine foreach kullanılıyor.
+            foreach (var kvp in series)
+            {
+                if (kvp.Value.Length != barCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): {kvp.Key}={kvp.Value.Length}");
+                }
+            }
+
             BuildSignals(ruleModeIndex);
         }
 
@@ -359,7 +373,12 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             else if (ruleModeIndex == 1)
             {
-                // MA5 > MA8 > MA13 siralamasi + RSI'de yukselen momentum (Rsi[-3] > Rsi[-1])
+                // MA5 > MA8 > MA13 siralamasi + RSI[i-3] > RSI[i-1] (RSI uc bar once, bir bar
+                // oncesine gore daha YUKSEKTI - yani RSI o aralikta DUSMUS, "sogumus momentum"
+                // pullback filtresi). Bu kosul "rsiUp" adiyla buy tarafina, tersi (RSI[i-3] <
+                // RSI[i-1], yani RSI o aralikta YUKSELMIS) "rsiDown" adiyla sell tarafina
+                // ekleniyor - degisken adlari RSI'nin kendi yonunu degil, hangi sinyale (buy/sell)
+                // eklendiklerini ifade ediyor, kafa karistirmasin diye burada not dusuldu.
                 var ma5  = series!["MA5"];
                 var ma8  = series!["MA8"];
                 var ma13 = series!["MA13"];
