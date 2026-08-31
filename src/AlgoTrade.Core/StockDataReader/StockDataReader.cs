@@ -92,6 +92,25 @@ namespace AlgoTrade.Core.StockDataReader
                 }
             }
 
+            // Gercek veri dosyalarinin (2026-08-31'de C:\data\csvFiles altindaki 7519 dosyanin
+            // tamami taranarak dogrulandi) header'i bu uygulamanin kendi BuildCsvHeader() formatini
+            // (alt cizgili: Kayit_Zamani/Baslangic_Tarihi/Bitis_Tarihi) degil, disaridan gelen
+            // export araclarinin bosluklu/Turkce formatini kullaniyor. Okuyucu tarafin (Program.cs,
+            // *_RunXxxWithProgressAsync.csx, mainScript*.csx) hep alt cizgili anahtarlari aramasi
+            // nedeniyle bu alanlar "N/A" gorunuyordu - burada tek noktadan alias'lanip
+            // normalize ediliyor.
+            var legacyKeyAliases = new (string Canonical, string Legacy)[]
+            {
+                ("Kayit_Zamani", "Kayit Zamani"),
+                ("Baslangic_Tarihi", "Başlangiç Tarihi"),
+                ("Bitis_Tarihi", "Bitiş Tarihi"),
+            };
+            foreach (var (canonical, legacy) in legacyKeyAliases)
+            {
+                if (!_metaData.ContainsKey(canonical) && _metaData.TryGetValue(legacy, out var legacyValue))
+                    _metaData[canonical] = legacyValue;
+            }
+
             IsMetaDataRead = true;
             OnReadMetaData?.Invoke(this, _metaData);
             return _metaData;
@@ -221,14 +240,14 @@ namespace AlgoTrade.Core.StockDataReader
         private string BuildCsvHeader(List<StockData> data)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"# Kayit_Zamani: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine($"# Kayit Zamani: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
             if (_metaData.TryGetValue("GrafikSembol", out var sembol))
                 sb.AppendLine($"# GrafikSembol: {sembol}");
             if (_metaData.TryGetValue("GrafikPeriyot", out var periyot))
                 sb.AppendLine($"# GrafikPeriyot: {periyot}");
             sb.AppendLine($"# BarCount: {data.Count}");
-            sb.AppendLine($"# Baslangic_Tarihi: {data.First().DateTime:yyyy.MM.dd HH:mm:ss}");
-            sb.AppendLine($"# Bitis_Tarihi: {data.Last().DateTime:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine($"# Başlangiç Tarihi: {data.First().DateTime:yyyy.MM.dd HH:mm:ss}");
+            sb.AppendLine($"# Bitiş Tarihi: {data.Last().DateTime:yyyy.MM.dd HH:mm:ss}");
             sb.AppendLine("# Format : Id Date Time Open High Low Close Volume Lot");
             sb.Append("# Data");
             return sb.ToString();
