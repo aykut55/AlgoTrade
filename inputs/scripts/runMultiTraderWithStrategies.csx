@@ -10,7 +10,7 @@ using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
-string dataFile = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+string dataFile = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 // -----------------------------------------------------------------------------
 
 Log($"=== runMultipleTrader.csx ===");

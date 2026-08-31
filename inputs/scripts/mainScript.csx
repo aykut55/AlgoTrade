@@ -26,7 +26,7 @@ LogManager logger = LogManager.GetInstance();
 DateTime? _progressStartTime = null;
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
-string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
+string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv";
 
 void OnReadMetaData(StockDataReader sender, ConcurrentDictionary<string, string> metaData)
 {

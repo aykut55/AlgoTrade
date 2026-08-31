@@ -54,7 +54,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 
 // =============================================================================
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
@@ -631,7 +631,7 @@ int kontratSayisi = 1;
 double lotSayisi = 0.01;
 double hisseSayisi = 1000.0;
 double komisyonCarpan = 20.0;
-double kaymaMiktari = 0.5;
+double kaymaMiktari = 0.0;
 bool pyramidingEnabled = false;
 
 // =============================================================================

@@ -45,7 +45,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\CRP\05\BTCUSDT_BNC.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 
 // =============================================================================
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
@@ -374,12 +374,12 @@ int tradeStartBarIndex = 0;
 // ViopEndex, ViopHisse, ViopParite, ViopMetal, FxEndex, FxHisse, FxParite, FxMetal,
 // FxCrypto, Crypto.
 // =============================================================================
-string marketType = "FxCrypto";
+string marketType = "ViopEndex";
 double ilkBakiye = 100000.0;
 int kontratSayisi = 1;
 double lotSayisi = 0.01;
 double hisseSayisi = 1000.0;
-double komisyonCarpan = 0.0;
+double komisyonCarpan = 20.0;
 double kaymaMiktari = 0.0;
 bool pyramidingEnabled = false;
 

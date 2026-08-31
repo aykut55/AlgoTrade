@@ -19,7 +19,7 @@ using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
-string dataFile = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+string dataFile = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 // -----------------------------------------------------------------------------
 
 Log("=== CustomConsensusExample.csx ===");
@@ -131,7 +131,7 @@ mainTrader.initialTradeParams!.Reset()
     .SetBakiyeParams(ilkBakiye: 100000.0)
     .SetKontratParamsViopEndex(kontratSayisi: 1)
     .SetKomisyonParams(komisyonCarpan: 20.0)
-    .SetKaymaParams(kaymaMiktari: 0.5);
+    .SetKaymaParams(kaymaMiktari: 0.0);
 mainTrader.RunMode = TraderRunMode.TradeOnly;
 mainTrader.ConfigureUserFlagsOnce();
 mainTrader.SaveStatisticsToFile = true;
@@ -149,7 +149,7 @@ void AddChild(int childId, IStrategy strategy)
         .SetBakiyeParams(ilkBakiye: 100000.0)
         .SetKontratParamsViopEndex(kontratSayisi: 1)
         .SetKomisyonParams(komisyonCarpan: 20.0)
-        .SetKaymaParams(kaymaMiktari: 0.5);
+        .SetKaymaParams(kaymaMiktari: 0.0);
     child.ConfigureUserFlagsOnce();
     child.SaveStatisticsToFile = true;
     child.Init();

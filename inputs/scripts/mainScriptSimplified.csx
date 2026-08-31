@@ -15,7 +15,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\01\\VIP-X030-T.csv";
+string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 bool addHeadTailInfo = false;
 

@@ -1,6 +1,6 @@
 {
   "AppSettings": {
-    "StockDataFile": "C:\\data\\csvFiles\\CRP\\05\\BTCUSDT_BNC.csv",
+    "StockDataFile": "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv",
     "AutoRunMode": "None",
     "MenuTimeoutSeconds": 5
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
@@ -39,12 +39,12 @@
       "Version": "v1"
     },
     "TradeParams": {
-      "MarketType": "FxCrypto",
+      "MarketType": "ViopEndex",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 0.0,
+      "KomisyonCarpan": 20.0,
       "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
@@ -145,12 +145,12 @@
         "Version": "v1"
       },
       "TradeParams": {
-        "MarketType": "FxCrypto",
+        "MarketType": "ViopEndex",
         "IlkBakiye": 100000.0,
         "KontratSayisi": 1,
         "LotSayisi": 0.01,
         "HisseSayisi": 1000.0,
-        "KomisyonCarpan": 0.0,
+        "KomisyonCarpan": 20.0,
         "KaymaMiktari": 0.0,
         "PyramidingEnabled": false
       },
@@ -455,12 +455,12 @@
         "Version": "v1"
       },
       "TradeParams": {
-        "MarketType": "FxCrypto",
+        "MarketType": "ViopEndex",
         "IlkBakiye": 100000.0,
         "KontratSayisi": 1,
         "LotSayisi": 0.01,
         "HisseSayisi": 1000.0,
-        "KomisyonCarpan": 0.0,
+        "KomisyonCarpan": 20.0,
         "KaymaMiktari": 0.0,
         "PyramidingEnabled": false
       },
@@ -559,12 +559,12 @@
         "Version": "v1"
       },
       "TradeParams": {
-        "MarketType": "FxCrypto",
+        "MarketType": "ViopEndex",
         "IlkBakiye": 100000.0,
         "KontratSayisi": 1,
         "LotSayisi": 0.01,
         "HisseSayisi": 1000.0,
-        "KomisyonCarpan": 0.0,
+        "KomisyonCarpan": 20.0,
         "KaymaMiktari": 0.0,
         "PyramidingEnabled": false
       },
@@ -751,12 +751,12 @@
       "OptimizationTo": -1
     },
     "TradeParams": {
-      "MarketType": "FxCrypto",
+      "MarketType": "ViopEndex",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 0.0,
+      "KomisyonCarpan": 20.0,
       "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
@@ -1028,12 +1028,12 @@
       "Version": "v1"
     },
     "TradeParams": {
-      "MarketType": "FxCrypto",
+      "MarketType": "ViopEndex",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 0.0,
+      "KomisyonCarpan": 20.0,
       "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
@@ -1070,12 +1070,12 @@
       "Version": "v1"
     },
     "TradeParams": {
-      "MarketType": "FxCrypto",
+      "MarketType": "ViopEndex",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 0.0,
+      "KomisyonCarpan": 20.0,
       "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
@@ -1135,12 +1135,12 @@
           "Version": "v1"
         },
         "TradeParams": {
-          "MarketType": "FxCrypto",
+          "MarketType": "ViopEndex",
           "IlkBakiye": 100000.0,
           "KontratSayisi": 1,
           "LotSayisi": 0.01,
           "HisseSayisi": 1000.0,
-          "KomisyonCarpan": 0.0,
+          "KomisyonCarpan": 20.0,
           "KaymaMiktari": 0.0,
           "PyramidingEnabled": false
         },
@@ -1357,12 +1357,12 @@
       "Version": "v1"
     },
     "TradeParams": {
-      "MarketType": "FxCrypto",
+      "MarketType": "ViopEndex",
       "IlkBakiye": 100000.0,
       "KontratSayisi": 1,
       "LotSayisi": 0.01,
       "HisseSayisi": 1000.0,
-      "KomisyonCarpan": 0.0,
+      "KomisyonCarpan": 20.0,
       "KaymaMiktari": 0.0,
       "PyramidingEnabled": false
     },
@@ -1422,12 +1422,12 @@
           "Version": "v1"
         },
         "TradeParams": {
-          "MarketType": "FxCrypto",
+          "MarketType": "ViopEndex",
           "IlkBakiye": 100000.0,
           "KontratSayisi": 1,
           "LotSayisi": 0.01,
           "HisseSayisi": 1000.0,
-          "KomisyonCarpan": 0.0,
+          "KomisyonCarpan": 20.0,
           "KaymaMiktari": 0.0,
           "PyramidingEnabled": false
         },
@@ -1666,12 +1666,12 @@
           "Version": "v1"
         },
         "TradeParams": {
-          "MarketType": "FxCrypto",
+          "MarketType": "ViopEndex",
           "IlkBakiye": 100000.0,
           "KontratSayisi": 1,
           "LotSayisi": 0.01,
           "HisseSayisi": 1000.0,
-          "KomisyonCarpan": 0.0,
+          "KomisyonCarpan": 20.0,
           "KaymaMiktari": 0.0,
           "PyramidingEnabled": false
         },

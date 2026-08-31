@@ -40,7 +40,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // =============================================================================
@@ -445,7 +445,7 @@ ConfirmationTrigger ecfTrigger = ConfirmationTrigger.Both;
 double ilkBakiye = 100000.0;
 int kontratSayisi = 1;
 double komisyonCarpan = 20.0;
-double kaymaMiktari = 0.5;
+double kaymaMiktari = 0.0;
 
 // =============================================================================
 // Symbol Info
