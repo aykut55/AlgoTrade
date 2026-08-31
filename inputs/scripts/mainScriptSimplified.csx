@@ -86,7 +86,7 @@ void OnTraderProgress(int currentBar, int totalBars, double percentage)
 // =============================================================================
 // Configure
 // =============================================================================
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy
 
 void ConfigureStrategy()
 {
@@ -129,6 +129,18 @@ void ConfigureStrategy()
             ["period"] = 14,
             ["oversold"] = 30,
             ["overbought"] = 70,
+            ["priceSource"] = "Close",
+            ["signalModeIndex"] = 0
+        };
+    }
+    else if (strategyChoice == 3)
+    {
+        strategyName = "SimpleOTTStrategy";
+        strategyParams = new Dictionary<string, object>
+        {
+            ["period"] = 2,
+            ["percent"] = 1.4,
+            ["ottMaMethod"] = "VIDYA",
             ["priceSource"] = "Close",
             ["signalModeIndex"] = 0
         };

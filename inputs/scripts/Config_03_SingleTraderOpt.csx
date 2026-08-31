@@ -166,7 +166,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 6;
+int optChoice = 7;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -289,6 +289,24 @@ else if (optChoice == 6)
         ("period",      7, 21, 7),
         ("oversold",   20, 35, 5),
         ("overbought", 65, 80, 5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 7)
+{
+    // SimpleOTTStrategy - OTT'un MA'si icin method + period/percent taraniyor
+    // (MOST'taki mostMaMethod range deseniyle ayni). priceSource + signalModeIndex sabit tutuluyor.
+    optimizationStrategyName = "SimpleOTTStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("ottMaMethod", 0, 2, 1),      // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+                                       // (VIDYA=12 ayri deneme gerektirir, taramaya SMA/EMA/WMA konuldu)
+        ("period",   1, 10, 1),
+        ("percent",  0.5, 3.0, 0.5),
     };
     fixedParams = new Dictionary<string, object>
     {

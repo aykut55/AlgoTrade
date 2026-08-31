@@ -9,6 +9,7 @@
     { "bundle": "inputs/python/offlineReplay/samples/SimpleStochasticStrategy/bundle.npz",  "label": "Stochastic",   "color": [178, 102, 255, 255] },
     { "bundle": "inputs/python/offlineReplay/samples/SimpleSuperTrendStrategy/bundle.npz",  "label": "SuperTrend",   "color": [0, 255, 204, 255] },
     { "bundle": "inputs/python/offlineReplay/samples/SimpleMAStrategy/bundle.npz",          "label": "MA",           "color": [255, 51, 204, 255] },
-    { "bundle": "inputs/python/offlineReplay/samples/SimpleParabolicSARStrategy/bundle.npz","label": "ParabolicSAR", "color": [200, 200, 200, 255] }
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleParabolicSARStrategy/bundle.npz","label": "ParabolicSAR", "color": [200, 200, 200, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleOTTStrategy/bundle.npz",         "label": "OTT",          "color": [255, 153, 51, 255] }
   ]
 }

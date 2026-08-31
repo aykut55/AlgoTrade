@@ -89,6 +89,14 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
         ["overbought"] = 70,
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
+    }),
+    (3, "SimpleOTTStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 2,
+        ["percent"] = 1.4,
+        ["ottMaMethod"] = "VIDYA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
     })
 };
 

@@ -95,6 +95,15 @@ algoTrader.AddStrategyConfig(2, "SimpleRSIStrategy", new Dictionary<string, obje
     ["signalModeIndex"] = 0
 });
 
+algoTrader.AddStrategyConfig(3, "SimpleOTTStrategy", new Dictionary<string, object>
+{
+    ["period"] = 2,
+    ["percent"] = 1.4,
+    ["ottMaMethod"] = "VIDYA",
+    ["priceSource"] = "Close",
+    ["signalModeIndex"] = 0
+});
+
 // 4. Query listesi
 algoTrader.ClearQueryConfigs();
 

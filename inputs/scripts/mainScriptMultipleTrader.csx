@@ -114,6 +114,16 @@ void ConfigureStrategies()
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     });
+
+    // Id=3 : SimpleOTTStrategy
+    algoTrader.AddStrategyConfig(3, "SimpleOTTStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 2,
+        ["percent"] = 1.4,
+        ["ottMaMethod"] = "VIDYA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
 }
 
 void ConfigureQueries()

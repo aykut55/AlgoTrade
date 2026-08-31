@@ -7,3 +7,5 @@ SimpleMAStrategy|v1|Default|fastPeriod:int:10|slowPeriod:int:20|fastMaMethod:str
 SimpleMAStrategy|v2|Fast|fastPeriod:int:5|slowPeriod:int:13|fastMaMethod:string:SIMPLE|slowMaMethod:string:SIMPLE|priceSource:string:Close|signalModeIndex:int:0
 SimpleRSIStrategy|v1|Default|period:int:14|oversold:double:30|overbought:double:70|priceSource:string:Close|signalModeIndex:int:0
 SimpleRSIStrategy|v2|MidlineCross|period:int:14|oversold:double:30|overbought:double:70|priceSource:string:Close|signalModeIndex:int:1
+SimpleOTTStrategy|v1|Default|period:int:2|percent:double:1.4|ottMaMethod:string:VIDYA|priceSource:string:Close|signalModeIndex:int:0
+SimpleOTTStrategy|v2|MaCross|period:int:2|percent:double:1.4|ottMaMethod:string:VIDYA|priceSource:string:Close|signalModeIndex:int:1

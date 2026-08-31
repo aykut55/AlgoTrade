@@ -1006,8 +1006,9 @@ namespace AlgoTrade.Core.Trading.Indicators.Trend
         /// <param name="period">Moving average period (default: 2)</param>
         /// <param name="percent">OTT optimization percent (default: 1.4)</param>
         /// <param name="maMethod">Moving average method (default: VAR/VIDYA)</param>
+        /// <param name="source">Price source MA'yı besleyen seri (default: Close - klasik OTT)</param>
         /// <returns>OTTResult containing ott, ma, and support values</returns>
-        public OTTResult OTT(int period = 2, double percent = 1.4, Base.MAMethod maMethod = Base.MAMethod.VIDYA)
+        public OTTResult OTT(int period = 2, double percent = 1.4, Base.MAMethod maMethod = Base.MAMethod.VIDYA, PriceSource source = PriceSource.Close)
         {
             if (!_manager.IsInitialized)
                 throw new InvalidOperationException("Manager not initialized with data");
@@ -1016,11 +1017,11 @@ namespace AlgoTrade.Core.Trading.Indicators.Trend
             if (percent < 0)
                 throw new ArgumentException("Percent must be non-negative");
 
-            var closes = _manager.GetClosePrices();
-            var length = closes.Length;
+            var src = ResolvePriceSource(source);
+            var length = src.Length;
 
             // Calculate moving average
-            var ma = _manager.MA.Calculate(closes, maMethod, period);
+            var ma = _manager.MA.Calculate(src, maMethod, period);
 
             // Calculate OTT bands
             var fark = new double[length];

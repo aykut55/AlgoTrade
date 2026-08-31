@@ -100,6 +100,7 @@ var strategiesToRun = new List<(string Name, Dictionary<string, object> Params)>
     ("SimpleSuperTrendStrategy", new Dictionary<string, object>()),
     ("SimpleMAStrategy", new Dictionary<string, object>()),
     ("SimpleParabolicSARStrategy", new Dictionary<string, object>()),
+    ("SimpleOTTStrategy", new Dictionary<string, object>()),
 };
 
 foreach (var (stratName, stratParams) in strategiesToRun)
