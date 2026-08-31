@@ -119,19 +119,24 @@ else
 // Her test trader'ina (her parametre kombinasyonu) uygulanir - bunlar false/eksik kalirsa
 // ConfigureUserFlagsOnce() tum sinyalleri false'a resetler ve HICBIR kombinasyon islem acmaz
 // (bkz. docs/manual/07-menu-vs-script-parity.md SS3, kritik hata notu).
+//
+// Asil enable/disable noktasi: SingleTrader.cs -> MapStrategyCommandsToTradeCommands().
+// Buradaki bool'lar sadece trader.signals.XEnabled alanlarina kopyalanir; strateji
+// TradeSignals.Buy/Sell/TakeProfit/StopLoss/Flat/Skip uretse bile, ilgili XEnabled false ise
+// MapStrategyCommandsToTradeCommands() sinyali orada durdurur ve gercek emre donusturmez.
 // =============================================================================
-bool alEnabled = true;
-bool satEnabled = true;
-bool flatOlEnabled = true;
-bool pasGecEnabled = true;
-bool karAlEnabled = true;
-bool zararKesEnabled = true;
-bool gunSonuPozKapatEnabled = false;
-bool timeFilteringEnabled = false;
-string signalsStartDateTime = "2025.05.25 09:35:00";
-string signalsStopDateTime = "2025.06.02 17:55:00";
+bool alEnabled                 = true;
+bool satEnabled                = true;
+bool flatOlEnabled             = false;
+bool pasGecEnabled             = false;
+bool karAlEnabled              = true;
+bool zararKesEnabled           = false;
+bool gunSonuPozKapatEnabled    = false;
+bool timeFilteringEnabled      = true;
+string signalsStartDateTime    = "2025.05.25 09:00:00";
+string signalsStopDateTime     = "2025.06.02 17:55:00";
 bool tradeStartBarIndexEnabled = false;
-int tradeStartBarIndex = 0;
+int tradeStartBarIndex         = 0;
 
 // =============================================================================
 // Optimizer Log (CSV/TXT) - AppConfig.json'daki SingleTraderOptimizer.Save bolumunun karsiligi
@@ -166,7 +171,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 9;
+int optChoice = 1;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -198,15 +203,16 @@ else if (optChoice == 1)
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
         // MA method'lar en dışta - sabit kalirken fastPeriod/slowPeriod taranir.
-        ("fastMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
-        ("slowMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
-        ("fastPeriod",   5, 20, 5),
-        ("slowPeriod",  20, 60, 10),
+        //("fastMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+        //("slowMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+        ("fastPeriod",  5, 420, 10),
+        ("slowPeriod", 20, 420, 10),
     };
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"]     = "Close",
-        ["signalModeIndex"] = 0
+        ["signalModeIndex"] = 0,
+        ["exitModeIndex"]   = 4   // 4: Anlık kar/zarar fiyat seviyesi - 1000 TL üzerinde kar al (SimpleMAStrategy.cs:358)
     };
 }
 else if (optChoice == 2)

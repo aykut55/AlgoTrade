@@ -45,6 +45,20 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - flatModeIndex: flat kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
     /// - skipModeIndex: skip kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
     /// - ruleModeIndex: PLACEHOLDER, henuz okunmuyor - ileride ihtiyaç halinde kullanilacak ekstra eksen
+    ///
+    /// Enable/disable katmanlarinda asimetri var:
+    /// - Buy/Sell/Flat/Skip: strateji disinda hicbir flag'e bakmaz, sadece kendi mantigiyla karar
+    ///   verip TradeSignals doner. Islem gerceklesip gerceklesmeyecegi TEK katmanda,
+    ///   SingleTrader.MapStrategyCommandsToTradeCommands() -> signals.AlEnabled/SatEnabled/... ile
+    ///   disaridan kontrol edilir.
+    /// - TakeProfit/StopLoss: buradaki her exitModeIndex dali, sinyali uretmeden ONCE
+    ///   Trader.flags?.XHesaplaEnabled kontrolu yapiyor (KarAlZararKes helper'inin kendi ic
+    ///   gate'i - karAlZararKes.cs'teki her metod zaten ayni flag'i tekrar kontrol ediyor, yani bu
+    ///   dis kontrol pratikte gereksiz/redundant). Sinyal uretilse bile ayrica
+    ///   MapStrategyCommandsToTradeCommands() -> signals.KarAlEnabled/ZararKesEnabled ikinci kez
+    ///   gate ediyor. Yani KarAl/ZararKes cift katmanli, Buy/Sell/Flat/Skip tek katmanli - tutarsiz
+    ///   ama zararsiz (flags.XHesaplaEnabled ilk trade'den sonra otomatik true olup bir daha hic
+    ///   false'a donmuyor, bkz. SingleTrader.cs ExecuteOrders).
     /// </summary>
     public class SimpleMAStrategy : BaseStrategy
     {
