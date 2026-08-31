@@ -75,32 +75,7 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? ott;
         private double[]? ma;
 
-        // Parametresiz constructor (eski kullanımlar için)
-        public SimpleOTTStrategy(int period = 2, double percent = 1.4, MAMethod ottMaMethod = MAMethod.VIDYA, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.period          = period;
-            this.percent         = percent;
-            this.ottMaMethod     = ottMaMethod;
-            this.priceSource     = priceSource;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["Period"]          = period;
-            Parameters["Percent"]         = percent;
-            Parameters["OttMaMethod"]     = ottMaMethod;
-            Parameters["PriceSource"]     = priceSource;
-            Parameters["RuleModeIndex"]   = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]   = exitModeIndex;
-            Parameters["FlatModeIndex"]   = flatModeIndex;
-            Parameters["SkipModeIndex"]   = skipModeIndex;
-        }
-
-        // Parametreli constructor (yeni kullanım)
+        // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleOTTStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 2, double percent = 1.4, MAMethod ottMaMethod = MAMethod.VIDYA, PriceSource priceSource = PriceSource.Close,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

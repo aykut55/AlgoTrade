@@ -38,17 +38,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? _fastMA;
         private double[]? _slowMA;
 
-        public SimpleMACrossStrategy(int fastPeriod = 10, int slowPeriod = 20, int choice = 0)
-        {
-            _fastPeriod = fastPeriod;
-            _slowPeriod = slowPeriod;
-            _choice = choice;
-
-            Parameters["FastPeriod"] = fastPeriod;
-            Parameters["SlowPeriod"] = slowPeriod;
-            Parameters["Choice"] = choice;
-        }
-
         public SimpleMACrossStrategy(List<StockData> data, IndicatorManager indicators, int fastPeriod = 10, int slowPeriod = 20, int choice = 0)
         {
             _fastPeriod = fastPeriod;

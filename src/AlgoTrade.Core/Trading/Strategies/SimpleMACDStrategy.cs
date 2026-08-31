@@ -64,30 +64,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? macd;
         private double[]? signal;
 
-        public SimpleMACDStrategy(int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.fastPeriod      = fastPeriod;
-            this.slowPeriod      = slowPeriod;
-            this.signalPeriod    = signalPeriod;
-            this.priceSource     = priceSource;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["FastPeriod"]     = fastPeriod;
-            Parameters["SlowPeriod"]     = slowPeriod;
-            Parameters["SignalPeriod"]   = signalPeriod;
-            Parameters["PriceSource"]    = priceSource;
-            Parameters["RuleModeIndex"]  = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]  = exitModeIndex;
-            Parameters["FlatModeIndex"]  = flatModeIndex;
-            Parameters["SkipModeIndex"]  = skipModeIndex;
-        }
-
         public SimpleMACDStrategy(List<StockData> data, IndicatorManager indicators,
             int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9, PriceSource priceSource = PriceSource.Close,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

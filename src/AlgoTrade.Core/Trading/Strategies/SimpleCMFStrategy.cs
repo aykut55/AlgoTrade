@@ -59,28 +59,6 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private double[]? cmf;
 
-        public SimpleCMFStrategy(int period = 20, double positiveThreshold = 0.1, double negativeThreshold = -0.1,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.period            = period;
-            this.positiveThreshold = positiveThreshold;
-            this.negativeThreshold = negativeThreshold;
-            this.ruleModeIndex     = ruleModeIndex;
-            this.signalModeIndex   = signalModeIndex;
-            this.exitModeIndex     = exitModeIndex;
-            this.flatModeIndex     = flatModeIndex;
-            this.skipModeIndex     = skipModeIndex;
-
-            Parameters["Period"]            = period;
-            Parameters["PositiveThreshold"] = positiveThreshold;
-            Parameters["NegativeThreshold"] = negativeThreshold;
-            Parameters["RuleModeIndex"]     = ruleModeIndex;
-            Parameters["SignalModeIndex"]   = signalModeIndex;
-            Parameters["ExitModeIndex"]     = exitModeIndex;
-            Parameters["FlatModeIndex"]     = flatModeIndex;
-            Parameters["SkipModeIndex"]     = skipModeIndex;
-        }
-
         public SimpleCMFStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 20, double positiveThreshold = 0.1, double negativeThreshold = -0.1,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

@@ -63,30 +63,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? source;
         private double[]? momentum;
 
-        public SimpleMomentumStrategy(int period = 12, double positiveThreshold = 0, double negativeThreshold = 0, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.period            = period;
-            this.positiveThreshold = positiveThreshold;
-            this.negativeThreshold = negativeThreshold;
-            this.priceSource       = priceSource;
-            this.ruleModeIndex     = ruleModeIndex;
-            this.signalModeIndex   = signalModeIndex;
-            this.exitModeIndex     = exitModeIndex;
-            this.flatModeIndex     = flatModeIndex;
-            this.skipModeIndex     = skipModeIndex;
-
-            Parameters["Period"]            = period;
-            Parameters["PositiveThreshold"] = positiveThreshold;
-            Parameters["NegativeThreshold"] = negativeThreshold;
-            Parameters["PriceSource"]       = priceSource;
-            Parameters["RuleModeIndex"]     = ruleModeIndex;
-            Parameters["SignalModeIndex"]   = signalModeIndex;
-            Parameters["ExitModeIndex"]     = exitModeIndex;
-            Parameters["FlatModeIndex"]     = flatModeIndex;
-            Parameters["SkipModeIndex"]     = skipModeIndex;
-        }
-
         public SimpleMomentumStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 12, double positiveThreshold = 0, double negativeThreshold = 0, PriceSource priceSource = PriceSource.Close,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

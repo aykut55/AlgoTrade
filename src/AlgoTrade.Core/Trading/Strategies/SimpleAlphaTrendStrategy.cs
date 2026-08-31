@@ -62,30 +62,6 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private double[]? alphaTrend;
 
-        public SimpleAlphaTrendStrategy(int atrPeriod = 14, double coefficient = 1.0, int momentumPeriod = 14, bool useMFI = true,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.atrPeriod       = atrPeriod;
-            this.coefficient     = coefficient;
-            this.momentumPeriod  = momentumPeriod;
-            this.useMFI          = useMFI;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["AtrPeriod"]      = atrPeriod;
-            Parameters["Coefficient"]    = coefficient;
-            Parameters["MomentumPeriod"] = momentumPeriod;
-            Parameters["UseMFI"]         = useMFI;
-            Parameters["RuleModeIndex"]  = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]  = exitModeIndex;
-            Parameters["FlatModeIndex"]  = flatModeIndex;
-            Parameters["SkipModeIndex"]  = skipModeIndex;
-        }
-
         public SimpleAlphaTrendStrategy(List<StockData> data, IndicatorManager indicators,
             int atrPeriod = 14, double coefficient = 1.0, int momentumPeriod = 14, bool useMFI = true,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

@@ -66,30 +66,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? pmaxMA;
         private int[]?    direction;
 
-        public SimplePMaxStrategy(int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, MAMethod pmaxMaMethod = MAMethod.EMA,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.atrPeriod       = atrPeriod;
-            this.multiplier      = multiplier;
-            this.maPeriod        = maPeriod;
-            this.pmaxMaMethod    = pmaxMaMethod;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["AtrPeriod"]      = atrPeriod;
-            Parameters["Multiplier"]     = multiplier;
-            Parameters["MaPeriod"]       = maPeriod;
-            Parameters["PmaxMaMethod"]   = pmaxMaMethod;
-            Parameters["RuleModeIndex"]  = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]  = exitModeIndex;
-            Parameters["FlatModeIndex"]  = flatModeIndex;
-            Parameters["SkipModeIndex"]  = skipModeIndex;
-        }
-
         public SimplePMaxStrategy(List<StockData> data, IndicatorManager indicators,
             int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, MAMethod pmaxMaMethod = MAMethod.EMA,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

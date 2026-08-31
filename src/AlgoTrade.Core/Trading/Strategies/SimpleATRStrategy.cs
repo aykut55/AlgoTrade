@@ -69,30 +69,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? upper;
         private double[]? lower;
 
-        public SimpleATRStrategy(int atrPeriod = 14, int maPeriod = 20, double multiplier = 2.0, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.atrPeriod       = atrPeriod;
-            this.maPeriod        = maPeriod;
-            this.multiplier      = multiplier;
-            this.priceSource     = priceSource;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["AtrPeriod"]      = atrPeriod;
-            Parameters["MaPeriod"]       = maPeriod;
-            Parameters["Multiplier"]     = multiplier;
-            Parameters["PriceSource"]    = priceSource;
-            Parameters["RuleModeIndex"]  = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]  = exitModeIndex;
-            Parameters["FlatModeIndex"]  = flatModeIndex;
-            Parameters["SkipModeIndex"]  = skipModeIndex;
-        }
-
         public SimpleATRStrategy(List<StockData> data, IndicatorManager indicators,
             int atrPeriod = 14, int maPeriod = 20, double multiplier = 2.0, PriceSource priceSource = PriceSource.Close,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

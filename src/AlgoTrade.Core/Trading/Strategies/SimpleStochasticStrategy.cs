@@ -60,28 +60,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? k;
         private double[]? d;
 
-        public SimpleStochasticStrategy(int kPeriod = 14, int dPeriod = 3, double centerLine = 50,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.kPeriod         = kPeriod;
-            this.dPeriod         = dPeriod;
-            this.centerLine      = centerLine;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["KPeriod"]       = kPeriod;
-            Parameters["DPeriod"]       = dPeriod;
-            Parameters["CenterLine"]    = centerLine;
-            Parameters["RuleModeIndex"] = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"] = exitModeIndex;
-            Parameters["FlatModeIndex"] = flatModeIndex;
-            Parameters["SkipModeIndex"] = skipModeIndex;
-        }
-
         public SimpleStochasticStrategy(List<StockData> data, IndicatorManager indicators,
             int kPeriod = 14, int dPeriod = 3, double centerLine = 50,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

@@ -44,6 +44,18 @@ GÜNCELLENMEDİ (satır aşırı uzardı) — kod dalları (`else if`) doğru, s
 Build yeşil (`dotnet build AlgoTrade.sln`, 0 error) her adımda doğrulandı. Henüz commit
 EDİLMEDİ — kullanıcı hepsi bitince TEK bir commit atacağını söyledi.
 
+**Ek temizlik (2026-08-31)**: 24 `Simple*Strategy` sınıfındaki (Combo ailesi hariç) parametresiz/
+data'sız constructor SİLİNDİ — bir araştırma agent'ı repo genelinde (StrategyRegistry, Console,
+WinForms, .csx script'ler, dokümantasyon, testler — test projesi zaten yok) hiçbir çağıran
+bulamadı; `StrategyRegistry.CreateFromBestMatchingConstructor` zaten ilk iki parametrenin
+`List<StockData>`/`IndicatorManager` olmasını ZORUNLU tutuyor, yani bu ctor hiç kullanılamıyordu.
+Build yeşil. İki dosyada (`SimpleIchimokuStrategy`, `SimplePMaxStrategy`) ilk silme denemesi
+yanlışlıkla ctor gövdesini boşaltıp imzayı bıraktı (ölü ama derlenen bir ctor kalmıştı) - ikinci
+geçişte düzeltildi, tüm 24+4(Combo) dosyada tam olarak 1 constructor kaldığı grep ile doğrulandı.
+
+`SimpleMACrossStrategy`'nin git reposundan tamamen silinmesi ayrı bir adım olarak bekliyor
+(kullanıcı kendisi yapacak).
+
 **Ek düzeltme (2026-08-31, kullanıcı sorusu üzerine)**: `SimpleComboStrategy` + `Rule001/002/003`
 (4 dosya) — bunlar zaten kendi ayrı `ruleModeIndex`/`signalModeIndex`(0-1) mimarisini koruyor
 (bilinçli, dokunulmadı), AMA `exitModeIndex` sadece mod 0'ı uyguluyordu (1-5 sessizce no-op

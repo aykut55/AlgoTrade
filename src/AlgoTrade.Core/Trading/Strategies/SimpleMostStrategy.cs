@@ -76,32 +76,7 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? most;
         private double[]? exmov;
 
-        // Parametresiz constructor (eski kullanımlar için)
-        public SimpleMostStrategy(int period = 21, double percent = 1.0, MAMethod mostMaMethod = MAMethod.EMA, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.period          = period;
-            this.percent         = percent;
-            this.mostMaMethod    = mostMaMethod;
-            this.priceSource     = priceSource;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["Period"]          = period;
-            Parameters["Percent"]         = percent;
-            Parameters["MostMaMethod"]    = mostMaMethod;
-            Parameters["PriceSource"]     = priceSource;
-            Parameters["RuleModeIndex"]   = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]   = exitModeIndex;
-            Parameters["FlatModeIndex"]   = flatModeIndex;
-            Parameters["SkipModeIndex"]   = skipModeIndex;
-        }
-
-        // Parametreli constructor (yeni kullanım)
+        // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleMostStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 21, double percent = 1.0, MAMethod mostMaMethod = MAMethod.EMA, PriceSource priceSource = PriceSource.Close,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

@@ -61,28 +61,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? senkouA;
         private double[]? senkouB;
 
-        public SimpleIchimokuStrategy(int tenkanPeriod = 9, int kijunPeriod = 26, int senkouPeriod = 52,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.tenkanPeriod    = tenkanPeriod;
-            this.kijunPeriod     = kijunPeriod;
-            this.senkouPeriod    = senkouPeriod;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["TenkanPeriod"]   = tenkanPeriod;
-            Parameters["KijunPeriod"]    = kijunPeriod;
-            Parameters["SenkouPeriod"]   = senkouPeriod;
-            Parameters["RuleModeIndex"]  = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]  = exitModeIndex;
-            Parameters["FlatModeIndex"]  = flatModeIndex;
-            Parameters["SkipModeIndex"]  = skipModeIndex;
-        }
-
         public SimpleIchimokuStrategy(List<StockData> data, IndicatorManager indicators,
             int tenkanPeriod = 9, int kijunPeriod = 26, int senkouPeriod = 52,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)

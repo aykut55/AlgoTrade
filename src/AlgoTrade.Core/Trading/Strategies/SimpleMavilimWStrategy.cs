@@ -58,26 +58,6 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? mavilimW;
         private double[]? trendline;
 
-        public SimpleMavilimWStrategy(int param1 = 3, int param2 = 5,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
-        {
-            this.param1          = param1;
-            this.param2          = param2;
-            this.ruleModeIndex   = ruleModeIndex;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-
-            Parameters["Param1"]         = param1;
-            Parameters["Param2"]         = param2;
-            Parameters["RuleModeIndex"]  = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]  = exitModeIndex;
-            Parameters["FlatModeIndex"]  = flatModeIndex;
-            Parameters["SkipModeIndex"]  = skipModeIndex;
-        }
-
         public SimpleMavilimWStrategy(List<StockData> data, IndicatorManager indicators,
             int param1 = 3, int param2 = 5,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
