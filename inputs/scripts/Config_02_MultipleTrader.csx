@@ -106,6 +106,13 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
         ["ottMaMethod"] = "VIDYA",
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
+    }),
+    (4, "SimpleSuperTrendStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 10,
+        ["multiplier"] = 3.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
     })
 };
 

@@ -56,7 +56,7 @@ if (data.Count == 0)
 }
 
 // =============================================================================
-// 1. Indicators + dort child strateji (SimpleMostStrategy + SimpleMAStrategy + SimpleRSIStrategy + SimpleOTTStrategy)
+// 1. Indicators + bes child strateji (SimpleMostStrategy + SimpleMAStrategy + SimpleRSIStrategy + SimpleOTTStrategy + SimpleSuperTrendStrategy)
 // =============================================================================
 var indicators = new IndicatorManager(data);
 
@@ -76,9 +76,11 @@ var childStrategy2 = algoTrader.CreateStrategyFromRegistry(data, indicators, "Si
     new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 30, ["overbought"] = 70, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
 var childStrategy3 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleOTTStrategy",
     new Dictionary<string, object> { ["period"] = 2, ["percent"] = 1.4, ["ottMaMethod"] = "VIDYA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy4 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleSuperTrendStrategy",
+    new Dictionary<string, object> { ["period"] = 10, ["multiplier"] = 3.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
 
 // =============================================================================
-// 2. MultipleTrader'i manuel kur (mainTrader + 4 child)
+// 2. MultipleTrader'i manuel kur (mainTrader + 5 child)
 // =============================================================================
 Log("\nMultipleTrader kuruluyor (manuel, CustomConsensusFunc atanabilsin diye)...");
 
@@ -121,6 +123,7 @@ AddChild(0, childStrategy0);
 AddChild(1, childStrategy1);
 AddChild(2, childStrategy2);
 AddChild(3, childStrategy3);
+AddChild(4, childStrategy4);
 
 multipleTrader.Init();
 
@@ -221,12 +224,12 @@ TradeSignals WeightedConsensus(List<SingleTrader> traders)
     return TradeSignals.Flat;
 }
 
-// -- Ozel ornek 3: kosullu filtre - sadece child_0, child_1, child_2 VE child_3 (Most+MA+RSI+OTT) ayni yonde ise o yon.
-TradeSignals AllFourAgreeConsensus(List<SingleTrader> traders)
+// -- Ozel ornek 3: kosullu filtre - sadece child_0..4 (Most+MA+RSI+OTT+SuperTrend) hepsi ayni yonde ise o yon.
+TradeSignals AllFiveAgreeConsensus(List<SingleTrader> traders)
 {
-    if (traders.Count >= 4 && traders[0].is_son_yon_a() && traders[1].is_son_yon_a() && traders[2].is_son_yon_a() && traders[3].is_son_yon_a())
+    if (traders.Count >= 5 && traders[0].is_son_yon_a() && traders[1].is_son_yon_a() && traders[2].is_son_yon_a() && traders[3].is_son_yon_a() && traders[4].is_son_yon_a())
         return TradeSignals.Buy;
-    if (traders.Count >= 4 && traders[0].is_son_yon_s() && traders[1].is_son_yon_s() && traders[2].is_son_yon_s() && traders[3].is_son_yon_s())
+    if (traders.Count >= 5 && traders[0].is_son_yon_s() && traders[1].is_son_yon_s() && traders[2].is_son_yon_s() && traders[3].is_son_yon_s() && traders[4].is_son_yon_s())
         return TradeSignals.Sell;
     return TradeSignals.Flat;
 }
@@ -238,7 +241,7 @@ multipleTrader.CustomConsensusFunc = FirstChildWinsConsensus;
 // multipleTrader.CustomConsensusFunc = AllConsensusReference;       // hazir All ile ayni
 // multipleTrader.CustomConsensusFunc = AnyConsensusReference;       // hazir Any ile ayni
 // multipleTrader.CustomConsensusFunc = WeightedConsensus;
-// multipleTrader.CustomConsensusFunc = AllFourAgreeConsensus;
+// multipleTrader.CustomConsensusFunc = AllFiveAgreeConsensus;
 // -------------------------------------------------------------------------------
 Log("\n[CustomConsensus] CustomConsensusFunc atandi: 'ilk child kazanir' kurali aktif.");
 

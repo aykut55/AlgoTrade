@@ -113,7 +113,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 4;
+int strategyChoice = 5;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -172,6 +172,17 @@ else if (strategyChoice == 4)
         ["period"] = 2,
         ["percent"] = 1.4,
         ["ottMaMethod"] = "VIDYA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 5)
+{
+    strategyName = "SimpleSuperTrendStrategy";
+    strategyParams = new Dictionary<string, object>
+    {
+        ["period"] = 10,
+        ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     };

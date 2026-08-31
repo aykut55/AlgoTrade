@@ -11,7 +11,7 @@ using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
 string dataFile        = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
-int    strategyChoice  = 0; // 0=SimpleMostStrategy (period x percent), 1=SimpleMAStrategy (fastPeriod x slowPeriod), 2=SimpleRSIStrategy (period x oversold), 3=SimpleOTTStrategy (period x percent)
+int    strategyChoice  = 0; // 0=SimpleMostStrategy (period x percent), 1=SimpleMAStrategy (fastPeriod x slowPeriod), 2=SimpleRSIStrategy (period x oversold), 3=SimpleOTTStrategy (period x percent), 4=SimpleSuperTrendStrategy (period x multiplier)
 
 string strategyName;
 string sweepParam1Name, sweepParam2Name;
@@ -71,6 +71,19 @@ else if (strategyChoice == 3)
     fixedParams = new Dictionary<string, object>
     {
         ["ottMaMethod"] = "VIDYA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 4)
+{
+    strategyName = "SimpleSuperTrendStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "multiplier";
+    sweepParam2Values = new object[] { 1.0, 2.0, 3.0, 4.0 };
+    fixedParams = new Dictionary<string, object>
+    {
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     };

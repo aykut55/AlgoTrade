@@ -93,7 +93,7 @@ void OnTraderProgress(/*SingleTrader sender, */int currentBar, int totalBars, do
     // Not: Her yeni run oncesi _progressStartTime = null yapilmali.
 }
 
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy
 
 void ConfigureStrategy()
 {
@@ -148,6 +148,17 @@ void ConfigureStrategy()
             ["period"] = 2,
             ["percent"] = 1.4,
             ["ottMaMethod"] = "VIDYA",
+            ["priceSource"] = "Close",
+            ["signalModeIndex"] = 0
+        };
+    }
+    else if (strategyChoice == 4)
+    {
+        strategyName = "SimpleSuperTrendStrategy";
+        strategyParams = new Dictionary<string, object>
+        {
+            ["period"] = 10,
+            ["multiplier"] = 3.0,
             ["priceSource"] = "Close",
             ["signalModeIndex"] = 0
         };

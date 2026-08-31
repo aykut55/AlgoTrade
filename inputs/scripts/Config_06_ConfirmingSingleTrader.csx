@@ -69,7 +69,7 @@ string filePrefix = "ConfirmingSingleTrader";
 // =============================================================================
 // SignalTrader Stratejisi (ham Al/Sat/Flat sinyalini uretir)
 // =============================================================================
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy
 
 string strategyName;
 Dictionary<string, object> strategyParameters;
@@ -119,6 +119,17 @@ else if (strategyChoice == 3)
         ["period"] = 2,
         ["percent"] = 1.4,
         ["ottMaMethod"] = "VIDYA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 4)
+{
+    strategyName = "SimpleSuperTrendStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 10,
+        ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     };

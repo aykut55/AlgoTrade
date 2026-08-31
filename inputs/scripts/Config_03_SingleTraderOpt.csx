@@ -166,7 +166,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 7;
+int optChoice = 8;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -307,6 +307,22 @@ else if (optChoice == 7)
                                        // (VIDYA=12 ayri deneme gerektirir, taramaya SMA/EMA/WMA konuldu)
         ("period",   1, 10, 1),
         ("percent",  0.5, 3.0, 0.5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 8)
+{
+    // SimpleSuperTrendStrategy - ATR periyodu ve multiplier taraniyor.
+    // priceSource + signalModeIndex burada sabit tutuluyor.
+    optimizationStrategyName = "SimpleSuperTrendStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period",     7, 21, 7),
+        ("multiplier", 1.0, 4.0, 1.0),
     };
     fixedParams = new Dictionary<string, object>
     {

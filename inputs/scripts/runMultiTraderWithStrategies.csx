@@ -104,6 +104,14 @@ algoTrader.AddStrategyConfig(3, "SimpleOTTStrategy", new Dictionary<string, obje
     ["signalModeIndex"] = 0
 });
 
+algoTrader.AddStrategyConfig(4, "SimpleSuperTrendStrategy", new Dictionary<string, object>
+{
+    ["period"] = 10,
+    ["multiplier"] = 3.0,
+    ["priceSource"] = "Close",
+    ["signalModeIndex"] = 0
+});
+
 // 4. Query listesi
 algoTrader.ClearQueryConfigs();
 

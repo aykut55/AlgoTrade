@@ -124,6 +124,15 @@ void ConfigureStrategies()
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     });
+
+    // Id=4 : SimpleSuperTrendStrategy
+    algoTrader.AddStrategyConfig(4, "SimpleSuperTrendStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 10,
+        ["multiplier"] = 3.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
 }
 
 void ConfigureQueries()
