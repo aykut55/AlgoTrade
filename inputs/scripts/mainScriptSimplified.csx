@@ -15,7 +15,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = "C:\\data\\csvFiles\\CRP\\05\\BTCUSDT_BNC.csv";
+string stockDataFullFileName = "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 bool addHeadTailInfo = false;
 

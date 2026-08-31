@@ -19,7 +19,7 @@ using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
-string dataFile = @"C:\data\csvFiles\CRP\05\BTCUSDT_BNC.csv";
+string dataFile = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 // -----------------------------------------------------------------------------
 
 Log("=== CustomConsensusExample.csx ===");
@@ -129,8 +129,8 @@ var mainTrader = multipleTrader.GetMainTrader();
 mainTrader.Reset();
 mainTrader.initialTradeParams!.Reset()
     .SetBakiyeParams(ilkBakiye: 100000.0)
-    .SetKontratParamsFxCrypto(lotSayisi: 0.01)
-    .SetKomisyonParams(komisyonCarpan: 0.0)
+    .SetKontratParamsViopEndex(kontratSayisi: 1)
+    .SetKomisyonParams(komisyonCarpan: 20.0)
     .SetKaymaParams(kaymaMiktari: 0.0);
 mainTrader.RunMode = TraderRunMode.TradeOnly;
 mainTrader.ConfigureUserFlagsOnce();
@@ -147,8 +147,8 @@ void AddChild(int childId, IStrategy strategy)
     child.SymbolPeriod = symbolPeriod;
     child.initialTradeParams!.Reset()
         .SetBakiyeParams(ilkBakiye: 100000.0)
-        .SetKontratParamsFxCrypto(lotSayisi: 0.01)
-        .SetKomisyonParams(komisyonCarpan: 0.0)
+        .SetKontratParamsViopEndex(kontratSayisi: 1)
+        .SetKomisyonParams(komisyonCarpan: 20.0)
         .SetKaymaParams(kaymaMiktari: 0.0);
     child.ConfigureUserFlagsOnce();
     child.SaveStatisticsToFile = true;

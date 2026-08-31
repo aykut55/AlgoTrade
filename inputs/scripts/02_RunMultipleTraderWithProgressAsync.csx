@@ -205,7 +205,7 @@ mainTrader.Reset();
 // Configure position sizing for mainTrader
 mainTrader.initialTradeParams!.Reset()
     .SetBakiyeParams(ilkBakiye: ilkBakiye)
-    .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
+    .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
     .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
     .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 
@@ -258,7 +258,7 @@ Log("\nCreating child traders...");
 
     childTrader.initialTradeParams!.Reset()
         .SetBakiyeParams(ilkBakiye: ilkBakiye)
-        .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
+        .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
         .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
         .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 
@@ -303,7 +303,7 @@ Log("\nCreating child traders...");
 
     childTrader.initialTradeParams!.Reset()
         .SetBakiyeParams(ilkBakiye: ilkBakiye)
-        .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
+        .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
         .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
         .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 
@@ -348,7 +348,7 @@ Log("\nCreating child traders...");
 
     childTrader.initialTradeParams!.Reset()
         .SetBakiyeParams(ilkBakiye: ilkBakiye)
-        .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
+        .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
         .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
         .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 

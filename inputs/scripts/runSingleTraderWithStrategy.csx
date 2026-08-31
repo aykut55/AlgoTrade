@@ -10,7 +10,7 @@ using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
-string dataFile        = @"C:\data\csvFiles\CRP\05\BTCUSDT_BNC.csv";
+string dataFile        = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 int    strategyChoice  = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy, 5=SimpleParabolicSARStrategy
 
 string strategyName;
