@@ -298,7 +298,7 @@ singleTrader.LastExecutionTimeStart = DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss
 // Configure position sizing
 singleTrader.initialTradeParams!.Reset()
     .SetBakiyeParams(ilkBakiye: ilkBakiye)
-    .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
+    .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
     .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
     .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 

@@ -148,7 +148,7 @@ foreach (var (stratName, stratParams) in strategiesToRun)
 
     singleTrader.initialTradeParams!.Reset()
         .SetBakiyeParams(ilkBakiye: ilkBakiye)
-        .SetKontratParamsViopEndex(kontratSayisi: kontratSayisi)
+        .SetKontratParamsFxCrypto(lotSayisi: lotSayisi)
         .SetKomisyonParams(komisyonCarpan: komisyonCarpan)
         .SetKaymaParams(kaymaMiktari: kaymaMiktari);
 

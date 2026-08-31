@@ -17,7 +17,7 @@
 //   Query (opsiyonel)    -> queryEnabled + queryName + queryParams
 //   EquityCurveFilter    -> ecfEnabled + ecfThresholdTypeIsPercent + ecfProfitThreshold +
 //                           ecfLossThreshold + ecfTrigger
-//   TradeParams          -> ilkBakiye + kontratSayisi + komisyonCarpan + kaymaMiktari
+//   TradeParams          -> ilkBakiye + lotSayisi + komisyonCarpan + kaymaMiktari
 //   Signals              -> BURADA DEGIL - 01_RunSingleTraderWithProgressAsync.csx'teki
 //                           OnApplyUserFlags(SingleTrader) local fonksiyonunda HARDCODED
 //                           (AlEnabled/SatEnabled/... + StartDateTime/StopDateTime)
@@ -40,7 +40,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\CRP\05\BTCUSDT_BNC.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // =============================================================================
@@ -443,8 +443,8 @@ ConfirmationTrigger ecfTrigger = ConfirmationTrigger.Both;
 // Trade Params
 // =============================================================================
 double ilkBakiye = 100000.0;
-int kontratSayisi = 1;
-double komisyonCarpan = 20.0;
+double lotSayisi = 0.01;
+double komisyonCarpan = 0.0;
 double kaymaMiktari = 0.0;
 
 // =============================================================================
