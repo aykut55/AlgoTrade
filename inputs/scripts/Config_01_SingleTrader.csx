@@ -113,7 +113,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 6;
+int strategyChoice = 1;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -135,12 +135,13 @@ else if (strategyChoice == 1)
     strategyName = "SimpleMAStrategy";
     strategyParams = new Dictionary<string, object>
     {
-        ["fastPeriod"] = 10,
-        ["slowPeriod"] = 20,
-        ["fastMaMethod"] = "EMA",
-        ["slowMaMethod"] = "EMA",
+        ["fastPeriod"] = 8,
+        ["slowPeriod"] = 21,
+        ["fastMaMethod"] = "SIMPLE",
+        ["slowMaMethod"] = "SIMPLE",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["signalModeIndex"] = 0,
+        ["exitModeIndex"] = 4   // 4: Anlık kar/zarar fiyat seviyesi - 1000 TL üzerinde kar al (SimpleMAStrategy.cs:358)
     };
 }
 else if (strategyChoice == 2)

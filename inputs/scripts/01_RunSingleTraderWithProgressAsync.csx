@@ -36,15 +36,15 @@ void OnApplyUserFlags(SingleTrader trader)
     trader.ConfigureUserFlagsOnce();
     trader.signals.AlEnabled                   = true;
     trader.signals.SatEnabled                  = true;
-    trader.signals.FlatOlEnabled               = true;
-    trader.signals.PasGecEnabled               = true;
+    trader.signals.FlatOlEnabled               = false;
+    trader.signals.PasGecEnabled               = false;
     trader.signals.KarAlEnabled                = true;
-    trader.signals.ZararKesEnabled             = true;
+    trader.signals.ZararKesEnabled             = false;
     trader.signals.GunSonuPozKapatEnabled      = false;
-    trader.signals.TimeFilteringEnabled        = false;
+    trader.signals.TimeFilteringEnabled        = true;
     trader.signals.EquityCurveFilteringEnabled = false;
 
-    var dateTimes       = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
+    var dateTimes       = new string[] { "2025.05.25 09:00:00", "2025.06.02 17:55:00" };
     trader.StartDateTimeStr = dateTimes[0];
     trader.StopDateTimeStr  = dateTimes[1];
 
