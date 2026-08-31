@@ -113,6 +113,16 @@ void ConfigureStrategies()
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     });
+
+    // Id=2 : SimpleRSIStrategy
+    algoTrader.AddStrategyConfig(2, "SimpleRSIStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["oversold"] = 30,
+        ["overbought"] = 70,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
 }
 
 void ConfigureQueries()

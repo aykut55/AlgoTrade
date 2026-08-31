@@ -86,6 +86,15 @@ algoTrader.AddStrategyConfig(1, "SimpleMAStrategy", new Dictionary<string, objec
     ["signalModeIndex"] = 0
 });
 
+algoTrader.AddStrategyConfig(2, "SimpleRSIStrategy", new Dictionary<string, object>
+{
+    ["period"] = 14,
+    ["oversold"] = 30,
+    ["overbought"] = 70,
+    ["priceSource"] = "Close",
+    ["signalModeIndex"] = 0
+});
+
 // 4. Query listesi
 algoTrader.ClearQueryConfigs();
 

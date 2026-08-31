@@ -9,7 +9,7 @@
       "series": [
         {
           "source": "ohlc",
-          "name": "...",
+          "name": "VIP'VIP-X030-T",
           "dataId": 0
         }
       ]
@@ -29,39 +29,6 @@
             60,
             200,
             255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 1 Signal",
-          "label": "Child 1 Signal",
-          "color": [
-            51,
-            204,
-            255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 2 Signal",
-          "label": "Child 2 Signal",
-          "color": [
-            255,
-            204,
-            0,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 3 Signal",
-          "label": "Child 3 Signal",
-          "color": [
-            76,
-            255,
-            76,
             255
           ]
         }
@@ -89,39 +56,6 @@
             0,
             255
           ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 1 PnL",
-          "label": "Child 1 PnL",
-          "color": [
-            51,
-            204,
-            255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 2 PnL",
-          "label": "Child 2 PnL",
-          "color": [
-            255,
-            204,
-            0,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 3 PnL",
-          "label": "Child 3 PnL",
-          "color": [
-            76,
-            255,
-            76,
-            255
-          ]
         }
       ],
       "yLabel": "PnL Price"
@@ -141,39 +75,6 @@
             255,
             255,
             0,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 1 PnL %",
-          "label": "Child 1 PnL %",
-          "color": [
-            51,
-            204,
-            255,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 2 PnL %",
-          "label": "Child 2 PnL %",
-          "color": [
-            255,
-            204,
-            0,
-            255
-          ]
-        },
-        {
-          "source": "indicator",
-          "name": "Child 3 PnL %",
-          "label": "Child 3 PnL %",
-          "color": [
-            76,
-            255,
-            76,
             255
           ]
         }
@@ -219,6 +120,21 @@
         }
       ],
       "yLabel": "Return %"
+    },
+    {
+      "id": "strategyIndicators",
+      "name": "Strategy Indicators",
+      "caption": "RSI (14)",
+      "height": 260,
+      "ySyncId": 6,
+      "series": [
+        {
+          "source": "indicator",
+          "name": "RSI (14)",
+          "label": "RSI (14)"
+        }
+      ],
+      "yLabel": "Indicators"
     }
   ]
 }

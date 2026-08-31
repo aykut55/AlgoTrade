@@ -69,7 +69,7 @@ string filePrefix = "ConfirmingSingleTrader";
 // =============================================================================
 // SignalTrader Stratejisi (ham Al/Sat/Flat sinyalini uretir)
 // =============================================================================
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy
 
 string strategyName;
 Dictionary<string, object> strategyParameters;
@@ -95,6 +95,18 @@ else if (strategyChoice == 1)
         ["slowPeriod"] = 20,
         ["fastMaMethod"] = "EMA",
         ["slowMaMethod"] = "EMA",
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 2)
+{
+    strategyName = "SimpleRSIStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["oversold"] = 30,
+        ["overbought"] = 70,
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     };

@@ -6,3 +6,4 @@
 
 SimpleMostStrategy|v1|Opt|mostMaMethod:0:2:1|period:10:50:10|percent:1.0:3.0:1.0|fixed:priceSource:string:Close|fixed:signalModeIndex:int:0
 SimpleMAStrategy|v1|Opt|fastMaMethod:0:2:1|slowMaMethod:0:2:1|fastPeriod:5:20:5|slowPeriod:20:60:10|fixed:priceSource:string:Close|fixed:signalModeIndex:int:0
+SimpleRSIStrategy|v1|Opt|period:7:21:7|oversold:20:35:5|overbought:65:80:5|fixed:priceSource:string:Close|fixed:signalModeIndex:int:0

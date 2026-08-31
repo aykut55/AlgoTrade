@@ -90,6 +90,14 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
         ["slowMaMethod"] = "EMA",
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
+    }),
+    (2, "SimpleRSIStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["oversold"] = 30,
+        ["overbought"] = 70,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
     })
 };
 

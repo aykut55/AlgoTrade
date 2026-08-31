@@ -166,7 +166,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 1;
+int optChoice = 6;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -277,6 +277,23 @@ else if (optChoice == 5)
         ["macdSignalPeriod"]     = 9,
         ["superTrendMultiplier"] = 3.0,
         ["signalModeIndex"]      = 0
+    };
+}
+else if (optChoice == 6)
+{
+    // SimpleRSIStrategy - RSI periyodu ve oversold/overbought seviyeleri taraniyor.
+    // priceSource + signalModeIndex burada sabit tutuluyor.
+    optimizationStrategyName = "SimpleRSIStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period",      7, 21, 7),
+        ("oversold",   20, 35, 5),
+        ("overbought", 65, 80, 5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
     };
 }
 else

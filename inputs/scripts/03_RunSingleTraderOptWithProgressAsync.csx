@@ -32,6 +32,7 @@ var sw = new Stopwatch();
 // 1. Veri Oku
 // =============================================================================
 Log("=== RunSingleTraderOptWithProgressAsync.csx ===");
+Log($"Strategy  : {optimizationStrategyName}");
 
 if (!File.Exists(stockDataFullFileName))
 {

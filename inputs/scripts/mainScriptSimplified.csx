@@ -86,7 +86,7 @@ void OnTraderProgress(int currentBar, int totalBars, double percentage)
 // =============================================================================
 // Configure
 // =============================================================================
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy
 
 void ConfigureStrategy()
 {
@@ -117,6 +117,18 @@ void ConfigureStrategy()
             ["slowPeriod"] = 20,
             ["fastMaMethod"] = "EMA",
             ["slowMaMethod"] = "EMA",
+            ["priceSource"] = "Close",
+            ["signalModeIndex"] = 0
+        };
+    }
+    else if (strategyChoice == 2)
+    {
+        strategyName = "SimpleRSIStrategy";
+        strategyParams = new Dictionary<string, object>
+        {
+            ["period"] = 14,
+            ["oversold"] = 30,
+            ["overbought"] = 70,
             ["priceSource"] = "Close",
             ["signalModeIndex"] = 0
         };

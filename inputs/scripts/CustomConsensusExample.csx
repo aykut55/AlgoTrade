@@ -56,7 +56,7 @@ if (data.Count == 0)
 }
 
 // =============================================================================
-// 1. Indicators + iki child strateji (SimpleMostStrategy + SimpleMAStrategy)
+// 1. Indicators + uc child strateji (SimpleMostStrategy + SimpleMAStrategy + SimpleRSIStrategy)
 // =============================================================================
 var indicators = new IndicatorManager(data);
 
@@ -72,9 +72,11 @@ var childStrategy0 = algoTrader.CreateStrategyFromRegistry(data, indicators, "Si
     new Dictionary<string, object> { ["period"] = 21, ["percent"] = 1.0, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
 var childStrategy1 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMAStrategy",
     new Dictionary<string, object> { ["fastPeriod"] = 10, ["slowPeriod"] = 20, ["fastMaMethod"] = "EMA", ["slowMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy2 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleRSIStrategy",
+    new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 30, ["overbought"] = 70, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
 
 // =============================================================================
-// 2. MultipleTrader'i manuel kur (mainTrader + 2 child)
+// 2. MultipleTrader'i manuel kur (mainTrader + 3 child)
 // =============================================================================
 Log("\nMultipleTrader kuruluyor (manuel, CustomConsensusFunc atanabilsin diye)...");
 
@@ -115,6 +117,7 @@ void AddChild(int childId, IStrategy strategy)
 
 AddChild(0, childStrategy0);
 AddChild(1, childStrategy1);
+AddChild(2, childStrategy2);
 
 multipleTrader.Init();
 
@@ -200,7 +203,7 @@ TradeSignals FirstChildWinsConsensus(List<SingleTrader> traders)
     return TradeSignals.Flat;
 }
 
-// -- Ozel ornek 2: agirlikli oy - child_2'nin oyu 3 kat sayilsin.
+// -- Ozel ornek 2: agirlikli oy - child_2'nin (RSI) oyu 3 kat sayilsin.
 TradeSignals WeightedConsensus(List<SingleTrader> traders)
 {
     int weightedBuy = 0, weightedSell = 0;
@@ -215,12 +218,12 @@ TradeSignals WeightedConsensus(List<SingleTrader> traders)
     return TradeSignals.Flat;
 }
 
-// -- Ozel ornek 3: kosullu filtre - sadece child_0 VE child_1 ayni yonde ise o yon.
-TradeSignals BothAgreeConsensus(List<SingleTrader> traders)
+// -- Ozel ornek 3: kosullu filtre - sadece child_0, child_1 VE child_2 (Most+MA+RSI) ayni yonde ise o yon.
+TradeSignals AllThreeAgreeConsensus(List<SingleTrader> traders)
 {
-    if (traders.Count >= 2 && traders[0].is_son_yon_a() && traders[1].is_son_yon_a())
+    if (traders.Count >= 3 && traders[0].is_son_yon_a() && traders[1].is_son_yon_a() && traders[2].is_son_yon_a())
         return TradeSignals.Buy;
-    if (traders.Count >= 2 && traders[0].is_son_yon_s() && traders[1].is_son_yon_s())
+    if (traders.Count >= 3 && traders[0].is_son_yon_s() && traders[1].is_son_yon_s() && traders[2].is_son_yon_s())
         return TradeSignals.Sell;
     return TradeSignals.Flat;
 }
@@ -232,7 +235,7 @@ multipleTrader.CustomConsensusFunc = FirstChildWinsConsensus;
 // multipleTrader.CustomConsensusFunc = AllConsensusReference;       // hazir All ile ayni
 // multipleTrader.CustomConsensusFunc = AnyConsensusReference;       // hazir Any ile ayni
 // multipleTrader.CustomConsensusFunc = WeightedConsensus;
-// multipleTrader.CustomConsensusFunc = BothAgreeConsensus;
+// multipleTrader.CustomConsensusFunc = AllThreeAgreeConsensus;
 // -------------------------------------------------------------------------------
 Log("\n[CustomConsensus] CustomConsensusFunc atandi: 'ilk child kazanir' kurali aktif.");
 
