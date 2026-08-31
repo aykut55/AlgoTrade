@@ -44,6 +44,13 @@ GÜNCELLENMEDİ (satır aşırı uzardı) — kod dalları (`else if`) doğru, s
 Build yeşil (`dotnet build AlgoTrade.sln`, 0 error) her adımda doğrulandı. Henüz commit
 EDİLMEDİ — kullanıcı hepsi bitince TEK bir commit atacağını söyledi.
 
+**Ek düzeltme (2026-08-31, kullanıcı sorusu üzerine)**: `SimpleComboStrategy` + `Rule001/002/003`
+(4 dosya) — bunlar zaten kendi ayrı `ruleModeIndex`/`signalModeIndex`(0-1) mimarisini koruyor
+(bilinçli, dokunulmadı), AMA `exitModeIndex` sadece mod 0'ı uyguluyordu (1-5 sessizce no-op
+kalıyordu) — bu diğer 21 stratejiyle TUTARSIZDI, gerçek bir eksikti. Şimdi 4 dosyada da
+`exitModeIndex` 0-5 tam (diğer 21'le birebir aynı `Trader.flags?.XEnabled` korumalı blok).
+Stale "PLACEHOLDER" yorumları da güncellendi. Build yeşil.
+
 **Not**: Yeni bir Simple*Strategy eklenecekse (örn. gelecekte SimpleMACrossStrategy'yi ayrı
 tutmaya karar verilirse, ya da yeni bir indikatöre strateji yazılırsa) aşağıdaki "Turnkey rollout
 deseni"ni takip et.

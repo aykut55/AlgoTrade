@@ -36,9 +36,12 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///                     0: siralama/seviye bazli (koşul true oldugu surece HER barda buy/sell tekrarlanir),
     ///                     1: kesisim bazli (sadece false->true GECIS aninda, bir kere). AKTIF,
     ///                     OnStep'te dallanan tek parametre bu.
-    /// - exitModeIndex   : takeProfit/stopLoss NE ZAMAN tetiklensin (seviye/kesisim gibi bir ayrim).
-    ///                     PLACEHOLDER - şu an exit, bizim mantigimizdan degil Trader.karAlZararKes'in
-    ///                     hazir fonksiyonundan geliyor, bu parametrenin henuz hicbir etkisi yok.
+    /// - exitModeIndex   : takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden,
+    ///                     diğer 21 Simple*Strategy'yle AYNI 0-5 dispatch'i - 2026-08-31'de
+    ///                     tamamlandı, önceden sadece 0 uygulanıyordu):
+    ///                     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye
+    ///                     3: Yüzde, tek seviye  4: Anlık kar/zarar fiyat seviyesi
+    ///                     5: Anlık kar/zarar yüzdesi. AKTIF.
     /// - flatModeIndex   : flat'e gecis NE ZAMAN tetiklensin. PLACEHOLDER - şu an flat icin hicbir
     ///                     kural tanimli degil (flatSignals hep false), bu parametrenin henuz
     ///                     hicbir etkisi yok.
@@ -79,7 +82,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int ruleModeIndex;
         private readonly int signalModeIndex; // 0: siralama (level) bazli - kural true oldugu surece sinyal, 1: kesisim (crossover) bazli - sadece false->true gecis aninda sinyal
-        private readonly int exitModeIndex;   // PLACEHOLDER - henuz okunmuyor, bkz. sinif basi doc comment
+        private readonly int exitModeIndex;   // takeProfit/stopLoss yöntemi (0-5, Trader.karAlZararKes üzerinden) - AKTIF
         private readonly int flatModeIndex;   // PLACEHOLDER - henuz okunmuyor, bkz. sinif basi doc comment
         private readonly int skipModeIndex;   // PLACEHOLDER - henuz okunmuyor, bkz. sinif basi doc comment
         private Dictionary<string, double[]>? series;
@@ -173,19 +176,83 @@ namespace AlgoTrade.Core.Trading.Strategies
             // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir
             if (Trader != null)
             {
+                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner(takeProfit hep false kalir)
                 if (exitModeIndex == 0)
                 {
-                    // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                    takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                    // 0: Seviye, seviyeli
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    // 1: Yüzde, seviyeli
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    // 2: Seviye, tek seviye
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    // 3: Yüzde, tek seviye
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
             if (Trader != null)
             {
+                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner(stopLoss hep false kalir)
                 if (exitModeIndex == 0)
                 {
-                    // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                    stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                    // 0: Seviye, seviyeli
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    // 1: Yüzde, seviyeli
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    // 2: Seviye, tek seviye
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    // 3: Yüzde, tek seviye
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
                 }
             }
             // ************************************************************************************************************************
