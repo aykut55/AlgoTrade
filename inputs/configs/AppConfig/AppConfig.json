@@ -1019,7 +1019,7 @@
   "SymbolScan": {
     // AutoDiscover=true iken DataFolder icindeki tum *.csv dosyalari otomatik taranir.
     // AutoDiscover=false iken SymbolList kullanilir (her eleman dosya adi koku, orn. "BTCUSDT_BNC").
-    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "DataFolder": "C:\\data\\csvFiles\\VIP\\05",
     "AutoDiscover": true,
     "SymbolList": [],
     "Strategy": {
@@ -1061,8 +1061,8 @@
   "TimeframeScan": {
     // Ayni sembolu N farkli zaman diliminde BAGIMSIZ calistirir (konsensus/biles YOK).
     // Her TF icin Path.Combine(BaseFolder, tf, Symbol+".csv") okunur.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
-    "Symbol": "BTCUSDT_BNC",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
+    "Symbol": "VIP-X030-T",
     "Timeframes": ["01", "05", "15", "60"],
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
@@ -1105,8 +1105,8 @@
     // (TF'ler arasi konsensus YOK). MultipleTrader blogu asagida, ana "MultipleTrader" bolumuyle
     // ayni sema (child stratejiler, consensus modu, trade params) - istersen buradan bagimsiz
     // duzenleyebilirsin.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
-    "Symbol": "BTCUSDT_BNC",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
+    "Symbol": "VIP-X030-T",
     "Timeframes": ["01", "05", "15", "60"],
     "MultipleTrader": {
       "RunMode": "TradeOnly",
@@ -1346,7 +1346,7 @@
     // AutoDiscover=true iken ReferenceTimeframe klasorundeki tum *.csv dosyalari sembol listesi
     // olarak kullanilir, sonra her sembol TUM Timeframes klasorlerinde aranir
     // (Path.Combine(BaseFolder, tf, symbol+".csv")). AutoDiscover=false iken SymbolList kullanilir.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
     "AutoDiscover": true,
     "ReferenceTimeframe": "05",
     "SymbolList": [],
@@ -1392,7 +1392,7 @@
     // calistirir (semboller arasi konsensus YOK). MultipleTrader blogu asagida, ana
     // "MultipleTrader" bolumuyle ayni sema (child stratejiler, consensus modu, trade params) -
     // istersen buradan bagimsiz duzenleyebilirsin.
-    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "DataFolder": "C:\\data\\csvFiles\\VIP\\05",
     "AutoDiscover": true,
     "SymbolList": [],
     "MultipleTrader": {
@@ -1634,7 +1634,7 @@
     // ReferenceTimeframe klasorundeki tum *.csv dosyalari sembol listesi olarak kullanilir,
     // sonra her sembol TUM Timeframes klasorlerinde aranir. MultipleTrader blogu asagida, ana
     // "MultipleTrader" bolumuyle ayni sema.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
     "AutoDiscover": true,
     "ReferenceTimeframe": "05",
     "SymbolList": [],
@@ -1876,7 +1876,7 @@
     // Sorgu Tarama Matrisi - Senaryo 5: ayni sorguyu birden fazla sembolde BAGIMSIZ calistirir.
     // SymbolScan'in Sorgu karsiligi - Strategy yerine Query, TradeParams/Signals yok, Sort yok
     // (sorgu sonuclari bir performans degeri degil, kullanici kendisi yorumlar).
-    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "DataFolder": "C:\\data\\csvFiles\\VIP\\05",
     "AutoDiscover": true,
     "SymbolList": [],
     "Query": {
@@ -1900,8 +1900,8 @@
   "QueryTimeframeScan": {
     // Sorgu Tarama Matrisi - Senaryo 2: ayni sorguyu ayni sembolde birden fazla zaman diliminde
     // BAGIMSIZ calistirir. TimeframeScan'in Sorgu karsiligi.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
-    "Symbol": "BTCUSDT_BNC",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
+    "Symbol": "VIP-X030-T",
     "Timeframes": ["05", "15"],
     "Query": {
       "ConfigFile": "QueryConfig.txt",
@@ -1924,8 +1924,8 @@
   "MultiQueryTimeframeScan": {
     // Sorgu Tarama Matrisi - Senaryo 4: birden fazla sorguyu (MultipleQuery, hicbiri
     // birlestirilmez) ayni sembolde her zaman diliminde BAGIMSIZ calistirir.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
-    "Symbol": "BTCUSDT_BNC",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
+    "Symbol": "VIP-X030-T",
     "Timeframes": ["05", "15"],
     "Queries": [
       { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
@@ -1947,7 +1947,7 @@
   "QuerySymbolTimeframeScan": {
     // Sorgu Tarama Matrisi - Senaryo 6: tek bir sorguyu N sembol x M zaman dilimi matrisinde,
     // ikisi de TAMAMEN BAGIMSIZ calistirir.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
     "AutoDiscover": true,
     "ReferenceTimeframe": "05",
     "SymbolList": [],
@@ -1973,7 +1973,7 @@
   "MultiQuerySymbolScan": {
     // Sorgu Tarama Matrisi - Senaryo 7: birden fazla sorguyu (MultipleQuery, hicbiri
     // birlestirilmez) tek bir zaman diliminde birden fazla sembolde BAGIMSIZ calistirir.
-    "DataFolder": "C:\\data\\csvFiles\\CRP\\05",
+    "DataFolder": "C:\\data\\csvFiles\\VIP\\05",
     "AutoDiscover": true,
     "SymbolList": [],
     "Queries": [
@@ -1996,7 +1996,7 @@
   "MultiQuerySymbolTimeframeScan": {
     // Sorgu Tarama Matrisi - Senaryo 8: matrisin en genel hali - N sembol x M zaman dilimi, her
     // hucrede birden fazla sorgu (MultipleQuery, hicbiri birlestirilmez), hepsi BAGIMSIZ.
-    "BaseFolder": "C:\\data\\csvFiles\\CRP",
+    "BaseFolder": "C:\\data\\csvFiles\\VIP",
     "AutoDiscover": true,
     "ReferenceTimeframe": "05",
     "SymbolList": [],
