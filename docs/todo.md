@@ -26,8 +26,10 @@ StrategyConfig.txt, OptimizationConfig.txt, GenerateReplaySampleBundles.csx, pla
 CustomConsensusExample.csx) yayıldı — kullanıcının 2026-08-31 açık kararıyla ("Tam rollout,
 hepsi için"), CustomConsensusExample.csx'i 23 child'a çıkarma pahasına dahil.
 
-**Kasıtlı atlanan**: `SimpleMACrossStrategy` — kullanıcı "pas geçeceğiz" dedi (`SimpleMAStrategy`
-ile birebir aynı mantık, bkz. "İsimlendirme notu" bölümü, muhtemelen kazara duplicate).
+**Kasıtlı atlanan ve SİLİNEN**: `SimpleMACrossStrategy` — kullanıcı "pas geçeceğiz" dedi
+(`SimpleMAStrategy` ile birebir aynı mantık, bkz. "İsimlendirme notu" bölümü, muhtemelen kazara
+duplicate). Rewrite kapsamına hiç alınmadı, sonra dosya fiziksel olarak repodan silindi (2026-08-31,
+kullanıcı) — build/config/script tarafında hiçbir referans kalmadığı doğrulandı (bkz. altta).
 
 **CustomConsensusExample.csx'teki tasarım notu**: 23 child'a çıkınca "Özel örnek 3" (child_0..5
 hepsi ayni yönde) fonksiyonu `AllOfFirstSixAgreeConsensus` olarak yeniden adlandırıldı ve KASITLI
@@ -53,8 +55,12 @@ Build yeşil. İki dosyada (`SimpleIchimokuStrategy`, `SimplePMaxStrategy`) ilk 
 yanlışlıkla ctor gövdesini boşaltıp imzayı bıraktı (ölü ama derlenen bir ctor kalmıştı) - ikinci
 geçişte düzeltildi, tüm 24+4(Combo) dosyada tam olarak 1 constructor kaldığı grep ile doğrulandı.
 
-`SimpleMACrossStrategy`'nin git reposundan tamamen silinmesi ayrı bir adım olarak bekliyor
-(kullanıcı kendisi yapacak).
+`SimpleMACrossStrategy` dosyası kullanıcı tarafından fiziksel olarak silindi (2026-08-31). Silmeden
+önce repo genelinde grep ile doğrulandı: hiçbir C# kodu/`.csx` script/`StrategyConfig.txt`/
+`OptimizationConfig.txt` satırı bu sınıfı adıyla ya da tip olarak referans almıyordu (tek eşleşme
+`docs/manual/classes/02-singletrader.md`'deki örnekti, o da `SimpleMostStrategy` kullanıyordu) —
+yani silme ne build'i ne runtime'ı bozar. `docs/todo.md` ve `docs/PROJECT_ANALYSIS.md`'deki stale
+referanslar da temizlendi.
 
 **Ek düzeltme (2026-08-31, kullanıcı sorusu üzerine)**: `SimpleComboStrategy` + `Rule001/002/003`
 (4 dosya) — bunlar zaten kendi ayrı `ruleModeIndex`/`signalModeIndex`(0-1) mimarisini koruyor
@@ -457,13 +463,14 @@ Sadece `SMA` (✅ `SimpleMAStrategy`, `SimpleMACrossStrategy`, `SimpleATRStrateg
 içinde hepsinin denenebilmesi daha mantıklı görünüyor — kullanıcının planladığı "MA denemeleri"
 tam olarak bu ihtiyaç (2026-08-26 konuşması).
 
-### İsimlendirme notu (2026-08-26 konuşmasından)
+### İsimlendirme notu (2026-08-26 konuşmasından, 2026-08-31'de çözüldü)
 
 `SimpleMAStrategy` ile `SimpleMACrossStrategy` **birebir aynı mantığı** (fast/slow SMA
-golden/death cross) iki farklı isimle taşıyor — gerçek bir davranış farkı yok, muhtemelen kazara
-duplicate. Yeni bir indikatöre isim verirken ("Cross" gibi ekler eklerken) bu tekrara düşmemeye
-dikkat: "Cross" eki sadece gerçekten farklı bir sinyal mekanizmasını (örn. Donchian Channel'da
-fiyatın üst/alt bandı kırması) ifade ediyorsa kullanılmalı.
+golden/death cross) iki farklı isimle taşıyordu — gerçek bir davranış farkı yoktu, muhtemelen
+kazara duplicate'ti. **Çözüldü**: `SimpleMACrossStrategy` kullanıcı kararıyla repodan tamamen
+silindi (bkz. yukarıdaki "AKTİF GÖREV" node'u). Yeni bir indikatöre isim verirken ("Cross" gibi
+ekler eklerken) aynı tekrara düşmemeye dikkat: "Cross" eki sadece gerçekten farklı bir sinyal
+mekanizmasını (örn. Donchian Channel'da fiyatın üst/alt bandı kırması) ifade ediyorsa kullanılmalı.
 
 ## Strateji Karşılaştırma — Getiri Eğrisi Görselleştirme (migration-guide.md Madde 10, 2026-08-21)
 

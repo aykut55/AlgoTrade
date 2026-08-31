@@ -383,7 +383,6 @@ value|...`. `ParameterRanges` (taranacak) ve `FixedParameters` (sabit) ayrı tut
 | SimpleIchimokuStrategy | Tenkan/Kijun | TK Cross | tenkan=9, kijun=26, senkou=52 |
 | SimpleKairiStrategy | Kairi (hesaplanmış) | AL: +5 eşik; SAT: -5 eşik | period=20, ±threshold=5 |
 | SimpleMACDStrategy | MACD | MACD/Signal kesişimi | fast=12, slow=26, signal=9 |
-| SimpleMACrossStrategy | Fast/Slow SMA | Golden/Death Cross | fast=10, slow=20 |
 | SimpleMAStrategy | Fast/Slow SMA | Golden/Death Cross (choice etkisiz) | fast=10, slow=20 |
 | SimpleMFIStrategy | MFI | AL: 20 yukarı; SAT: 80 aşağı | period=14, 20/80 |
 | SimpleMavilimWStrategy | MavilimW | Fiyat-MavilimW kesişimi | param1=3, param2=5 (minbar=100 sabit) |
