@@ -1,11 +1,11 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Trading.Indicators.Momentum.Results;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Indicators.Base;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -13,59 +13,105 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// MACD (Moving Average Convergence Divergence) Stratejisi
     ///
     /// MACD Mantığı:
-    /// - MACD Line = Fast EMA - Slow EMA
-    /// - Signal Line = MACD'nin EMA'sı
-    /// - Histogram = MACD - Signal
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: MACD, Signal Line'ı yukarı kesiyor
-    /// - SAT: MACD, Signal Line'ı aşağı kesiyor
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - MACD/Signal çifti MOST'un most/exmov çiftinin analogu
+    /// - MACD Line = Fast EMA - Slow EMA, Signal Line = MACD'nin EMA'sı
     ///
     /// Parametreler:
-    /// - fastPeriod: Hızlı EMA periyodu (varsayılan 12)
-    /// - slowPeriod: Yavaş EMA periyodu (varsayılan 26)
-    /// - signalPeriod: Signal line periyodu (varsayılan 9)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - fastPeriod/slowPeriod/signalPeriod: EMA periyotları (varsayılan 12/26/9)
+    /// - priceSource: MACD'nin beslendiği kaynak (varsayılan Close - klasik MACD)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: MACD-Signal kesişimi       (MACD, Signal'i yukarı/aşağı kesince)
+    ///     1: MACD-zero kesişimi         (MACD 0'ı yukarı/aşağı kesince - ikinci klasik MACD sinyali)
+    ///     2: MACD slope flip            (MACD'nin kendi yönü dönünce)
+    ///     3: MACD-Signal state          (konum - kesişim değil, koşul sürdükçe her bar)
+    ///     4: Histogram band/uzaklık     (MACD-Signal farkı %bandThreshold'dan fazla açılınca)
+    ///     5: Breakout + retest          (MACD Signal'i kesip geri yaklaşıp tutunca)
+    ///     6: Confirmation bars          (kesişimden sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: MACD eğimi + state combo   (rejim: MACD-Signal konumu + momentum: MACD N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
+    ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimpleMACDStrategy : BaseStrategy
     {
         public override string Name => "Simple MACD Strategy";
 
-        private readonly int _fastPeriod;
-        private readonly int _slowPeriod;
-        private readonly int _signalPeriod;
-        private readonly int _choice;
-        private MACDResult? _macdResult;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimpleMACDStrategy(int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9, int choice = 0)
+        private readonly int fastPeriod;
+        private readonly int slowPeriod;
+        private readonly int signalPeriod;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private readonly PriceSource priceSource = PriceSource.Close;
+
+        private double[]? source;
+        private double[]? macd;
+        private double[]? signal;
+
+        public SimpleMACDStrategy(int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9, PriceSource priceSource = PriceSource.Close,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _fastPeriod = fastPeriod;
-            _slowPeriod = slowPeriod;
-            _signalPeriod = signalPeriod;
-            _choice = choice;
+            this.fastPeriod      = fastPeriod;
+            this.slowPeriod      = slowPeriod;
+            this.signalPeriod    = signalPeriod;
+            this.priceSource     = priceSource;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["FastPeriod"] = fastPeriod;
-            Parameters["SlowPeriod"] = slowPeriod;
-            Parameters["SignalPeriod"] = signalPeriod;
-            Parameters["Choice"] = choice;
+            Parameters["FastPeriod"]     = fastPeriod;
+            Parameters["SlowPeriod"]     = slowPeriod;
+            Parameters["SignalPeriod"]   = signalPeriod;
+            Parameters["PriceSource"]    = priceSource;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
         }
 
-        public SimpleMACDStrategy(List<StockData> data, IndicatorManager indicators, int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9, int choice = 0)
+        public SimpleMACDStrategy(List<StockData> data, IndicatorManager indicators,
+            int fastPeriod = 12, int slowPeriod = 26, int signalPeriod = 9, PriceSource priceSource = PriceSource.Close,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _fastPeriod = fastPeriod;
-            _slowPeriod = slowPeriod;
-            _signalPeriod = signalPeriod;
-            _choice = choice;
+            this.fastPeriod      = fastPeriod;
+            this.slowPeriod      = slowPeriod;
+            this.signalPeriod    = signalPeriod;
+            this.priceSource     = priceSource;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["FastPeriod"] = fastPeriod;
-            Parameters["SlowPeriod"] = slowPeriod;
-            Parameters["SignalPeriod"] = signalPeriod;
-            Parameters["Choice"] = choice;
+            Parameters["FastPeriod"]     = fastPeriod;
+            Parameters["SlowPeriod"]     = slowPeriod;
+            Parameters["SignalPeriod"]   = signalPeriod;
+            Parameters["PriceSource"]    = priceSource;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -74,74 +120,229 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            var closes = Indicators.GetClosePrices();
-            _macdResult = Indicators.Momentum.MACD(closes, _fastPeriod, _slowPeriod, _signalPeriod);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
+            source      = Indicators.Trend.ResolvePriceSource(priceSource);
 
-            //Log($"SimpleMACDStrategy initialized: Fast={_fastPeriod}, Slow={_slowPeriod}, Signal={_signalPeriod}");
+            var macdResult = Indicators.Momentum.MACD(source, fastPeriod, slowPeriod, signalPeriod);
+            macd   = macdResult.MACD;
+            signal = macdResult.Signal;
+
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= macd.Length        == barCount;
+            allSeriesLengthsMatch &= signal.Length      == barCount;
+            allSeriesLengthsMatch &= source.Length      == barCount;
+            allSeriesLengthsMatch &= openPrices.Length  == barCount;
+            allSeriesLengthsMatch &= highPrices.Length  == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length   == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length     == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length    == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length   == barCount;
+            allSeriesLengthsMatch &= dates.Length       == barCount;
+            allSeriesLengthsMatch &= times.Length       == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length  == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"macd={macd.Length}, signal={signal.Length}, source={source.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
+                    $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
+                    $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            if (currentIndex < _slowPeriod + _signalPeriod + 1)
+            if (currentIndex < slowPeriod + signalPeriod + 1)
                 return TradeSignals.None;
 
-            if (_macdResult == null || _macdResult.MACD.Length == 0)
+            if (macd == null || signal == null || macd.Length == 0)
                 return TradeSignals.None;
 
-            double currentMACD = _macdResult.MACD[currentIndex];
-            double prevMACD = _macdResult.MACD[currentIndex - 1];
-            double currentSignal = _macdResult.Signal[currentIndex];
-            double prevSignal = _macdResult.Signal[currentIndex - 1];
+            double currentMACD = macd[currentIndex];
+            double currentSignal = signal[currentIndex];
 
-            if (double.IsNaN(currentMACD) || double.IsNaN(prevMACD) || double.IsNaN(currentSignal) || double.IsNaN(prevSignal))
+            if (double.IsNaN(currentMACD) || double.IsNaN(currentSignal))
                 return TradeSignals.None;
 
-            // ************************************************************************************************************************
-            // choice: 0 = MACD-Signal crossover, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            if (signalModeIndex == 0)
             {
-                // AL: MACD, Signal'i yukarı kesiyor
-                if (prevMACD <= prevSignal && currentMACD > currentSignal)
+                // 0: MACD-Signal kesişimi
+                if (YukarıKesti(currentIndex, macd, signal)) buy  = true;
+                if (AsagiKesti(currentIndex, macd, signal))  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: MACD-zero kesişimi
+                const double zero = 0.0;
+                if (YukarıKesti(currentIndex, macd, zero)) buy  = true;
+                if (AsagiKesti(currentIndex, macd, zero))  sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: MACD slope flip
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // SAT: MACD, Signal'i aşağı kesiyor
-                if (prevMACD >= prevSignal && currentMACD < currentSignal)
-                {
-                    sell = true;
+                    double slopeNow  = macd[currentIndex]     - macd[currentIndex - 1];
+                    double slopePrev = macd[currentIndex - 1] - macd[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 3: MACD-Signal state - koşul sürdükçe her bar
+                if (Buyuk(currentIndex, macd, signal)) buy  = true;
+                if (Kucuk(currentIndex, macd, signal)) sell = true;
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 4)
+            {
+                // 4: Histogram band/uzaklık filtresi
+                const double bandThreshold = 0.5; // MACD birimi
+                double histogram = currentMACD - currentSignal;
+                if (histogram >  bandThreshold) buy  = true;
+                if (histogram < -bandThreshold) sell = true;
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest
+                const int retestLookback = 10;
+                const double retestBand  = 0.1;
+
+                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                {
+                    if (k < 1) continue;
+
+                    if (!buy && YukarıKesti(k, macd, signal)
+                        && Math.Abs(currentMACD - currentSignal) <= retestBand
+                        && currentMACD > currentSignal)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(k, macd, signal)
+                        && Math.Abs(currentMACD - currentSignal) <= retestBand
+                        && currentMACD < currentSignal)
+                    {
+                        sell = true;
+                    }
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, macd, signal);
+                    bool stayedBelow = AsagiKesti(crossBar, macd, signal);
+                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    {
+                        stayedAbove &= macd[k] > signal[k];
+                        stayedBelow &= macd[k] < signal[k];
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: MACD eğimi + state combo
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool macdRising  = macd[currentIndex] > macd[currentIndex - slopeLookback];
+                    bool macdFalling = macd[currentIndex] < macd[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, macd, signal) && macdRising)  buy  = true;
+                    if (Kucuk(currentIndex, macd, signal) && macdFalling) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -153,23 +354,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetMACDLine() => _macdResult?.MACD;
-        public double[]? GetSignalLine() => _macdResult?.Signal;
-        public double[]? GetHistogram() => _macdResult?.Histogram;
+        public double[]? GetMACDLine() => macd;
+        public double[]? GetSignalLine() => signal;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            if (_macdResult?.MACD != null && _macdResult.MACD.Length > 0)
-                indicators["MACD"] = _macdResult.MACD;
-
-            if (_macdResult?.Signal != null && _macdResult.Signal.Length > 0)
-                indicators["Signal"] = _macdResult.Signal;
-
-            if (_macdResult?.Histogram != null && _macdResult.Histogram.Length > 0)
-                indicators["Histogram"] = _macdResult.Histogram;
-
+            if (macd != null && macd.Length > 0) indicators["MACD"] = macd;
+            if (signal != null && signal.Length > 0) indicators["Signal"] = signal;
             return indicators.Count > 0 ? indicators : null;
         }
     }

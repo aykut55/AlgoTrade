@@ -69,7 +69,7 @@ string filePrefix = "ConfirmingSingleTrader";
 // =============================================================================
 // SignalTrader Stratejisi (ham Al/Sat/Flat sinyalini uretir)
 // =============================================================================
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy
+int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy, 5=SimpleParabolicSARStrategy
 
 string strategyName;
 Dictionary<string, object> strategyParameters;
@@ -131,6 +131,204 @@ else if (strategyChoice == 4)
         ["period"] = 10,
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 5)
+{
+    strategyName = "SimpleParabolicSARStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["step"] = 0.02,
+        ["max"] = 0.2,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 6)
+{
+    strategyName = "SimpleADXStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["adxThreshold"] = 25,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 7)
+{
+    strategyName = "SimpleDIStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 8)
+{
+    strategyName = "SimpleMACDStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["fastPeriod"] = 12,
+        ["slowPeriod"] = 26,
+        ["signalPeriod"] = 9,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 9)
+{
+    strategyName = "SimpleStochasticStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["kPeriod"] = 14,
+        ["dPeriod"] = 3,
+        ["centerLine"] = 50,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 10)
+{
+    strategyName = "SimpleBollingerStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["multiplier"] = 2.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 11)
+{
+    strategyName = "SimpleATRStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 14,
+        ["maPeriod"] = 20,
+        ["multiplier"] = 2.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 12)
+{
+    strategyName = "SimpleCMFStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["positiveThreshold"] = 0.1,
+        ["negativeThreshold"] = -0.1,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 13)
+{
+    strategyName = "SimpleMFIStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["oversold"] = 20,
+        ["overbought"] = 80,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 14)
+{
+    strategyName = "SimpleKairiStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["positiveThreshold"] = 5,
+        ["negativeThreshold"] = -5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 15)
+{
+    strategyName = "SimpleMomentumStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 12,
+        ["positiveThreshold"] = 0,
+        ["negativeThreshold"] = 0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 16)
+{
+    strategyName = "SimpleHHVLLVStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 17)
+{
+    strategyName = "SimpleHYLYStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["threshold"] = 80,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 18)
+{
+    strategyName = "SimpleIchimokuStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["tenkanPeriod"] = 9,
+        ["kijunPeriod"] = 26,
+        ["senkouPeriod"] = 52,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 19)
+{
+    strategyName = "SimpleMavilimWStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["param1"] = 3,
+        ["param2"] = 5,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 20)
+{
+    strategyName = "SimplePMaxStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 10,
+        ["multiplier"] = 3.0,
+        ["maPeriod"] = 10,
+        ["pmaxMaMethod"] = "EMA",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 21)
+{
+    strategyName = "SimpleTillsonT3Strategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["period"] = 5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 22)
+{
+    strategyName = "SimpleAlphaTrendStrategy";
+    strategyParameters = new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 14,
+        ["coefficient"] = 1.0,
+        ["momentumPeriod"] = 14,
+        ["useMFI"] = true,
         ["signalModeIndex"] = 0
     };
 }

@@ -1,11 +1,10 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Trading.Indicators.Trend.Results;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -13,53 +12,100 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// ADX (Average Directional Index) Stratejisi
     ///
     /// ADX Mantığı:
-    /// - ADX: Trend gücünü ölçer (yön değil)
-    /// - +DI: Yukarı yönlü hareket
-    /// - -DI: Aşağı yönlü hareket
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: +DI, -DI'yı yukarı kesiyor VE ADX > 25
-    /// - SAT: -DI, +DI'yı yukarı kesiyor VE ADX > 25
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - ADX: Trend gücünü ölçer (yön değil), +DI/-DI: yönlü hareket gücü
+    /// - +DI/-DI çifti MOST'un most/exmov çiftinin analogu; ADX ise tüm modları filtreleyen
+    ///   bir trend-gücü eşiği (bu, ADX Strategy'yi filtresiz DI Strategy'den ayıran özellik)
+    /// - Fiyat/priceSource kavramı yok - +DI/-DI High/Low'a bağımlı (SuperTrend/SAR gibi)
     ///
     /// Parametreler:
-    /// - period: ADX periyodu (varsayılan 14)
-    /// - adxThreshold: Minimum ADX değeri (varsayılan 25)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - period: ADX/DI periyodu (varsayılan 14)
+    /// - adxThreshold: Minimum ADX değeri - trend gücü filtresi (varsayılan 25)
+    /// - signalModeIndex: buy/sell yöntemini seçer (hepsi ADX>adxThreshold ile filtrelenir):
+    ///     0: +DI/-DI kesişimi          (+DI, -DI'yı yukarı/aşağı kesince)
+    ///     1: +DI/-DI state             (konum - kesişim değil, koşul sürdükçe her bar)
+    ///     2: ADX slope flip            (ADX'in kendi yönü dönünce - trend gücü artışa/azalışa geçince)
+    ///     3: ADX-DI kombine state      (ADX>threshold VE +DI>-DI ise AL, ADX>threshold VE -DI>+DI ise SAT, her bar)
+    ///     4: Band / uzaklık filtresi   (+DI ile -DI arasındaki fark %bandThreshold'dan fazla açılınca)
+    ///     5: Breakout + retest         (DI kesişip ADX geriden threshold'u geçince)
+    ///     6: Confirmation bars         (kesişimden sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: ADX eğimi + DI state      (rejim: DI state + momentum: ADX N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli               (SonFiyataGoreKarAl/ZararKesSeviyeHesaplaSeviyeli)
+    ///     1: Yüzde, seviyeli                 (SonFiyataGoreKarAl/ZararKesYuzdeHesaplaSeviyeli)
+    ///     2: Seviye, tek seviye              (SonFiyataGoreKarAl/ZararKesSeviyeHesapla)
+    ///     3: Yüzde, tek seviye               (SonFiyataGoreKarAl/ZararKesYuzdeHesapla)
+    ///     4: Anlık kar/zarar fiyat seviyesi  (KarZararFiyatSeviyesindenKarAl/ZararKesHesapla)
+    ///     5: Anlık kar/zarar yüzdesi         (KarZararYuzdesindenKarAl/ZararKesHesapla)
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimpleADXStrategy : BaseStrategy
     {
         public override string Name => "Simple ADX Strategy";
 
-        private readonly int _period;
-        private readonly double _adxThreshold;
-        private readonly int _choice;
-        private ADXResult? _adxResult;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimpleADXStrategy(int period = 14, double adxThreshold = 25, int choice = 0)
+        private readonly int period;
+        private readonly double adxThreshold;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private double[]? adx;
+        private double[]? plusDI;
+        private double[]? minusDI;
+
+        public SimpleADXStrategy(int period = 14, double adxThreshold = 25,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _adxThreshold = adxThreshold;
-            _choice = choice;
+            this.period          = period;
+            this.adxThreshold    = adxThreshold;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["Period"] = period;
-            Parameters["ADXThreshold"] = adxThreshold;
-            Parameters["Choice"] = choice;
+            Parameters["Period"]         = period;
+            Parameters["AdxThreshold"]   = adxThreshold;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
         }
 
-        public SimpleADXStrategy(List<StockData> data, IndicatorManager indicators, int period = 14, double adxThreshold = 25, int choice = 0)
+        public SimpleADXStrategy(List<StockData> data, IndicatorManager indicators,
+            int period = 14, double adxThreshold = 25,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _adxThreshold = adxThreshold;
-            _choice = choice;
+            this.period          = period;
+            this.adxThreshold    = adxThreshold;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["Period"] = period;
-            Parameters["ADXThreshold"] = adxThreshold;
-            Parameters["Choice"] = choice;
+            Parameters["Period"]         = period;
+            Parameters["AdxThreshold"]   = adxThreshold;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -68,77 +114,220 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            _adxResult = Indicators.Trend.ADXWithDI(_period);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
 
-            //Log($"SimpleADXStrategy initialized: Period={_period}, ADXThreshold={_adxThreshold}");
+            var adxResult = Indicators.Trend.ADXWithDI(period);
+            adx     = adxResult.ADX;
+            plusDI  = adxResult.PlusDI;
+            minusDI = adxResult.MinusDI;
+
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= adx.Length        == barCount;
+            allSeriesLengthsMatch &= plusDI.Length     == barCount;
+            allSeriesLengthsMatch &= minusDI.Length    == barCount;
+            allSeriesLengthsMatch &= openPrices.Length == barCount;
+            allSeriesLengthsMatch &= highPrices.Length == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length  == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length    == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length   == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length  == barCount;
+            allSeriesLengthsMatch &= dates.Length      == barCount;
+            allSeriesLengthsMatch &= times.Length      == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"adx={adx.Length}, plusDI={plusDI.Length}, minusDI={minusDI.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
+                    $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
+                    $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            if (currentIndex < _period * 2 + 1)
+            if (currentIndex < period * 2 + 1)
                 return TradeSignals.None;
 
-            if (_adxResult == null || _adxResult.ADX.Length == 0)
+            if (adx == null || adx.Length == 0 || plusDI == null || minusDI == null)
                 return TradeSignals.None;
 
-            double currentADX = _adxResult.ADX[currentIndex];
-            double currentPlusDI = _adxResult.PlusDI[currentIndex];
-            double prevPlusDI = _adxResult.PlusDI[currentIndex - 1];
-            double currentMinusDI = _adxResult.MinusDI[currentIndex];
-            double prevMinusDI = _adxResult.MinusDI[currentIndex - 1];
+            double currentADX = adx[currentIndex];
+            double currentPlusDI = plusDI[currentIndex];
+            double currentMinusDI = minusDI[currentIndex];
 
             if (double.IsNaN(currentADX) || double.IsNaN(currentPlusDI) || double.IsNaN(currentMinusDI))
                 return TradeSignals.None;
 
-            // ************************************************************************************************************************
-            // choice: 0 = DI crossover with ADX filter, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            bool strongTrend = currentADX > adxThreshold;
+
+            if (signalModeIndex == 0)
             {
-                // ADX trend gücü filtresi
-                bool strongTrend = currentADX > _adxThreshold;
-
-                // AL: +DI, -DI'yı yukarı kesiyor VE ADX > threshold
-                if (prevPlusDI <= prevMinusDI && currentPlusDI > currentMinusDI && strongTrend)
+                // 0: +DI/-DI kesişimi + ADX>threshold filtresi (klasik)
+                if (YukarıKesti(currentIndex, plusDI, minusDI) && strongTrend) buy  = true;
+                if (AsagiKesti(currentIndex, plusDI, minusDI) && strongTrend)  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: +DI/-DI state - filtresiz, koşul sürdükçe her bar
+                if (Buyuk(currentIndex, plusDI, minusDI)) buy  = true;
+                if (Kucuk(currentIndex, plusDI, minusDI)) sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: ADX slope flip - trend gücü artışa/azalışa geçiyor, yön DI'dan
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // SAT: -DI, +DI'yı yukarı kesiyor VE ADX > threshold
-                if (prevMinusDI <= prevPlusDI && currentMinusDI > currentPlusDI && strongTrend)
-                {
-                    sell = true;
+                    double slopeNow  = adx[currentIndex]     - adx[currentIndex - 1];
+                    double slopePrev = adx[currentIndex - 1] - adx[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0 && currentPlusDI > currentMinusDI) buy  = true;
+                    if (slopePrev <= 0.0 && slopeNow > 0.0 && currentMinusDI > currentPlusDI) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 3: ADX-DI kombine state - her bar, ADX filtreli konum
+                if (strongTrend && currentPlusDI > currentMinusDI) buy  = true;
+                if (strongTrend && currentMinusDI > currentPlusDI) sell = true;
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 4)
+            {
+                // 4: Band / uzaklık filtresi - +DI ile -DI farkı bandThreshold'dan fazla açılınca
+                const double bandThreshold = 5.0; // DI puanı
+                double diDiff = currentPlusDI - currentMinusDI;
+                if (diDiff >  bandThreshold) buy  = true;
+                if (diDiff < -bandThreshold) sell = true;
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest - DI kesişti, sonradan ADX threshold'u geçince onaylanır
+                const int retestLookback = 10;
+                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                {
+                    if (k < 1) continue;
+
+                    if (!buy && YukarıKesti(k, plusDI, minusDI) && strongTrend && currentPlusDI > currentMinusDI)
+                        buy = true;
+
+                    if (!sell && AsagiKesti(k, plusDI, minusDI) && strongTrend && currentMinusDI > currentPlusDI)
+                        sell = true;
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars - kesişimden confirmBars sonra hâlâ aynı yönde VE ADX güçlü
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, plusDI, minusDI);
+                    bool stayedBelow = AsagiKesti(crossBar, plusDI, minusDI);
+                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    {
+                        stayedAbove &= plusDI[k] > minusDI[k];
+                        stayedBelow &= plusDI[k] < minusDI[k];
+                    }
+                    if (stayedAbove && strongTrend) buy  = true;
+                    if (stayedBelow && strongTrend) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: ADX eğimi + DI state - rejim (DI konumu) + momentum (ADX N-bar eğimi)
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool adxRising = adx[currentIndex] > adx[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, plusDI, minusDI) && adxRising) buy  = true;
+                    if (Kucuk(currentIndex, plusDI, minusDI) && adxRising) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -150,23 +339,16 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetADX() => _adxResult?.ADX;
-        public double[]? GetPlusDI() => _adxResult?.PlusDI;
-        public double[]? GetMinusDI() => _adxResult?.MinusDI;
+        public double[]? GetADX() => adx;
+        public double[]? GetPlusDI() => plusDI;
+        public double[]? GetMinusDI() => minusDI;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            if (_adxResult?.ADX != null && _adxResult.ADX.Length > 0)
-                indicators["ADX"] = _adxResult.ADX;
-
-            if (_adxResult?.PlusDI != null && _adxResult.PlusDI.Length > 0)
-                indicators["+DI"] = _adxResult.PlusDI;
-
-            if (_adxResult?.MinusDI != null && _adxResult.MinusDI.Length > 0)
-                indicators["-DI"] = _adxResult.MinusDI;
-
+            if (adx != null && adx.Length > 0) indicators["ADX"] = adx;
+            if (plusDI != null && plusDI.Length > 0) indicators["+DI"] = plusDI;
+            if (minusDI != null && minusDI.Length > 0) indicators["-DI"] = minusDI;
             return indicators.Count > 0 ? indicators : null;
         }
     }

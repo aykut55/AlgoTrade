@@ -1,11 +1,10 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Trading.Indicators.Momentum.Results;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -13,59 +12,98 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// Stochastic Osilatör Stratejisi
     ///
     /// Stochastic Mantığı:
-    /// - %K = (Close - LLV) / (HHV - LLV) * 100
-    /// - %D = %K'nın SMA'sı
-    /// - 80 üstü: Aşırı alım, 20 altı: Aşırı satım
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: %K, %D'yi yukarı kesiyor ve her ikisi 50'nin altında
-    /// - SAT: %K, %D'yi aşağı kesiyor ve her ikisi 50'nin üstünde
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - %K/%D çifti MOST'un most/exmov çiftinin analogu, 0-100 arası bantlı
+    /// - %K/%D High/Low/Close'a bağımlı (priceSource yok, SuperTrend/SAR gibi)
     ///
     /// Parametreler:
-    /// - kPeriod: %K periyodu (varsayılan 14)
-    /// - dPeriod: %D periyodu (varsayılan 3)
+    /// - kPeriod/dPeriod: %K/%D periyotları (varsayılan 14/3)
     /// - centerLine: Merkez çizgi (varsayılan 50)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: %K-%D kesişimi + centerline filtresi (klasik - her ikisi de merkezin altında/üstünde olmalı)
+    ///     1: %K-centerline kesişimi     (ikinci klasik Stochastic sinyali)
+    ///     2: %K slope flip              (%K'nın kendi yönü dönünce)
+    ///     3: %K-%D state                (konum - kesişim değil, koşul sürdükçe her bar)
+    ///     4: Band / uzaklık filtresi    (%K ile %D arasındaki fark %bandThreshold'dan fazla açılınca)
+    ///     5: Breakout + retest          (%K %D'yi kesip geri yaklaşıp tutunca)
+    ///     6: Confirmation bars          (kesişimden sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: %K eğimi + state combo     (rejim: %K-%D konumu + momentum: %K N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
+    ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimpleStochasticStrategy : BaseStrategy
     {
         public override string Name => "Simple Stochastic Strategy";
 
-        private readonly int _kPeriod;
-        private readonly int _dPeriod;
-        private readonly double _centerLine;
-        private readonly int _choice;
-        private StochasticResult? _stochResult;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimpleStochasticStrategy(int kPeriod = 14, int dPeriod = 3, double centerLine = 50, int choice = 0)
+        private readonly int kPeriod;
+        private readonly int dPeriod;
+        private readonly double centerLine;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private double[]? k;
+        private double[]? d;
+
+        public SimpleStochasticStrategy(int kPeriod = 14, int dPeriod = 3, double centerLine = 50,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _kPeriod = kPeriod;
-            _dPeriod = dPeriod;
-            _centerLine = centerLine;
-            _choice = choice;
+            this.kPeriod         = kPeriod;
+            this.dPeriod         = dPeriod;
+            this.centerLine      = centerLine;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["KPeriod"] = kPeriod;
-            Parameters["DPeriod"] = dPeriod;
-            Parameters["CenterLine"] = centerLine;
-            Parameters["Choice"] = choice;
+            Parameters["KPeriod"]       = kPeriod;
+            Parameters["DPeriod"]       = dPeriod;
+            Parameters["CenterLine"]    = centerLine;
+            Parameters["RuleModeIndex"] = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"] = exitModeIndex;
+            Parameters["FlatModeIndex"] = flatModeIndex;
+            Parameters["SkipModeIndex"] = skipModeIndex;
         }
 
-        public SimpleStochasticStrategy(List<StockData> data, IndicatorManager indicators, int kPeriod = 14, int dPeriod = 3, double centerLine = 50, int choice = 0)
+        public SimpleStochasticStrategy(List<StockData> data, IndicatorManager indicators,
+            int kPeriod = 14, int dPeriod = 3, double centerLine = 50,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _kPeriod = kPeriod;
-            _dPeriod = dPeriod;
-            _centerLine = centerLine;
-            _choice = choice;
+            this.kPeriod         = kPeriod;
+            this.dPeriod         = dPeriod;
+            this.centerLine      = centerLine;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["KPeriod"] = kPeriod;
-            Parameters["DPeriod"] = dPeriod;
-            Parameters["CenterLine"] = centerLine;
-            Parameters["Choice"] = choice;
+            Parameters["KPeriod"]       = kPeriod;
+            Parameters["DPeriod"]       = dPeriod;
+            Parameters["CenterLine"]    = centerLine;
+            Parameters["RuleModeIndex"] = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"] = exitModeIndex;
+            Parameters["FlatModeIndex"] = flatModeIndex;
+            Parameters["SkipModeIndex"] = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -74,73 +112,226 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            _stochResult = Indicators.Momentum.Stochastic(_kPeriod, _dPeriod);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
 
-            //Log($"SimpleStochasticStrategy initialized: K={_kPeriod}, D={_dPeriod}, CenterLine={_centerLine}");
+            var stochResult = Indicators.Momentum.Stochastic(kPeriod, dPeriod);
+            k = stochResult.K;
+            d = stochResult.D;
+
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= k.Length          == barCount;
+            allSeriesLengthsMatch &= d.Length          == barCount;
+            allSeriesLengthsMatch &= openPrices.Length == barCount;
+            allSeriesLengthsMatch &= highPrices.Length == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length  == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length    == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length   == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length  == barCount;
+            allSeriesLengthsMatch &= dates.Length      == barCount;
+            allSeriesLengthsMatch &= times.Length      == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"k={k.Length}, d={d.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
+                    $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
+                    $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            if (currentIndex < _kPeriod + _dPeriod + 1)
+            if (currentIndex < kPeriod + dPeriod + 1)
                 return TradeSignals.None;
 
-            if (_stochResult == null || _stochResult.K.Length == 0)
+            if (k == null || d == null || k.Length == 0)
                 return TradeSignals.None;
 
-            double currentK = _stochResult.K[currentIndex];
-            double prevK = _stochResult.K[currentIndex - 1];
-            double currentD = _stochResult.D[currentIndex];
-            double prevD = _stochResult.D[currentIndex - 1];
+            double currentK = k[currentIndex];
+            double currentD = d[currentIndex];
 
-            if (double.IsNaN(currentK) || double.IsNaN(prevK) || double.IsNaN(currentD) || double.IsNaN(prevD))
+            if (double.IsNaN(currentK) || double.IsNaN(currentD))
                 return TradeSignals.None;
 
-            // ************************************************************************************************************************
-            // choice: 0 = %K-%D crossover with center filter, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            if (signalModeIndex == 0)
             {
-                // AL: %K, %D'yi yukarı kesiyor ve her ikisi 50'nin altında
-                if (prevK <= prevD && currentK > currentD && currentK < _centerLine && currentD < _centerLine)
+                // 0: %K-%D kesişimi + centerline filtresi (klasik)
+                if (YukarıKesti(currentIndex, k, d) && currentK < centerLine && currentD < centerLine) buy  = true;
+                if (AsagiKesti(currentIndex, k, d) && currentK > centerLine && currentD > centerLine)  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: %K-centerline kesişimi
+                if (YukarıKesti(currentIndex, k, centerLine)) buy  = true;
+                if (AsagiKesti(currentIndex, k, centerLine))  sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: %K slope flip
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // SAT: %K, %D'yi aşağı kesiyor ve her ikisi 50'nin üstünde
-                if (prevK >= prevD && currentK < currentD && currentK > _centerLine && currentD > _centerLine)
-                {
-                    sell = true;
+                    double slopeNow  = k[currentIndex]     - k[currentIndex - 1];
+                    double slopePrev = k[currentIndex - 1] - k[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 3: %K-%D state - koşul sürdükçe her bar
+                if (Buyuk(currentIndex, k, d)) buy  = true;
+                if (Kucuk(currentIndex, k, d)) sell = true;
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 4)
+            {
+                // 4: Band / uzaklık filtresi
+                const double bandThreshold = 10.0; // Stochastic puanı
+                double diff = currentK - currentD;
+                if (diff >  bandThreshold) buy  = true;
+                if (diff < -bandThreshold) sell = true;
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest
+                const int retestLookback = 10;
+                const double retestBand  = 3.0;
+
+                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                {
+                    if (m < 1) continue;
+
+                    if (!buy && YukarıKesti(m, k, d)
+                        && Math.Abs(currentK - currentD) <= retestBand
+                        && currentK > currentD)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(m, k, d)
+                        && Math.Abs(currentK - currentD) <= retestBand
+                        && currentK < currentD)
+                    {
+                        sell = true;
+                    }
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, k, d);
+                    bool stayedBelow = AsagiKesti(crossBar, k, d);
+                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    {
+                        stayedAbove &= k[m] > d[m];
+                        stayedBelow &= k[m] < d[m];
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: %K eğimi + state combo
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool kRising  = k[currentIndex] > k[currentIndex - slopeLookback];
+                    bool kFalling = k[currentIndex] < k[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, k, d) && kRising)  buy  = true;
+                    if (Kucuk(currentIndex, k, d) && kFalling) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -152,19 +343,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetK() => _stochResult?.K;
-        public double[]? GetD() => _stochResult?.D;
+        public double[]? GetK() => k;
+        public double[]? GetD() => d;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            if (_stochResult?.K != null && _stochResult.K.Length > 0)
-                indicators["Stoch_K"] = _stochResult.K;
-
-            if (_stochResult?.D != null && _stochResult.D.Length > 0)
-                indicators["Stoch_D"] = _stochResult.D;
-
+            if (k != null && k.Length > 0) indicators["Stoch_K"] = k;
+            if (d != null && d.Length > 0) indicators["Stoch_D"] = d;
             return indicators.Count > 0 ? indicators : null;
         }
     }

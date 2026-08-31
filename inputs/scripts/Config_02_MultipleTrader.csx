@@ -113,6 +113,132 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
+    }),
+    (5, "SimpleParabolicSARStrategy", new Dictionary<string, object>
+    {
+        ["step"] = 0.02,
+        ["max"] = 0.2,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (6, "SimpleADXStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["adxThreshold"] = 25,
+        ["signalModeIndex"] = 0
+    }),
+    (7, "SimpleDIStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["signalModeIndex"] = 0
+    }),
+    (8, "SimpleMACDStrategy", new Dictionary<string, object>
+    {
+        ["fastPeriod"] = 12,
+        ["slowPeriod"] = 26,
+        ["signalPeriod"] = 9,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (9, "SimpleStochasticStrategy", new Dictionary<string, object>
+    {
+        ["kPeriod"] = 14,
+        ["dPeriod"] = 3,
+        ["centerLine"] = 50,
+        ["signalModeIndex"] = 0
+    }),
+    (10, "SimpleBollingerStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["multiplier"] = 2.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (11, "SimpleATRStrategy", new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 14,
+        ["maPeriod"] = 20,
+        ["multiplier"] = 2.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (12, "SimpleCMFStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["positiveThreshold"] = 0.1,
+        ["negativeThreshold"] = -0.1,
+        ["signalModeIndex"] = 0
+    }),
+    (13, "SimpleMFIStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["oversold"] = 20,
+        ["overbought"] = 80,
+        ["signalModeIndex"] = 0
+    }),
+    (14, "SimpleKairiStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["positiveThreshold"] = 5,
+        ["negativeThreshold"] = -5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (15, "SimpleMomentumStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 12,
+        ["positiveThreshold"] = 0,
+        ["negativeThreshold"] = 0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (16, "SimpleHHVLLVStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (17, "SimpleHYLYStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["threshold"] = 80,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (18, "SimpleIchimokuStrategy", new Dictionary<string, object>
+    {
+        ["tenkanPeriod"] = 9,
+        ["kijunPeriod"] = 26,
+        ["senkouPeriod"] = 52,
+        ["signalModeIndex"] = 0
+    }),
+    (19, "SimpleMavilimWStrategy", new Dictionary<string, object>
+    {
+        ["param1"] = 3,
+        ["param2"] = 5,
+        ["signalModeIndex"] = 0
+    }),
+    (20, "SimplePMaxStrategy", new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 10,
+        ["multiplier"] = 3.0,
+        ["maPeriod"] = 10,
+        ["pmaxMaMethod"] = "EMA",
+        ["signalModeIndex"] = 0
+    }),
+    (21, "SimpleTillsonT3Strategy", new Dictionary<string, object>
+    {
+        ["period"] = 5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    }),
+    (22, "SimpleAlphaTrendStrategy", new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 14,
+        ["coefficient"] = 1.0,
+        ["momentumPeriod"] = 14,
+        ["useMFI"] = true,
+        ["signalModeIndex"] = 0
     })
 };
 

@@ -1,10 +1,10 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -12,58 +12,97 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// MFI (Money Flow Index) Stratejisi
     ///
     /// MFI Mantığı:
-    /// - Hacim ağırlıklı RSI benzeri indikatör
-    /// - 0-100 arası, 80 üstü: Aşırı alım, 20 altı: Aşırı satım
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: MFI 20 seviyesini yukarı kesiyor (aşırı satımdan çıkış)
-    /// - SAT: MFI 80 seviyesini aşağı kesiyor (aşırı alımdan çıkış)
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - Hacim ağırlıklı RSI benzeri indikatör, 0-100 arası (RSI'nin mimari analogu)
+    /// - Hacim/High/Low/Close'a bağımlı, priceSource yok
     ///
     /// Parametreler:
     /// - period: MFI periyodu (varsayılan 14)
-    /// - oversold: Aşırı satım seviyesi (varsayılan 20)
-    /// - overbought: Aşırı alım seviyesi (varsayılan 80)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - oversold/overbought: seviyeler (varsayılan 20/80)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: Oversold/overbought kesişimi (klasik)
+    ///     1: Orta hat (50) kesişimi        (MFI 50'yi yukarı/aşağı kesince)
+    ///     2: MFI slope flip                (MFI'nin kendi yönü dönünce)
+    ///     3: MFI state                     (50'ye göre konum - koşul sürdükçe her bar)
+    ///     4: Band / uzaklık filtresi       (MFI 50'den %bandThreshold puandan fazla uzaklaşınca)
+    ///     5: Breakout + retest             (oversold/overbought kırılıp MFI geri yaklaşıp tutunca)
+    ///     6: Confirmation bars             (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: MFI eğimi + state combo       (rejim: 50'ye göre konum + momentum: MFI N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
+    ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimpleMFIStrategy : BaseStrategy
     {
         public override string Name => "Simple MFI Strategy";
 
-        private readonly int _period;
-        private readonly double _oversold;
-        private readonly double _overbought;
-        private readonly int _choice;
-        private double[]? _mfi;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimpleMFIStrategy(int period = 14, double oversold = 20, double overbought = 80, int choice = 0)
+        private readonly int period;
+        private readonly double oversold;
+        private readonly double overbought;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private double[]? mfi;
+
+        public SimpleMFIStrategy(int period = 14, double oversold = 20, double overbought = 80,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _oversold = oversold;
-            _overbought = overbought;
-            _choice = choice;
+            this.period          = period;
+            this.oversold        = oversold;
+            this.overbought      = overbought;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["Period"] = period;
-            Parameters["Oversold"] = oversold;
-            Parameters["Overbought"] = overbought;
-            Parameters["Choice"] = choice;
+            Parameters["Period"]         = period;
+            Parameters["Oversold"]       = oversold;
+            Parameters["Overbought"]     = overbought;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
         }
 
-        public SimpleMFIStrategy(List<StockData> data, IndicatorManager indicators, int period = 14, double oversold = 20, double overbought = 80, int choice = 0)
+        public SimpleMFIStrategy(List<StockData> data, IndicatorManager indicators,
+            int period = 14, double oversold = 20, double overbought = 80,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _oversold = oversold;
-            _overbought = overbought;
-            _choice = choice;
+            this.period          = period;
+            this.oversold        = oversold;
+            this.overbought      = overbought;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["Period"] = period;
-            Parameters["Oversold"] = oversold;
-            Parameters["Overbought"] = overbought;
-            Parameters["Choice"] = choice;
+            Parameters["Period"]         = period;
+            Parameters["Oversold"]       = oversold;
+            Parameters["Overbought"]     = overbought;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -72,71 +111,225 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            _mfi = Indicators.VolumeInd.MFI(_period);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
 
-            //Log($"SimpleMFIStrategy initialized: Period={_period}, Oversold={_oversold}, Overbought={_overbought}");
+            mfi = Indicators.VolumeInd.MFI(period);
+
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= mfi.Length         == barCount;
+            allSeriesLengthsMatch &= openPrices.Length  == barCount;
+            allSeriesLengthsMatch &= highPrices.Length  == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length   == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length     == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length    == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length   == barCount;
+            allSeriesLengthsMatch &= dates.Length       == barCount;
+            allSeriesLengthsMatch &= times.Length       == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length  == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"mfi={mfi.Length}, open={openPrices.Length}, high={highPrices.Length}, low={lowPrices.Length}, close={closePrices.Length}, " +
+                    $"volume={volumes.Length}, lot={lotSizes.Length}, dateTime={dateTimes.Length}, date={dates.Length}, " +
+                    $"time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            if (currentIndex < _period + 1)
+            if (currentIndex < period + 1)
                 return TradeSignals.None;
 
-            if (_mfi == null || _mfi.Length == 0)
+            if (mfi == null || mfi.Length == 0)
                 return TradeSignals.None;
 
-            double currentMFI = _mfi[currentIndex];
-            double prevMFI = _mfi[currentIndex - 1];
-
-            if (double.IsNaN(currentMFI) || double.IsNaN(prevMFI))
+            double currentMFI = mfi[currentIndex];
+            if (double.IsNaN(currentMFI))
                 return TradeSignals.None;
 
-            // ************************************************************************************************************************
-            // choice: 0 = MFI overbought/oversold crossover, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            if (signalModeIndex == 0)
             {
-                // AL: MFI oversold seviyesini yukarı kesiyor
-                if (prevMFI <= _oversold && currentMFI > _oversold)
+                // 0: Oversold/overbought kesişimi (klasik)
+                if (YukarıKesti(currentIndex, mfi, oversold))   buy  = true;
+                if (AsagiKesti(currentIndex, mfi, overbought))  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: Orta hat (50) kesişimi
+                const double midline = 50.0;
+                if (YukarıKesti(currentIndex, mfi, midline)) buy  = true;
+                if (AsagiKesti(currentIndex, mfi, midline))  sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: MFI slope flip
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // SAT: MFI overbought seviyesini aşağı kesiyor
-                if (prevMFI >= _overbought && currentMFI < _overbought)
-                {
-                    sell = true;
+                    double slopeNow  = mfi[currentIndex]     - mfi[currentIndex - 1];
+                    double slopePrev = mfi[currentIndex - 1] - mfi[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 3: MFI state - 50'ye göre konum, her bar
+                const double midline = 50.0;
+                if (Buyuk(currentIndex, mfi, midline)) buy  = true;
+                if (Kucuk(currentIndex, mfi, midline)) sell = true;
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 4)
+            {
+                // 4: Band / uzaklık filtresi
+                const double midline       = 50.0;
+                const double bandThreshold = 30.0; // 50±30 => 80/20 seviyeleri
+                double distance = currentMFI - midline;
+                if (distance >  bandThreshold) buy  = true;
+                if (distance < -bandThreshold) sell = true;
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest
+                const int retestLookback = 10;
+                const double retestBand  = 2.0;
+
+                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                {
+                    if (m < 1) continue;
+
+                    if (!buy && YukarıKesti(m, mfi, oversold)
+                        && currentMFI <= oversold + retestBand
+                        && currentMFI > oversold)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(m, mfi, overbought)
+                        && currentMFI >= overbought - retestBand
+                        && currentMFI < overbought)
+                    {
+                        sell = true;
+                    }
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, mfi, oversold);
+                    bool stayedBelow = AsagiKesti(crossBar, mfi, overbought);
+                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    {
+                        stayedAbove &= mfi[m] > oversold;
+                        stayedBelow &= mfi[m] < overbought;
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: MFI eğimi + state combo
+                const int slopeLookback = 3;
+                const double midline     = 50.0;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool mfiRising  = mfi[currentIndex] > mfi[currentIndex - slopeLookback];
+                    bool mfiFalling = mfi[currentIndex] < mfi[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, mfi, midline) && mfiRising)  buy  = true;
+                    if (Kucuk(currentIndex, mfi, midline) && mfiFalling) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -148,15 +341,12 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetMFI() => _mfi;
+        public double[]? GetMFI() => mfi;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            if (_mfi != null && _mfi.Length > 0)
-                indicators["MFI"] = _mfi;
-
+            if (mfi != null && mfi.Length > 0) indicators["MFI"] = mfi;
             return indicators.Count > 0 ? indicators : null;
         }
     }

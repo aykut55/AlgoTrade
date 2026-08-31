@@ -166,7 +166,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 8;
+int optChoice = 9;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -327,6 +327,277 @@ else if (optChoice == 8)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 9)
+{
+    // SimpleParabolicSARStrategy - hizlanma faktoru adimi (step) ve maksimumu (max) taraniyor.
+    // priceSource + signalModeIndex burada sabit tutuluyor.
+    optimizationStrategyName = "SimpleParabolicSARStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("step", 0.01, 0.05, 0.01),
+        ("max",  0.1,  0.3,  0.1),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 10)
+{
+    // SimpleADXStrategy - period ve adxThreshold taraniyor.
+    optimizationStrategyName = "SimpleADXStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period",       7, 21, 7),
+        ("adxThreshold", 15, 35, 10),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 11)
+{
+    // SimpleDIStrategy - sadece period taraniyor (ADX filtresi yok).
+    optimizationStrategyName = "SimpleDIStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 7, 21, 7),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 12)
+{
+    // SimpleMACDStrategy - fast/slow EMA periyotlari taraniyor.
+    optimizationStrategyName = "SimpleMACDStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("fastPeriod", 8, 16, 4),
+        ("slowPeriod", 20, 30, 5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalPeriod"]    = 9,
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 13)
+{
+    // SimpleStochasticStrategy - kPeriod ve dPeriod taraniyor.
+    optimizationStrategyName = "SimpleStochasticStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("kPeriod", 7, 21, 7),
+        ("dPeriod", 2, 5, 1),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["centerLine"]      = 50,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 14)
+{
+    // SimpleBollingerStrategy - period ve multiplier taraniyor.
+    optimizationStrategyName = "SimpleBollingerStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period",     10, 30, 10),
+        ("multiplier", 1.5, 2.5, 0.5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 15)
+{
+    // SimpleATRStrategy - atrPeriod ve multiplier taraniyor.
+    optimizationStrategyName = "SimpleATRStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("atrPeriod",  7, 21, 7),
+        ("multiplier", 1.5, 2.5, 0.5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["maPeriod"]        = 20,
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 16)
+{
+    // SimpleCMFStrategy - period taraniyor.
+    optimizationStrategyName = "SimpleCMFStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 10, 30, 10),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["positiveThreshold"] = 0.1,
+        ["negativeThreshold"] = -0.1,
+        ["signalModeIndex"]   = 0
+    };
+}
+else if (optChoice == 17)
+{
+    // SimpleMFIStrategy - period taraniyor.
+    optimizationStrategyName = "SimpleMFIStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 7, 21, 7),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["oversold"]        = 20,
+        ["overbought"]      = 80,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 18)
+{
+    // SimpleKairiStrategy - period taraniyor.
+    optimizationStrategyName = "SimpleKairiStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 10, 30, 10),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["positiveThreshold"] = 5,
+        ["negativeThreshold"] = -5,
+        ["priceSource"]       = "Close",
+        ["signalModeIndex"]   = 0
+    };
+}
+else if (optChoice == 19)
+{
+    // SimpleMomentumStrategy - period taraniyor.
+    optimizationStrategyName = "SimpleMomentumStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 7, 21, 7),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["positiveThreshold"] = 0,
+        ["negativeThreshold"] = 0,
+        ["priceSource"]       = "Close",
+        ["signalModeIndex"]   = 0
+    };
+}
+else if (optChoice == 20)
+{
+    // SimpleHHVLLVStrategy - period taraniyor.
+    optimizationStrategyName = "SimpleHHVLLVStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 10, 30, 10),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 21)
+{
+    // SimpleHYLYStrategy - period taraniyor.
+    optimizationStrategyName = "SimpleHYLYStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 10, 30, 10),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["threshold"]       = 80,
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 22)
+{
+    // SimpleIchimokuStrategy - tenkanPeriod taraniyor.
+    optimizationStrategyName = "SimpleIchimokuStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("tenkanPeriod", 7, 11, 2),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["kijunPeriod"]     = 26,
+        ["senkouPeriod"]    = 52,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 23)
+{
+    // SimpleMavilimWStrategy - param1/param2 taraniyor.
+    optimizationStrategyName = "SimpleMavilimWStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("param1", 2, 4, 1),
+        ("param2", 4, 6, 1),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 24)
+{
+    // SimplePMaxStrategy - atrPeriod ve multiplier taraniyor.
+    optimizationStrategyName = "SimplePMaxStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("atrPeriod",  7, 13, 3),
+        ("multiplier", 2.0, 4.0, 1.0),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["maPeriod"]        = 10,
+        ["pmaxMaMethod"]    = "EMA",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 25)
+{
+    // SimpleTillsonT3Strategy - period taraniyor.
+    optimizationStrategyName = "SimpleTillsonT3Strategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period", 3, 7, 2),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (optChoice == 26)
+{
+    // SimpleAlphaTrendStrategy - atrPeriod ve coefficient taraniyor.
+    optimizationStrategyName = "SimpleAlphaTrendStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("atrPeriod",   7, 21, 7),
+        ("coefficient", 0.5, 1.5, 0.5),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["momentumPeriod"]  = 14,
+        ["useMFI"]          = true,
         ["signalModeIndex"] = 0
     };
 }

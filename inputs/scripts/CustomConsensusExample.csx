@@ -56,7 +56,9 @@ if (data.Count == 0)
 }
 
 // =============================================================================
-// 1. Indicators + bes child strateji (SimpleMostStrategy + SimpleMAStrategy + SimpleRSIStrategy + SimpleOTTStrategy + SimpleSuperTrendStrategy)
+// 1. Indicators + 23 child strateji (trend-flip ailesi: Most/MA/RSI/OTT/SuperTrend/ParabolicSAR
+// + kalan tum Simple*Strategy'ler: ADX/DI/MACD/Stochastic/Bollinger/ATR/CMF/MFI/Kairi/Momentum/
+// HHVLLV/HYLY/Ichimoku/MavilimW/PMax/TillsonT3/AlphaTrend)
 // =============================================================================
 var indicators = new IndicatorManager(data);
 
@@ -78,9 +80,45 @@ var childStrategy3 = algoTrader.CreateStrategyFromRegistry(data, indicators, "Si
     new Dictionary<string, object> { ["period"] = 2, ["percent"] = 1.4, ["ottMaMethod"] = "VIDYA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
 var childStrategy4 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleSuperTrendStrategy",
     new Dictionary<string, object> { ["period"] = 10, ["multiplier"] = 3.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy5 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleParabolicSARStrategy",
+    new Dictionary<string, object> { ["step"] = 0.02, ["max"] = 0.2, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy6 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleADXStrategy",
+    new Dictionary<string, object> { ["period"] = 14, ["adxThreshold"] = 25, ["signalModeIndex"] = 0 });
+var childStrategy7 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleDIStrategy",
+    new Dictionary<string, object> { ["period"] = 14, ["signalModeIndex"] = 0 });
+var childStrategy8 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMACDStrategy",
+    new Dictionary<string, object> { ["fastPeriod"] = 12, ["slowPeriod"] = 26, ["signalPeriod"] = 9, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy9 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleStochasticStrategy",
+    new Dictionary<string, object> { ["kPeriod"] = 14, ["dPeriod"] = 3, ["centerLine"] = 50, ["signalModeIndex"] = 0 });
+var childStrategy10 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleBollingerStrategy",
+    new Dictionary<string, object> { ["period"] = 20, ["multiplier"] = 2.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy11 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleATRStrategy",
+    new Dictionary<string, object> { ["atrPeriod"] = 14, ["maPeriod"] = 20, ["multiplier"] = 2.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy12 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleCMFStrategy",
+    new Dictionary<string, object> { ["period"] = 20, ["positiveThreshold"] = 0.1, ["negativeThreshold"] = -0.1, ["signalModeIndex"] = 0 });
+var childStrategy13 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMFIStrategy",
+    new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 20, ["overbought"] = 80, ["signalModeIndex"] = 0 });
+var childStrategy14 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleKairiStrategy",
+    new Dictionary<string, object> { ["period"] = 20, ["positiveThreshold"] = 5, ["negativeThreshold"] = -5, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy15 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMomentumStrategy",
+    new Dictionary<string, object> { ["period"] = 12, ["positiveThreshold"] = 0, ["negativeThreshold"] = 0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy16 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleHHVLLVStrategy",
+    new Dictionary<string, object> { ["period"] = 20, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy17 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleHYLYStrategy",
+    new Dictionary<string, object> { ["period"] = 20, ["threshold"] = 80, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy18 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleIchimokuStrategy",
+    new Dictionary<string, object> { ["tenkanPeriod"] = 9, ["kijunPeriod"] = 26, ["senkouPeriod"] = 52, ["signalModeIndex"] = 0 });
+var childStrategy19 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMavilimWStrategy",
+    new Dictionary<string, object> { ["param1"] = 3, ["param2"] = 5, ["signalModeIndex"] = 0 });
+var childStrategy20 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimplePMaxStrategy",
+    new Dictionary<string, object> { ["atrPeriod"] = 10, ["multiplier"] = 3.0, ["maPeriod"] = 10, ["pmaxMaMethod"] = "EMA", ["signalModeIndex"] = 0 });
+var childStrategy21 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleTillsonT3Strategy",
+    new Dictionary<string, object> { ["period"] = 5, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+var childStrategy22 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleAlphaTrendStrategy",
+    new Dictionary<string, object> { ["atrPeriod"] = 14, ["coefficient"] = 1.0, ["momentumPeriod"] = 14, ["useMFI"] = true, ["signalModeIndex"] = 0 });
 
 // =============================================================================
-// 2. MultipleTrader'i manuel kur (mainTrader + 5 child)
+// 2. MultipleTrader'i manuel kur (mainTrader + 23 child)
 // =============================================================================
 Log("\nMultipleTrader kuruluyor (manuel, CustomConsensusFunc atanabilsin diye)...");
 
@@ -124,6 +162,24 @@ AddChild(1, childStrategy1);
 AddChild(2, childStrategy2);
 AddChild(3, childStrategy3);
 AddChild(4, childStrategy4);
+AddChild(5, childStrategy5);
+AddChild(6, childStrategy6);
+AddChild(7, childStrategy7);
+AddChild(8, childStrategy8);
+AddChild(9, childStrategy9);
+AddChild(10, childStrategy10);
+AddChild(11, childStrategy11);
+AddChild(12, childStrategy12);
+AddChild(13, childStrategy13);
+AddChild(14, childStrategy14);
+AddChild(15, childStrategy15);
+AddChild(16, childStrategy16);
+AddChild(17, childStrategy17);
+AddChild(18, childStrategy18);
+AddChild(19, childStrategy19);
+AddChild(20, childStrategy20);
+AddChild(21, childStrategy21);
+AddChild(22, childStrategy22);
 
 multipleTrader.Init();
 
@@ -224,12 +280,16 @@ TradeSignals WeightedConsensus(List<SingleTrader> traders)
     return TradeSignals.Flat;
 }
 
-// -- Ozel ornek 3: kosullu filtre - sadece child_0..4 (Most+MA+RSI+OTT+SuperTrend) hepsi ayni yonde ise o yon.
-TradeSignals AllFiveAgreeConsensus(List<SingleTrader> traders)
+// -- Ozel ornek 3: kosullu filtre - sadece trend-flip ailesindeki ilk 6 child (Most+MA+RSI+OTT+
+// SuperTrend+ParabolicSAR, child_0..5) hepsi ayni yonde ise o yon. Artik toplam 23 child var
+// (bkz. yukarisi) - bu ornek BILEREK sadece ilk 6'ya bakiyor: hepsinin (23'unun) ayni anda
+// ayni yonde olmasini istemek pratikte AllConsensusReference'in (yukaridaki, generic "All" modu)
+// aynisi olurdu - custom path'in ayirt edici noktasi index'e ozel bir ALT KUME secebilmek.
+TradeSignals AllOfFirstSixAgreeConsensus(List<SingleTrader> traders)
 {
-    if (traders.Count >= 5 && traders[0].is_son_yon_a() && traders[1].is_son_yon_a() && traders[2].is_son_yon_a() && traders[3].is_son_yon_a() && traders[4].is_son_yon_a())
+    if (traders.Count >= 6 && traders[0].is_son_yon_a() && traders[1].is_son_yon_a() && traders[2].is_son_yon_a() && traders[3].is_son_yon_a() && traders[4].is_son_yon_a() && traders[5].is_son_yon_a())
         return TradeSignals.Buy;
-    if (traders.Count >= 5 && traders[0].is_son_yon_s() && traders[1].is_son_yon_s() && traders[2].is_son_yon_s() && traders[3].is_son_yon_s() && traders[4].is_son_yon_s())
+    if (traders.Count >= 6 && traders[0].is_son_yon_s() && traders[1].is_son_yon_s() && traders[2].is_son_yon_s() && traders[3].is_son_yon_s() && traders[4].is_son_yon_s() && traders[5].is_son_yon_s())
         return TradeSignals.Sell;
     return TradeSignals.Flat;
 }
@@ -241,7 +301,7 @@ multipleTrader.CustomConsensusFunc = FirstChildWinsConsensus;
 // multipleTrader.CustomConsensusFunc = AllConsensusReference;       // hazir All ile ayni
 // multipleTrader.CustomConsensusFunc = AnyConsensusReference;       // hazir Any ile ayni
 // multipleTrader.CustomConsensusFunc = WeightedConsensus;
-// multipleTrader.CustomConsensusFunc = AllFiveAgreeConsensus;
+// multipleTrader.CustomConsensusFunc = AllOfFirstSixAgreeConsensus;
 // -------------------------------------------------------------------------------
 Log("\n[CustomConsensus] CustomConsensusFunc atandi: 'ilk child kazanir' kurali aktif.");
 

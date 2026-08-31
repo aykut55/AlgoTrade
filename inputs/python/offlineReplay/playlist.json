@@ -10,6 +10,18 @@
     { "bundle": "inputs/python/offlineReplay/samples/SimpleSuperTrendStrategy/bundle.npz",  "label": "SuperTrend",   "color": [0, 255, 204, 255] },
     { "bundle": "inputs/python/offlineReplay/samples/SimpleMAStrategy/bundle.npz",          "label": "MA",           "color": [255, 51, 204, 255] },
     { "bundle": "inputs/python/offlineReplay/samples/SimpleParabolicSARStrategy/bundle.npz","label": "ParabolicSAR", "color": [200, 200, 200, 255] },
-    { "bundle": "inputs/python/offlineReplay/samples/SimpleOTTStrategy/bundle.npz",         "label": "OTT",          "color": [255, 153, 51, 255] }
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleOTTStrategy/bundle.npz",         "label": "OTT",          "color": [255, 153, 51, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleDIStrategy/bundle.npz",         "label": "DI",           "color": [153, 51, 255, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleCMFStrategy/bundle.npz",        "label": "CMF",          "color": [51, 255, 153, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleMFIStrategy/bundle.npz",        "label": "MFI",          "color": [255, 51, 51, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleKairiStrategy/bundle.npz",      "label": "Kairi",        "color": [102, 178, 255, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleMomentumStrategy/bundle.npz",   "label": "Momentum",     "color": [255, 178, 102, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleHHVLLVStrategy/bundle.npz",     "label": "HHV/LLV",      "color": [178, 255, 102, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleHYLYStrategy/bundle.npz",       "label": "HY/LY",        "color": [255, 102, 178, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleIchimokuStrategy/bundle.npz",   "label": "Ichimoku",     "color": [102, 255, 178, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleMavilimWStrategy/bundle.npz",   "label": "MavilimW",     "color": [204, 153, 255, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimplePMaxStrategy/bundle.npz",       "label": "PMax",         "color": [255, 204, 153, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleTillsonT3Strategy/bundle.npz",  "label": "TillsonT3",    "color": [153, 255, 204, 255] },
+    { "bundle": "inputs/python/offlineReplay/samples/SimpleAlphaTrendStrategy/bundle.npz", "label": "AlphaTrend",   "color": [255, 230, 102, 255] }
   ]
 }

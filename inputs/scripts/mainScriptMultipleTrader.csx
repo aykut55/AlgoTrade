@@ -133,6 +133,168 @@ void ConfigureStrategies()
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0
     });
+
+    // Id=5 : SimpleParabolicSARStrategy
+    algoTrader.AddStrategyConfig(5, "SimpleParabolicSARStrategy", new Dictionary<string, object>
+    {
+        ["step"] = 0.02,
+        ["max"] = 0.2,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=6 : SimpleADXStrategy
+    algoTrader.AddStrategyConfig(6, "SimpleADXStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["adxThreshold"] = 25,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=7 : SimpleDIStrategy
+    algoTrader.AddStrategyConfig(7, "SimpleDIStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=8 : SimpleMACDStrategy
+    algoTrader.AddStrategyConfig(8, "SimpleMACDStrategy", new Dictionary<string, object>
+    {
+        ["fastPeriod"] = 12,
+        ["slowPeriod"] = 26,
+        ["signalPeriod"] = 9,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=9 : SimpleStochasticStrategy
+    algoTrader.AddStrategyConfig(9, "SimpleStochasticStrategy", new Dictionary<string, object>
+    {
+        ["kPeriod"] = 14,
+        ["dPeriod"] = 3,
+        ["centerLine"] = 50,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=10 : SimpleBollingerStrategy
+    algoTrader.AddStrategyConfig(10, "SimpleBollingerStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["multiplier"] = 2.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=11 : SimpleATRStrategy
+    algoTrader.AddStrategyConfig(11, "SimpleATRStrategy", new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 14,
+        ["maPeriod"] = 20,
+        ["multiplier"] = 2.0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=12 : SimpleCMFStrategy
+    algoTrader.AddStrategyConfig(12, "SimpleCMFStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["positiveThreshold"] = 0.1,
+        ["negativeThreshold"] = -0.1,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=13 : SimpleMFIStrategy
+    algoTrader.AddStrategyConfig(13, "SimpleMFIStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 14,
+        ["oversold"] = 20,
+        ["overbought"] = 80,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=14 : SimpleKairiStrategy
+    algoTrader.AddStrategyConfig(14, "SimpleKairiStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["positiveThreshold"] = 5,
+        ["negativeThreshold"] = -5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=15 : SimpleMomentumStrategy
+    algoTrader.AddStrategyConfig(15, "SimpleMomentumStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 12,
+        ["positiveThreshold"] = 0,
+        ["negativeThreshold"] = 0,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=16 : SimpleHHVLLVStrategy
+    algoTrader.AddStrategyConfig(16, "SimpleHHVLLVStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=17 : SimpleHYLYStrategy
+    algoTrader.AddStrategyConfig(17, "SimpleHYLYStrategy", new Dictionary<string, object>
+    {
+        ["period"] = 20,
+        ["threshold"] = 80,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=18 : SimpleIchimokuStrategy
+    algoTrader.AddStrategyConfig(18, "SimpleIchimokuStrategy", new Dictionary<string, object>
+    {
+        ["tenkanPeriod"] = 9,
+        ["kijunPeriod"] = 26,
+        ["senkouPeriod"] = 52,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=19 : SimpleMavilimWStrategy
+    algoTrader.AddStrategyConfig(19, "SimpleMavilimWStrategy", new Dictionary<string, object>
+    {
+        ["param1"] = 3,
+        ["param2"] = 5,
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=20 : SimplePMaxStrategy
+    algoTrader.AddStrategyConfig(20, "SimplePMaxStrategy", new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 10,
+        ["multiplier"] = 3.0,
+        ["maPeriod"] = 10,
+        ["pmaxMaMethod"] = "EMA",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=21 : SimpleTillsonT3Strategy
+    algoTrader.AddStrategyConfig(21, "SimpleTillsonT3Strategy", new Dictionary<string, object>
+    {
+        ["period"] = 5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    });
+
+    // Id=22 : SimpleAlphaTrendStrategy
+    algoTrader.AddStrategyConfig(22, "SimpleAlphaTrendStrategy", new Dictionary<string, object>
+    {
+        ["atrPeriod"] = 14,
+        ["coefficient"] = 1.0,
+        ["momentumPeriod"] = 14,
+        ["useMFI"] = true,
+        ["signalModeIndex"] = 0
+    });
 }
 
 void ConfigureQueries()

@@ -1,10 +1,11 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Indicators.Base;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -12,61 +13,110 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// ATR (Average True Range) Volatilite Kırılım Stratejisi
     ///
     /// ATR Mantığı:
-    /// - Piyasa volatilitesini ölçer
-    /// - Kırılım seviyeleri için bant oluşturur
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: Fiyat üst bandı (MA + ATR*çarpan) yukarı kırıyor
-    /// - SAT: Fiyat alt bandı (MA - ATR*çarpan) aşağı kırıyor
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - Upper/Lower band = MA(priceSource) ± ATR*multiplier - Bollinger'ın ATR tabanlı analogu
+    /// - ATR'nin kendisi (True Range) High/Low/Close'a bağımlı, priceSource'tan bağımsız hesaplanır;
+    ///   priceSource sadece bandın merkezindeki MA'yı ve OnStep karşılaştırmasını besler
     ///
     /// Parametreler:
     /// - atrPeriod: ATR periyodu (varsayılan 14)
     /// - maPeriod: MA periyodu (varsayılan 20)
     /// - multiplier: ATR çarpanı (varsayılan 2.0)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - priceSource: MA'nın beslendiği kaynak + OnStep sinyal serisi (varsayılan Close)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: Üst/alt bant kırılımı      (fiyat üst bandı yukarı / alt bandı aşağı kesince)
+    ///     1: Orta bant (MA) kesişimi     (fiyat orta bandı yukarı/aşağı kesince)
+    ///     2: Üst bant slope flip         (üst bandın kendi yönü dönünce - volatilite rejimi)
+    ///     3: Bant state                  (fiyat üst/alt bandın dışında - koşul sürdükçe her bar)
+    ///     4: Bant genişliği filtresi     (üst-alt bant farkı %bandWidthThreshold'dan fazla açılınca)
+    ///     5: Breakout + retest           (üst/alt bant kırılıp fiyat geri gelip retest tutunca)
+    ///     6: Confirmation bars           (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: Fiyat eğimi + bant state    (rejim: bant state + momentum: fiyatın N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
+    ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimpleATRStrategy : BaseStrategy
     {
         public override string Name => "Simple ATR Strategy";
 
-        private readonly int _atrPeriod;
-        private readonly int _maPeriod;
-        private readonly double _multiplier;
-        private readonly int _choice;
-        private double[]? _atr;
-        private double[]? _ma;
-        private double[]? _upperBand;
-        private double[]? _lowerBand;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimpleATRStrategy(int atrPeriod = 14, int maPeriod = 20, double multiplier = 2.0, int choice = 0)
+        private readonly int atrPeriod;
+        private readonly int maPeriod;
+        private readonly double multiplier;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private readonly PriceSource priceSource = PriceSource.Close;
+
+        private double[]? source;
+        private double[]? atr;
+        private double[]? ma;
+        private double[]? upper;
+        private double[]? lower;
+
+        public SimpleATRStrategy(int atrPeriod = 14, int maPeriod = 20, double multiplier = 2.0, PriceSource priceSource = PriceSource.Close,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _atrPeriod = atrPeriod;
-            _maPeriod = maPeriod;
-            _multiplier = multiplier;
-            _choice = choice;
+            this.atrPeriod       = atrPeriod;
+            this.maPeriod        = maPeriod;
+            this.multiplier      = multiplier;
+            this.priceSource     = priceSource;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["ATRPeriod"] = atrPeriod;
-            Parameters["MAPeriod"] = maPeriod;
-            Parameters["Multiplier"] = multiplier;
-            Parameters["Choice"] = choice;
+            Parameters["AtrPeriod"]      = atrPeriod;
+            Parameters["MaPeriod"]       = maPeriod;
+            Parameters["Multiplier"]     = multiplier;
+            Parameters["PriceSource"]    = priceSource;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
         }
 
-        public SimpleATRStrategy(List<StockData> data, IndicatorManager indicators, int atrPeriod = 14, int maPeriod = 20, double multiplier = 2.0, int choice = 0)
+        public SimpleATRStrategy(List<StockData> data, IndicatorManager indicators,
+            int atrPeriod = 14, int maPeriod = 20, double multiplier = 2.0, PriceSource priceSource = PriceSource.Close,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _atrPeriod = atrPeriod;
-            _maPeriod = maPeriod;
-            _multiplier = multiplier;
-            _choice = choice;
+            this.atrPeriod       = atrPeriod;
+            this.maPeriod        = maPeriod;
+            this.multiplier      = multiplier;
+            this.priceSource     = priceSource;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["ATRPeriod"] = atrPeriod;
-            Parameters["MAPeriod"] = maPeriod;
-            Parameters["Multiplier"] = multiplier;
-            Parameters["Choice"] = choice;
+            Parameters["AtrPeriod"]      = atrPeriod;
+            Parameters["MaPeriod"]       = maPeriod;
+            Parameters["Multiplier"]     = multiplier;
+            Parameters["PriceSource"]    = priceSource;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -75,96 +125,249 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            var closes = Indicators.GetClosePrices();
-            _atr = Indicators.Volatility.ATR(_atrPeriod);
-            _ma = Indicators.MA.SMA(closes, _maPeriod);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
+            source      = Indicators.Trend.ResolvePriceSource(priceSource);
 
-            int length = closes.Length;
-            _upperBand = new double[length];
-            _lowerBand = new double[length];
+            atr = Indicators.Volatility.ATR(atrPeriod);
+            ma  = Indicators.MA.SMA(source, maPeriod);
 
-            for (int i = 0; i < length; i++)
+            upper = new double[barCount];
+            lower = new double[barCount];
+            for (int i = 0; i < barCount; i++)
             {
-                if (double.IsNaN(_ma[i]) || double.IsNaN(_atr[i]))
+                if (double.IsNaN(ma[i]) || double.IsNaN(atr[i]))
                 {
-                    _upperBand[i] = double.NaN;
-                    _lowerBand[i] = double.NaN;
+                    upper[i] = double.NaN;
+                    lower[i] = double.NaN;
                 }
                 else
                 {
-                    _upperBand[i] = _ma[i] + (_atr[i] * _multiplier);
-                    _lowerBand[i] = _ma[i] - (_atr[i] * _multiplier);
+                    upper[i] = ma[i] + (atr[i] * multiplier);
+                    lower[i] = ma[i] - (atr[i] * multiplier);
                 }
             }
 
-            //Log($"SimpleATRStrategy initialized: ATRPeriod={_atrPeriod}, MAPeriod={_maPeriod}, Multiplier={_multiplier}");
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= atr.Length         == barCount;
+            allSeriesLengthsMatch &= ma.Length          == barCount;
+            allSeriesLengthsMatch &= upper.Length       == barCount;
+            allSeriesLengthsMatch &= lower.Length       == barCount;
+            allSeriesLengthsMatch &= source.Length      == barCount;
+            allSeriesLengthsMatch &= openPrices.Length  == barCount;
+            allSeriesLengthsMatch &= highPrices.Length  == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length   == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length     == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length    == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length   == barCount;
+            allSeriesLengthsMatch &= dates.Length       == barCount;
+            allSeriesLengthsMatch &= times.Length       == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length  == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"atr={atr.Length}, ma={ma.Length}, upper={upper.Length}, lower={lower.Length}, source={source.Length}, " +
+                    $"open={openPrices.Length}, high={highPrices.Length}, low={lowPrices.Length}, close={closePrices.Length}, " +
+                    $"volume={volumes.Length}, lot={lotSizes.Length}, dateTime={dateTimes.Length}, date={dates.Length}, " +
+                    $"time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            int minPeriod = Math.Max(_atrPeriod, _maPeriod) + 1;
+            int minPeriod = Math.Max(atrPeriod, maPeriod) + 1;
             if (currentIndex < minPeriod)
                 return TradeSignals.None;
 
-            if (_upperBand == null || _lowerBand == null || _upperBand.Length == 0)
+            if (upper == null || lower == null || ma == null || source == null || upper.Length == 0)
                 return TradeSignals.None;
 
-            double currentClose = Data[currentIndex].Close;
-            double prevClose = Data[currentIndex - 1].Close;
-            double currentUpper = _upperBand[currentIndex];
-            double prevUpper = _upperBand[currentIndex - 1];
-            double currentLower = _lowerBand[currentIndex];
-            double prevLower = _lowerBand[currentIndex - 1];
+            double currentPrice = source[currentIndex];
+            double currentUpper = upper[currentIndex];
+            double currentLower = lower[currentIndex];
 
             if (double.IsNaN(currentUpper) || double.IsNaN(currentLower))
                 return TradeSignals.None;
 
-            // ************************************************************************************************************************
-            // choice: 0 = ATR band breakout, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            if (signalModeIndex == 0)
             {
-                // AL: Fiyat üst bandı yukarı kırıyor
-                if (prevClose <= prevUpper && currentClose > currentUpper)
+                // 0: Üst/alt bant kırılımı (klasik)
+                if (YukarıKesti(currentIndex, source, upper)) buy  = true;
+                if (AsagiKesti(currentIndex, source, lower))  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: Orta bant (MA) kesişimi
+                if (YukarıKesti(currentIndex, source, ma)) buy  = true;
+                if (AsagiKesti(currentIndex, source, ma))  sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: Üst bant slope flip - volatilite rejimi
+                if (currentIndex >= 2)
                 {
-                    buy = true;
+                    double slopeNow  = upper[currentIndex]     - upper[currentIndex - 1];
+                    double slopePrev = upper[currentIndex - 1] - upper[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
+            }
+            else if (signalModeIndex == 3)
+            {
+                // 3: Bant state
+                if (Buyuk(currentIndex, source, upper)) buy  = true;
+                if (Kucuk(currentIndex, source, lower)) sell = true;
+            }
+            else if (signalModeIndex == 4)
+            {
+                // 4: Bant genişliği filtresi
+                const double bandWidthThreshold = 0.04; // %4
+                double width = (currentUpper - currentLower) / currentPrice;
+                if (width > bandWidthThreshold && currentPrice > ma[currentIndex]) buy  = true;
+                if (width > bandWidthThreshold && currentPrice < ma[currentIndex]) sell = true;
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest
+                const int retestLookback = 10;
+                double barLow  = Data[currentIndex].Low;
+                double barHigh = Data[currentIndex].High;
 
-                // SAT: Fiyat alt bandı aşağı kırıyor
-                if (prevClose >= prevLower && currentClose < currentLower)
+                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
                 {
-                    sell = true;
+                    if (m < 1) continue;
+
+                    if (!buy && YukarıKesti(m, source, upper)
+                        && barLow <= currentUpper
+                        && currentPrice > currentUpper)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(m, source, lower)
+                        && barHigh >= currentLower
+                        && currentPrice < currentLower)
+                    {
+                        sell = true;
+                    }
                 }
             }
-            else
+            else if (signalModeIndex == 6)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 6: Confirmation bars
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, source, upper);
+                    bool stayedBelow = AsagiKesti(crossBar, source, lower);
+                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    {
+                        stayedAbove &= source[m] > upper[m];
+                        stayedBelow &= source[m] < lower[m];
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 7)
+            {
+                // 7: Fiyat eğimi + bant state
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool priceRising  = source[currentIndex] > source[currentIndex - slopeLookback];
+                    bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, source, upper) && priceRising)  buy  = true;
+                    if (Kucuk(currentIndex, source, lower) && priceFalling) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -176,27 +379,16 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetATR() => _atr;
-        public double[]? GetUpperBand() => _upperBand;
-        public double[]? GetLowerBand() => _lowerBand;
+        public double[]? GetATR() => atr;
+        public double[]? GetUpperBand() => upper;
+        public double[]? GetLowerBand() => lower;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            var closes = Indicators.GetClosePrices();
-            if (closes != null && closes.Length > 0)
-                indicators["Close"] = closes;
-
-            if (_upperBand != null && _upperBand.Length > 0)
-                indicators["ATR_Upper"] = _upperBand;
-
-            if (_lowerBand != null && _lowerBand.Length > 0)
-                indicators["ATR_Lower"] = _lowerBand;
-
-            if (_ma != null && _ma.Length > 0)
-                indicators["MA"] = _ma;
-
+            if (upper != null && upper.Length > 0) indicators["ATR_Upper"] = upper;
+            if (lower != null && lower.Length > 0) indicators["ATR_Lower"] = lower;
+            if (ma != null && ma.Length > 0) indicators["MA"] = ma;
             return indicators.Count > 0 ? indicators : null;
         }
     }

@@ -1,11 +1,11 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Trading.Indicators.Trend.Results;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
+using AlgoTrade.Core.Trading.Indicators.Base;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -13,58 +13,107 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// PMax (Profit Maximizer) İndikatörü Stratejisi
     ///
     /// PMax Mantığı:
-    /// - MOST + SuperTrend hibrit yapısı
-    /// - ATR tabanlı trailing stop ile hareketli ortalama kombinasyonu
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: Direction -1'den 1'e değişirse (trend dönüşü)
-    /// - SAT: Direction 1'den -1'e değişirse (trend dönüşü)
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - MOST + SuperTrend hibrit yapısı, ATR tabanlı trailing stop + MA kombinasyonu
+    /// - ATR High/Low/Close'a bağımlı olduğu için priceSource yok (SuperTrend/SAR gibi)
     ///
     /// Parametreler:
     /// - atrPeriod: ATR periyodu (varsayılan 10)
     /// - multiplier: ATR çarpanı (varsayılan 3.0)
     /// - maPeriod: MA periyodu (varsayılan 10)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - pmaxMaMethod: PMax'ın MA tipi (varsayılan EMA)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: Fiyat-PMax kırılımı        (fiyat PMax'ı yukarı/aşağı kesince)
+    ///     1: Direction flip              (indikatörün kendi Direction dizisi -1'den 1'e/1'den -1'e dönünce - eski choice=0 ile birebir aynı)
+    ///     2: PMax slope flip             (PMax'ın kendi yönü dönünce)
+    ///     3: PMax state                  (fiyatın PMax'a göre konumu - koşul sürdükçe her bar)
+    ///     4: Band / uzaklık filtresi     (fiyat PMax'tan %bandThreshold'dan fazla uzaklaşınca)
+    ///     5: Breakout + retest           (PMax kırılıp fiyat geri gelip retest tutunca)
+    ///     6: Confirmation bars           (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: Fiyat eğimi + PMax state    (rejim: fiyat-PMax konumu + momentum: fiyatın N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
+    ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimplePMaxStrategy : BaseStrategy
     {
         public override string Name => "Simple PMax Strategy";
 
-        private readonly int _atrPeriod;
-        private readonly double _multiplier;
-        private readonly int _maPeriod;
-        private readonly int _choice;
-        private PMaxResult? _pmaxResult;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimplePMaxStrategy(int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, int choice = 0)
+        private readonly int atrPeriod;
+        private readonly double multiplier;
+        private readonly int maPeriod;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private readonly MAMethod pmaxMaMethod = MAMethod.EMA;
+
+        private double[]? pmax;
+        private double[]? pmaxMA;
+        private int[]?    direction;
+
+        public SimplePMaxStrategy(int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, MAMethod pmaxMaMethod = MAMethod.EMA,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _atrPeriod = atrPeriod;
-            _multiplier = multiplier;
-            _maPeriod = maPeriod;
-            _choice = choice;
+            this.atrPeriod       = atrPeriod;
+            this.multiplier      = multiplier;
+            this.maPeriod        = maPeriod;
+            this.pmaxMaMethod    = pmaxMaMethod;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["ATRPeriod"] = atrPeriod;
-            Parameters["Multiplier"] = multiplier;
-            Parameters["MAPeriod"] = maPeriod;
-            Parameters["Choice"] = choice;
+            Parameters["AtrPeriod"]      = atrPeriod;
+            Parameters["Multiplier"]     = multiplier;
+            Parameters["MaPeriod"]       = maPeriod;
+            Parameters["PmaxMaMethod"]   = pmaxMaMethod;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
         }
 
-        public SimplePMaxStrategy(List<StockData> data, IndicatorManager indicators, int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, int choice = 0)
+        public SimplePMaxStrategy(List<StockData> data, IndicatorManager indicators,
+            int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, MAMethod pmaxMaMethod = MAMethod.EMA,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _atrPeriod = atrPeriod;
-            _multiplier = multiplier;
-            _maPeriod = maPeriod;
-            _choice = choice;
+            this.atrPeriod       = atrPeriod;
+            this.multiplier      = multiplier;
+            this.maPeriod        = maPeriod;
+            this.pmaxMaMethod    = pmaxMaMethod;
+            this.ruleModeIndex   = ruleModeIndex;
+            this.signalModeIndex = signalModeIndex;
+            this.exitModeIndex   = exitModeIndex;
+            this.flatModeIndex   = flatModeIndex;
+            this.skipModeIndex   = skipModeIndex;
 
-            Parameters["ATRPeriod"] = atrPeriod;
-            Parameters["Multiplier"] = multiplier;
-            Parameters["MAPeriod"] = maPeriod;
-            Parameters["Choice"] = choice;
+            Parameters["AtrPeriod"]      = atrPeriod;
+            Parameters["Multiplier"]     = multiplier;
+            Parameters["MaPeriod"]       = maPeriod;
+            Parameters["PmaxMaMethod"]   = pmaxMaMethod;
+            Parameters["RuleModeIndex"]  = ruleModeIndex;
+            Parameters["SignalModeIndex"] = signalModeIndex;
+            Parameters["ExitModeIndex"]  = exitModeIndex;
+            Parameters["FlatModeIndex"]  = flatModeIndex;
+            Parameters["SkipModeIndex"]  = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -73,68 +122,233 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            _pmaxResult = Indicators.Trend.PMax(_atrPeriod, _multiplier, _maPeriod);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
 
-            //Log($"SimplePMaxStrategy initialized: ATRPeriod={_atrPeriod}, Multiplier={_multiplier}, MAPeriod={_maPeriod}");
+            var pmaxResult = Indicators.Trend.PMax(atrPeriod, multiplier, maPeriod, pmaxMaMethod);
+            pmax      = pmaxResult.PMax;
+            pmaxMA    = pmaxResult.PMaxMA;
+            direction = pmaxResult.Direction;
+
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= pmax.Length        == barCount;
+            allSeriesLengthsMatch &= direction.Length   == barCount;
+            allSeriesLengthsMatch &= openPrices.Length  == barCount;
+            allSeriesLengthsMatch &= highPrices.Length  == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length   == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length     == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length    == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length   == barCount;
+            allSeriesLengthsMatch &= dates.Length       == barCount;
+            allSeriesLengthsMatch &= times.Length       == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length  == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"pmax={pmax.Length}, direction={direction.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
+                    $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
+                    $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            if (currentIndex < Math.Max(_atrPeriod, _maPeriod) + 1)
+            if (currentIndex < Math.Max(atrPeriod, maPeriod) + 1)
                 return TradeSignals.None;
 
-            if (_pmaxResult == null || _pmaxResult.Direction.Length == 0)
+            if (pmax == null || direction == null || closePrices == null || pmax.Length == 0)
                 return TradeSignals.None;
 
-            int currentDirection = _pmaxResult.Direction[currentIndex];
-            int prevDirection = _pmaxResult.Direction[currentIndex - 1];
+            double currentPrice = closePrices[currentIndex];
+            double currentPMax = pmax[currentIndex];
+            int currentDirection = direction[currentIndex];
+            int prevDirection = direction[currentIndex - 1];
 
-            // ************************************************************************************************************************
-            // choice: 0 = Direction change, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            if (double.IsNaN(currentPMax))
+                return TradeSignals.None;
+
+            if (signalModeIndex == 0)
             {
-                // AL: Direction -1'den 1'e değişiyor
-                if (prevDirection == -1 && currentDirection == 1)
+                // 0: Fiyat-PMax kırılımı (klasik)
+                if (YukarıKesti(currentIndex, closePrices, pmax)) buy  = true;
+                if (AsagiKesti(currentIndex, closePrices, pmax))  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: Direction flip - indikatörün kendi Direction dizisi
+                if (prevDirection == -1 && currentDirection == 1) buy  = true;
+                if (prevDirection == 1  && currentDirection == -1) sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: PMax slope flip
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // SAT: Direction 1'den -1'e değişiyor
-                if (prevDirection == 1 && currentDirection == -1)
-                {
-                    sell = true;
+                    double slopeNow  = pmax[currentIndex]     - pmax[currentIndex - 1];
+                    double slopePrev = pmax[currentIndex - 1] - pmax[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 3: PMax state
+                if (Buyuk(currentIndex, closePrices, pmax)) buy  = true;
+                if (Kucuk(currentIndex, closePrices, pmax)) sell = true;
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 4)
+            {
+                // 4: Band / uzaklık filtresi
+                const double bandThreshold = 0.01; // %1
+                if (currentPMax != 0.0)
+                {
+                    double distanceRatio = (currentPrice - currentPMax) / currentPMax;
+                    if (distanceRatio >  bandThreshold) buy  = true;
+                    if (distanceRatio < -bandThreshold) sell = true;
+                }
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest
+                const int retestLookback = 10;
+                double barLow  = Data[currentIndex].Low;
+                double barHigh = Data[currentIndex].High;
+
+                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                {
+                    if (m < 1) continue;
+
+                    if (!buy && YukarıKesti(m, closePrices, pmax)
+                        && barLow <= currentPMax
+                        && currentPrice > currentPMax)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(m, closePrices, pmax)
+                        && barHigh >= currentPMax
+                        && currentPrice < currentPMax)
+                    {
+                        sell = true;
+                    }
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, closePrices, pmax);
+                    bool stayedBelow = AsagiKesti(crossBar, closePrices, pmax);
+                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    {
+                        stayedAbove &= closePrices[m] > pmax[m];
+                        stayedBelow &= closePrices[m] < pmax[m];
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: Fiyat eğimi + PMax state
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool priceRising  = closePrices[currentIndex] > closePrices[currentIndex - slopeLookback];
+                    bool priceFalling = closePrices[currentIndex] < closePrices[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, closePrices, pmax) && priceRising)  buy  = true;
+                    if (Kucuk(currentIndex, closePrices, pmax) && priceFalling) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -146,24 +360,15 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetPMax() => _pmaxResult?.PMax;
-        public double[]? GetMA() => _pmaxResult?.PMaxMA;
-        public int[]? GetDirection() => _pmaxResult?.Direction;
+        public double[]? GetPMax() => pmax;
+        public double[]? GetMA() => pmaxMA;
+        public int[]? GetDirection() => direction;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            var closes = Indicators.GetClosePrices();
-            if (closes != null && closes.Length > 0)
-                indicators["Close"] = closes;
-
-            if (_pmaxResult?.PMax != null && _pmaxResult.PMax.Length > 0)
-                indicators["PMax"] = _pmaxResult.PMax;
-
-            if (_pmaxResult?.PMaxMA != null && _pmaxResult.PMaxMA.Length > 0)
-                indicators["MA"] = _pmaxResult.PMaxMA;
-
+            if (pmax != null && pmax.Length > 0) indicators["PMax"] = pmax;
+            if (pmaxMA != null && pmaxMA.Length > 0) indicators["MA"] = pmaxMA;
             return indicators.Count > 0 ? indicators : null;
         }
     }

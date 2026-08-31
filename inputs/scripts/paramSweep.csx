@@ -11,7 +11,7 @@ using AlgoTrade.Core.Timer;
 
 // ---- PARAMETRELER (Buradan degistirin) --------------------------------------
 string dataFile        = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
-int    strategyChoice  = 0; // 0=SimpleMostStrategy (period x percent), 1=SimpleMAStrategy (fastPeriod x slowPeriod), 2=SimpleRSIStrategy (period x oversold), 3=SimpleOTTStrategy (period x percent), 4=SimpleSuperTrendStrategy (period x multiplier)
+int    strategyChoice  = 0; // 0=SimpleMostStrategy (period x percent), 1=SimpleMAStrategy (fastPeriod x slowPeriod), 2=SimpleRSIStrategy (period x oversold), 3=SimpleOTTStrategy (period x percent), 4=SimpleSuperTrendStrategy (period x multiplier), 5=SimpleParabolicSARStrategy (step x max)
 
 string strategyName;
 string sweepParam1Name, sweepParam2Name;
@@ -85,6 +85,236 @@ else if (strategyChoice == 4)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 5)
+{
+    strategyName = "SimpleParabolicSARStrategy";
+    sweepParam1Name   = "step";
+    sweepParam1Values = new object[] { 0.01, 0.02, 0.03, 0.05 };
+    sweepParam2Name   = "max";
+    sweepParam2Values = new object[] { 0.1, 0.2, 0.3, 0.4 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 6)
+{
+    strategyName = "SimpleADXStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "adxThreshold";
+    sweepParam2Values = new object[] { 15, 20, 25, 30 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 7)
+{
+    strategyName = "SimpleDIStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Values = new object[] { 0, 1, 3, 7 };
+    fixedParams = new Dictionary<string, object>();
+}
+else if (strategyChoice == 8)
+{
+    strategyName = "SimpleMACDStrategy";
+    sweepParam1Name   = "fastPeriod";
+    sweepParam1Values = new object[] { 8, 10, 12, 16 };
+    sweepParam2Name   = "slowPeriod";
+    sweepParam2Values = new object[] { 20, 26, 30, 35 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalPeriod"] = 9,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 9)
+{
+    strategyName = "SimpleStochasticStrategy";
+    sweepParam1Name   = "kPeriod";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "dPeriod";
+    sweepParam2Values = new object[] { 2, 3, 5, 8 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["centerLine"] = 50,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 10)
+{
+    strategyName = "SimpleBollingerStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 10, 15, 20, 30 };
+    sweepParam2Name   = "multiplier";
+    sweepParam2Values = new object[] { 1.5, 2.0, 2.5, 3.0 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 11)
+{
+    strategyName = "SimpleATRStrategy";
+    sweepParam1Name   = "atrPeriod";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "multiplier";
+    sweepParam2Values = new object[] { 1.5, 2.0, 2.5, 3.0 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["maPeriod"] = 20,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 12)
+{
+    strategyName = "SimpleCMFStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 10, 15, 20, 30 };
+    sweepParam2Name   = "positiveThreshold";
+    sweepParam2Values = new object[] { 0.05, 0.1, 0.15, 0.2 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["negativeThreshold"] = -0.1,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 13)
+{
+    strategyName = "SimpleMFIStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "oversold";
+    sweepParam2Values = new object[] { 10, 15, 20, 25 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["overbought"] = 80,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 14)
+{
+    strategyName = "SimpleKairiStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 10, 15, 20, 30 };
+    sweepParam2Name   = "positiveThreshold";
+    sweepParam2Values = new object[] { 3, 5, 7, 10 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["negativeThreshold"] = -5,
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 15)
+{
+    strategyName = "SimpleMomentumStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 7, 10, 12, 21 };
+    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Values = new object[] { 0, 1, 3, 7 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"] = "Close"
+    };
+}
+else if (strategyChoice == 16)
+{
+    strategyName = "SimpleHHVLLVStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 10, 15, 20, 30 };
+    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Values = new object[] { 0, 1, 3, 7 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"] = "Close"
+    };
+}
+else if (strategyChoice == 17)
+{
+    strategyName = "SimpleHYLYStrategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 10, 15, 20, 30 };
+    sweepParam2Name   = "threshold";
+    sweepParam2Values = new object[] { 70, 75, 80, 85 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"] = "Close",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 18)
+{
+    strategyName = "SimpleIchimokuStrategy";
+    sweepParam1Name   = "tenkanPeriod";
+    sweepParam1Values = new object[] { 7, 9, 11, 13 };
+    sweepParam2Name   = "kijunPeriod";
+    sweepParam2Values = new object[] { 20, 26, 30, 35 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["senkouPeriod"] = 52,
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 19)
+{
+    strategyName = "SimpleMavilimWStrategy";
+    sweepParam1Name   = "param1";
+    sweepParam1Values = new object[] { 2, 3, 4, 5 };
+    sweepParam2Name   = "param2";
+    sweepParam2Values = new object[] { 4, 5, 6, 7 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 20)
+{
+    strategyName = "SimplePMaxStrategy";
+    sweepParam1Name   = "atrPeriod";
+    sweepParam1Values = new object[] { 7, 10, 13, 16 };
+    sweepParam2Name   = "multiplier";
+    sweepParam2Values = new object[] { 2.0, 3.0, 4.0, 5.0 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["maPeriod"] = 10,
+        ["pmaxMaMethod"] = "EMA",
+        ["signalModeIndex"] = 0
+    };
+}
+else if (strategyChoice == 21)
+{
+    strategyName = "SimpleTillsonT3Strategy";
+    sweepParam1Name   = "period";
+    sweepParam1Values = new object[] { 3, 5, 7, 9 };
+    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Values = new object[] { 0, 1, 3, 7 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"] = "Close"
+    };
+}
+else if (strategyChoice == 22)
+{
+    strategyName = "SimpleAlphaTrendStrategy";
+    sweepParam1Name   = "atrPeriod";
+    sweepParam1Values = new object[] { 7, 10, 14, 21 };
+    sweepParam2Name   = "coefficient";
+    sweepParam2Values = new object[] { 0.5, 1.0, 1.5, 2.0 };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["momentumPeriod"] = 14,
+        ["useMFI"] = true,
         ["signalModeIndex"] = 0
     };
 }

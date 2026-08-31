@@ -1,10 +1,10 @@
 using AlgoTrade.Core;
-using AlgoTrade.Core.Trading.Indicators;
-using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Trading.Core;
+using AlgoTrade.Core.Trading.Indicators;
 using AlgoTrade.Core.Trading.Strategy;
 using System;
 using System.Collections.Generic;
+using static AlgoTrade.Core.Trading.Utils.Utils;
 
 namespace AlgoTrade.Core.Trading.Strategies
 {
@@ -12,59 +12,97 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// CMF (Chaikin Money Flow) Stratejisi
     ///
     /// CMF Mantığı:
-    /// - Alım/satım baskısını ölçen hacim indikatörü
-    /// - -1 ile +1 arası değer alır
-    /// - Pozitif: Alım baskısı, Negatif: Satım baskısı
-    ///
-    /// Trading Logic (choice=0):
-    /// - AL: CMF pozitif eşiği (0.1) yukarı kesiyor
-    /// - SAT: CMF negatif eşiği (-0.1) aşağı kesiyor
-    ///
-    /// Trading Logic (choice=1):
-    /// - (İleride eklenecek alternatif sinyal mantığı)
+    /// - Alım/satım baskısını ölçen hacim indikatörü, -1..+1 arası, RSI'nin 0 merkezli analogu
+    /// - Hacim/High/Low/Close'a bağımlı, priceSource yok
     ///
     /// Parametreler:
     /// - period: CMF periyodu (varsayılan 20)
-    /// - positiveThreshold: Pozitif sinyal eşiği (varsayılan 0.1)
-    /// - negativeThreshold: Negatif sinyal eşiği (varsayılan -0.1)
-    /// - choice: Sinyal mantığı seçimi (varsayılan 0)
+    /// - positiveThreshold/negativeThreshold: sinyal eşikleri (varsayılan 0.1/-0.1)
+    /// - signalModeIndex: buy/sell yöntemini seçer:
+    ///     0: Pozitif/negatif eşik kesişimi (klasik)
+    ///     1: Orta hat (0) kesişimi        (CMF 0'ı yukarı/aşağı kesince)
+    ///     2: CMF slope flip               (CMF'nin kendi yönü dönünce)
+    ///     3: CMF state                    (0'a göre konum - koşul sürdükçe her bar)
+    ///     4: Band / uzaklık filtresi      (CMF 0'dan %bandThreshold'dan fazla uzaklaşınca)
+    ///     5: Breakout + retest            (eşik kırılıp CMF geri yaklaşıp tutunca)
+    ///     6: Confirmation bars            (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
+    ///     7: CMF eğimi + state combo      (rejim: 0'a göre konum + momentum: CMF N-bar eğimi)
+    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
+    ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
+    /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
     /// </summary>
     public class SimpleCMFStrategy : BaseStrategy
     {
         public override string Name => "Simple CMF Strategy";
 
-        private readonly int _period;
-        private readonly double _positiveThreshold;
-        private readonly double _negativeThreshold;
-        private readonly int _choice;
-        private double[]? _cmf;
+        private int barCount;
+        private double[]? openPrices;
+        private double[]? highPrices;
+        private double[]? lowPrices;
+        private double[]? closePrices;
+        private long[]? volumes;
+        private long[]? lotSizes;
+        private DateTime[]? dateTimes;
+        private DateOnly[]? dates;
+        private TimeOnly[]? times;
+        private long[]? epochTimes;
 
-        public SimpleCMFStrategy(int period = 20, double positiveThreshold = 0.1, double negativeThreshold = -0.1, int choice = 0)
+        private readonly int period;
+        private readonly double positiveThreshold;
+        private readonly double negativeThreshold;
+        private readonly int signalModeIndex;
+        private readonly int exitModeIndex;
+        private readonly int flatModeIndex;
+        private readonly int skipModeIndex;
+        private readonly int ruleModeIndex;
+
+        private double[]? cmf;
+
+        public SimpleCMFStrategy(int period = 20, double positiveThreshold = 0.1, double negativeThreshold = -0.1,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _positiveThreshold = positiveThreshold;
-            _negativeThreshold = negativeThreshold;
-            _choice = choice;
+            this.period            = period;
+            this.positiveThreshold = positiveThreshold;
+            this.negativeThreshold = negativeThreshold;
+            this.ruleModeIndex     = ruleModeIndex;
+            this.signalModeIndex   = signalModeIndex;
+            this.exitModeIndex     = exitModeIndex;
+            this.flatModeIndex     = flatModeIndex;
+            this.skipModeIndex     = skipModeIndex;
 
-            Parameters["Period"] = period;
+            Parameters["Period"]            = period;
             Parameters["PositiveThreshold"] = positiveThreshold;
             Parameters["NegativeThreshold"] = negativeThreshold;
-            Parameters["Choice"] = choice;
+            Parameters["RuleModeIndex"]     = ruleModeIndex;
+            Parameters["SignalModeIndex"]   = signalModeIndex;
+            Parameters["ExitModeIndex"]     = exitModeIndex;
+            Parameters["FlatModeIndex"]     = flatModeIndex;
+            Parameters["SkipModeIndex"]     = skipModeIndex;
         }
 
-        public SimpleCMFStrategy(List<StockData> data, IndicatorManager indicators, int period = 20, double positiveThreshold = 0.1, double negativeThreshold = -0.1, int choice = 0)
+        public SimpleCMFStrategy(List<StockData> data, IndicatorManager indicators,
+            int period = 20, double positiveThreshold = 0.1, double negativeThreshold = -0.1,
+            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            _period = period;
-            _positiveThreshold = positiveThreshold;
-            _negativeThreshold = negativeThreshold;
-            _choice = choice;
+            this.period            = period;
+            this.positiveThreshold = positiveThreshold;
+            this.negativeThreshold = negativeThreshold;
+            this.ruleModeIndex     = ruleModeIndex;
+            this.signalModeIndex   = signalModeIndex;
+            this.exitModeIndex     = exitModeIndex;
+            this.flatModeIndex     = flatModeIndex;
+            this.skipModeIndex     = skipModeIndex;
 
-            Parameters["Period"] = period;
+            Parameters["Period"]            = period;
             Parameters["PositiveThreshold"] = positiveThreshold;
             Parameters["NegativeThreshold"] = negativeThreshold;
-            Parameters["Choice"] = choice;
+            Parameters["RuleModeIndex"]     = ruleModeIndex;
+            Parameters["SignalModeIndex"]   = signalModeIndex;
+            Parameters["ExitModeIndex"]     = exitModeIndex;
+            Parameters["FlatModeIndex"]     = flatModeIndex;
+            Parameters["SkipModeIndex"]     = skipModeIndex;
 
-            // Initialize base strategy
             Initialize(data, indicators);
         }
 
@@ -73,71 +111,221 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            _cmf = Indicators.VolumeInd.CMF(_period);
+            barCount    = Indicators.GetDataCount();
+            openPrices  = Indicators.GetOpenPrices();
+            highPrices  = Indicators.GetHighPrices();
+            lowPrices   = Indicators.GetLowPrices();
+            closePrices = Indicators.GetClosePrices();
+            volumes     = Indicators.GetVolume();
+            lotSizes    = Indicators.GetLotSizes();
+            dateTimes   = Indicators.GetDateTimes();
+            dates       = Indicators.GetDates();
+            times       = Indicators.GetTimes();
+            epochTimes  = Indicators.GetEpochTimes();
 
-            //Log($"SimpleCMFStrategy initialized: Period={_period}, PositiveThreshold={_positiveThreshold}, NegativeThreshold={_negativeThreshold}");
+            cmf = Indicators.VolumeInd.CMF(period);
+
+            bool allSeriesLengthsMatch = true;
+            allSeriesLengthsMatch &= cmf.Length         == barCount;
+            allSeriesLengthsMatch &= openPrices.Length  == barCount;
+            allSeriesLengthsMatch &= highPrices.Length  == barCount;
+            allSeriesLengthsMatch &= lowPrices.Length   == barCount;
+            allSeriesLengthsMatch &= closePrices.Length == barCount;
+            allSeriesLengthsMatch &= volumes.Length     == barCount;
+            allSeriesLengthsMatch &= lotSizes.Length    == barCount;
+            allSeriesLengthsMatch &= dateTimes.Length   == barCount;
+            allSeriesLengthsMatch &= dates.Length       == barCount;
+            allSeriesLengthsMatch &= times.Length       == barCount;
+            allSeriesLengthsMatch &= epochTimes.Length  == barCount;
+
+            if (!allSeriesLengthsMatch)
+            {
+                throw new InvalidOperationException(
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
+                    $"cmf={cmf.Length}, open={openPrices.Length}, high={highPrices.Length}, low={lowPrices.Length}, close={closePrices.Length}, " +
+                    $"volume={volumes.Length}, lot={lotSizes.Length}, dateTime={dateTimes.Length}, date={dates.Length}, " +
+                    $"time={times.Length}, epoch={epochTimes.Length}");
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            bool buy = false;
-            bool sell = false;
-            bool takeProfit = false;
-            bool stopLoss = false;
-            bool flat = false;
-            bool skip = false;
+            bool buy = false, sell = false, takeProfit = false, stopLoss = false, flat = false, skip = false;
 
-            if (currentIndex < _period + 1)
+            if (currentIndex < period + 1)
                 return TradeSignals.None;
 
-            if (_cmf == null || _cmf.Length == 0)
+            if (cmf == null || cmf.Length == 0)
                 return TradeSignals.None;
 
-            double currentCMF = _cmf[currentIndex];
-            double prevCMF = _cmf[currentIndex - 1];
-
-            if (double.IsNaN(currentCMF) || double.IsNaN(prevCMF))
+            double currentCMF = cmf[currentIndex];
+            if (double.IsNaN(currentCMF))
                 return TradeSignals.None;
 
-            // ************************************************************************************************************************
-            // choice: 0 = CMF threshold crossover, 1 = (İleride eklenecek)
-            if (_choice == 0)
+            if (signalModeIndex == 0)
             {
-                // AL: CMF pozitif eşiği yukarı kesiyor
-                if (prevCMF <= _positiveThreshold && currentCMF > _positiveThreshold)
+                // 0: Pozitif/negatif eşik kesişimi (klasik)
+                if (YukarıKesti(currentIndex, cmf, positiveThreshold)) buy  = true;
+                if (AsagiKesti(currentIndex, cmf, negativeThreshold))  sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: Orta hat (0) kesişimi
+                const double zero = 0.0;
+                if (YukarıKesti(currentIndex, cmf, zero)) buy  = true;
+                if (AsagiKesti(currentIndex, cmf, zero))  sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // 2: CMF slope flip
+                if (currentIndex >= 2)
                 {
-                    buy = true;
-                }
-
-                // SAT: CMF negatif eşiği aşağı kesiyor
-                if (prevCMF >= _negativeThreshold && currentCMF < _negativeThreshold)
-                {
-                    sell = true;
+                    double slopeNow  = cmf[currentIndex]     - cmf[currentIndex - 1];
+                    double slopePrev = cmf[currentIndex - 1] - cmf[currentIndex - 2];
+                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
+                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
                 }
             }
-            else
+            else if (signalModeIndex == 3)
             {
-                // İleride eklenecek alternatif sinyal mantığı
+                // 3: CMF state - 0'a göre konum, her bar
+                if (Buyuk(currentIndex, cmf, 0.0)) buy  = true;
+                if (Kucuk(currentIndex, cmf, 0.0)) sell = true;
             }
-            // ************************************************************************************************************************
+            else if (signalModeIndex == 4)
+            {
+                // 4: Band / uzaklık filtresi
+                const double bandThreshold = 0.2;
+                if (currentCMF >  bandThreshold) buy  = true;
+                if (currentCMF < -bandThreshold) sell = true;
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: Breakout + retest
+                const int retestLookback = 10;
+                const double retestBand  = 0.02;
+
+                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                {
+                    if (m < 1) continue;
+
+                    if (!buy && YukarıKesti(m, cmf, positiveThreshold)
+                        && currentCMF <= positiveThreshold + retestBand
+                        && currentCMF > positiveThreshold)
+                    {
+                        buy = true;
+                    }
+
+                    if (!sell && AsagiKesti(m, cmf, negativeThreshold)
+                        && currentCMF >= negativeThreshold - retestBand
+                        && currentCMF < negativeThreshold)
+                    {
+                        sell = true;
+                    }
+                }
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Confirmation bars
+                const int confirmBars = 3;
+                if (currentIndex >= confirmBars + 1)
+                {
+                    int crossBar = currentIndex - confirmBars;
+
+                    bool stayedAbove = YukarıKesti(crossBar, cmf, positiveThreshold);
+                    bool stayedBelow = AsagiKesti(crossBar, cmf, negativeThreshold);
+                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    {
+                        stayedAbove &= cmf[m] > positiveThreshold;
+                        stayedBelow &= cmf[m] < negativeThreshold;
+                    }
+                    if (stayedAbove) buy  = true;
+                    if (stayedBelow) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: CMF eğimi + state combo
+                const int slopeLookback = 3;
+                if (currentIndex >= slopeLookback)
+                {
+                    bool cmfRising  = cmf[currentIndex] > cmf[currentIndex - slopeLookback];
+                    bool cmfFalling = cmf[currentIndex] < cmf[currentIndex - slopeLookback];
+                    if (Buyuk(currentIndex, cmf, 0.0) && cmfRising)  buy  = true;
+                    if (Kucuk(currentIndex, cmf, 0.0) && cmfFalling) sell = true;
+                }
+            }
 
             if (Trader != null)
             {
-                // Trader.flags.KarAlSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (takeProfit hep false kalir)
-                takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.KarAlSeviyeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.KarAlYuzdeHesaplaEnabled == true)
+                        takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                }
             }
 
             if (Trader != null)
             {
-                // Trader.flags.ZararKesSeviyeHesaplaEnabled kapaliysa metod iceride 0 doner (stopLoss hep false kalir)
-                stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                if (exitModeIndex == 0)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
+                }
+                else if (exitModeIndex == 1)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
+                }
+                else if (exitModeIndex == 2)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
+                }
+                else if (exitModeIndex == 3)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
+                }
+                else if (exitModeIndex == 4)
+                {
+                    if (Trader.flags?.ZararKesSeviyeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                }
+                else if (exitModeIndex == 5)
+                {
+                    if (Trader.flags?.ZararKesYuzdeHesaplaEnabled == true)
+                        stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                }
             }
 
-            // Flat olma durumu burada incelenir ve flat flag'i setlenir
-            flat = false;
-
-            // Skip olma durumu burada incelenir ve skip flag'i setlenir
-            skip = false;
+            if (flatModeIndex == 0) flat = false;
+            if (skipModeIndex == 0) skip = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
@@ -149,15 +337,12 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        public double[]? GetCMF() => _cmf;
+        public double[]? GetCMF() => cmf;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
             var indicators = new Dictionary<string, double[]>();
-
-            if (_cmf != null && _cmf.Length > 0)
-                indicators["CMF"] = _cmf;
-
+            if (cmf != null && cmf.Length > 0) indicators["CMF"] = cmf;
             return indicators.Count > 0 ? indicators : null;
         }
     }

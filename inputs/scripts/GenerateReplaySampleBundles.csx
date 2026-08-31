@@ -101,6 +101,18 @@ var strategiesToRun = new List<(string Name, Dictionary<string, object> Params)>
     ("SimpleMAStrategy", new Dictionary<string, object>()),
     ("SimpleParabolicSARStrategy", new Dictionary<string, object>()),
     ("SimpleOTTStrategy", new Dictionary<string, object>()),
+    ("SimpleDIStrategy", new Dictionary<string, object>()),
+    ("SimpleCMFStrategy", new Dictionary<string, object>()),
+    ("SimpleMFIStrategy", new Dictionary<string, object>()),
+    ("SimpleKairiStrategy", new Dictionary<string, object>()),
+    ("SimpleMomentumStrategy", new Dictionary<string, object>()),
+    ("SimpleHHVLLVStrategy", new Dictionary<string, object>()),
+    ("SimpleHYLYStrategy", new Dictionary<string, object>()),
+    ("SimpleIchimokuStrategy", new Dictionary<string, object>()),
+    ("SimpleMavilimWStrategy", new Dictionary<string, object>()),
+    ("SimplePMaxStrategy", new Dictionary<string, object>()),
+    ("SimpleTillsonT3Strategy", new Dictionary<string, object>()),
+    ("SimpleAlphaTrendStrategy", new Dictionary<string, object>()),
 };
 
 foreach (var (stratName, stratParams) in strategiesToRun)

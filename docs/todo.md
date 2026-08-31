@@ -1,5 +1,131 @@
 # TODO
 
+## AKTİF GÖREV — Simple*Strategy'leri Ortak Mimariye Göre Yeniden Yazma (2026-08-31 başladı, TAMAMLANDI — sadece SimpleMACrossStrategy kasıtlı atlandı)
+
+> **Bu node, kullanıcı onayladığında SİLİNECEK** (iş fiilen bitti, sadece kullanıcının son
+> kontrolü/commit'i bekleniyor). Amaç: bu görev bir sonraki (yeni bir Simple*Strategy eklenmesi
+> gibi) benzer bir işe girişilirse referans/şablon olarak kalması.
+
+### Durum özeti
+
+`src/AlgoTrade.Core/Trading/Strategies/` altında `SimpleMostStrategy`'nin kurduğu mimariye
+(bkz. aşağıdaki "Ortak mimari" bölümü) göre yeniden yazılan TÜM 21 strateji (`SimpleComboStrategy`
++ `Rule001/002/003` HARİÇ — onlar zaten kendi ayrı `ruleModeIndex` mimarisine sahip, dokunulmadı):
+
+`SimpleMostStrategy` (referans), `SimpleMAStrategy`, `SimpleRSIStrategy`, `SimpleOTTStrategy`
+(+`TrendIndicators.OTT()`'a `PriceSource` eklendi), `SimpleSuperTrendStrategy`,
+`SimpleParabolicSARStrategy`, `SimpleADXStrategy`, `SimpleDIStrategy`, `SimpleMACDStrategy`,
+`SimpleStochasticStrategy`, `SimpleBollingerStrategy`, `SimpleATRStrategy`, `SimpleCMFStrategy`,
+`SimpleMFIStrategy`, `SimpleKairiStrategy`, `SimpleMomentumStrategy`, `SimpleHHVLLVStrategy`,
+`SimpleHYLYStrategy`, `SimpleIchimokuStrategy`, `SimpleMavilimWStrategy`, `SimplePMaxStrategy`,
+`SimpleTillsonT3Strategy`, `SimpleAlphaTrendStrategy`.
+
+Her biri TÜM config/script dosyalarına da (Config_01-03/06/07, mainScript+Simplified,
+mainScriptMultipleTrader+Simplified, runSingleTrader/runMultiTraderWithStrategies, paramSweep,
+StrategyConfig.txt, OptimizationConfig.txt, GenerateReplaySampleBundles.csx, playlist.json,
+CustomConsensusExample.csx) yayıldı — kullanıcının 2026-08-31 açık kararıyla ("Tam rollout,
+hepsi için"), CustomConsensusExample.csx'i 23 child'a çıkarma pahasına dahil.
+
+**Kasıtlı atlanan**: `SimpleMACrossStrategy` — kullanıcı "pas geçeceğiz" dedi (`SimpleMAStrategy`
+ile birebir aynı mantık, bkz. "İsimlendirme notu" bölümü, muhtemelen kazara duplicate).
+
+**CustomConsensusExample.csx'teki tasarım notu**: 23 child'a çıkınca "Özel örnek 3" (child_0..5
+hepsi ayni yönde) fonksiyonu `AllOfFirstSixAgreeConsensus` olarak yeniden adlandırıldı ve KASITLI
+OLARAK sadece ilk 6 (trend-flip ailesi) child'a bakacak şekilde bırakıldı — tüm 23'üne genişletmek
+onu zaten var olan generic `AllConsensusReference` moduyla aynı yapardı (pedagojik ayırt edici
+noktayı yok ederdi).
+
+**Küçük, kasıtlı asimetriler** (pratiklik için, hata değil): `strategyChoice`/`optChoice`
+değişkenlerinin başındaki satır-içi özet yorumları (`// 0=X, 1=Y, ...`) yeni 17 strateji için
+GÜNCELLENMEDİ (satır aşırı uzardı) — kod dalları (`else if`) doğru, sadece yorum eksik.
+`StrategyConfig.txt`'ye yeni 17 için sadece `v1` eklendi (v2 varyantı yok) — ilk 6 stratejide
+(Most/MA/RSI/OTT/SuperTrend/SAR) v1+v2 vardı.
+
+Build yeşil (`dotnet build AlgoTrade.sln`, 0 error) her adımda doğrulandı. Henüz commit
+EDİLMEDİ — kullanıcı hepsi bitince TEK bir commit atacağını söyledi.
+
+**Not**: Yeni bir Simple*Strategy eklenecekse (örn. gelecekte SimpleMACrossStrategy'yi ayrı
+tutmaya karar verilirse, ya da yeni bir indikatöre strateji yazılırsa) aşağıdaki "Turnkey rollout
+deseni"ni takip et.
+
+### Ortak mimari (her yeni strateji bunu takip etmeli)
+
+Referans dosyalar: `SimpleMostStrategy.cs`, `SimpleOTTStrategy.cs`, `SimpleSuperTrendStrategy.cs`
+(üçü de birbirinden kopyala-uyarla).
+
+- `signalModeIndex` (0-7): 0=ana kırılım, 1=ikinci seri kesişimi (yoksa uyarla — bkz.
+  SuperTrend'in Direction-flip çözümü), 2=indikatörün kendi slope flip'i, 3=state (kesişim değil,
+  her bar), 4=band/uzaklık filtresi, 5=breakout+retest, 6=confirmation bars, 7=slope+state combo.
+- `exitModeIndex` (0-5): `Trader.karAlZararKes` üzerinden — kod MOST'takiyle BİREBİR AYNI,
+  değişmiyor.
+- `flatModeIndex`/`skipModeIndex`/`ruleModeIndex`: placeholder, hep 0, okunmuyor.
+- `priceSource`: indikatör mantıksal olarak izin veriyorsa (tek bir fiyat serisine MA/hesap
+  uygulanıyorsa) hem indikatöre hem OnStep'teki `source`'a bağla; indikatör yapısal olarak
+  OHLC'ye bağımlıysa (ATR/True Range gibi) İNDİKATÖRÜ DEĞİŞTİRME, sadece OnStep `source`'unu
+  besle (SuperTrend örneği).
+- OnInit: `Indicators.GetDataCount()` + tüm OHLCV/date alanları + `allSeriesLengthsMatch` uzunluk
+  kontrolü (throw `InvalidOperationException` uyuşmazsa).
+- İki constructor (parametresiz + `(List<StockData> data, IndicatorManager indicators, ...)`).
+- `using static AlgoTrade.Core.Trading.Utils.Utils;` → `YukarıKesti`/`AsagiKesti`/`Buyuk`/`Kucuk`
+  (hem dizi-dizi hem dizi-skaler overload'ları var, skaler seviyeli karşılaştırmalar için RSI'nin
+  oversold/overbought'u gibi kullanılabilir).
+
+### Turnkey rollout deseni (her yeni strateji için TEKRARLANACAK — kullanıcı "tam/anahtar teslim
+yap" dediğinde durmadan hepsi yapılır)
+
+1. İndikatörü oku (`src/AlgoTrade.Core/Trading/Indicators/...`), MOST'a yapısal benzerliğini
+   değerlendirip signalModeIndex 0-7 menüsünü tasarla.
+2. Strategy `.cs` dosyasını MOST şablonuna göre TAMAMEN yeniden yaz.
+3. `dotnet build AlgoTrade.sln -c Debug --nologo` — 0 error beklenir.
+4. `Config_01_SingleTrader.csx`'e yeni `strategyChoice` branch'i ekle VE `int strategyChoice = N;`
+   olarak AKTİF yap (kullanıcının test yolu: Menu[8]→1).
+5. `Config_03_SingleTraderOpt.csx`'e yeni `optChoice` branch'i ekle VE `int optChoice = N;`
+   olarak AKTİF yap (kullanıcının test yolu: Menu[8]→3).
+6. Tam yayılım — bir önceki stratejinin (örn. SuperTrend) geçtiği HER dosyayı grep'le bul, aynı
+   satırı yeni strateji için ekle: `Config_02/06/07`, `mainScript(+Simplified)`,
+   `mainScriptMultipleTrader(+Simplified)`, `runSingleTraderWithStrategy.csx`,
+   `runMultiTraderWithStrategies.csx`, `paramSweep.csx`, `StrategyConfig.txt` (v1 Default + varsa
+   v2 alternatif signalModeIndex), `OptimizationConfig.txt`, `GenerateReplaySampleBundles.csx`,
+   `inputs/python/offlineReplay/playlist.json` (SON İKİSİNDE ÖNCE STRATEJİ ZATEN VAR MI DİYE
+   KONTROL ET — bazıları önceden listede olabilir, mükerrer ekleme, bkz. SuperTrend'de yapılan
+   hata: aynı satırı iki kere eklemiştim, parite grep'i yakaladı).
+7. `CustomConsensusExample.csx`'e yeni child ekle (id = önceki en yüksek + 1), `AddChild` çağrısı,
+   `AllNAgreeConsensus` fonksiyonunu bir artan N ile yeniden adlandır (`traders.Count >= N` + tüm
+   child'ların aynı yönde olması).
+8. `AlgoTrade.Console/Program.cs`'e DOKUNMA (Most+MA orada hiç eşleşmiyor, kasıtlı atlanıyor).
+9. Grep ile parite doğrulaması: önceki strateji adı vs yeni strateji adı, her dosyada eşit sayıda
+   geçmeli (GenerateReplaySampleBundles.csx/playlist.json hariç — orada asimetri normal olabilir,
+   ÖNCEDEN var olup olmadığını kontrol ederek yorumla).
+10. Kısa Türkçe özet ver. Kullanıcı "commit mesajı ver" derse: kısa, edilgen dil (yapıldı/edildi),
+    madde madde, ONA VERDİĞİM ÖNCEKİ FORMATI bozmadan (bkz. sohbet geçmişi — dash bullet + girintili
+    devam satırları).
+11. Memory'e (`C:\Users\Pc\.claude\projects\D--SageProjects-AlgoTrade\memory\`) yeni bir
+    `algotrade_<strateji>_strategy.md` node'u ekle (bkz. `algotrade_supertrend_strategy.md` örnek
+    format) + `MEMORY.md`'ye tek satır pointer.
+
+### Kısıtlar / kullanıcı tercihleri
+
+- **ASLA** `git commit` çalıştırma — kullanıcı kendi commit atıyor.
+- Kullanıcı "adım adım ilerle" dedi (SimpleRSIStrategy sırasında) — genel kural: bir strateji
+  yazılırken TASARIM kararları (signalModeIndex menüsü gibi) için kısa onay iste, ama kullanıcı
+  "tam/anahtar teslim yap" dediğinde tüm rollout'u tek seferde, durmadan yap.
+- Build her zaman doğrulanmalı, 0 error şart.
+- Kullanıcının hızlı test yolu sabit: **Menu[8]→1** ve **Menu[8]→3** — bunlar hep en son yazılan
+  stratejiye aktif tutulmalı (`Config_01`/`Config_03`'teki `strategyChoice`/`optChoice`).
+
+### RESUME PROMPT (görev fiilen bitti — bu sadece ileride yeni bir Simple*Strategy eklenirse kullanılacak şablon)
+
+```
+docs/todo.md'deki "AKTİF GÖREV — Simple*Strategy'leri Ortak Mimariye Göre Yeniden Yazma" node'unu
+oku - 21 strateji zaten bitti (SimpleMACrossStrategy kasıtlı atlandı). Eğer yeni bir Simple*
+Strategy eklenmesi isteniyorsa (yeni bir indikatör, ya da MACross'un ayrı tutulmasına karar
+verilirse), "Turnkey rollout deseni"ni takip ederek anahtar teslim yaz: strategy.cs + gerekiyorsa
+indikatöre priceSource + build kontrolü + Config_01/Config_03'e ekleyip aktif yap + tüm diğer
+config/script dosyalarına yay (GenerateReplaySampleBundles.csx/playlist.json'da önce zaten var mı
+kontrol et, CustomConsensusExample.csx'e eklerken 23 child'lık listenin tasarım notunu oku) +
+memory node'u yaz + node'daki "Durum özeti"ni güncelle.
+```
+
 ## İndikatör Kütüphanesi Bug'ı — MACD signalLine NaN Zehirlenmesi (2026-08-27)
 
 - [ ] **`MomentumIndicators.MACD()` — signalLine sonsuza kadar NaN kalabiliyor** (bulunma şekli:
