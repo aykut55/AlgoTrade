@@ -129,10 +129,10 @@ bool alEnabled                 = true;
 bool satEnabled                = true;
 bool flatOlEnabled             = false;
 bool pasGecEnabled             = false;
-bool karAlEnabled              = true;
+bool karAlEnabled              = false;
 bool zararKesEnabled           = false;
 bool gunSonuPozKapatEnabled    = false;
-bool timeFilteringEnabled      = true;
+bool timeFilteringEnabled      = false;
 string signalsStartDateTime    = "2025.05.25 09:00:00";
 string signalsStopDateTime     = "2025.06.02 17:55:00";
 bool tradeStartBarIndexEnabled = false;
@@ -203,13 +203,15 @@ else if (optChoice == 1)
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
         // MA method'lar en dışta - sabit kalirken fastPeriod/slowPeriod taranir.
-        //("fastMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
-        //("slowMaMethod", 0, 2, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
-        ("fastPeriod",  5, 420, 10),
-        ("slowPeriod", 20, 420, 10),
+        //("fastMaMethod", 0, 20, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+        //("slowMaMethod", 0, 20, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
+        ("fastPeriod", 10, 100, 1),
+        ("slowPeriod", 20, 100, 1),
     };
     fixedParams = new Dictionary<string, object>
     {
+        ["fastMaMethod"]    = "EMA",
+        ["slowMaMethod"]    = "EMA",
         ["priceSource"]     = "Close",
         ["signalModeIndex"] = 0,
         ["exitModeIndex"]   = 4   // 4: Anlık kar/zarar fiyat seviyesi - 1000 TL üzerinde kar al (SimpleMAStrategy.cs:358)
