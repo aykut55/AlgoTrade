@@ -89,14 +89,19 @@ desktop.ini
 
 # DearPyGuiDataPlotter / DearImGuiBundleDataPlotter alt-projeleri
 src/DearImGuiBundleDataPlotter/*.ini
-# input.json / latest_bundle.npz / latest_bundle.view.json BILEREK commitli -
-# runMe.bat'in C#'siz standalone acilista da gercek veriyle gelmesi icin
-# (bkz. docs/InputConfig.md). Ustune yazilirsa tekrar commit'lemek
-# kullanicinin sorumlulugunda. full_pipeline_bundle.* gibi diger
-# alternatif bundle'lar ve IPC kuyrugu hala runtime verisi, ignore'da kalir.
+# latest_bundle.npz / latest_bundle.view.json artik ignore'da (2026-09-01, kullanici karari) -
+# her plotter kosusunda uzerine yazilan ~20MB'lik calisma ciktisi, git history'yi sisiriyordu.
+# Onceden "standalone demo verisi gelsin" diye commitliydi; standalone demo gerekiyorsa sabit
+# isimli ayri bir sample bundle commit'lenir. full_pipeline_bundle.* / IPC kuyrugu zaten runtime verisi.
 src/DearPyGuiDataPlotter/inputs/full_pipeline_bundle.npz
 src/DearPyGuiDataPlotter/inputs/full_pipeline_bundle.view.json
 src/DearPyGuiDataPlotter/inputs/runtime_commands/
+src/DearPyGuiDataPlotter/inputs/latest_bundle.npz
+src/DearPyGuiDataPlotter/inputs/latest_bundle.view.json
+inputs/python/dearPyGuiDataPlotter/latest_bundle.npz
+inputs/python/dearPyGuiDataPlotter/latest_bundle.view.json
+inputs/python/pythonPlotter/latest_bundle.npz
+inputs/python/pythonPlotter/latest_bundle.view.json
 
 # Offline Replay: samples/ commit'lenmiyor (GenerateReplaySampleBundles.csx cikisi, buyuk,
 # playlist.json'dan bagimsiz elle uretilen/kopyalanan ornek veri - kullanici karari,
