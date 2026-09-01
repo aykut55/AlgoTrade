@@ -238,21 +238,21 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (signalModeIndex == 0)
             {
                 // 0: Fast/Slow MA kesişimi - fastMA slowMA'yı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, fastMA, slowMA)) buy  = true;
-                if (AsagiKesti(currentIndex, fastMA, slowMA))  sell = true;
+                if (YukarıKesti(currentIndex, fastMA, slowMA)) buy = true;
+                if (AsagiKesti(currentIndex, fastMA, slowMA)) sell = true;
             }
             else if (signalModeIndex == 1)
             {
                 // 1: Fiyat-FastMA kesişimi - fiyat fastMA'yı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, source, fastMA)) buy  = true;
-                if (AsagiKesti(currentIndex, source, fastMA))  sell = true;
+                if (YukarıKesti(currentIndex, source, fastMA)) buy = true;
+                if (AsagiKesti(currentIndex, source, fastMA)) sell = true;
             }
             else if (signalModeIndex == 2)
             {
                 // 2: SlowMA slope flip - slowMA'nın kendi yönü dönüyor (düşen/düz → yükselen = AL)
                 if (currentIndex >= 2)
                 {
-                    double slopeNow  = slowMA[currentIndex]     - slowMA[currentIndex - 1];
+                    double slopeNow  = slowMA[currentIndex] - slowMA[currentIndex - 1];
                     double slopePrev = slowMA[currentIndex - 1] - slowMA[currentIndex - 2];
                     if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
                     if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
@@ -271,7 +271,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 if (currentSlowMA != 0.0)
                 {
                     double distanceRatio = (currentFastMA - currentSlowMA) / currentSlowMA;
-                    if (distanceRatio >  bandThreshold) buy  = true;
+                    if (distanceRatio > bandThreshold) buy   = true;
                     if (distanceRatio < -bandThreshold) sell = true;
                 }
             }
@@ -330,17 +330,21 @@ namespace AlgoTrade.Core.Trading.Strategies
                 {
                     bool fastMARising  = fastMA[currentIndex] > fastMA[currentIndex - slopeLookback];
                     bool fastMAFalling = fastMA[currentIndex] < fastMA[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, fastMA, slowMA) && fastMARising)  buy  = true;
+                    if (Buyuk(currentIndex, fastMA, slowMA) && fastMARising) buy   = true;
                     if (Kucuk(currentIndex, fastMA, slowMA) && fastMAFalling) sell = true;
                 }
             }
             // ************************************************************************************************************************
 
-            // ÖRNEK: Trader referansını kullanarak kar al / zarar kes hesaplama
-            // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir
-            // Not: Trader.flags.XHesaplaEnabled kontrolu burada yapilmiyor - karAlZararKes'teki her
-            // metod zaten kendi icinde ayni flag'i kontrol edip kapaliysa 0 donuyor (bkz. KarAlZararKes.cs).
-            if (Trader != null)
+            // Trader referansını kullanarak kar al / zarar kes hesaplama.
+            // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir.
+            // GATE: Trader.signals.KarAlEnabled kapaliysa takeProfit HIC hesaplanmaz - hep false kalir.
+            // Aksi halde (KarAlEnabled=false iken) strateji yine TakeProfit isaretler, oncelik zincirinde
+            // buy/sell'i ezer ve MapStrategyCommandsToTradeCommands o sinyali dusurdugu icin o bar bos
+            // gecer (ornek: guclu trendde pozisyon 1000 TL kari gecince her bar TakeProfit doner, her
+            // death-cross yutulup pozisyon donmez kalir). Trader.flags.KarAlSeviyeHesaplaEnabled bu
+            // korumayi SAGLAMAZ - o flag ilk trade'den sonra SingleTrader.cs'de kosulsuz true olur.
+            if (Trader?.signals?.KarAlEnabled == true)
             {
                 if (exitModeIndex == 0)
                 {
@@ -374,7 +378,9 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (Trader != null)
+            // GATE: Trader.signals.ZararKesEnabled kapaliysa stopLoss HIC hesaplanmaz - hep false kalir
+            // (takeProfit ile ayni gerekce, yukariya bak).
+            if (Trader?.signals?.ZararKesEnabled == true)
             {
                 if (exitModeIndex == 0)
                 {
@@ -409,17 +415,23 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (flatModeIndex == 0)
+            if (Trader?.signals?.FlatOlEnabled == true)
             {
-                // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                flat = false;
+                if (flatModeIndex == 0)
+                {
+                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                    flat = false;
+                }
             }
             // ************************************************************************************************************************
 
-            if (skipModeIndex == 0)
+            if (Trader?.signals?.PasGecEnabled == true)
             {
-                // Skip olma durumu burada incelenir ve skip flag'i setlenir            
-                skip = false;
+                if (skipModeIndex == 0)
+                {
+                    // Skip olma durumu burada incelenir ve skip flag'i setlenir            
+                    skip = false;
+                }
             }
             // ************************************************************************************************************************
 
@@ -427,6 +439,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             // ************************************************************************************************************************
             // ************************************************************************************************************************
             // Sinyal önceliklendirmesi
+            // Not: takeProfit/stopLoss yukarida Trader.signals.KarAlEnabled/ZararKesEnabled ile gate'lendi,
+            // yani ilgili flag kapaliysa buraya hep false gelir ve zincir buy/sell'e duser.
             // ************************************************************************************************************************
             // ************************************************************************************************************************
             // ************************************************************************************************************************
