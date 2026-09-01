@@ -52,6 +52,12 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? macdSignal;
         private double[]? superTrend;
         private double[]? close;
+        // Run baglami - ILK OnStep cagrisinda Trader'dan cozulur (OnInit'te DEGIL: OnInit
+        // constructor'dan calisir, SetTrader() daha sonra SetStrategy() icinde -> OnInit'te Trader null).
+        private bool runContextResolved;
+        private int  timeframeMinutes;    // 1, 5, 15, 60, 240 ... (0 = SymbolPeriod cozulemedi)
+        private bool isOptimizationRun;   // true = opt taramasi icinde (Trader.OptimizationEnabled), false = tekli kosu
+
 
         public SimpleComboStrategyRule003(List<StockData> data, IndicatorManager indicators,
             int macdFastPeriod = 12, int macdSlowPeriod = 26, int macdSignalPeriod = 9,
@@ -100,8 +106,41 @@ namespace AlgoTrade.Core.Trading.Strategies
         private bool BuyLevel(int i)  => Buyuk(i, macd!, macdSignal!) && Kucuk(i, superTrend!, close!);
         private bool SellLevel(int i) => Kucuk(i, macd!, macdSignal!) && Buyuk(i, superTrend!, close!);
 
+        // Run baglamini (timeframe + opt mu) Trader'dan bir kez cozer. OnInit'te yapilamiyor
+        // (orada Trader henuz null); ilk OnStep cagrisinda cagrilir.
+        private void ResolveRunContext()
+        {
+            if (runContextResolved)
+                return;
+
+            runContextResolved = true;
+
+            isOptimizationRun = Trader?.OptimizationEnabled == true;
+
+            // SymbolPeriod: intraday'de dakika sayisi string'i ("5","15","240"); A/G/H/Y = Aylik/Gunluk/Haftalik/Yillik.
+            // Cozulemezse (null / "" / "N/A") timeframeMinutes = 0 -> cagiran kod "bilinmiyor" diye ele alir.
+            string sp = (Trader?.SymbolPeriod ?? "").Trim().ToUpperInvariant();
+            timeframeMinutes = sp switch
+            {
+                "G" => 1440,      // 1 gun   (takvim dk)
+                "H" => 10080,     // 1 hafta
+                "A" => 43200,     // ~1 ay
+                "Y" => 525600,    // ~1 yil  (365 * 1440)
+                _   => (int.TryParse(sp, out var tf) && tf > 0) ? tf : 0
+            };
+
+            // Opt'ta konsolu bogmasin diye sadece tekli kosuda logla
+            if (!isOptimizationRun)
+            {
+                string tfStr = Trader?.SymbolPeriod ?? "?";
+                Log($"[{Name}] timeframe={tfStr} ({timeframeMinutes}dk), optRun={isOptimizationRun}");
+            }
+        }
+
         public override TradeSignals OnStep(int currentIndex)
         {
+            ResolveRunContext();
+
             bool buy        = false;
             bool sell       = false;
             bool takeProfit = false;
