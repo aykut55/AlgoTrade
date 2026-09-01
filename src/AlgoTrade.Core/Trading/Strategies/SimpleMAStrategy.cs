@@ -46,19 +46,14 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - skipModeIndex: skip kategorisinin dispatch parametresi - PLACEHOLDER, henuz okunmuyor
     /// - ruleModeIndex: PLACEHOLDER, henuz okunmuyor - ileride ihtiyaç halinde kullanilacak ekstra eksen
     ///
-    /// Enable/disable katmanlarinda asimetri var:
-    /// - Buy/Sell/Flat/Skip: strateji disinda hicbir flag'e bakmaz, sadece kendi mantigiyla karar
-    ///   verip TradeSignals doner. Islem gerceklesip gerceklesmeyecegi TEK katmanda,
-    ///   SingleTrader.MapStrategyCommandsToTradeCommands() -> signals.AlEnabled/SatEnabled/... ile
-    ///   disaridan kontrol edilir.
-    /// - TakeProfit/StopLoss: buradaki her exitModeIndex dali, sinyali uretmeden ONCE
-    ///   Trader.flags?.XHesaplaEnabled kontrolu yapiyor (KarAlZararKes helper'inin kendi ic
-    ///   gate'i - karAlZararKes.cs'teki her metod zaten ayni flag'i tekrar kontrol ediyor, yani bu
-    ///   dis kontrol pratikte gereksiz/redundant). Sinyal uretilse bile ayrica
-    ///   MapStrategyCommandsToTradeCommands() -> signals.KarAlEnabled/ZararKesEnabled ikinci kez
-    ///   gate ediyor. Yani KarAl/ZararKes cift katmanli, Buy/Sell/Flat/Skip tek katmanli - tutarsiz
-    ///   ama zararsiz (flags.XHesaplaEnabled ilk trade'den sonra otomatik true olup bir daha hic
-    ///   false'a donmuyor, bkz. SingleTrader.cs ExecuteOrders).
+    /// Sinyal gate'i (OnStep sonu, oncelik zincirinden hemen once):
+    /// 6 sinyal (buy/sell/takeProfit/stopLoss/flat/skip) once strateji tarafindan hicbir trader
+    /// flag'ine bakilmadan uretilir; sonra ilgili enable flag'i ACIKCA false olan (Trader.signals.
+    /// AlEnabled/SatEnabled/KarAlEnabled/ZararKesEnabled/FlatOlEnabled/PasGecEnabled) sinyaller
+    /// sifirlanir. Amac: ust-oncelikli ama uygulanmayacak bir sinyal (or. KarAlEnabled=false iken
+    /// takeProfit) oncelik zincirinde alttaki gecerli sinyali (or. sell) sessizce ezmesin -
+    /// zincir tek TradeSignals dondurdugu icin ezilen sinyal trader'a hic ulasmaz.
+    /// MapStrategyCommandsToTradeCommands() ayni flag'leri ayrica kontrol eder (defensif ikinci katman).
     /// </summary>
     public class SimpleMAStrategy : BaseStrategy
     {
@@ -238,14 +233,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (signalModeIndex == 0)
             {
                 // 0: Fast/Slow MA kesişimi - fastMA slowMA'yı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, fastMA, slowMA)) buy = true;
-                if (AsagiKesti(currentIndex, fastMA, slowMA)) sell = true;
+                if (YukarıKesti(currentIndex, fastMA, slowMA)) buy  = true;
+                if (AsagiKesti(currentIndex, fastMA, slowMA))  sell = true;
             }
             else if (signalModeIndex == 1)
             {
                 // 1: Fiyat-FastMA kesişimi - fiyat fastMA'yı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, source, fastMA)) buy = true;
-                if (AsagiKesti(currentIndex, source, fastMA)) sell = true;
+                if (YukarıKesti(currentIndex, source, fastMA)) buy  = true;
+                if (AsagiKesti(currentIndex, source, fastMA))  sell = true;
             }
             else if (signalModeIndex == 2)
             {
@@ -271,7 +266,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 if (currentSlowMA != 0.0)
                 {
                     double distanceRatio = (currentFastMA - currentSlowMA) / currentSlowMA;
-                    if (distanceRatio > bandThreshold) buy   = true;
+                    if (distanceRatio > bandThreshold)  buy  = true;
                     if (distanceRatio < -bandThreshold) sell = true;
                 }
             }
@@ -330,21 +325,13 @@ namespace AlgoTrade.Core.Trading.Strategies
                 {
                     bool fastMARising  = fastMA[currentIndex] > fastMA[currentIndex - slopeLookback];
                     bool fastMAFalling = fastMA[currentIndex] < fastMA[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, fastMA, slowMA) && fastMARising) buy   = true;
+                    if (Buyuk(currentIndex, fastMA, slowMA) && fastMARising)  buy  = true;
                     if (Kucuk(currentIndex, fastMA, slowMA) && fastMAFalling) sell = true;
                 }
             }
             // ************************************************************************************************************************
 
-            // Trader referansını kullanarak kar al / zarar kes hesaplama.
-            // Trader property'si BaseStrategy.SetTrader() ile otomatik set edilir.
-            // GATE: Trader.signals.KarAlEnabled kapaliysa takeProfit HIC hesaplanmaz - hep false kalir.
-            // Aksi halde (KarAlEnabled=false iken) strateji yine TakeProfit isaretler, oncelik zincirinde
-            // buy/sell'i ezer ve MapStrategyCommandsToTradeCommands o sinyali dusurdugu icin o bar bos
-            // gecer (ornek: guclu trendde pozisyon 1000 TL kari gecince her bar TakeProfit doner, her
-            // death-cross yutulup pozisyon donmez kalir). Trader.flags.KarAlSeviyeHesaplaEnabled bu
-            // korumayi SAGLAMAZ - o flag ilk trade'den sonra SingleTrader.cs'de kosulsuz true olur.
-            if (Trader?.signals?.KarAlEnabled == true)
+            if (Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -378,9 +365,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            // GATE: Trader.signals.ZararKesEnabled kapaliysa stopLoss HIC hesaplanmaz - hep false kalir
-            // (takeProfit ile ayni gerekce, yukariya bak).
-            if (Trader?.signals?.ZararKesEnabled == true)
+            if (Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -415,32 +400,56 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (Trader?.signals?.FlatOlEnabled == true)
+            if (flatModeIndex == 0)
             {
-                if (flatModeIndex == 0)
-                {
-                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                    flat = false;
-                }
+                // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                flat = false;
             }
             // ************************************************************************************************************************
 
-            if (Trader?.signals?.PasGecEnabled == true)
+            if (skipModeIndex == 0)
             {
-                if (skipModeIndex == 0)
-                {
-                    // Skip olma durumu burada incelenir ve skip flag'i setlenir            
-                    skip = false;
-                }
+                // Skip olma durumu burada incelenir ve skip flag'i setlenir            
+                skip = false;
             }
+            // ************************************************************************************************************************
+
+            // ------------------------------------------------------------------------------------------------------------------
+            // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.
+            // Yukarıda 6 sinyal (buy/sell/takeProfit/stopLoss/flat/skip) strateji tarafından hiçbir trader
+            // flag'ine bakılmadan, tamamen kendi mantığıyla üretildi. Burada, öncelik zincirine girmeden,
+            // ilgili enable flag'i AÇIKÇA false olanları sıfırlıyoruz.
+            //
+            // Neden burada (zincirden önce): OnStep tek bir TradeSignals döndürür ve aşağıdaki öncelik
+            // zinciri (skip > flat > TP > SL > buy > sell) ilk true olanı döndürüp gerisini atar. Üst
+            // öncelikli ama trader'ın uygulamayacağı bir sinyal (ör. KarAlEnabled=false iken takeProfit)
+            // true kalırsa, zincir TakeProfit döndürür; MapStrategyCommandsToTradeCommands() onu flag
+            // kapalı diye düşürür - ve o barın ALTTAKİ geçerli sinyali (ör. Sell) hiç döndürülmediği için
+            // SESSİZCE KAYBOLUR. Güçlü trendde bu pozisyonu kilitler (poz kâra geçince her bar
+            // takeProfit=true, her death-cross yutulur, poz dönmez). Gate zincirden önce olunca kapalı
+            // sinyal daha zincire girmeden elenir, zincir bir sonraki geçerli sinyale düşer.
+            //
+            // Neden "== false" (,"!= true" değil): Trader/signals null ise (strateji trader'sız çalışırsa,
+            // ör. birim test) "== false" -> false, sinyal sıfırlanmaz; strateji ham üretici gibi davranır.
+            //
+            // MapStrategyCommandsToTradeCommands() aynı flag'leri bir kez daha kontrol eder (çift katman)
+            // ama tek başına shadowing'i çözemez - asıl düzeltme buradaki gate. Trader.flags.
+            // KarAlSeviyeHesaplaEnabled de korumaz: ilk trade'den sonra koşulsuz true olur, niyeti yansıtmaz.
+            // ------------------------------------------------------------------------------------------------------------------
+            if (Trader?.signals?.AlEnabled      == false) buy        = false;
+            if (Trader?.signals?.SatEnabled     == false) sell       = false;
+            if (Trader?.signals?.KarAlEnabled   == false) takeProfit = false;
+            if (Trader?.signals?.ZararKesEnabled== false) stopLoss   = false;
+            if (Trader?.signals?.FlatOlEnabled  == false) flat       = false;
+            if (Trader?.signals?.PasGecEnabled  == false) skip       = false;
             // ************************************************************************************************************************
 
             // ************************************************************************************************************************
             // ************************************************************************************************************************
             // ************************************************************************************************************************
             // Sinyal önceliklendirmesi
-            // Not: takeProfit/stopLoss yukarida Trader.signals.KarAlEnabled/ZararKesEnabled ile gate'lendi,
-            // yani ilgili flag kapaliysa buraya hep false gelir ve zincir buy/sell'e duser.
+            // Not: 6 sinyal de yukaridaki gate blogunda Trader.signals.*Enabled ile filtrelendi -
+            // flag'i kapali olan sinyal buraya hep false gelir, zincir bir sonraki gecerli sinyale duser.
             // ************************************************************************************************************************
             // ************************************************************************************************************************
             // ************************************************************************************************************************

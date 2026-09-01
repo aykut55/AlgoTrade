@@ -32,6 +32,15 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
     ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
     /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
+    ///
+    /// Sinyal gate'i (OnStep sonu, oncelik zincirinden hemen once):
+    /// 6 sinyal (buy/sell/takeProfit/stopLoss/flat/skip) once strateji tarafindan hicbir trader
+    /// flag'ine bakilmadan uretilir; sonra ilgili enable flag'i ACIKCA false olan (Trader.signals.
+    /// AlEnabled/SatEnabled/KarAlEnabled/ZararKesEnabled/FlatOlEnabled/PasGecEnabled) sinyaller
+    /// sifirlanir. Amac: ust-oncelikli ama uygulanmayacak bir sinyal (or. KarAlEnabled=false iken
+    /// takeProfit) oncelik zincirinde alttaki gecerli sinyali (or. sell) sessizce ezmesin -
+    /// zincir tek TradeSignals dondurdugu icin ezilen sinyal trader'a hic ulasmaz.
+    /// MapStrategyCommandsToTradeCommands() ayni flag'leri ayrica kontrol eder (defensif ikinci katman).
     /// </summary>
     public class SimpleMomentumStrategy : BaseStrategy
     {
@@ -300,6 +309,35 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             if (flatModeIndex == 0) flat = false;
             if (skipModeIndex == 0) skip = false;
+
+            // ------------------------------------------------------------------------------------------------------------------
+            // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.
+            // Yukarıda 6 sinyal (buy/sell/takeProfit/stopLoss/flat/skip) strateji tarafından hiçbir trader
+            // flag'ine bakılmadan, tamamen kendi mantığıyla üretildi. Burada, öncelik zincirine girmeden,
+            // ilgili enable flag'i AÇIKÇA false olanları sıfırlıyoruz.
+            //
+            // Neden burada (zincirden önce): OnStep tek bir TradeSignals döndürür ve aşağıdaki öncelik
+            // zinciri (skip > flat > TP > SL > buy > sell) ilk true olanı döndürüp gerisini atar. Üst
+            // öncelikli ama trader'ın uygulamayacağı bir sinyal (ör. KarAlEnabled=false iken takeProfit)
+            // true kalırsa, zincir TakeProfit döndürür; MapStrategyCommandsToTradeCommands() onu flag
+            // kapalı diye düşürür - ve o barın ALTTAKİ geçerli sinyali (ör. Sell) hiç döndürülmediği için
+            // SESSİZCE KAYBOLUR. Güçlü trendde bu pozisyonu kilitler (poz kâra geçince her bar
+            // takeProfit=true, her death-cross yutulur, poz dönmez). Gate zincirden önce olunca kapalı
+            // sinyal daha zincire girmeden elenir, zincir bir sonraki geçerli sinyale düşer.
+            //
+            // Neden "== false" (,"!= true" değil): Trader/signals null ise (strateji trader'sız çalışırsa,
+            // ör. birim test) "== false" -> false, sinyal sıfırlanmaz; strateji ham üretici gibi davranır.
+            //
+            // MapStrategyCommandsToTradeCommands() aynı flag'leri bir kez daha kontrol eder (çift katman)
+            // ama tek başına shadowing'i çözemez - asıl düzeltme buradaki gate. Trader.flags.
+            // KarAlSeviyeHesaplaEnabled de korumaz: ilk trade'den sonra koşulsuz true olur, niyeti yansıtmaz.
+            // ------------------------------------------------------------------------------------------------------------------
+            if (Trader?.signals?.AlEnabled      == false) buy        = false;
+            if (Trader?.signals?.SatEnabled     == false) sell       = false;
+            if (Trader?.signals?.KarAlEnabled   == false) takeProfit = false;
+            if (Trader?.signals?.ZararKesEnabled== false) stopLoss   = false;
+            if (Trader?.signals?.FlatOlEnabled  == false) flat       = false;
+            if (Trader?.signals?.PasGecEnabled  == false) skip       = false;
 
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
