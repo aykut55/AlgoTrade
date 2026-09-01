@@ -436,18 +436,20 @@ Log($"\nProcessed {totalBars} bars.");
 // =============================================================================
 // 9b. Kaydet + Plot - PARALEL
 // Istatistik dosyalarini diske yazma, eski pythonnet plot ve yeni DearPyGuiDataPlotter
-// ayni anda baslatilir; hicbiri digerinin bitmesini/kapatilmasini beklemez. Ikisi de
-// birer arka plan Task'i olarak calisir, en sonda hepsi birlikte (Task.WhenAll) beklenir -
-// yani iki plot penceresi de ayni anda acik olur, log dosyalari da onlar acikken arka
-// planda yazilir.
+// ayni anda baslatilir; hicbiri digerinin bitmesini/kapatilmasini beklemez. Dosya yazimi
+// (fileTasks) ve plot pencereleri (plotTasks) AYRI listelerde tutulur ve ayri ayri
+// beklenir: fileTasks bitince (plotlar hala acikken) "dosyalar yazildi" logu basilir,
+// plotTasks bitince (pencereler kapatilinca) "hepsi bitti" logu basilir - boylece plotlara
+// bakarken dosya yazimi bitti mi diye ekrandan takip edilebilir.
 // =============================================================================
-var backgroundTasks = new List<Task>();
+var fileTasks = new List<Task>();
+var plotTasks = new List<Task>();
 
 if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
 {
     if (!singleTrader.OptimizationEnabled)
     {
-        backgroundTasks.Add(Task.Run(() =>
+        fileTasks.Add(Task.Run(() =>
         {
             Log("\nSaving statistics to files...");
             singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
@@ -470,11 +472,11 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
     algoTrader.RegisterLogger(LogManager.GetInstance());
 
     if (algoTrader.SetupPython())
-        backgroundTasks.Add(algoTrader.PlotSingleTraderData(singleTrader));
+        plotTasks.Add(algoTrader.PlotSingleTraderData(singleTrader));
     else
         Log("[HATA] Python setup failed. PlotSingleTraderData skipped.");
 
-    backgroundTasks.Add(Task.Run(() =>
+    plotTasks.Add(Task.Run(() =>
     {
         try
         {
@@ -509,8 +511,14 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
     }));
 }
 
-// Hepsi paralel baslatildi; simdi hepsinin (dosya yazimi + iki plot penceresinin kapanmasi) bitmesini birlikte bekle.
-await Task.WhenAll(backgroundTasks);
+// Hepsi paralel baslatildi. Once sadece dosya yazimini bekle - plotlar hala acik olabilir,
+// bu yuzden bu mesaj plot pencereleri kapatilmadan gorunur.
+await Task.WhenAll(fileTasks);
+Log("\nTum dosyalar diske yazildi.");
+
+// Simdi plot pencerelerinin kapatilmasini bekle.
+await Task.WhenAll(plotTasks);
+Log("\nTum plot pencereleri kapatildi - bekleyen islem kalmadi.");
 
 // =============================================================================
 // 12. Temizle

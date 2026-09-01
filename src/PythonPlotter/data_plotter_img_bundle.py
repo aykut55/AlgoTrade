@@ -2914,29 +2914,22 @@ class DataPlotterImgBundle:
                 total = sum(ratios)
                 row_ratios_list = [r/total for r in ratios] if total > 0 else None
 
-                print(f"[DEBUG] Panel height_ratios: {[self.panels[idx].height_ratio for idx in sorted_indices]}")
-                print(f"[DEBUG] Normalized ratios: {row_ratios_list}")
-
                 # Create SubplotsRowColRatios object if ratios are available
                 if row_ratios_list is not None:
                     # Try creating SubplotsRowColRatios object with constructor
                     try:
                         row_col_ratios = implot.SubplotsRowColRatios(row_ratios_list, None)
-                        print(f"[DEBUG] Created SubplotsRowColRatios object successfully")
-                    except Exception as e1:
-                        print(f"[DEBUG] Constructor with args failed: {e1}")
+                    except Exception:
                         try:
                             # Try without arguments
                             row_col_ratios = implot.SubplotsRowColRatios()
-                            print(f"[DEBUG] Created empty SubplotsRowColRatios, trying to set rows...")
                             # Try different methods to set ratios
                             if hasattr(row_col_ratios, 'set_row_ratios'):
                                 row_col_ratios.set_row_ratios(row_ratios_list)
                             elif hasattr(row_col_ratios, 'row_ratios'):
                                 row_col_ratios.row_ratios = row_ratios_list
-                            print(f"[DEBUG] Set row_ratios on object")
                         except Exception as e2:
-                            print(f"[DEBUG] Empty constructor failed: {e2}")
+                            print(f"[WARN] SubplotsRowColRatios olusturulamadi: {e2}")
                             row_col_ratios = None
                 else:
                     row_col_ratios = None

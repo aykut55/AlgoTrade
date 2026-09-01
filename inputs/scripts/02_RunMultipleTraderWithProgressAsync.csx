@@ -195,7 +195,7 @@ var indicators = algoTrader.CreateIndicators();
 // =============================================================================
 Log("\nCreating multipleTrader...");
 
-var multipleTrader = new MultipleTrader(0, data, indicators, null);
+var multipleTrader = new MultipleTrader(0, data, indicators, LogManager.GetInstance());
 multipleTrader.Reset();
 multipleTrader.WriteChildTradersDataToFiles = writeChildTradersDataToFiles;
 
@@ -233,7 +233,7 @@ Log("\nCreating child traders...");
 {
     int childId = 0;
 
-    var childTrader = new SingleTrader(childId, "childTrader_0", data, indicators, null);
+    var childTrader = new SingleTrader(childId, "childTrader_0", data, indicators, LogManager.GetInstance());
 
     childTrader.RunMode = selectedRunMode;
 
@@ -278,7 +278,7 @@ Log("\nCreating child traders...");
 {
     int childId = 1;
 
-    var childTrader = new SingleTrader(childId, "childTrader_1", data, indicators, null);
+    var childTrader = new SingleTrader(childId, "childTrader_1", data, indicators, LogManager.GetInstance());
 
     childTrader.RunMode = selectedRunMode;
 
@@ -323,7 +323,7 @@ Log("\nCreating child traders...");
 {
     int childId = 2;
 
-    var childTrader = new SingleTrader(childId, "childTrader_2", data, indicators, null);
+    var childTrader = new SingleTrader(childId, "childTrader_2", data, indicators, LogManager.GetInstance());
 
     childTrader.RunMode = selectedRunMode;
 
@@ -438,37 +438,10 @@ timeManager.RestartTimer("3");
 multipleTrader.Finalize();
 timeManager.StopTimer("3");
 
-// Dosyaya yazma
-if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
-{
-    // MultipleTrader bar-by-bar lists (Yon/Seviye/Sinyal per trader)
-    Log("\nSaving MultipleTraderLists to files...");
-    multipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
-
-    // mainTrader + childTrader'lari yan yana karsilastiran tek dosya (grid) -
-    // AlgoTrade.cs:1598 WriteMultipleTraderStatistics ile ayni.
-    Log("\nSaving MultipleTraderStatistics (grid) to files...");
-    multipleTrader.WriteMultipleTraderStatistics(AppSettings.LogsDir);
-
-    if (mainTrader.SaveStatisticsToFile)
-    {
-        Log("\nSaving mainTrader statistics to files...");
-        mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
-    }
-
-    // AlgoTrade.cs:1611 (trader.WriteChildTradersDataToFiles) ile ayni gate.
-    if (writeChildTradersDataToFiles)
-    {
-        foreach (var childTrader in multipleTrader.Traders)
-        {
-            if (childTrader.SaveStatisticsToFile)
-                childTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
-        }
-    }
-}
-
 // AlgoTrade.cs:2138-2139 StopTimer("1")/StopTimer("0") ile ayni nokta (dosya yazimindan sonra,
 // plot'tan once - menude de t0/t1 olcumu plot'u kapsamiyor, bkz. asagidaki "8b. Plot" notu).
+// Not: dosya yazimi artik plot'tan once bitmeyi beklemiyor - asagida "8b" ile PARALEL calisiyor,
+// bu yuzden StopTimer burada, dosya yazimi baslamadan cagriliyor (olcum degismesin diye).
 timeManager.StopTimer("1");
 timeManager.StopTimer("0");
 
@@ -491,11 +464,62 @@ Log($"\nt3 = {t3} msec. <==> Finalizing multipleTrader elapsed time");
 Log($"\nProcessed {totalBars} bars with {multipleTrader.Traders.Count} child traders.");
 
 // =============================================================================
-// 8b. Plot (pythonnet + DearPyGuiDataPlotter)
-// t0-t3 olcumunden SONRA calisiyor - menude de Plot, RunMultipleTraderWithProgressAsync()
-// donduktan (yani t0-t3 hesaplandiktan) SONRA, runMultipleTraderAlgoTrade() icinde tetikleniyor
-// (Program.cs:872-904) - plot penceresinin acik kalma suresi t0/t1'i sismesin diye.
+// 8b. Kaydet + Plot - PARALEL
+// Dosyaya yazma (Lists/Statistics/grid, mainTrader + childTrader'lar), eski pythonnet plot ve
+// yeni DearPyGuiDataPlotter ayni anda baslatilir; hicbiri digerinin bitmesini/kapatilmasini
+// beklemez. Hepsi birer arka plan Task'i olarak calisir, en sonda hepsi birlikte
+// (Task.WhenAll) beklenir - t0-t3 olcumunden SONRA calisiyor (menude de Plot,
+// RunMultipleTraderWithProgressAsync() donduktan SONRA, runMultipleTraderAlgoTrade() icinde
+// tetikleniyor - Program.cs:872-904 - plot/kayit suresi t0/t1'i sismesin diye).
 // =============================================================================
+var fileTasks = new List<Task>();
+var plotTasks = new List<Task>();
+
+if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
+{
+    fileTasks.Add(Task.Run(() =>
+    {
+        // MultipleTrader bar-by-bar lists (Yon/Seviye/Sinyal per trader)
+        Log("\nSaving MultipleTraderLists to files...");
+        multipleTrader.WriteMultipleTraderListsToFiles(AppSettings.LogsDir);
+        Log("\nMultipleTraderLists saved.");
+
+        // mainTrader + childTrader'lari yan yana karsilastiran tek dosya (grid) -
+        // AlgoTrade.cs:1598 WriteMultipleTraderStatistics ile ayni.
+        Log("\nSaving MultipleTraderStatistics (grid) to files...");
+        multipleTrader.WriteMultipleTraderStatistics(AppSettings.LogsDir);
+        Log("\nMultipleTraderStatistics (grid) saved.");
+    }));
+
+    if (mainTrader.SaveStatisticsToFile)
+    {
+        fileTasks.Add(Task.Run(() =>
+        {
+            Log("\nSaving mainTrader statistics to files...");
+            mainTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+            Log("\nmainTrader statistics saved.");
+        }));
+    }
+
+    // AlgoTrade.cs:1611 (trader.WriteChildTradersDataToFiles) ile ayni gate.
+    if (writeChildTradersDataToFiles)
+    {
+        foreach (var childTrader in multipleTrader.Traders)
+        {
+            if (childTrader.SaveStatisticsToFile)
+            {
+                var trader = childTrader;
+                fileTasks.Add(Task.Run(() =>
+                {
+                    Log($"\nSaving childTrader[{trader.GetId()}] statistics to files...");
+                    trader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+                    Log($"\nchildTrader[{trader.GetId()}] statistics saved.");
+                }));
+            }
+        }
+    }
+}
+
 if (!IsCancellationRequested && !multipleTrader.IsStopRequested && selectedRunMode != TraderRunMode.QueryOnly)
 {
     Log("");
@@ -503,42 +527,53 @@ if (!IsCancellationRequested && !multipleTrader.IsStopRequested && selectedRunMo
     algoTrader.RegisterLogger(LogManager.GetInstance());
 
     if (algoTrader.SetupPython())
-        await algoTrader.PlotMultipleTraderData(multipleTrader);
+        plotTasks.Add(algoTrader.PlotMultipleTraderData(multipleTrader));
     else
         Log("[HATA] Python setup failed. PlotMultipleTraderData skipped.");
 
-    try
+    plotTasks.Add(Task.Run(() =>
     {
-        var bundleConverter = new TradeDataBundleConverter();
-        string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
-        var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(multipleTrader, bundleOutDir);
+        try
+        {
+            var bundleConverter = new TradeDataBundleConverter();
+            string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+            var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(multipleTrader, bundleOutDir);
 
-        // Ayni bundle'i outputs/logs'a da yaz (MultipleTraderLists.csv/Statistics.txt ile ayni
-        // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
-        bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
-        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\MultipleTraderBundle.npz'e de yazildi.");
+            // Ayni bundle'i outputs/logs'a da yaz (MultipleTraderLists.csv/Statistics.txt ile ayni
+            // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
+            bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
+            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\MultipleTraderBundle.npz'e de yazildi.");
 
-        // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
-        // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
-        bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
-        bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
-        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
+            // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
+            // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
+            bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+            bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
 
-        // true: eski tip plotter gibi, pencere kapanana kadar bloklar. false: hemen doner,
-        // process arka planda acik kalir (hot-reload akisi).
-        bool blockDearPyGuiPlotterUntilClosed = true;
-
-        var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
-        dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
-        dearPyGuiTestPlotter.StartPlotter();
-        dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockDearPyGuiPlotterUntilClosed);
-        Log($"[DearPyGuiDataPlotter] MultipleTrader datasi yuklendi: {bundlePath}");
-    }
-    catch (Exception ex)
-    {
-        Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
-    }
+            // Bu cagri kendi Task.Run thread'ini pencere kapanana kadar bloklar - ana akisi
+            // ya da diger background task'lari (dosya yazma, eski plot) ETKILEMEZ, hepsi
+            // zaten paralel calisiyor.
+            var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
+            dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
+            dearPyGuiTestPlotter.StartPlotter();
+            dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockUntilClosed: true);
+            Log($"[DearPyGuiDataPlotter] MultipleTrader datasi yuklendi: {bundlePath}");
+        }
+        catch (Exception ex)
+        {
+            Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
+        }
+    }));
 }
+
+// Hepsi paralel baslatildi. Once sadece dosya yazimini bekle - plotlar hala acik olabilir,
+// bu yuzden bu mesaj plot pencereleri kapatilmadan gorunur.
+await Task.WhenAll(fileTasks);
+Log("\nTum dosyalar diske yazildi.");
+
+// Simdi plot pencerelerinin kapatilmasini bekle.
+await Task.WhenAll(plotTasks);
+Log("\nTum plot pencereleri kapatildi - bekleyen islem kalmadi.");
 
 // =============================================================================
 // 10. Temizle
