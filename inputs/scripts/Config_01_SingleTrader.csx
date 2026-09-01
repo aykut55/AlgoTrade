@@ -137,8 +137,8 @@ else if (strategyChoice == 1)
     {
         ["fastPeriod"] = 8,
         ["slowPeriod"] = 21,
-        ["fastMaMethod"] = "SIMPLE",
-        ["slowMaMethod"] = "SIMPLE",
+        ["fastMaMethod"] = "EMA",
+        ["slowMaMethod"] = "EMA",
         ["priceSource"] = "Close",
         ["signalModeIndex"] = 0,
         ["exitModeIndex"] = 4   // 4: Anlık kar/zarar fiyat seviyesi - 1000 TL üzerinde kar al (SimpleMAStrategy.cs:358)

@@ -38,10 +38,10 @@ void OnApplyUserFlags(SingleTrader trader)
     trader.signals.SatEnabled                  = true;
     trader.signals.FlatOlEnabled               = false;
     trader.signals.PasGecEnabled               = false;
-    trader.signals.KarAlEnabled                = true;
+    trader.signals.KarAlEnabled                = false;
     trader.signals.ZararKesEnabled             = false;
     trader.signals.GunSonuPozKapatEnabled      = false;
-    trader.signals.TimeFilteringEnabled        = true;
+    trader.signals.TimeFilteringEnabled        = false;
     trader.signals.EquityCurveFilteringEnabled = false;
 
     var dateTimes       = new string[] { "2025.05.25 09:00:00", "2025.06.02 17:55:00" };
