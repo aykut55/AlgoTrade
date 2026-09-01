@@ -127,10 +127,10 @@ else
 // =============================================================================
 bool alEnabled                 = true;
 bool satEnabled                = true;
-bool flatOlEnabled             = false;
-bool pasGecEnabled             = false;
-bool karAlEnabled              = false;
-bool zararKesEnabled           = false;
+bool flatOlEnabled             = true;
+bool pasGecEnabled             = true;
+bool karAlEnabled              = true;
+bool zararKesEnabled           = true;
 bool gunSonuPozKapatEnabled    = false;
 bool timeFilteringEnabled      = false;
 string signalsStartDateTime    = "2025.05.25 09:00:00";
@@ -205,16 +205,20 @@ else if (optChoice == 1)
         // MA method'lar en dışta - sabit kalirken fastPeriod/slowPeriod taranir.
         //("fastMaMethod", 0, 20, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
         //("slowMaMethod", 0, 20, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
-        ("fastPeriod", 10, 100, 1),
-        ("slowPeriod", 20, 100, 1),
+        ("fastPeriod", 50, 200, 5),
+        ("slowPeriod", 50, 200, 5),
     };
     fixedParams = new Dictionary<string, object>
     {
         ["fastMaMethod"]    = "EMA",
         ["slowMaMethod"]    = "EMA",
         ["priceSource"]     = "Close",
+
         ["signalModeIndex"] = 0,
-        ["exitModeIndex"]   = 4   // 4: Anlık kar/zarar fiyat seviyesi - 1000 TL üzerinde kar al (SimpleMAStrategy.cs:358)
+        ["exitModeIndex"]   = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
+        ["flatModeIndex"]   = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        ["skipModeIndex"]   = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        // ["exitModeIndex"] = 4     // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
     };
 }
 else if (optChoice == 2)

@@ -36,10 +36,10 @@ void OnApplyUserFlags(SingleTrader trader)
     trader.ConfigureUserFlagsOnce();
     trader.signals.AlEnabled                   = true;
     trader.signals.SatEnabled                  = true;
-    trader.signals.FlatOlEnabled               = false;
-    trader.signals.PasGecEnabled               = false;
-    trader.signals.KarAlEnabled                = false;
-    trader.signals.ZararKesEnabled             = false;
+    trader.signals.FlatOlEnabled               = true;
+    trader.signals.PasGecEnabled               = true;
+    trader.signals.KarAlEnabled                = true;
+    trader.signals.ZararKesEnabled             = true;
     trader.signals.GunSonuPozKapatEnabled      = false;
     trader.signals.TimeFilteringEnabled        = false;
     trader.signals.EquityCurveFilteringEnabled = false;
