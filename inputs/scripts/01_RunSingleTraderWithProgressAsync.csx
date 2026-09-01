@@ -39,7 +39,7 @@ void OnApplyUserFlags(SingleTrader trader)
     trader.signals.FlatOlEnabled               = true;
     trader.signals.PasGecEnabled               = true;
     trader.signals.KarAlEnabled                = true;
-    trader.signals.ZararKesEnabled             = true;
+    trader.signals.ZararKesEnabled             = false;   // TP-only: strateji stopLoss uretir ama gate sifirlar
     trader.signals.GunSonuPozKapatEnabled      = false;
     trader.signals.TimeFilteringEnabled        = false;
     trader.signals.EquityCurveFilteringEnabled = false;

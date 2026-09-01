@@ -144,8 +144,8 @@ else if (strategyChoice == 1)
         ["signalModeIndex"] = 0,
         ["exitModeIndex"]   = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
         ["flatModeIndex"]   = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        ["skipModeIndex"]   = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        // ["exitModeIndex"] = 4     // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
+        ["skipModeIndex"]   = 99,    // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        ["exitModeIndex"]   = 4      // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
     };
 }
 else if (strategyChoice == 2)
