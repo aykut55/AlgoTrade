@@ -152,10 +152,12 @@ class DataPlotter:
                   f"min={min(bn):.2f}  max={max(bn):.2f}")
 
         if td.komisyon_fiyat_list:
-            print(f"  Komisyon       : toplam={sum(td.komisyon_fiyat_list):.2f}")
+            # Kumulatif liste (her bar'da o ana kadarki toplam) - sum() degil son deger.
+            print(f"  Komisyon       : toplam={td.komisyon_fiyat_list[-1]:.2f}")
 
         if td.getiri_fiyat_net_list:
-            print(f"  Getiri Net     : toplam={sum(td.getiri_fiyat_net_list):.2f}")
+            # Kumulatif liste (her bar'da o ana kadarki toplam) - sum() degil son deger.
+            print(f"  Getiri Net     : toplam={td.getiri_fiyat_net_list[-1]:.2f}")
 
         if td.strategy_indicators:
             keys = list(td.strategy_indicators.keys()) \

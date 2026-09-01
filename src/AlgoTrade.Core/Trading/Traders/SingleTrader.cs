@@ -2553,34 +2553,22 @@ public class SingleTrader : MarketDataProvider, IDisposable
     {
         string configPath = Path.Combine(inputsDir, "StatisticsExporterConfig.json");
 
-        if (this.SaveFullListsCsvEnabled)
-        {
-            Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
-            statistics.SaveListsToCsvFromConfig(Path.Combine(outputDir, FullListsCsvFileName), configPath);
-        }
-
-        if (this.SaveFullListsTxtEnabled)
-        {
-            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
-            statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
-        }
-
-        // ********************************************************************************************************
-        // ********************************************************************************************************
-        // ********************************************************************************************************
-        // ********************************************************************************************************
-        // ********************************************************************************************************
+        // Not: FullListsCsv/Txt (SingleTraderLists.*) en buyuk/en yavas dosyalar (1.5+ GB
+        // olabiliyor) - digerlerinin progress'i ekranda gorunsun diye bunlar en sona alindi,
+        // bkz. asagida "Buyuk liste dosyalari (en son yazilir)" blogu.
 
         if (this.SaveFullStatsCsvEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsCsvFileName}...");
             statistics.SaveToCsv(Path.Combine(outputDir, FullStatsCsvFileName));
+            Log($"\t{FullStatsCsvFileName} saved.");
         }
 
         if (this.SaveFullStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {FullStatsTxtFileName}...");
             statistics.SaveToTxt(Path.Combine(outputDir, FullStatsTxtFileName));
+            Log($"\t{FullStatsTxtFileName} saved.");
         }
 
         // ********************************************************************************************************
@@ -2595,6 +2583,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
             Log($"\n\tSaving performans to {PerformansCsvFileName}...");
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
                 .SavePerformansToCsvFromConfig(Path.Combine(outputDir, PerformansCsvFileName), configPath);
+            Log($"\t{PerformansCsvFileName} saved.");
         }
 
         if (this.SavePerformansTxtEnabled)
@@ -2602,6 +2591,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
             Log($"\n\tSaving performans to {PerformansTxtFileName}...");
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
                 .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), configPath);
+            Log($"\t{PerformansTxtFileName} saved.");
         }
 
         // ********************************************************************************************************
@@ -2639,24 +2629,48 @@ public class SingleTrader : MarketDataProvider, IDisposable
         {
             Log($"\n\tSaving statistics to {FullStatsTxtFormattedFileName}...");
             statistics.SaveToTxtFormatted(Path.Combine(outputDir, FullStatsTxtFormattedFileName));
+            Log($"\t{FullStatsTxtFormattedFileName} saved.");
         }
 
         if (this.SaveMinimalStatsTxtFormattedEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalStatsTxtFormattedFileName}...");
             statistics.SaveToTxtMinimalFormatted(Path.Combine(outputDir, MinimalStatsTxtFormattedFileName));
+            Log($"\t{MinimalStatsTxtFormattedFileName} saved.");
         }
 
         if (this.SaveGridStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {GridStatsTxtFileName}...");
             statistics.SaveToTxtGrid(Path.Combine(outputDir, GridStatsTxtFileName), this.ReportContext);
+            Log($"\t{GridStatsTxtFileName} saved.");
         }
 
         if (this.SaveMinimalGridStatsTxtEnabled)
         {
             Log($"\n\tSaving statistics to {MinimalGridStatsTxtFileName}...");
             statistics.SaveToTxtMinimalGrid(Path.Combine(outputDir, MinimalGridStatsTxtFileName), this.ReportContext);
+            Log($"\t{MinimalGridStatsTxtFileName} saved.");
+        }
+
+        // ********************************************************************************************************
+        // Buyuk liste dosyalari (en son yazilir) - SingleTraderLists.csv/txt bar basina satir
+        // icerdigi icin 1.5+ GB olabiliyor; digerlerinin progress'i ekranda erken gorunsun
+        // diye kasitli olarak en sona birakildi.
+        // ********************************************************************************************************
+
+        if (this.SaveFullListsCsvEnabled)
+        {
+            Log($"\n\tSaving statistics to {FullListsCsvFileName}...");
+            statistics.SaveListsToCsvFromConfig(Path.Combine(outputDir, FullListsCsvFileName), configPath);
+            Log($"\t{FullListsCsvFileName} saved.");
+        }
+
+        if (this.SaveFullListsTxtEnabled)
+        {
+            Log($"\n\tSaving statistics to {FullListsTxtFileName}...");
+            statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), configPath);
+            Log($"\t{FullListsTxtFileName} saved.");
         }
 
         // Export (versiyonlu sütun tanımlarıyla çıktı)
@@ -2668,10 +2682,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
             Log($"\n\tExport: SaveListsToTxt (version={ExportVersion}) → {FullListsTxtFileName}...");
             statistics.SaveListsToTxtFromConfig(Path.Combine(outputDir, FullListsTxtFileName), exportConfigPath, ExportVersion);
+            Log($"\t{FullListsTxtFileName} (export) saved.");
 
             Log($"\n\tExport: SavePerformansToTxt (version={ExportVersion}) → {PerformansTxtFileName}...");
             new AlgoTrade.Core.Trading.Utils.StatisticsExporter(statistics)
                 .SavePerformansToTxtFromConfig(Path.Combine(outputDir, PerformansTxtFileName), exportConfigPath, ExportVersion);
+            Log($"\t{PerformansTxtFileName} (export) saved.");
         }
 
     }

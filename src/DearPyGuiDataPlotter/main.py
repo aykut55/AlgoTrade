@@ -38,16 +38,19 @@ class App:
         try:
             with dpg.font_registry():
                 with dpg.font(fontPath, 16) as defaultFont:
-                    dpg.add_font_range_hint(dpg.mvFontRangeHint_Default)
-                    dpg.add_font_range(0x11E, 0x11F)
-                    dpg.add_font_range(0x130, 0x131)
-                    dpg.add_font_range(0x15E, 0x15F)
+                    # Yeni dearpygui surumlerinde karakter araliklari otomatik yonetiliyor,
+                    # bu cagrilar artik no-op ve sadece DeprecationWarning basiyor.
+                    # dpg.add_font_range_hint(dpg.mvFontRangeHint_Default)
+                    # dpg.add_font_range(0x11E, 0x11F)
+                    # dpg.add_font_range(0x130, 0x131)
+                    # dpg.add_font_range(0x15E, 0x15F)
+                    pass
             dpg.bind_font(defaultFont)
         except Exception:
             pass
 
     def run(self):
-        subprocess.call("cls", shell=True)
+        # subprocess.call("cls", shell=True)  # AlgoTrade.Console ile ayni cmd penceresini paylastigi icin kaldirildi
         dpg.setup_dearpygui()
         dpg.show_viewport()
         try:

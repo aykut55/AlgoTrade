@@ -227,7 +227,7 @@ if (queryEnabled)
 // =============================================================================
 Log("\nCreating singleTrader...");
 
-var singleTrader = new SingleTrader(0, "singleTrader", data, indicators, null);
+var singleTrader = new SingleTrader(0, "singleTrader", data, indicators, LogManager.GetInstance());
 
 // =============================================================================
 // 6b. Callbacks
@@ -401,19 +401,6 @@ timeManager.RestartTimer("3");
 singleTrader.Finalize();
 timeManager.StopTimer("3");
 
-if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
-{
-    if (!singleTrader.OptimizationEnabled)
-    {
-        Log("\nSaving statistics to files...");
-        singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
-    }
-    else
-    {
-        Log("\nSkipping full statistics write in optimization mode...");
-    }
-}
-
 // =============================================================================
 // 10. Query Ozeti
 // =============================================================================
@@ -447,11 +434,35 @@ Log($"\nt3 = {t3} msec. <==> Finalizing singleTrader elapsed time");
 Log($"\nProcessed {totalBars} bars.");
 
 // =============================================================================
-// 9b. Plot (pythonnet + DearPyGuiDataPlotter)
-// t0-t3 olcumunden SONRA calisiyor - menude de Plot, RunSingleTraderWithProgressAsync()
+// 9b. Kaydet + Plot - PARALEL
+// Istatistik dosyalarini diske yazma, eski pythonnet plot ve yeni DearPyGuiDataPlotter
+// ayni anda baslatilir; hicbiri digerinin bitmesini/kapatilmasini beklemez. Ikisi de
+// birer arka plan Task'i olarak calisir, en sonda hepsi birlikte (Task.WhenAll) beklenir -
+// yani iki plot penceresi de ayni anda acik olur, log dosyalari da onlar acikken arka
+// planda yazilir.
+// =============================================================================
+var backgroundTasks = new List<Task>();
+
+if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
+{
+    if (!singleTrader.OptimizationEnabled)
+    {
+        backgroundTasks.Add(Task.Run(() =>
+        {
+            Log("\nSaving statistics to files...");
+            singleTrader.WriteStatisticsToFile(AppSettings.LogsDir, AppSettings.ConfigsDir);
+            Log("\nStatistics files saved.");
+        }));
+    }
+    else
+    {
+        Log("\nSkipping full statistics write in optimization mode...");
+    }
+}
+
+// t0-t3 olcumunden SONRA baslatiliyor - menude de Plot, RunSingleTraderWithProgressAsync()
 // donduktan (yani t0-t3 hesaplandiktan) SONRA, runSingleTraderAlgoTrade() icinde tetikleniyor
 // (Program.cs:793-825) - plot penceresinin acik kalma suresi t0/t1'i sismesin diye.
-// =============================================================================
 if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode != TraderRunMode.QueryOnly)
 {
     Log("");
@@ -459,42 +470,47 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
     algoTrader.RegisterLogger(LogManager.GetInstance());
 
     if (algoTrader.SetupPython())
-        await algoTrader.PlotSingleTraderData(singleTrader);
+        backgroundTasks.Add(algoTrader.PlotSingleTraderData(singleTrader));
     else
         Log("[HATA] Python setup failed. PlotSingleTraderData skipped.");
 
-    try
+    backgroundTasks.Add(Task.Run(() =>
     {
-        var bundleConverter = new TradeDataBundleConverter();
-        string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
-        var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(singleTrader, bundleOutDir);
+        try
+        {
+            var bundleConverter = new TradeDataBundleConverter();
+            string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+            var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(singleTrader, bundleOutDir);
 
-        // Ayni bundle'i outputs/logs'a da yaz (SingleTraderLists.csv/Statistics.txt ile ayni
-        // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
-        bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
-        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\SingleTraderBundle.npz'e de yazildi.");
+            // Ayni bundle'i outputs/logs'a da yaz (SingleTraderLists.csv/Statistics.txt ile ayni
+            // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
+            bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
+            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\SingleTraderBundle.npz'e de yazildi.");
 
-        // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
-        // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
-        bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
-        bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
-        Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
+            // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
+            // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
+            bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+            bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
 
-        // true: eski tip plotter gibi, pencere kapanana kadar bloklar. false: hemen doner,
-        // process arka planda acik kalir (hot-reload akisi).
-        bool blockDearPyGuiPlotterUntilClosed = true;
-
-        var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
-        dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
-        dearPyGuiTestPlotter.StartPlotter();
-        dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockDearPyGuiPlotterUntilClosed);
-        Log($"[DearPyGuiDataPlotter] SingleTrader datasi yuklendi: {bundlePath}");
-    }
-    catch (Exception ex)
-    {
-        Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
-    }
+            // Bu cagri kendi Task.Run thread'ini pencere kapanana kadar bloklar - ana akisi
+            // ya da diger background task'lari (istatistik yazma, eski plot) ETKILEMEZ,
+            // hepsi zaten paralel calisiyor.
+            var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
+            dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
+            dearPyGuiTestPlotter.StartPlotter();
+            dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockUntilClosed: true);
+            Log($"[DearPyGuiDataPlotter] SingleTrader datasi yuklendi: {bundlePath}");
+        }
+        catch (Exception ex)
+        {
+            Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
+        }
+    }));
 }
+
+// Hepsi paralel baslatildi; simdi hepsinin (dosya yazimi + iki plot penceresinin kapanmasi) bitmesini birlikte bekle.
+await Task.WhenAll(backgroundTasks);
 
 // =============================================================================
 // 12. Temizle
