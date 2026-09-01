@@ -54,7 +54,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
 
 // =============================================================================
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
@@ -515,7 +515,7 @@ else if (optChoice == 20)
     optimizationStrategyName = "SimpleHHVLLVStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("period", 12, 96, 6),      // 1h - 8h rejim ufku (5dk bar; 12=1h, 24=2h, 48=4h, 96=8h)
+        ("period", 300, 600, 5),      // 1h - 8h rejim ufku (5dk bar; 12=1h, 24=2h, 48=4h, 96=8h)
     };
     fixedParams = new Dictionary<string, object>
     {

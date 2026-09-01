@@ -40,7 +40,7 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // =============================================================================
@@ -322,6 +322,7 @@ else if (strategyChoice == 17)
         ["period"]          = 48,   // 4h / 5dk = 48 bar (15dk'da 16, 60dk'da 4)
         ["priceSource"]     = "Close",
         ["signalModeIndex"] = 8,    // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
+        ["signalModeIndex"] = 1,    // 1: Kanal ortası kesişimi
 
         ["exitModeIndex"] = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
         ["flatModeIndex"] = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
