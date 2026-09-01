@@ -29,6 +29,9 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest            (kırılıp fiyat geri gelip retest tutunca)
     ///     6: Confirmation bars            (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
     ///     7: Fiyat eğimi + kanal state     (rejim: kanal state + momentum: fiyatın N-bar eğimi)
+    ///     8: HHV/LLV eğim state           (HHV yükselirken AL, LLV düşerken SAT - koşul sürdükçe her bar;
+    ///                                      mode 2'nin flip yerine sürekli-state hali. MTF rejim için:
+    ///                                      period'i 4h/tf gibi büyük seç -> "kanal tavani hala yukseliyor mu")
     /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
     ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
     ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
@@ -267,6 +270,17 @@ namespace AlgoTrade.Core.Trading.Strategies
                     bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
                     if (Buyuk(currentIndex, source, hhv) && priceRising)  buy  = true;
                     if (Kucuk(currentIndex, source, llv) && priceFalling) sell = true;
+                }
+            }
+            else if (signalModeIndex == 8)
+            {
+                // 8: HHV/LLV eğim state - kanal tavani yukselirken AL, tabani duserken SAT (kosul surdukce her bar).
+                //    Mode 2 (slope flip) kenar-tetikli; bu sürekli-state. MTF rejim filtresi olarak:
+                //    period'i büyük seç (ör. 4h/tf) -> "son N barin tepesi hala yeni yapiyor mu".
+                if (currentIndex >= 1)
+                {
+                    if (hhv[currentIndex] > hhv[currentIndex - 1]) buy  = true;
+                    if (llv[currentIndex] < llv[currentIndex - 1]) sell = true;
                 }
             }
 

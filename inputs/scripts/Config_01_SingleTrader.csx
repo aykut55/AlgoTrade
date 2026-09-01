@@ -113,7 +113,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 1;
+int strategyChoice = 17;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -319,9 +319,9 @@ else if (strategyChoice == 17)
     strategyName = "SimpleHHVLLVStrategy";
     strategyParams = new Dictionary<string, object>
     {
-        ["period"] = 20,
-        ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["period"]          = 48,   // 4h / 5dk = 48 bar (15dk'da 16, 60dk'da 4)
+        ["priceSource"]     = "Close",
+        ["signalModeIndex"] = 8     // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
     };
 }
 else if (strategyChoice == 18)

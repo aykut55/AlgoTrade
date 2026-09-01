@@ -171,7 +171,7 @@ string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 1;
+int optChoice = 20;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -511,16 +511,16 @@ else if (optChoice == 19)
 }
 else if (optChoice == 20)
 {
-    // SimpleHHVLLVStrategy - period taraniyor.
+    // SimpleHHVLLVStrategy - signalModeIndex 8 (HHV/LLV eğim state), rejim ufku (period) taraniyor.
     optimizationStrategyName = "SimpleHHVLLVStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("period", 10, 30, 10),
+        ("period", 12, 96, 6),      // 1h - 8h rejim ufku (5dk bar; 12=1h, 24=2h, 48=4h, 96=8h)
     };
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"]     = "Close",
-        ["signalModeIndex"] = 0
+        ["signalModeIndex"] = 8
     };
 }
 else if (optChoice == 21)
