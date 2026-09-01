@@ -132,7 +132,7 @@ stockDataReader.OnReadMetaData += (reader, metaData) =>
 };
 stockDataReader.OnProgress += (reader, count, isCompleted) =>
 {
-    Log(isCompleted ? $"\tRecord count     : {count}" : $"\tRecord no        : {count}");
+    //Log(isCompleted ? $"\tRecord count     : {count}" : $"\tRecord no        : {count}");
 };
 
 stockDataReader.ReadMetaData(stockDataFullFileName);

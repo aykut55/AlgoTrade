@@ -2008,7 +2008,6 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {"Comm Count".PadLeft(10)}");
             sb.Append($" | {"Commission".PadLeft(10)}");
             sb.Append($" | {"ExecTime(ms)".PadLeft(12)}");
-            sb.Append($" | {"(Getiri FiyatNet%,Fiyat%,Puan%)".PadLeft(32)}");
             foreach (var name in names)
                 sb.Append($" | {name.PadLeft(Math.Max(8, name.Length))}");
             sb.Append($" | {"#".PadLeft(4)}");
@@ -2039,7 +2038,6 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {KomisyonIslemSayisi.ToString().PadLeft(10)}");
             sb.Append($" | {KomisyonFiyat.ToString("F2", CultureInfo.InvariantCulture).PadLeft(10)}");
             sb.Append($" | {LastExecutionTimeInMSec.ToString().PadLeft(12)}");
-            sb.Append($" | {"-".PadLeft(16).PadRight(32)}");
 
             foreach (var kvp in parameters)
                 sb.Append($" | {(Convert.ToString(kvp.Value, CultureInfo.InvariantCulture) ?? "").PadLeft(Math.Max(8, kvp.Key.Length))}");

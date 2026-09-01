@@ -520,7 +520,10 @@ else if (optChoice == 20)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"]     = "Close",
-        ["signalModeIndex"] = 8
+        ["signalModeIndex"] = 8,
+        ["exitModeIndex"] = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
+        ["flatModeIndex"] = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        ["skipModeIndex"] = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
     };
 }
 else if (optChoice == 21)

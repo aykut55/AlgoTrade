@@ -284,7 +284,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (Trader != null)
+            if (1 == 1 && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -312,7 +312,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (Trader != null)
+            if (1 == 1 && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -372,12 +372,30 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (Trader?.signals?.FlatOlEnabled  == false) flat       = false;
             if (Trader?.signals?.PasGecEnabled  == false) skip       = false;
 
-            if (skip) return TradeSignals.Skip;
-            else if (flat) return TradeSignals.Flat;
-            else if (takeProfit) return TradeSignals.TakeProfit;
-            else if (stopLoss) return TradeSignals.StopLoss;
-            else if (buy) return TradeSignals.Buy;
-            else if (sell) return TradeSignals.Sell;
+            if (skip)
+            {
+                return TradeSignals.Skip;
+            }
+            else if (flat)
+            {
+                return TradeSignals.Flat;
+            }
+            else if (takeProfit)
+            {
+                return TradeSignals.TakeProfit;
+            }
+            else if (stopLoss)
+            {
+                return TradeSignals.StopLoss;
+            }
+            else if (buy)
+            {
+                return TradeSignals.Buy;
+            }
+            else if (sell)
+            {
+                return TradeSignals.Sell;
+            }
 
             return TradeSignals.None;
         }

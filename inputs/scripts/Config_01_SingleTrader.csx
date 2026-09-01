@@ -321,7 +321,12 @@ else if (strategyChoice == 17)
     {
         ["period"]          = 48,   // 4h / 5dk = 48 bar (15dk'da 16, 60dk'da 4)
         ["priceSource"]     = "Close",
-        ["signalModeIndex"] = 8     // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
+        ["signalModeIndex"] = 8,    // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
+
+        ["exitModeIndex"] = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
+        ["flatModeIndex"] = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        ["skipModeIndex"] = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        //["exitModeIndex"] = 4      // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
     };
 }
 else if (strategyChoice == 18)
