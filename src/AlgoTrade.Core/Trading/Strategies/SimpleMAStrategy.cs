@@ -87,6 +87,12 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? fastMA;
         private double[]? slowMA;
 
+        // Run baglami - ILK OnStep cagrisinda Trader'dan cozulur (OnInit'te DEGIL: OnInit
+        // constructor'dan calisir, SetTrader() daha sonra SetStrategy() icinde -> OnInit'te Trader null).
+        private bool runContextResolved;
+        private int  timeframeMinutes;    // 1, 5, 15, 60, 240 ... (0 = SymbolPeriod sayisal degil/cozulemedi)
+        private bool isOptimizationRun;   // true = opt taramasi icinde (Trader.OptimizationEnabled), false = tekli kosu
+
         // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleMAStrategy(List<StockData> data, IndicatorManager indicators,
             int fastPeriod = 10, int slowPeriod = 20, MAMethod fastMaMethod = MAMethod.SIMPLE, MAMethod slowMaMethod = MAMethod.SIMPLE, PriceSource priceSource = PriceSource.Close,
@@ -203,6 +209,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             bool stopLoss   = false;
             bool flat       = false;
             bool skip       = false;
+            // ************************************************************************************************************************
+
+            ResolveRunContext();
             // ************************************************************************************************************************
 
             // İlk barlarda yeterli veri yok (fastPeriod slowPeriod'dan büyük verilse bile güvenli)
@@ -482,6 +491,37 @@ namespace AlgoTrade.Core.Trading.Strategies
             // ************************************************************************************************************************
 
             return TradeSignals.None;
+        }
+
+        // Run baglamini (timeframe + opt mu) Trader'dan bir kez cozer. OnInit'te yapilamiyor
+        // (orada Trader henuz null); ilk OnStep cagrisinda cagrilir.
+        private void ResolveRunContext()
+        {
+            if (runContextResolved)
+                return;
+
+            runContextResolved = true;
+
+            isOptimizationRun = Trader?.OptimizationEnabled == true;
+
+            // SymbolPeriod: intraday'de dakika sayisi string'i ("5","15","240"); A/G/H = Aylik/Gunluk/Haftalik.
+            // Cozulemezse (null / "" / "N/A") timeframeMinutes = 0 -> cagiran kod "bilinmiyor" diye ele alir.
+            string sp = (Trader?.SymbolPeriod ?? "").Trim().ToUpperInvariant();
+            timeframeMinutes = sp switch
+            {
+                "G" => 1440,      // 1 gun   (takvim dk)
+                "H" => 10080,     // 1 hafta
+                "A" => 43200,     // ~1 ay
+                "Y" => 525600,    // ~1 yil  (365 * 1440)
+                _   => (int.TryParse(sp, out var tf) && tf > 0) ? tf : 0
+            };
+
+            // Opt'ta konsolu bogmasin diye sadece tekli kosuda logla
+            if (!isOptimizationRun)
+            {
+                string tfStr = Trader?.SymbolPeriod ?? "?";
+                Log($"[SimpleMA] timeframe={tfStr} ({timeframeMinutes}dk), optRun={isOptimizationRun}");
+            }
         }
 
         /// <summary>

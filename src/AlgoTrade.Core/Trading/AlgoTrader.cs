@@ -2811,6 +2811,13 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             singleTraderOptimizer = new SingleTraderOptimizer(0, this.Data, indicators, _logger);
 
+            // Sembol/periyot bilgisi - optimizer bunlari createSingleTrader() icinde her test
+            // trader'ina kopyalar (SingleTraderOptimizer.cs). Burada set edilmezse optimizer.SymbolPeriod
+            // "" kalir ve stratejiler Trader.SymbolPeriod'u bos gorur (tekli kosuda AlgoTrader.cs:1353
+            // ile set edildigi icin sorun cikmiyordu).
+            singleTraderOptimizer.SymbolName   = this.SymbolName;
+            singleTraderOptimizer.SymbolPeriod = this.SymbolPeriod;
+
             // Progress callback
             singleTraderOptimizer.OnOptimizationProgress += OnOptimizationProgress;                                     // singleTraderOptimizer.OnOptimizationProgress = (currentCombination, totalCombinations)
             singleTraderOptimizer.OnSingleTraderProgressCallback += OnOptimizationSingleTraderProgress;                 // (currentBar, totalBarsInner)
