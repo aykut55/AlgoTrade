@@ -181,6 +181,25 @@ memory node'u yaz + node'daki "Durum özeti"ni güncelle.
 
 ## Todo
 
+- [ ] **`TimeUtils.IsFirstBarOfDay`/`IsLastBarOfDay` hiç hesaplanmıyor, dead placeholder (2026-09-02)**:
+  `TimeUtils.cs`'de bu iki property zaten tanımlı ama sadece `Reset()`'te `false`'a set ediliyor —
+  `UpdateSessionStatus()` (asıl "her bar güncelle" metodu) sadece `IsInTradingSession`/
+  `IsAfterCloseTime`'ı dolduruyor, `IsFirstBarOfDay`/`IsLastBarOfDay` hiçbir yerde gerçek
+  hesaplanmıyor. `SimpleMAStrategy.cs`'ye periyottan bağımsız (dates[] takvim karşılaştırmalı)
+  `IsFirstBarOfDay(currentIndex)`/`IsLastBarOfDay(currentIndex)` (lookahead)/
+  `IsFirstBarOfWeek(currentIndex)` (ISO 8601 hafta no)/`IsFirstBarOfMonth(currentIndex)`
+  helper'ları eklendi (strateji-seviyesinde, `GetSlowMA`/`FastPeriod`/`SlowPeriod`'un hemen
+  ardında). Kullanıcı onaylarsa iki aday konum var:
+  - **`TimeUtils.UpdateSessionStatus()` içine taşı/doldur** — `SingleTrader.timeUtils` üzerinden
+    merkezi, trader-seviyesinde çalışan alt yapı.
+  - **`BaseStrategy`'ye taşı** (2026-09-02, kullanıcı önerisi, muhtemelen daha doğru yer) — 22
+    `Simple*Strategy` hepsi zaten `BaseStrategy`'den türüyor, `Data`/`Indicators` de orada; ama
+    `dates`/`barCount` şu an her strateji kendi `OnInit`'inde ayrı ayrı yüklüyor
+    (`Indicators.GetDates()`) — `BaseStrategy`'ye taşımak için bu alanları da oraya taşıyıp
+    paylaşmak gerekir (22 stratejiye tek tek kopyalamak yerine hepsi bedavaya kazanır).
+  Hangisi seçilirse seçilsin `IsLastBarOfDay` ileriye bakan (lookahead) bir kontrol içerdiği için
+  dikkatli tasarlanmalı.
+
 - [x] ~~Offline Replay — yeni tip plotter'da OHLC panelinde AL/SAT harfleri/level çizgileri
   MAX_SIGNAL_EVENTS eşiğini aştığı için çizilmiyor olabilir~~ — **HİPOTEZ ÇÜRÜTÜLDÜ, SORUN YOK
   (doğrulandı 2026-08-26)**: `RunOfflineReplay.csx` ile `combined.npz` (10 run, 1911603 bar)

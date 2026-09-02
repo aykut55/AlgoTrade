@@ -77,6 +77,9 @@ namespace AlgoTrade.Core.Trading.Strategies
         private int  timeframeMinutes;    // 1, 5, 15, 60, 240 ... (0 = SymbolPeriod cozulemedi)
         private bool isOptimizationRun;   // true = opt taramasi icinde (Trader.OptimizationEnabled), false = tekli kosu
 
+        // timeframeMinutes'in türevi - run boyunca degismez, ResolveRunContext'te bir kez set edilir
+        private bool isOneMinute, isFiveMinute, isOneHour, isFourHour, isOneDay;
+
 
         public SimpleMomentumStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 12, double positiveThreshold = 0, double negativeThreshold = 0, PriceSource priceSource = PriceSource.Close,
@@ -164,6 +167,33 @@ namespace AlgoTrade.Core.Trading.Strategies
             double currentMom = momentum[currentIndex];
             if (double.IsNaN(currentMom))
                 return TradeSignals.None;
+
+            // isOneMinute/isFiveMinute/isOneHour/isFourHour/isOneDay artık field - ResolveRunContext'te
+            // bir kez set edilir, burada tekrar hesaplanmaz (run boyunca degismezler).
+                 if (isOneMinute)   { }
+            else if (isFiveMinute)  { }
+            else if (isOneHour)     { }
+            else if (isFourHour)    { }
+            else if (isOneDay)      { }
+            // ************************************************************************************************************************
+
+            // IsFirstBarOfDay/IsLastBarOfDay/IsFirstBarOfWeek/IsFirstBarOfMonth - henüz sinyal
+            // mantığına dahil değil, kullanılmasa da her bar hesaplanıp açık/hazır tutuluyor.
+            bool isFirstOfDay   = IsFirstBarOfDay(currentIndex);
+            bool isLastOfDay    = IsLastBarOfDay(currentIndex);
+            bool isFirstOfWeek  = IsFirstBarOfWeek(currentIndex);
+            bool isFirstOfMonth = IsFirstBarOfMonth(currentIndex);
+
+            if (isFirstOfDay)
+            {
+                // örn. gün başında önceki günden kalan pozisyonu flatle, ya da günlük bir
+                // sayaç/limit'i sıfırla (GunSonuPozKapatEnabled'a benzer ama period-independent)
+            }
+            if (isLastOfDay)
+            {
+                // örn. gün sonuna gelmeden pozisyonu kapat (gün-içi strateji için)
+            }
+            // ************************************************************************************************************************
 
             if (signalModeIndex == 0)
             {
@@ -259,7 +289,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (Trader != null)
+            if (1 == 1 && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -287,7 +317,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (Trader != null)
+            if (1 == 1 && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -380,6 +410,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 _   => (int.TryParse(sp, out var tf) && tf > 0) ? tf : 0
             };
 
+            isOneMinute  = timeframeMinutes == 1;
+            isFiveMinute = timeframeMinutes == 5;
+            isOneHour    = timeframeMinutes == 60;
+            isFourHour   = timeframeMinutes == 240;
+            isOneDay     = timeframeMinutes == 1440;
+
             // Opt'ta konsolu bogmasin diye sadece tekli kosuda logla
             if (!isOptimizationRun)
             {
@@ -396,6 +432,64 @@ namespace AlgoTrade.Core.Trading.Strategies
         }
 
         public double[]? GetMomentum() => momentum;
+
+        /// <summary>
+        /// Bu bar günün ilk barı mı? Periyottan bağımsız - dates[] takvim tarihini karşılaştırır,
+        /// bar sayımına dayanmaz (1dk/15dk/1h/4h fark etmeksizin aynı şekilde çalışır).
+        /// </summary>
+        private bool IsFirstBarOfDay(int currentIndex)
+        {
+            if (currentIndex <= 0)
+                return true;
+
+            return dates[currentIndex] != dates[currentIndex - 1];
+        }
+
+        /// <summary>
+        /// Bu bar günün son barı mı? Periyottan bağımsız - bir sonraki barın dates[] takvim
+        /// tarihine bakar (lookahead); veri setinin son barıysa da true döner.
+        /// </summary>
+        private bool IsLastBarOfDay(int currentIndex)
+        {
+            if (currentIndex >= barCount - 1)
+                return true;
+
+            return dates[currentIndex + 1] != dates[currentIndex];
+        }
+
+        /// <summary>
+        /// Bu bar haftanın ilk barı mı? Periyottan bağımsız - ISO 8601 hafta numarasını karşılaştırır
+        /// (yıl sınırını da doğru ele alır, örn. 2025 hafta 52 -> 2026 hafta 1).
+        /// </summary>
+        private bool IsFirstBarOfWeek(int currentIndex)
+        {
+            if (currentIndex <= 0)
+                return true;
+
+            var current = dates[currentIndex].ToDateTime(TimeOnly.MinValue);
+            var prev = dates[currentIndex - 1].ToDateTime(TimeOnly.MinValue);
+
+            int currentWeek = System.Globalization.ISOWeek.GetWeekOfYear(current);
+            int prevWeek = System.Globalization.ISOWeek.GetWeekOfYear(prev);
+            int currentIsoYear = System.Globalization.ISOWeek.GetYear(current);
+            int prevIsoYear = System.Globalization.ISOWeek.GetYear(prev);
+
+            return currentWeek != prevWeek || currentIsoYear != prevIsoYear;
+        }
+
+        /// <summary>
+        /// Bu bar ayın ilk barı mı? Periyottan bağımsız - dates[] takvim ay/yılını karşılaştırır.
+        /// </summary>
+        private bool IsFirstBarOfMonth(int currentIndex)
+        {
+            if (currentIndex <= 0)
+                return true;
+
+            var current = dates[currentIndex];
+            var prev = dates[currentIndex - 1];
+
+            return current.Month != prev.Month || current.Year != prev.Year;
+        }
 
         public override Dictionary<string, double[]>? GetPlotIndicators()
         {
