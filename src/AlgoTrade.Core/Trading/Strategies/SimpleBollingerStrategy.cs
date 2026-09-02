@@ -397,6 +397,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         public double[]? GetUpper() => upper;
         public double[]? GetMiddle() => middle;
         public double[]? GetLower() => lower;

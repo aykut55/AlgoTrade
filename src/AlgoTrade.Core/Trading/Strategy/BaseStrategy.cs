@@ -140,6 +140,12 @@ namespace AlgoTrade.Core.Trading.Strategy
             return null;
         }
 
+        /// <summary>
+        /// Opt sırasında bu parametre kombinasyonunun anlamlı olup olmadığını bildirir (IStrategy).
+        /// Default true - stratejiler kendi mantığına göre override eder (örn. fast &gt;= slow).
+        /// </summary>
+        public virtual bool IsValidParameterCombination() => true;
+
         public virtual void Dispose()
         {
             Reset();

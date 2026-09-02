@@ -420,6 +420,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         public double[]? GetATR() => atr;
         public double[]? GetUpperBand() => upper;
         public double[]? GetLowerBand() => lower;

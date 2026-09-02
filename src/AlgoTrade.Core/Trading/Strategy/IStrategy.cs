@@ -42,5 +42,12 @@ namespace AlgoTrade.Core.Trading.Strategy
         /// Returns null if strategy has no indicators to plot
         /// </summary>
         Dictionary<string, double[]>? GetPlotIndicators();
+
+        /// <summary>
+        /// Opt sırasında bu parametre kombinasyonunun anlamlı olup olmadığını bildirir.
+        /// false dönerse SingleTraderOptimizer backtest çalıştırmadan kombinasyonu atlar.
+        /// Default true - stratejiler kendi mantığına göre override eder (örn. fast >= slow).
+        /// </summary>
+        bool IsValidParameterCombination() => true;
     }
 }

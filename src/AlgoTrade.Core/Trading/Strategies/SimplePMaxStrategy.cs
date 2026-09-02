@@ -401,6 +401,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         public double[]? GetPMax() => pmax;
         public double[]? GetMA() => pmaxMA;
         public int[]? GetDirection() => direction;

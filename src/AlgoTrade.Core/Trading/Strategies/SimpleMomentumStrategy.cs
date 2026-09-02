@@ -388,6 +388,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         public double[]? GetMomentum() => momentum;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()

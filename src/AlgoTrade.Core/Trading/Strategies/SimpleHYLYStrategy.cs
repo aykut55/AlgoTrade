@@ -409,6 +409,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         public double[]? GetHY() => hy;
         public double[]? GetLY() => ly;
 

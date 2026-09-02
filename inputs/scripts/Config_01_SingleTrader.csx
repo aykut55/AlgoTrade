@@ -113,7 +113,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 17;
+int strategyChoice = 1;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -142,10 +142,10 @@ else if (strategyChoice == 1)
         ["priceSource"] = "Close",
 
         ["signalModeIndex"] = 0,
+        ["exitModeIndex"]   = 4,     // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
         ["exitModeIndex"]   = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
         ["flatModeIndex"]   = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        ["skipModeIndex"]   = 99,    // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        ["exitModeIndex"]   = 4      // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
+        ["skipModeIndex"]   = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
     };
 }
 else if (strategyChoice == 2)

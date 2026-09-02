@@ -380,6 +380,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         public double[]? GetCMF() => cmf;
 
         public override Dictionary<string, double[]>? GetPlotIndicators()

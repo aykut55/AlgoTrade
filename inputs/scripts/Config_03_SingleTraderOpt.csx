@@ -176,7 +176,7 @@ string sortedTxtFileName2 = "singleTraderOptLog_sorted_brut.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 20;
+int optChoice = 1;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -220,10 +220,10 @@ else if (optChoice == 1)
         ["priceSource"]     = "Close",
 
         ["signalModeIndex"] = 0,
+        ["exitModeIndex"]   = 4,     // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
         ["exitModeIndex"]   = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
         ["flatModeIndex"]   = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        ["skipModeIndex"]   = 99,    // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        ["exitModeIndex"]   = 4      // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
+        ["skipModeIndex"]   = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
     };
 }
 else if (optChoice == 2)

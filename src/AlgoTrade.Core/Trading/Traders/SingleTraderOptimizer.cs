@@ -348,6 +348,32 @@ public class SingleTraderOptimizer : IDisposable
             // Create strategy
             var strategy = StrategyFactoryMethod!(this.Data, Indicators, paramCombo);
 
+            // Gecersiz/mantiksiz kombinasyonlari backtest'siz atla (SimpleMAStrategy: fast>=slow gibi)
+            if (!strategy.IsValidParameterCombination())
+            {
+                var skipLine = new System.Text.StringBuilder();
+                skipLine.Append(currentCombination.ToString().PadLeft(4));
+                skipLine.Append($" | {$"[{currentCombination}/{totalCombinations}]".PadLeft(11)}");
+                skipLine.Append($" | {"skipped".PadLeft(11)}");
+                skipLine.Append($" | {"".PadLeft(12)}");
+                skipLine.Append($" | {"".PadLeft(14)}");
+                skipLine.Append($" | {"".PadLeft(14)}");
+                skipLine.Append($" | {"".PadLeft(6)}");
+                skipLine.Append($" | {"".PadLeft(7)}");
+                skipLine.Append($" | {"".PadLeft(7)}");
+                skipLine.Append($" | {"".PadLeft(9)}");
+                skipLine.Append($" | {"".PadLeft(10)}");
+                skipLine.Append($" | {"".PadLeft(10)}");
+                skipLine.Append($" | {"".PadLeft(12)}");
+                foreach (var kvp in paramCombo)
+                    skipLine.Append($" | {(Convert.ToString(kvp.Value, CultureInfo.InvariantCulture) ?? "").PadLeft(Math.Max(8, kvp.Key.Length))}");
+                skipLine.Append($" | {currentCombination.ToString().PadLeft(4)}");
+
+                LogManager.LogRaw(skipLine.ToString());
+                strategy.Dispose();
+                continue;
+            }
+
             // Create singleTrader
             SingleTrader singleTrader = createSingleTrader();
 

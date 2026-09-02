@@ -525,6 +525,19 @@ namespace AlgoTrade.Core.Trading.Strategies
         }
 
         /// <summary>
+        /// fast &gt;= slow MA kesişim mantığında anlamsız (crossover hiç oluşmaz/ters yönde davranır) -
+        /// opt bu kombinasyonları backtest'siz atlasın diye false döner.
+        /// </summary>
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            isValid = fastPeriod < slowPeriod;
+
+            return isValid;
+        }
+
+        /// <summary>
         /// Fast MA değerlerini al (plotting veya analiz için)
         /// </summary>
         public double[]? GetFastMA() => fastMA;

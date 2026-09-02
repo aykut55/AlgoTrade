@@ -489,6 +489,13 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
         }
 
+        public override bool IsValidParameterCombination()
+        {
+            bool isValid = true;
+
+            return isValid;
+        }
+
         /// <summary>
         /// SAR değerlerini al (plotting veya analiz için)
         /// </summary>
