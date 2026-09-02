@@ -797,7 +797,10 @@
     "Sort": {
       "SortField": "GetiriFiyatNet",
       "SortedCsvFileName": "singleTraderOptLog_sorted.csv",
-      "SortedTxtFileName": "singleTraderOptLog_sorted.txt"
+      "SortedTxtFileName": "singleTraderOptLog_sorted.txt",
+      "SortField2": "GetiriFiyat",
+      "SortedCsvFileName2": "singleTraderOptLog_sorted_brut.csv",
+      "SortedTxtFileName2": "singleTraderOptLog_sorted_brut.txt"
     },
     "SingleTrader": {
       "Plot": {

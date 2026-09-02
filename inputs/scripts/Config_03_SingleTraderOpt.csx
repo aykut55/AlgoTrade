@@ -160,6 +160,11 @@ string sortField = "GetiriFiyatNet";
 string sortedCsvFileName = "singleTraderOptLog_sorted.csv";
 string sortedTxtFileName = "singleTraderOptLog_sorted.txt";
 
+// İkinci sıralı çıktı (ör. GetiriFiyat — komisyon=0 kabul edilen brüt getiri). Boş bırakılırsa üretilmez.
+string sortField2 = "GetiriFiyat";
+string sortedCsvFileName2 = "singleTraderOptLog_sorted_brut.csv";
+string sortedTxtFileName2 = "singleTraderOptLog_sorted_brut.txt";
+
 // =============================================================================
 // Optimization Strategy Configuration
 // optChoice ile hangi strateji + hangi parametre range'lerinin taranacagi secilir - her deneme
@@ -515,7 +520,7 @@ else if (optChoice == 20)
     optimizationStrategyName = "SimpleHHVLLVStrategy";
     optimizationRanges = new List<(string name, double min, double max, double step)>
     {
-        ("period", 300, 600, 5),      // 1h - 8h rejim ufku (5dk bar; 12=1h, 24=2h, 48=4h, 96=8h)
+        ("period", 5, 600, 5),      // 1h - 8h rejim ufku (5dk bar; 12=1h, 24=2h, 48=4h, 96=8h)
     };
     fixedParams = new Dictionary<string, object>
     {

@@ -512,6 +512,11 @@ public class SingleTraderOptSortConfig
     public string SortField         { get; set; } = "GetiriFiyatNet";
     public string SortedCsvFileName { get; set; } = "singleTraderOptLog_sorted.csv";
     public string SortedTxtFileName { get; set; } = "singleTraderOptLog_sorted.txt";
+
+    // İkinci sıralı çıktı (ör. GetiriFiyat — komisyon=0 kabul edilen brüt getiri). Boş bırakılırsa üretilmez.
+    public string SortField2         { get; set; } = "GetiriFiyat";
+    public string SortedCsvFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.csv";
+    public string SortedTxtFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.txt";
 }
 
 /// <summary>Best trader (optimizasyon sonucu) için ayarlar.</summary>

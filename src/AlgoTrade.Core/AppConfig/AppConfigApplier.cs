@@ -941,6 +941,10 @@ public static class AppConfigApplier
             SortField         = cfg.Sort.SortField,
             SortedCsvFileName = cfg.Sort.SortedCsvFileName,
             SortedTxtFileName = cfg.Sort.SortedTxtFileName,
+
+            SortField2         = cfg.Sort.SortField2,
+            SortedCsvFileName2 = cfg.Sort.SortedCsvFileName2,
+            SortedTxtFileName2 = cfg.Sort.SortedTxtFileName2,
         });
 
         // Best trader — Plot

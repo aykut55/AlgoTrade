@@ -129,6 +129,11 @@ public class SingleTraderOptimizer : IDisposable
     public string SortedCsvFilePath { get; set; } = "";
     public string SortedTxtFilePath { get; set; } = "";
 
+    // İkinci sıralı çıktı (ör. komisyonsuz/brüt getiriye göre) — boş bırakılırsa üretilmez
+    public string SortField2 { get; set; } = "";
+    public string SortedCsvFilePath2 { get; set; } = "";
+    public string SortedTxtFilePath2 { get; set; } = "";
+
     // Optimization log file settings
     /// <summary>-1: her kombinasyonda yaz. >=0: ms cinsinden aralıkta yaz (bellekte biriktirir).</summary>
     public int FileFlushIntervalMs { get; set; } = -1;
@@ -704,24 +709,33 @@ public class SingleTraderOptimizer : IDisposable
         if (_cachedOptResults == null || _cachedOptResults.Count == 0)
             return;
 
-        // SortField'e göre sırala (desc)
-        var sorted = _cachedOptResults
+        WriteSortedFilesFor(SortField, SortedCsvFilePath, SortedTxtFilePath);
+
+        // İkinci sıralı çıktı (ör. GetiriFiyatYuzde — komisyon=0 kabul edilen brüt getiri) — opsiyonel
+        if (!string.IsNullOrEmpty(SortField2))
+            WriteSortedFilesFor(SortField2, SortedCsvFilePath2, SortedTxtFilePath2);
+    }
+
+    private void WriteSortedFilesFor(string sortField, string csvPath, string txtPath)
+    {
+        // sortField'e göre sırala (desc)
+        var sorted = _cachedOptResults!
             .OrderByDescending(r =>
             {
-                var v = r.Result.Values.GetValueOrDefault(SortField, "");
+                var v = r.Result.Values.GetValueOrDefault(sortField, "");
                 return double.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : double.MinValue;
             })
             .ToList();
 
-        if (CsvFileLoggingEnabled && !string.IsNullOrEmpty(SortedCsvFilePath))
+        if (CsvFileLoggingEnabled && !string.IsNullOrEmpty(csvPath))
         {
-            try { WriteSortedCsv(sorted, SortedCsvFilePath); }
+            try { WriteSortedCsv(sorted, csvPath); }
             catch (Exception ex) { LogManager.LogRaw($"  [Sorted] CSV yazma hatası: {ex.Message}"); }
         }
 
-        if (TxtFileLoggingEnabled && !string.IsNullOrEmpty(SortedTxtFilePath))
+        if (TxtFileLoggingEnabled && !string.IsNullOrEmpty(txtPath))
         {
-            try { WriteSortedTxt(sorted, SortedTxtFilePath); }
+            try { WriteSortedTxt(sorted, txtPath, sortField); }
             catch (Exception ex) { LogManager.LogRaw($"  [Sorted] TXT yazma hatası: {ex.Message}"); }
         }
     }
@@ -754,7 +768,7 @@ public class SingleTraderOptimizer : IDisposable
         sw.Flush();
     }
 
-    private void WriteSortedTxt(List<(int CombNo, OptimizationResult Result)> sorted, string filePath)
+    private void WriteSortedTxt(List<(int CombNo, OptimizationResult Result)> sorted, string filePath, string sortField)
     {
         var configColumns = !string.IsNullOrEmpty(ConfigFilePath)
             ? StatisticsExporter.LoadOptimizationColumns(ConfigFilePath)
@@ -766,7 +780,7 @@ public class SingleTraderOptimizer : IDisposable
         var first = sorted[0].Result;
         var paramWidths = first.Parameters.Keys.ToDictionary(k => k, k => Math.Max(k.Length, 10) + 1);
 
-        sw.WriteLine($"OPTIMIZATION RESULTS (sorted by {SortField}) - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        sw.WriteLine($"OPTIMIZATION RESULTS (sorted by {sortField}) - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         if (Data.Count > 0)
             sw.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
         sw.WriteLine("".PadRight(1360, '='));

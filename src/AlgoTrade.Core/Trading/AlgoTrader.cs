@@ -2845,6 +2845,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 singleTraderOptimizer.SortField         = sr.SortField;
                 singleTraderOptimizer.SortedCsvFilePath = Path.Combine(AppSettings.OptLogsDir, sr.SortedCsvFileName);
                 singleTraderOptimizer.SortedTxtFilePath = Path.Combine(AppSettings.OptLogsDir, sr.SortedTxtFileName);
+
+                singleTraderOptimizer.SortField2         = sr.SortField2;
+                singleTraderOptimizer.SortedCsvFilePath2 = !string.IsNullOrEmpty(sr.SortedCsvFileName2) ? Path.Combine(AppSettings.OptLogsDir, sr.SortedCsvFileName2) : "";
+                singleTraderOptimizer.SortedTxtFilePath2 = !string.IsNullOrEmpty(sr.SortedTxtFileName2) ? Path.Combine(AppSettings.OptLogsDir, sr.SortedTxtFileName2) : "";
             }
 
             // Signals config (her test trader'ına uygulanır)
@@ -3354,6 +3358,11 @@ public class SingleTraderOptSortOutputConfig
     public string SortField         { get; set; } = "GetiriFiyatNet";
     public string SortedCsvFileName { get; set; } = "singleTraderOptLog_sorted.csv";
     public string SortedTxtFileName { get; set; } = "singleTraderOptLog_sorted.txt";
+
+    // İkinci sıralı çıktı (ör. GetiriFiyat — komisyon=0 kabul edilen brüt getiri). Boş bırakılırsa üretilmez.
+    public string SortField2         { get; set; } = "GetiriFiyat";
+    public string SortedCsvFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.csv";
+    public string SortedTxtFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.txt";
 }
 
 /// <summary>
