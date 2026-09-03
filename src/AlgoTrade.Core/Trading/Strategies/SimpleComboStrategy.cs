@@ -116,6 +116,18 @@ namespace AlgoTrade.Core.Trading.Strategies
             this.exitModeIndex   = exitModeIndex;
             this.flatModeIndex   = flatModeIndex;
             this.skipModeIndex   = skipModeIndex;
+
+            // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
+            // degerleri burada (sabit, kod icinde) atanir.
+            startTime            = TimeOnly.ParseExact("10:05:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            stopTime             = TimeOnly.ParseExact("16:45:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            triggerTime          = TimeOnly.ParseExact("14:07:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            startDay             = default;
+            stopDay              = default;
+            isTimeEnabled        = false;
+            isDayEnabled         = false;
+            isTriggerTimeEnabled = false;
+
             Parameters["RuleModeIndex"]   = ruleModeIndex;
             Parameters["SignalModeIndex"] = signalModeIndex;
             Parameters["ExitModeIndex"]   = exitModeIndex;
@@ -156,14 +168,21 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            ResolveRunContext(currentIndex);
-
             bool buy        = false;
             bool sell       = false;
             bool takeProfit = false;
             bool stopLoss   = false;
             bool flat       = false;
             bool skip       = false;
+            // ************************************************************************************************************************
+
+            ResolveRunContext(currentIndex);
+
+            TimeOnly currentTime    = times![currentIndex];
+            DateOnly currentDate    = dates![currentIndex];
+            bool isWithinTimeWindow = !isTimeEnabled || (currentTime >= startTime && currentTime <= stopTime);
+            bool isWithinDayWindow  = !isDayEnabled  || (currentDate >= startDay  && currentDate <= stopDay);
+            bool isTriggerTime      = isTriggerTimeEnabled && currentTime == triggerTime;
             // ************************************************************************************************************************
 
             // Ilk barlarda yeterli veri yok
@@ -177,7 +196,23 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             // Gecerli ve onceki degerler
             double currentPrice = Data[currentIndex].Close;
-            double prevPrice = Data[currentIndex - 1].Close;
+            double prevPrice    = Data[currentIndex - 1].Close;
+            // ************************************************************************************************************************
+
+                 if (isOneMinute)       { }
+            else if (isFiveMinute)      { }
+            else if (isOneHour)         { }
+            else if (isFourHour)        { }
+            else if (isOneDay)          { }
+
+            if (isFirstOfDay)           { }
+            if (isLastOfDay)            { }
+            if (isFirstOfWeek)          { }
+            if (isFirstOfMonth)         { }
+                 
+                 if (isSonYonA)         { }
+            else if (isSonYonS)         { }
+            else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
             if (signalModeIndex == 0)
@@ -200,7 +235,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (Trader != null)
+            if (1 == 1 && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -234,7 +269,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (Trader != null)
+            if (1 == 1 && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -318,6 +353,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (Trader?.signals?.ZararKesEnabled== false) stopLoss   = false;
             if (Trader?.signals?.FlatOlEnabled  == false) flat       = false;
             if (Trader?.signals?.PasGecEnabled  == false) skip       = false;
+            // ************************************************************************************************************************
+
+            // Saat/tarih penceresi gate'i: pencere disinda buy/sell uretilmez ve flat=true setlenir -
+            // oncelik zincirinde flat buy/sell'den once geldigi icin (skip > flat > TP > SL > buy > sell)
+            // kosulsuz calisir. isTimeEnabled/isDayEnabled false ise ilgili pencere hep "icinde" sayilir.
+            if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
+            if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
+            // ************************************************************************************************************************
 
             if (skip)
             {
