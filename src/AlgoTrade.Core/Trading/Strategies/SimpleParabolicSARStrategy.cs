@@ -57,42 +57,29 @@ namespace AlgoTrade.Core.Trading.Strategies
     {
         public override string Name => "Simple Parabolic SAR Strategy";
 
-        private int barCount;
-        private double[]? openPrices;
-        private double[]? highPrices;
-        private double[]? lowPrices;
-        private double[]? closePrices;
-        private long[]? volumes;
-        private long[]? lotSizes;
-        private DateTime[]? dateTimes;
-        private DateOnly[]? dates;
-        private TimeOnly[]? times;
-        private long[]? epochTimes;
+        // barCount/openPrices/.../epochTimes artik BaseStrategy'de (protected) - LoadCommonSeries()
+        // tarafindan Initialize() icinde OnInit()'ten once doldurulur, burada tekrar tanimlanmaz.
 
         private readonly double step;
         private readonly double max;
-        private readonly int signalModeIndex; // buy/sell yöntemi - bkz. sınıf başı doc comment (0-7)
-        private readonly int exitModeIndex;
-        private readonly int flatModeIndex;
-        private readonly int skipModeIndex;
-        private readonly int ruleModeIndex;
+
+        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
+        // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
+        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
 
         // OnStep'teki "fiyat" tarafını besler - indikatörün kendisi (SAR) High/Low'a bağımlı,
         // priceSource'tan etkilenmez.
         private readonly PriceSource priceSource = PriceSource.Close;
 
+        // startTime/stopTime/startDay/stopDay/isTimeEnabled/isDayEnabled/triggerTime/isTriggerTimeEnabled
+        // artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri asagida constructor'da atanir.
+
         private double[]? source;   // priceSource'un çözülmüş hali - OnInit'te bir kez, OnStep bundan okur
         private double[]? sar;
         private bool[]?    trend;
-        // Run baglami - ILK OnStep cagrisinda Trader'dan cozulur (OnInit'te DEGIL: OnInit
-        // constructor'dan calisir, SetTrader() daha sonra SetStrategy() icinde -> OnInit'te Trader null).
-        private bool runContextResolved;
-        private int  timeframeMinutes;    // 1, 5, 15, 60, 240 ... (0 = SymbolPeriod cozulemedi)
-        private bool isOptimizationRun;   // true = opt taramasi icinde (Trader.OptimizationEnabled), false = tekli kosu
 
-        // timeframeMinutes'in türevi - run boyunca degismez, ResolveRunContext'te bir kez set edilir
-        private bool isOneMinute, isFiveMinute, isOneHour, isFourHour, isOneDay;
-
+        // runContextResolved/timeframeMinutes/isOptimizationRun/isOneMinute.../ResolveRunContext() artik
+        // BaseStrategy'de (protected) - burada tekrar tanimlanmaz.
 
         // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleParabolicSARStrategy(List<StockData> data, IndicatorManager indicators,
@@ -102,20 +89,39 @@ namespace AlgoTrade.Core.Trading.Strategies
             this.step            = step;
             this.max             = max;
             this.priceSource     = priceSource;
-            this.ruleModeIndex   = ruleModeIndex;
             this.signalModeIndex = signalModeIndex;
             this.exitModeIndex   = exitModeIndex;
             this.flatModeIndex   = flatModeIndex;
             this.skipModeIndex   = skipModeIndex;
+            this.ruleModeIndex   = ruleModeIndex;
 
-            Parameters["Step"]            = step;
-            Parameters["Max"]             = max;
-            Parameters["PriceSource"]     = priceSource;
-            Parameters["RuleModeIndex"]   = ruleModeIndex;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]   = exitModeIndex;
-            Parameters["FlatModeIndex"]   = flatModeIndex;
-            Parameters["SkipModeIndex"]   = skipModeIndex;
+            // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
+            // degerleri burada (sabit, kod icinde) atanir.
+            startTime            = TimeOnly.ParseExact("10:05:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            stopTime             = TimeOnly.ParseExact("16:45:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            triggerTime          = TimeOnly.ParseExact("14:07:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            startDay             = default;
+            stopDay              = default;
+            isTimeEnabled        = false;
+            isDayEnabled         = false;
+            isTriggerTimeEnabled = false;
+
+            Parameters["Step"]                 = step;
+            Parameters["Max"]                  = max;
+            Parameters["PriceSource"]          = priceSource;
+            Parameters["SignalModeIndex"]      = signalModeIndex;
+            Parameters["ExitModeIndex"]        = exitModeIndex;
+            Parameters["FlatModeIndex"]        = flatModeIndex;
+            Parameters["SkipModeIndex"]        = skipModeIndex;
+            Parameters["RuleModeIndex"]        = ruleModeIndex;
+            Parameters["StartTime"]            = startTime;
+            Parameters["StopTime"]             = stopTime;
+            Parameters["StartDay"]             = startDay;
+            Parameters["StopDay"]              = stopDay;
+            Parameters["IsTimeEnabled"]        = isTimeEnabled;
+            Parameters["IsDayEnabled"]         = isDayEnabled;
+            Parameters["TriggerTime"]          = triggerTime;
+            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
 
             // Initialize base strategy
             Initialize(data, indicators);
@@ -126,49 +132,27 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            // verileri oku
-            barCount    = Indicators.GetDataCount();
-            openPrices  = Indicators.GetOpenPrices();
-            highPrices  = Indicators.GetHighPrices();
-            lowPrices   = Indicators.GetLowPrices();
-            closePrices = Indicators.GetClosePrices();
-            volumes     = Indicators.GetVolume();
-            lotSizes    = Indicators.GetLotSizes();
-            dateTimes   = Indicators.GetDateTimes();
-            dates       = Indicators.GetDates();
-            times       = Indicators.GetTimes();
-            epochTimes  = Indicators.GetEpochTimes();
-            source      = Indicators.Trend.ResolvePriceSource(priceSource);
+            // barCount/openPrices/.../epochTimes BaseStrategy.LoadCommonSeries() tarafindan bu
+            // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
+            source = Indicators.Trend.ResolvePriceSource(priceSource);
 
             // Parabolic SAR indicator'ı hesapla (step/max ile - High/Low kullanır, priceSource'tan bağımsız)
             var sarResult = Indicators.Trend.ParabolicSAR(step, max);
             sar   = sarResult.SAR;
             trend = sarResult.Trend;
 
-            // Tüm seriler OnStep'te aynı index ile birlikte okunuyor - uzunlukları uyuşmazsa
-            // (örn. biri filtrelenmiş/kırpılmış gelirse) IndexOutOfRange yerine burada net hata ver
+            // sar/trend/source OnStep'te barCount ile ayni index'te okunuyor - uzunluklari
+            // uyusmazsa (or. indikator filtrelenmis/kirpilmis dondurdu) IndexOutOfRange yerine
+            // burada net hata ver (ortak diziler icin ayni kontrol LoadCommonSeries()'te yapildi).
             bool allSeriesLengthsMatch = true;
-            allSeriesLengthsMatch &= sar.Length        == barCount;
-            allSeriesLengthsMatch &= trend.Length      == barCount;
-            allSeriesLengthsMatch &= source.Length     == barCount;
-            allSeriesLengthsMatch &= openPrices.Length == barCount;
-            allSeriesLengthsMatch &= highPrices.Length == barCount;
-            allSeriesLengthsMatch &= lowPrices.Length  == barCount;
-            allSeriesLengthsMatch &= closePrices.Length == barCount;
-            allSeriesLengthsMatch &= volumes.Length    == barCount;
-            allSeriesLengthsMatch &= lotSizes.Length   == barCount;
-            allSeriesLengthsMatch &= dateTimes.Length  == barCount;
-            allSeriesLengthsMatch &= dates.Length      == barCount;
-            allSeriesLengthsMatch &= times.Length      == barCount;
-            allSeriesLengthsMatch &= epochTimes.Length == barCount;
+            allSeriesLengthsMatch &= sar.Length    == barCount;
+            allSeriesLengthsMatch &= trend.Length  == barCount;
+            allSeriesLengthsMatch &= source.Length == barCount;
 
             if (!allSeriesLengthsMatch)
             {
                 throw new InvalidOperationException(
-                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
-                    $"sar={sar.Length}, trend={trend.Length}, source={source.Length}, open={openPrices.Length}, high={highPrices.Length}, " +
-                    $"low={lowPrices.Length}, close={closePrices.Length}, volume={volumes.Length}, lot={lotSizes.Length}, " +
-                    $"dateTime={dateTimes.Length}, date={dates.Length}, time={times.Length}, epoch={epochTimes.Length}");
+                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): sar={sar.Length}, trend={trend.Length}, source={source.Length}");
             }
 
             //Log($"SimpleParabolicSARStrategy initialized: Step={step}, Max={max}, SignalModeIndex={signalModeIndex}");
@@ -176,14 +160,21 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public override TradeSignals OnStep(int currentIndex)
         {
-            ResolveRunContext();
-
             bool buy        = false;
             bool sell       = false;
             bool takeProfit = false;
             bool stopLoss   = false;
             bool flat       = false;
             bool skip       = false;
+            // ************************************************************************************************************************
+
+            ResolveRunContext(currentIndex);
+
+            TimeOnly currentTime    = times![currentIndex];
+            DateOnly currentDate    = dates![currentIndex];
+            bool isWithinTimeWindow = !isTimeEnabled || (currentTime >= startTime && currentTime <= stopTime);
+            bool isWithinDayWindow  = !isDayEnabled  || (currentDate >= startDay  && currentDate <= stopDay);
+            bool isTriggerTime      = isTriggerTimeEnabled && currentTime == triggerTime;
             // ************************************************************************************************************************
 
             // İlk barlarda yeterli veri yok
@@ -218,22 +209,17 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isOneDay)      { }
             // ************************************************************************************************************************
 
-            // IsFirstBarOfDay/IsLastBarOfDay/IsFirstBarOfWeek/IsFirstBarOfMonth - henüz sinyal
-            // mantığına dahil değil, kullanılmasa da her bar hesaplanıp açık/hazır tutuluyor.
-            bool isFirstOfDay   = IsFirstBarOfDay(currentIndex);
-            bool isLastOfDay    = IsLastBarOfDay(currentIndex);
-            bool isFirstOfWeek  = IsFirstBarOfWeek(currentIndex);
-            bool isFirstOfMonth = IsFirstBarOfMonth(currentIndex);
+            // isFirstOfDay/isLastOfDay/isFirstOfWeek/isFirstOfMonth/isSonYonA/S/F - artik BaseStrategy field'i,
+            // ResolveRunContext(currentIndex) tarafindan her bar tazelenir. Henüz sinyal mantığına dahil
+            // değil, kullanılmasa da hazır tutuluyor.
+            if (isFirstOfDay)           { }
+            if (isLastOfDay)            { }
+            if (isFirstOfWeek)          { }
+            if (isFirstOfMonth)         { }
 
-            if (isFirstOfDay)
-            {
-                // örn. gün başında önceki günden kalan pozisyonu flatle, ya da günlük bir
-                // sayaç/limit'i sıfırla (GunSonuPozKapatEnabled'a benzer ama period-independent)
-            }
-            if (isLastOfDay)
-            {
-                // örn. gün sonuna gelmeden pozisyonu kapat (gün-içi strateji için)
-            }
+                 if (isSonYonA)         { }
+            else if (isSonYonS)         { }
+            else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
             // signalModeIndex ile buy/sell yöntemi seçilir - detay için sınıf başı doc comment (0-7)
@@ -457,6 +443,12 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (Trader?.signals?.FlatOlEnabled  == false) flat       = false;
             if (Trader?.signals?.PasGecEnabled  == false) skip       = false;
 
+            // Saat/tarih penceresi gate'i: pencere disinda buy/sell uretilmez ve flat=true setlenir -
+            // oncelik zincirinde flat buy/sell'den once geldigi icin (skip > flat > TP > SL > buy > sell)
+            // kosulsuz calisir. isTimeEnabled/isDayEnabled false ise ilgili pencere hep "icinde" sayilir.
+            if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
+            if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
+
             if (skip)
             {
                 return TradeSignals.Skip;
@@ -488,42 +480,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             return TradeSignals.None;
         }
 
-        // Run baglamini (timeframe + opt mu) Trader'dan bir kez cozer. OnInit'te yapilamiyor
-        // (orada Trader henuz null); ilk OnStep cagrisinda cagrilir.
-        private void ResolveRunContext()
-        {
-            if (runContextResolved)
-                return;
-
-            runContextResolved = true;
-
-            isOptimizationRun = Trader?.OptimizationEnabled == true;
-
-            // SymbolPeriod: intraday'de dakika sayisi string'i ("5","15","240"); A/G/H/Y = Aylik/Gunluk/Haftalik/Yillik.
-            // Cozulemezse (null / "" / "N/A") timeframeMinutes = 0 -> cagiran kod "bilinmiyor" diye ele alir.
-            string sp = (Trader?.SymbolPeriod ?? "").Trim().ToUpperInvariant();
-            timeframeMinutes = sp switch
-            {
-                "G" => 1440,      // 1 gun   (takvim dk)
-                "H" => 10080,     // 1 hafta
-                "A" => 43200,     // ~1 ay
-                "Y" => 525600,    // ~1 yil  (365 * 1440)
-                _   => (int.TryParse(sp, out var tf) && tf > 0) ? tf : 0
-            };
-
-            isOneMinute  = timeframeMinutes == 1;
-            isFiveMinute = timeframeMinutes == 5;
-            isOneHour    = timeframeMinutes == 60;
-            isFourHour   = timeframeMinutes == 240;
-            isOneDay     = timeframeMinutes == 1440;
-
-            // Opt'ta konsolu bogmasin diye sadece tekli kosuda logla
-            if (!isOptimizationRun)
-            {
-                string tfStr = Trader?.SymbolPeriod ?? "?";
-                Log($"[{Name}] timeframe={tfStr} ({timeframeMinutes}dk), optRun={isOptimizationRun}");
-            }
-        }
+        // ResolveRunContext() artik BaseStrategy'de (protected) - burada tekrar tanimlanmaz.
 
         public override bool IsValidParameterCombination()
         {
@@ -552,63 +509,8 @@ namespace AlgoTrade.Core.Trading.Strategies
         /// </summary>
         public double Max => max;
 
-        /// <summary>
-        /// Bu bar günün ilk barı mı? Periyottan bağımsız - dates[] takvim tarihini karşılaştırır,
-        /// bar sayımına dayanmaz (1dk/15dk/1h/4h fark etmeksizin aynı şekilde çalışır).
-        /// </summary>
-        private bool IsFirstBarOfDay(int currentIndex)
-        {
-            if (currentIndex <= 0)
-                return true;
-
-            return dates[currentIndex] != dates[currentIndex - 1];
-        }
-
-        /// <summary>
-        /// Bu bar günün son barı mı? Periyottan bağımsız - bir sonraki barın dates[] takvim
-        /// tarihine bakar (lookahead); veri setinin son barıysa da true döner.
-        /// </summary>
-        private bool IsLastBarOfDay(int currentIndex)
-        {
-            if (currentIndex >= barCount - 1)
-                return true;
-
-            return dates[currentIndex + 1] != dates[currentIndex];
-        }
-
-        /// <summary>
-        /// Bu bar haftanın ilk barı mı? Periyottan bağımsız - ISO 8601 hafta numarasını karşılaştırır
-        /// (yıl sınırını da doğru ele alır, örn. 2025 hafta 52 -> 2026 hafta 1).
-        /// </summary>
-        private bool IsFirstBarOfWeek(int currentIndex)
-        {
-            if (currentIndex <= 0)
-                return true;
-
-            var current = dates[currentIndex].ToDateTime(TimeOnly.MinValue);
-            var prev = dates[currentIndex - 1].ToDateTime(TimeOnly.MinValue);
-
-            int currentWeek = System.Globalization.ISOWeek.GetWeekOfYear(current);
-            int prevWeek = System.Globalization.ISOWeek.GetWeekOfYear(prev);
-            int currentIsoYear = System.Globalization.ISOWeek.GetYear(current);
-            int prevIsoYear = System.Globalization.ISOWeek.GetYear(prev);
-
-            return currentWeek != prevWeek || currentIsoYear != prevIsoYear;
-        }
-
-        /// <summary>
-        /// Bu bar ayın ilk barı mı? Periyottan bağımsız - dates[] takvim ay/yılını karşılaştırır.
-        /// </summary>
-        private bool IsFirstBarOfMonth(int currentIndex)
-        {
-            if (currentIndex <= 0)
-                return true;
-
-            var current = dates[currentIndex];
-            var prev = dates[currentIndex - 1];
-
-            return current.Month != prev.Month || current.Year != prev.Year;
-        }
+        // IsFirstBarOfDay/IsLastBarOfDay/IsFirstBarOfWeek/IsFirstBarOfMonth artik BaseStrategy'de
+        // (protected) - burada tekrar tanimlanmaz.
 
         /// <summary>
         /// Get indicators for plotting (IStrategy implementation)
