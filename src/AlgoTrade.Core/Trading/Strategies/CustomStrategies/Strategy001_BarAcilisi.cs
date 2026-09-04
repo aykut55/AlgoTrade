@@ -11,17 +11,19 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// <summary>
     /// Strategy001_BarAcilisi - SimpleComboStrategyRule001 desenindeki (bkz. o dosyanin doc
     /// comment'i) TURETILMIS, SABIT/immutable bir deneme. Bar'in Acilis (Open) fiyatina dayali
-    /// bir AL/SAT kurali icin ISKELET - kuralin kendisi HENUZ YAZILMADI, bilincli olarak bos
-    /// birakildi (signalModeIndex == 0 dali).
-    ///
-    /// TODO: signalModeIndex == 0 icindeki bos blogu doldur - openPrices/closePrices/Data[i].Open
-    /// gibi BaseStrategy'de zaten hazir olan dizilerle (LoadCommonSeries() OnInit'ten once
-    /// dolduruyor) "bar acilisi" temalii karsilastirma burada tanimlanacak.
+    /// AL/SAT kurali: gunun ilk barinda (isFirstOfDay) o barin Open fiyati "gunun acilis fiyati"
+    /// olarak yakalanir (dayOpenPrice), gun boyunca sabit kalir.
+    /// - signalModeIndex == 0: Siralama (level) bazli - Close, gunun acilisinin ustunde/altinda
+    ///   oldugu HER barda AL/SAT tekrarlanir (Buyuk/Kucuk).
+    /// - signalModeIndex == 1: Kesisim (crossover) bazli - Close, gunun acilisini sadece
+    ///   YUKARI/ASAGI kestigi anda (bir kere) sinyal uretir (YukarıKesti/AsagiKesti).
     ///
     /// signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex: SimpleMostStrategy/
-    /// SimpleComboStrategy ile AYNI standart (2026-08-27 karari). Kural yazilana kadar
-    /// signalModeIndex hicbir deger icin buy/sell uretmez (hep false), diger dispatch'ler
-    /// (exit/flat/skip) aktif.
+    /// SimpleComboStrategy ile AYNI standart (2026-08-27 karari). signalModeIndex 0/1 disindaki
+    /// degerler icin buy/sell hep false kalir, diger dispatch'ler (exit/flat/skip) standart sekilde
+    /// aktif (buyModeEnabled/sellModeEnabled/exitModeEnabled/flatModeEnabled/skipModeEnabled
+    /// BaseStrategy'deki kod-seviyesi toggle'lar - bu strateji exit/flat/skip'i constructor'da
+    /// kapatiyor, bkz. asagisi).
     ///
     /// Sinyal gate'i (OnStep sonu, oncelik zincirinden hemen once):
     /// 6 sinyal (buy/sell/takeProfit/stopLoss/flat/skip) once strateji tarafindan hicbir trader
@@ -44,6 +46,13 @@ namespace AlgoTrade.Core.Trading.Strategies
         // openPrices/highPrices/lowPrices/closePrices de BaseStrategy'de (protected) -
         // LoadCommonSeries() tarafindan Initialize() icinde OnInit()'ten once doldurulur.
 
+        // Gunun acilis fiyati - isFirstOfDay barinda OnStep icinde guncellenir, gun boyunca ayni
+        // kalir (o barin Open'ina gore AL/SAT kiyaslamasi yapilir). OnInit'te barCount>0 ise ilk
+        // barin Open'iyla baslangic degeri verilir - currentIndex<1 guard'i yuzunden index 0
+        // hicbir zaman OnStep icinde isFirstOfDay dalina girmedigi icin, o barin Open'ini erken
+        // yakalamazsak ilk gunun barlarinda dayOpenPrice 0 kalirdi.
+        private double dayOpenPrice;
+
 
         public Strategy001_BarAcilisi(List<StockData> data, IndicatorManager indicators,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
@@ -52,6 +61,11 @@ namespace AlgoTrade.Core.Trading.Strategies
             this.exitModeIndex   = exitModeIndex;
             this.flatModeIndex   = flatModeIndex;
             this.skipModeIndex   = skipModeIndex;
+
+            // BaseStrategy'deki varsayilan degerler true oldugu icin , bu stratejide exit/flat/skip modlari kapali (false) - sadece buy/sell modlari acik
+            exitModeEnabled = false;
+            flatModeEnabled = false;
+            skipModeEnabled = false;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -77,8 +91,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            // Kural henuz yazilmadigi icin ek bir seri/indikator hesaplamaya gerek yok -
             // openPrices/closePrices BaseStrategy.LoadCommonSeries() tarafindan zaten dolduruldu.
+            // dayOpenPrice baslangic degeri: ilk barin (index 0) Open'i - bkz. field yorumu.
+            dayOpenPrice = openPrices != null && openPrices.Length > 0 ? openPrices[0] : 0.0;
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -125,14 +140,89 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
-            // TODO: Bar acilisi kurali burada yazilacak - simdilik bilincli olarak bos, buy/sell
-            // hep false kalir (strateji henuz sinyal uretmez).
             if (signalModeIndex == 0)
             {
+                // 0: Siralama (level) - Close, gunun acilisinin ustunde/altinda oldugu HER barda AL/SAT tekrarlanir
+                if (isFirstOfDay)
+                    dayOpenPrice = openPrices[currentIndex];
+
+                if (buyModeEnabled  && Buyuk(currentIndex, closePrices, dayOpenPrice))  buy = true;
+                if (sellModeEnabled && Kucuk(currentIndex, closePrices, dayOpenPrice)) sell = true;
+            }
+            else if (signalModeIndex == 1)
+            {
+                // 1: Kesisim (crossover) - Close, gunun acilisini sadece YUKARI/ASAGI kestigi anda (bir kere) sinyal uretir
+                if (isFirstOfDay)
+                    dayOpenPrice = openPrices[currentIndex];
+
+                if (buyModeEnabled  && YukarıKesti(currentIndex, closePrices, dayOpenPrice)) buy = true;
+                if (sellModeEnabled && AsagiKesti(currentIndex, closePrices, dayOpenPrice)) sell = true;
+            }
+            else if (signalModeIndex == 2)
+            {
+                // Gunun acilis fiyati (ayni yakalama, diger modlarla ortak)
+                if (isFirstOfDay)
+                    dayOpenPrice = openPrices[currentIndex];
+
+                // Sadece gunun 3. barinda kesisime bakilir (BaseStrategy.IsNthBarOfDay). Acilistan
+                // itibaren hic geri donmeden (pullback yapmadan) dumduz giden gunlerde 3. barda
+                // onceki bar da zaten ayni tarafta oldugu icin YukarıKesti/AsagiKesti hicbir zaman
+                // true olmaz - yani boyle "dumduz" gunlerde bilincli olarak pozisyon acilmaz.
+                if (IsNthBarOfDay(currentIndex, 3))
+                {
+                    if (buyModeEnabled  && YukarıKesti(currentIndex, closePrices, dayOpenPrice)) buy  = true;
+                    if (sellModeEnabled && AsagiKesti(currentIndex, closePrices, dayOpenPrice))   sell = true;
+                }
+            }
+            else if (signalModeIndex == 3)
+            {
+
+            }
+            else if (signalModeIndex == 4)
+            {
+
+            }
+            else if (signalModeIndex == 5)
+            {
+                // 5: High/Low ile - Close yerine bar'in High/Low'u acilisi kesince sinyal (intrabar, Close'u beklemez)
+                if (isFirstOfDay)
+                    dayOpenPrice = openPrices[currentIndex];
+
+                double barHigh = Data[currentIndex].High;
+                double barLow  = Data[currentIndex].Low;
+
+                if (buyModeEnabled  && barHigh > dayOpenPrice) buy  = true;
+                if (sellModeEnabled && barLow  < dayOpenPrice) sell = true;
+            }
+            else if (signalModeIndex == 6)
+            {
+                // 6: Gap bazli - gunun acilisi, bir onceki barin (dunun son bari) kapanisina gore yukari/asagi
+                //    gap yaptiysa sinyal - sadece gunun ilk barinda anlamli, digerlerinde buy/sell false kalir
+                if (isFirstOfDay)
+                {
+                    dayOpenPrice = openPrices[currentIndex];
+                    double previousClose = closePrices[currentIndex - 1];
+
+                    if (buyModeEnabled  && dayOpenPrice > previousClose) buy  = true;
+                    if (sellModeEnabled && dayOpenPrice < previousClose) sell = true;
+                }
+            }
+            else if (signalModeIndex == 7)
+            {
+                // 7: Zaman penceresiyle kombinasyon - mod 0'in (level) kurali sadece isTimeEnabled ile
+                //    acilan saat penceresi icindeyken calisir (isTimeEnabled false ise pencere hep "icinde" sayilir)
+                if (isFirstOfDay)
+                    dayOpenPrice = openPrices[currentIndex];
+
+                if (isWithinTimeWindow)
+                {
+                    if (buyModeEnabled  && Buyuk(currentIndex, closePrices, dayOpenPrice)) buy  = true;
+                    if (sellModeEnabled && Kucuk(currentIndex, closePrices, dayOpenPrice)) sell = true;
+                }
             }
             // ************************************************************************************************************************
 
-            if (1 == 1 && Trader != null)
+            if (exitModeEnabled && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -166,7 +256,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (exitModeEnabled && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -201,17 +291,23 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (flatModeIndex == 0)
+            if (flatModeEnabled)
             {
-                // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                flat = false;
+                if (flatModeIndex == 0)
+                {
+                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                    flat = false;
+                }
             }
             // ************************************************************************************************************************
 
-            if (skipModeIndex == 0)
+            if (skipModeEnabled)
             {
-                // Skip olma durumu burada incelenir ve skip flag'i setlenir
-                skip = false;
+                if (skipModeIndex == 0)
+                {
+                    // Skip olma durumu burada incelenir ve skip flag'i setlenir
+                    skip = false;
+                }
             }
             // ************************************************************************************************************************
 

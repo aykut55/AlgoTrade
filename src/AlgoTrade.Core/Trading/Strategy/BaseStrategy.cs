@@ -82,6 +82,18 @@ namespace AlgoTrade.Core.Trading.Strategy
         protected int skipModeIndex;
         protected int ruleModeIndex;
 
+        // buyModeEnabled/sellModeEnabled/exitModeEnabled/flatModeEnabled/skipModeEnabled - kod
+        // seviyesinde (debug/test amacli) buy/sell/exit/flat/skip mantigini topluca acip kapatmak
+        // icin ortak toggle'lar. Trader?.signals?.AlEnabled/SatEnabled/... (SINYAL GATE'I) ile
+        // KARISTIRILMASIN: o runtime'da Trader/UI tarafindan kontrol edilir, bunlar ise strateji
+        // kodunun kendisinde sabit true/false yazilip derlenen bir anahtar. Varsayilan hepsi true
+        // (mevcut davranis degismez) - kullanmak isteyen strateji constructor'inda override eder.
+        protected bool buyModeEnabled  = true;
+        protected bool sellModeEnabled = true;
+        protected bool exitModeEnabled = true;
+        protected bool flatModeEnabled = true;
+        protected bool skipModeEnabled = true;
+
         // isFirstOfDay/.../isSonYonF - ResolveRunContext(currentIndex) tarafindan HER OnStep cagrisinda
         // (guard'dan once) guncellenir; field olduklari icin OnStep'te dogrudan kullanilabilirler.
         protected bool isFirstOfDay, isLastOfDay, isFirstOfWeek, isFirstOfMonth;
@@ -188,6 +200,28 @@ namespace AlgoTrade.Core.Trading.Strategy
                 return true;
 
             return dates[currentIndex] != dates[currentIndex - 1];
+        }
+
+        /// <summary>
+        /// Bu bar, gunun n'inci bari mi? (n=1 -> IsFirstBarOfDay ile ayni). Periyottan bagimsiz -
+        /// dates[] takvim tarihini karsilastirir. Geriye dogru (n-1) bar ayni gune ait olmali VE
+        /// o baslangic noktasi (dayStartIndex = currentIndex - (n-1)) gunun GERCEKTEN ilk bari
+        /// olmali (araya baska bir gun girmemis olmali).
+        /// </summary>
+        protected bool IsNthBarOfDay(int currentIndex, int n)
+        {
+            if (n < 1 || currentIndex < n - 1)
+                return false;
+
+            int dayStartIndex = currentIndex - (n - 1);
+
+            for (int k = dayStartIndex; k < currentIndex; k++)
+            {
+                if (dates[k] != dates[k + 1])
+                    return false; // araya baska bir gun girmis, n bar kesintisiz ayni gune ait degil
+            }
+
+            return IsFirstBarOfDay(dayStartIndex);
         }
 
         /// <summary>
