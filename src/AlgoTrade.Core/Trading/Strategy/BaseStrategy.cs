@@ -88,11 +88,13 @@ namespace AlgoTrade.Core.Trading.Strategy
         // KARISTIRILMASIN: o runtime'da Trader/UI tarafindan kontrol edilir, bunlar ise strateji
         // kodunun kendisinde sabit true/false yazilip derlenen bir anahtar. Varsayilan hepsi true
         // (mevcut davranis degismez) - kullanmak isteyen strateji constructor'inda override eder.
-        protected bool buyModeEnabled  = true;
-        protected bool sellModeEnabled = true;
-        protected bool exitModeEnabled = true;
-        protected bool flatModeEnabled = true;
-        protected bool skipModeEnabled = true;
+        protected bool buyModeEnabled    = true;
+        protected bool sellModeEnabled   = true;
+        protected bool exitModeEnabled   = true;
+        protected bool exitModeTPEnabled = true;
+        protected bool exitModeSLEnabled = true;
+        protected bool flatModeEnabled   = true;
+        protected bool skipModeEnabled   = true;
 
         // isFirstOfDay/.../isSonYonF - ResolveRunContext(currentIndex) tarafindan HER OnStep cagrisinda
         // (guard'dan once) guncellenir; field olduklari icin OnStep'te dogrudan kullanilabilirler.

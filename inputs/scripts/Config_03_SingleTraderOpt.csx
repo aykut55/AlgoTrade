@@ -210,8 +210,8 @@ else if (optChoice == 1)
         // MA method'lar en dışta - sabit kalirken fastPeriod/slowPeriod taranir.
         //("fastMaMethod", 0, 20, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
         //("slowMaMethod", 0, 20, 1),   // MAMethod enum indeksi: 0=SIMPLE(SMA), 1=EMA, 2=WMA
-        ("fastPeriod", 5, 200, 5),
-        ("slowPeriod", 5, 200, 5),
+        ("fastPeriod",  50, 500, 50),
+        ("slowPeriod", 100, 2000, 100),
     };
     fixedParams = new Dictionary<string, object>
     {

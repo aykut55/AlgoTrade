@@ -401,7 +401,7 @@ else if (strategyChoice == 24)
     strategyName = "Strategy001_BarAcilisi";
     strategyParams = new Dictionary<string, object>
     {
-        ["signalModeIndex"] = 1,
+        ["signalModeIndex"] = 0,
         ["exitModeIndex"]   = 0,
         ["flatModeIndex"]   = 0,
         ["skipModeIndex"]   = 0

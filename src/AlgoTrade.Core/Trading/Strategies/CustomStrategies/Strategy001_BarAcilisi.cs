@@ -53,6 +53,11 @@ namespace AlgoTrade.Core.Trading.Strategies
         // yakalamazsak ilk gunun barlarinda dayOpenPrice 0 kalirdi.
         private double dayOpenPrice;
 
+        // ADX filtresi (signalModeIndex==1 icin) - trend gucu adxThreshold'un altindaysa
+        // kesisim sinyali uretilmez. OnInit'te Indicators.Trend.ADX(adxPeriod) ile doldurulur.
+        private readonly int adxPeriod;
+        private readonly double adxThreshold;
+        private double[]? adx;
 
         public Strategy001_BarAcilisi(List<StockData> data, IndicatorManager indicators,
             int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
@@ -62,26 +67,34 @@ namespace AlgoTrade.Core.Trading.Strategies
             this.flatModeIndex   = flatModeIndex;
             this.skipModeIndex   = skipModeIndex;
 
+            // ADX filtresi (signalModeIndex==1) - sabit, kod icinde atanir (startTime/stopTime ile ayni desen).
+            adxPeriod    = 14;
+            adxThreshold = 25;
+
             // BaseStrategy'deki varsayilan degerler true oldugu icin , bu stratejide exit/flat/skip modlari kapali (false) - sadece buy/sell modlari acik
-            exitModeEnabled = false;
-            flatModeEnabled = false;
-            skipModeEnabled = false;
+            exitModeEnabled   = false;
+            exitModeTPEnabled = false;
+            exitModeSLEnabled = false;
+            flatModeEnabled   = false;
+            skipModeEnabled   = false;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
             startTime            = TimeOnly.ParseExact("10:05:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             stopTime             = TimeOnly.ParseExact("16:45:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
-            triggerTime          = TimeOnly.ParseExact("14:07:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            triggerTime          = TimeOnly.ParseExact("10:00:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             startDay             = default;
             stopDay              = default;
             isTimeEnabled        = false;
             isDayEnabled         = false;
-            isTriggerTimeEnabled = false;
+            isTriggerTimeEnabled = true;
 
             Parameters["SignalModeIndex"] = signalModeIndex;
             Parameters["ExitModeIndex"]   = exitModeIndex;
             Parameters["FlatModeIndex"]   = flatModeIndex;
             Parameters["SkipModeIndex"]   = skipModeIndex;
+            Parameters["AdxPeriod"]       = adxPeriod;
+            Parameters["AdxThreshold"]    = adxThreshold;
 
             Initialize(data, indicators);
         }
@@ -94,6 +107,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             // openPrices/closePrices BaseStrategy.LoadCommonSeries() tarafindan zaten dolduruldu.
             // dayOpenPrice baslangic degeri: ilk barin (index 0) Open'i - bkz. field yorumu.
             dayOpenPrice = openPrices != null && openPrices.Length > 0 ? openPrices[0] : 0.0;
+
+            adx = Indicators.Trend.ADX(adxPeriod);
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -148,15 +163,27 @@ namespace AlgoTrade.Core.Trading.Strategies
 
                 if (buyModeEnabled  && Buyuk(currentIndex, closePrices, dayOpenPrice))  buy = true;
                 if (sellModeEnabled && Kucuk(currentIndex, closePrices, dayOpenPrice)) sell = true;
+
+                /*buy = false;
+                sell = false;
+
+                bool strongTrend = adx != null && currentIndex < adx.Length && !double.IsNaN(adx[currentIndex]) && adx[currentIndex] > adxThreshold;
+
+                if (buyModeEnabled  && strongTrend && Buyuk(currentIndex, closePrices, dayOpenPrice))  buy = true;
+                if (sellModeEnabled && strongTrend && Kucuk(currentIndex, closePrices, dayOpenPrice)) sell = true;*/
             }
             else if (signalModeIndex == 1)
             {
                 // 1: Kesisim (crossover) - Close, gunun acilisini sadece YUKARI/ASAGI kestigi anda (bir kere) sinyal uretir
+                // ADX filtresi: trend gucu (adx[currentIndex]) adxThreshold'un altindaysa kesisim gormezden gelinir -
+                // amac zayif/yatay piyasada gurultu kaynakli kesisimleri elemek.
                 if (isFirstOfDay)
                     dayOpenPrice = openPrices[currentIndex];
 
-                if (buyModeEnabled  && YukarıKesti(currentIndex, closePrices, dayOpenPrice)) buy = true;
-                if (sellModeEnabled && AsagiKesti(currentIndex, closePrices, dayOpenPrice)) sell = true;
+                /*bool strongTrend = adx != null && currentIndex < adx.Length && !double.IsNaN(adx[currentIndex]) && adx[currentIndex] > adxThreshold;
+
+                if (buyModeEnabled  && strongTrend && YukarıKesti(currentIndex, closePrices, dayOpenPrice)) buy = true;
+                if (sellModeEnabled && strongTrend && AsagiKesti(currentIndex, closePrices, dayOpenPrice)) sell = true;*/
             }
             else if (signalModeIndex == 2)
             {
@@ -176,7 +203,11 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             else if (signalModeIndex == 3)
             {
+                if (isTriggerTime)
+                    dayOpenPrice = openPrices[currentIndex];
 
+                if (buyModeEnabled  && YukarıKesti(currentIndex, closePrices, dayOpenPrice)) buy = true;
+                if (sellModeEnabled && AsagiKesti(currentIndex, closePrices, dayOpenPrice)) sell = true;
             }
             else if (signalModeIndex == 4)
             {
@@ -222,7 +253,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (exitModeEnabled && Trader != null)
+            if (exitModeTPEnabled && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
@@ -256,7 +287,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
             }
 
-            if (exitModeEnabled && Trader != null)
+            if (exitModeSLEnabled && Trader != null)
             {
                 if (exitModeIndex == 0)
                 {
