@@ -20,7 +20,9 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// Parametreler:
     /// - period: ADX/DI periyodu (varsayılan 14)
     /// - adxThreshold: Minimum ADX değeri - trend gücü filtresi (varsayılan 25)
-    /// - signalModeIndex: buy/sell yöntemini seçer (hepsi ADX>adxThreshold ile filtrelenir):
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden
+    ///   seçilir (hepsi ADX>adxThreshold ile filtrelenir):
     ///     0: +DI/-DI kesişimi          (+DI, -DI'yı yukarı/aşağı kesince)
     ///     1: +DI/-DI state             (konum - kesişim değil, koşul sürdükçe her bar)
     ///     2: ADX slope flip            (ADX'in kendi yönü dönünce - trend gücü artışa/azalışa geçince)
@@ -29,7 +31,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest         (DI kesişip ADX geriden threshold'u geçince)
     ///     6: Confirmation bars         (kesişimden sonra confirmBars bar aynı tarafta kalınca)
     ///     7: ADX eğimi + DI state      (rejim: DI state + momentum: ADX N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden seçilir:
     ///     0: Seviye, seviyeli               (SonFiyataGoreKarAl/ZararKesSeviyeHesaplaSeviyeli)
     ///     1: Yüzde, seviyeli                 (SonFiyataGoreKarAl/ZararKesYuzdeHesaplaSeviyeli)
     ///     2: Seviye, tek seviye              (SonFiyataGoreKarAl/ZararKesSeviyeHesapla)
@@ -57,9 +60,9 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int period;
         private readonly double adxThreshold;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex'in dispatch mantigi (OnStep'teki if/else zincirleri) stratejiye ozgu, burada kalir.
 
         // startTime/stopTime/startDay/stopDay/isTimeEnabled/isDayEnabled/triggerTime/isTriggerTimeEnabled
         // artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri asagida constructor'da atanir.
@@ -73,15 +76,17 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleADXStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 14, double adxThreshold = 25,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.period          = period;
-            this.adxThreshold    = adxThreshold;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-            this.ruleModeIndex   = ruleModeIndex;
+            this.period                  = period;
+            this.adxThreshold            = adxThreshold;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -94,21 +99,34 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Period"]               = period;
-            Parameters["AdxThreshold"]         = adxThreshold;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
-            Parameters["FlatModeIndex"]        = flatModeIndex;
-            Parameters["SkipModeIndex"]        = skipModeIndex;
-            Parameters["RuleModeIndex"]        = ruleModeIndex;
-            Parameters["StartTime"]            = startTime;
-            Parameters["StopTime"]             = stopTime;
-            Parameters["StartDay"]             = startDay;
-            Parameters["StopDay"]              = stopDay;
-            Parameters["IsTimeEnabled"]        = isTimeEnabled;
-            Parameters["IsDayEnabled"]         = isDayEnabled;
-            Parameters["TriggerTime"]          = triggerTime;
-            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            // BaseStrategy'deki varsayilan degerler true - bu stratejide takeProfit/stopLoss zaten
+            // kosulsuz aktifti (eski "if (1 == 1 && Trader != null)" guard'i), acikca true set edilir.
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
+            Parameters["Period"]                  = period;
+            Parameters["AdxThreshold"]             = adxThreshold;
+            Parameters["BuySignalModeIndex"]       = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]      = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"]  = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]    = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]            = flatModeIndex;
+            Parameters["SkipModeIndex"]            = skipModeIndex;
+            Parameters["RuleModeIndex"]            = ruleModeIndex;
+            Parameters["StartTime"]                = startTime;
+            Parameters["StopTime"]                 = stopTime;
+            Parameters["StartDay"]                 = startDay;
+            Parameters["StopDay"]                  = stopDay;
+            Parameters["IsTimeEnabled"]            = isTimeEnabled;
+            Parameters["IsDayEnabled"]             = isDayEnabled;
+            Parameters["TriggerTime"]              = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]     = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]           = buyModeEnabled;
+            Parameters["SellModeEnabled"]          = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]    = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]      = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]          = flatModeEnabled;
+            Parameters["SkipModeEnabled"]          = skipModeEnabled;
 
             Initialize(data, indicators);
         }
@@ -185,147 +203,218 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonS)         { }
             else if (isSonYonF)         { }
 
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: +DI/-DI kesişimi + ADX>threshold filtresi (klasik)
-                if (YukarıKesti(currentIndex, plusDI, minusDI) && strongTrend) buy  = true;
-                if (AsagiKesti(currentIndex, plusDI, minusDI) && strongTrend)  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: +DI/-DI state - filtresiz, koşul sürdükçe her bar
-                if (Buyuk(currentIndex, plusDI, minusDI)) buy  = true;
-                if (Kucuk(currentIndex, plusDI, minusDI)) sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: ADX slope flip - trend gücü artışa/azalışa geçiyor, yön DI'dan
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = adx[currentIndex]     - adx[currentIndex - 1];
-                    double slopePrev = adx[currentIndex - 1] - adx[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0 && currentPlusDI > currentMinusDI) buy  = true;
-                    if (slopePrev <= 0.0 && slopeNow > 0.0 && currentMinusDI > currentPlusDI) sell = true;
+                    // 0: +DI/-DI kesişimi + ADX>threshold filtresi (klasik)
+                    if (YukarıKesti(currentIndex, plusDI, minusDI) && strongTrend) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: ADX-DI kombine state - her bar, ADX filtreli konum
-                if (strongTrend && currentPlusDI > currentMinusDI) buy  = true;
-                if (strongTrend && currentMinusDI > currentPlusDI) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi - +DI ile -DI farkı bandThreshold'dan fazla açılınca
-                const double bandThreshold = 5.0; // DI puanı
-                double diDiff = currentPlusDI - currentMinusDI;
-                if (diDiff >  bandThreshold) buy  = true;
-                if (diDiff < -bandThreshold) sell = true;
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest - DI kesişti, sonradan ADX threshold'u geçince onaylanır
-                const int retestLookback = 10;
-                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                else if (buySignalModeIndex == 1)
                 {
-                    if (k < 1) continue;
-
-                    if (!buy && YukarıKesti(k, plusDI, minusDI) && strongTrend && currentPlusDI > currentMinusDI)
-                        buy = true;
-
-                    if (!sell && AsagiKesti(k, plusDI, minusDI) && strongTrend && currentMinusDI > currentPlusDI)
-                        sell = true;
+                    // 1: +DI/-DI state - filtresiz, koşul sürdükçe her bar
+                    if (Buyuk(currentIndex, plusDI, minusDI)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars - kesişimden confirmBars sonra hâlâ aynı yönde VE ADX güçlü
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 2)
                 {
-                    int crossBar = currentIndex - confirmBars;
-
-                    bool stayedAbove = YukarıKesti(crossBar, plusDI, minusDI);
-                    bool stayedBelow = AsagiKesti(crossBar, plusDI, minusDI);
-                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    // 2: ADX slope flip - trend gücü artışa geçiyor, yön DI'dan
+                    if (currentIndex >= 2)
                     {
-                        stayedAbove &= plusDI[k] > minusDI[k];
-                        stayedBelow &= plusDI[k] < minusDI[k];
+                        double slopeNow  = adx[currentIndex]     - adx[currentIndex - 1];
+                        double slopePrev = adx[currentIndex - 1] - adx[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0 && currentPlusDI > currentMinusDI) buy = true;
                     }
-                    if (stayedAbove && strongTrend) buy  = true;
-                    if (stayedBelow && strongTrend) sell = true;
                 }
-            }
-            else if (signalModeIndex == 7)
-            {
-                // 7: ADX eğimi + DI state - rejim (DI konumu) + momentum (ADX N-bar eğimi)
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                else if (buySignalModeIndex == 3)
                 {
-                    bool adxRising = adx[currentIndex] > adx[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, plusDI, minusDI) && adxRising) buy  = true;
-                    if (Kucuk(currentIndex, plusDI, minusDI) && adxRising) sell = true;
+                    // 3: ADX-DI kombine state - her bar, ADX filtreli konum
+                    if (strongTrend && currentPlusDI > currentMinusDI) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - +DI ile -DI farkı bandThreshold'dan fazla açılınca
+                    const double bandThreshold = 5.0; // DI puanı
+                    double diDiff = currentPlusDI - currentMinusDI;
+                    if (diDiff > bandThreshold) buy = true;
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - DI kesişti, sonradan ADX threshold'u geçince onaylanır
+                    const int retestLookback = 10;
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!buy && YukarıKesti(k, plusDI, minusDI) && strongTrend && currentPlusDI > currentMinusDI)
+                            buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kesişimden confirmBars sonra hâlâ aynı yönde VE ADX güçlü
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, plusDI, minusDI);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedAbove &= plusDI[k] > minusDI[k];
+                        }
+                        if (stayedAbove && strongTrend) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: ADX eğimi + DI state - rejim (DI konumu) + momentum (ADX N-bar eğimi)
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool adxRising = adx[currentIndex] > adx[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, plusDI, minusDI) && adxRising) buy = true;
+                    }
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (sellModeEnabled)
             {
-                if (exitModeIndex == 0)
+                if (sellSignalModeIndex == 0)
+                {
+                    // 0: +DI/-DI kesişimi + ADX>threshold filtresi (klasik)
+                    if (AsagiKesti(currentIndex, plusDI, minusDI) && strongTrend) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: +DI/-DI state - filtresiz, koşul sürdükçe her bar
+                    if (Kucuk(currentIndex, plusDI, minusDI)) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: ADX slope flip - trend gücü artışa geçiyor, yön DI'dan
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = adx[currentIndex]     - adx[currentIndex - 1];
+                        double slopePrev = adx[currentIndex - 1] - adx[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0 && currentMinusDI > currentPlusDI) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: ADX-DI kombine state - her bar, ADX filtreli konum
+                    if (strongTrend && currentMinusDI > currentPlusDI) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - +DI ile -DI farkı bandThreshold'dan fazla açılınca
+                    const double bandThreshold = 5.0; // DI puanı
+                    double diDiff = currentPlusDI - currentMinusDI;
+                    if (diDiff < -bandThreshold) sell = true;
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - DI kesişti, sonradan ADX threshold'u geçince onaylanır
+                    const int retestLookback = 10;
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!sell && AsagiKesti(k, plusDI, minusDI) && strongTrend && currentMinusDI > currentPlusDI)
+                            sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kesişimden confirmBars sonra hâlâ aynı yönde VE ADX güçlü
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, plusDI, minusDI);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedBelow &= plusDI[k] < minusDI[k];
+                        }
+                        if (stayedBelow && strongTrend) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: ADX eğimi + DI state - rejim (DI konumu) + momentum (ADX N-bar eğimi)
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool adxRising = adx[currentIndex] > adx[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, plusDI, minusDI) && adxRising) sell = true;
+                    }
+                }
+            }
+
+            if (takeProfitExitModeEnabled && Trader != null)
+            {
+                if (takeProfitExitModeIndex == 0)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
                 }
             }
 
-            if (flatModeIndex == 0) flat = false;
-            if (skipModeIndex == 0) skip = false;
+            if (flatModeEnabled)
+            {
+                if (flatModeIndex == 0) flat = false;
+            }
+            if (skipModeEnabled)
+            {
+                if (skipModeIndex == 0) skip = false;
+            }
 
             // ------------------------------------------------------------------------------------------------------------------
             // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.

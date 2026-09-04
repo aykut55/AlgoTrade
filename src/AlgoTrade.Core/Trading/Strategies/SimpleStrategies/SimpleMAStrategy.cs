@@ -26,7 +26,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - fastMaMethod: Hızlı MA'nın hareketli ortalama tipi (varsayılan SIMPLE)
     /// - slowMaMethod: Yavaş MA'nın hareketli ortalama tipi (varsayılan SIMPLE)
     /// - priceSource: Her iki MA'nın da beslendiği kaynak + OnStep sinyal serisi (varsayılan Close)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: Fast/Slow MA kesişimi     (fastMA slowMA'yı yukarı/aşağı kesince)
     ///     1: Fiyat-FastMA kesişimi     (fiyat fastMA'yı yukarı/aşağı kesince)
     ///     2: SlowMA slope flip         (slowMA'nın kendi yönü dönünce)
@@ -35,7 +36,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest         (fast/slow kesişip fiyat slowMA'ya geri gelip retest tutunca)
     ///     6: Confirmation bars         (kesişimden sonra confirmBars bar aynı tarafta kalınca)
     ///     7: FastMA eğimi + Fast/Slow state (rejim: fastMA-slowMA konumu + momentum: fastMA N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı liste üzerinden:
     ///     0: Seviye, seviyeli               (SonFiyataGoreKarAl/ZararKesSeviyeHesaplaSeviyeli)
     ///     1: Yüzde, seviyeli                 (SonFiyataGoreKarAl/ZararKesYuzdeHesaplaSeviyeli)
     ///     2: Seviye, tek seviye              (SonFiyataGoreKarAl/ZararKesSeviyeHesapla)
@@ -59,45 +61,33 @@ namespace AlgoTrade.Core.Trading.Strategies
     {
         public override string Name => "Simple MA Crossover";
 
-        // barCount/openPrices/.../epochTimes artik BaseStrategy'de (protected) - LoadCommonSeries()
-        // tarafindan Initialize() icinde OnInit()'ten once doldurulur, burada tekrar tanimlanmaz.
-
         private readonly int fastPeriod;
         private readonly int slowPeriod;
-
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
-        // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) MA'ya ozgu, burada kalir.
 
         private readonly MAMethod fastMaMethod = MAMethod.SIMPLE;
         private readonly MAMethod slowMaMethod = MAMethod.SIMPLE;
         private readonly PriceSource priceSource = PriceSource.Close;
 
-        // startTime/stopTime/startDay/stopDay/isTimeEnabled/isDayEnabled/triggerTime artik BaseStrategy'de
-        // tanimli (protected, readonly degil) - degerleri asagida constructor'da atanir.
-
         private double[]? source;   // priceSource'un çözülmüş hali - OnInit'te bir kez, OnStep bundan okur
         private double[]? fastMA;
         private double[]? slowMA;
 
-        // runContextResolved/timeframeMinutes/isOptimizationRun/isOneMinute.../ResolveRunContext() artik
-        // BaseStrategy'de (protected) - burada tekrar tanimlanmaz.
-
-        // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleMAStrategy(List<StockData> data, IndicatorManager indicators,
             int fastPeriod = 10, int slowPeriod = 20, MAMethod fastMaMethod = MAMethod.SIMPLE, MAMethod slowMaMethod = MAMethod.SIMPLE, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.fastPeriod      = fastPeriod;
-            this.slowPeriod      = slowPeriod;
-            this.fastMaMethod    = fastMaMethod;
-            this.slowMaMethod    = slowMaMethod;
-            this.priceSource     = priceSource;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-            this.ruleModeIndex   = ruleModeIndex;
+            this.fastPeriod              = fastPeriod;
+            this.slowPeriod              = slowPeriod;
+            this.fastMaMethod            = fastMaMethod;
+            this.slowMaMethod            = slowMaMethod;
+            this.priceSource             = priceSource;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -110,24 +100,38 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["FastPeriod"]           = fastPeriod;
-            Parameters["SlowPeriod"]           = slowPeriod;
-            Parameters["FastMaMethod"]         = fastMaMethod;
-            Parameters["SlowMaMethod"]         = slowMaMethod;
-            Parameters["PriceSource"]          = priceSource;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
-            Parameters["FlatModeIndex"]        = flatModeIndex;
-            Parameters["SkipModeIndex"]        = skipModeIndex;
-            Parameters["RuleModeIndex"]        = ruleModeIndex;
-            Parameters["StartTime"]            = startTime;
-            Parameters["StopTime"]             = stopTime;
-            Parameters["StartDay"]             = startDay;
-            Parameters["StopDay"]              = stopDay;
-            Parameters["IsTimeEnabled"]        = isTimeEnabled;
-            Parameters["IsDayEnabled"]         = isDayEnabled;
-            Parameters["TriggerTime"]          = triggerTime;
-            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            // BaseStrategy'deki varsayilan degerler true oldugu icin , bu stratejide exit/flat/skip modlari kapali (false) - sadece buy/sell modlari acik
+            takeProfitExitModeEnabled = false;
+            stopLossExitModeEnabled   = false;
+            flatModeEnabled       = false;
+            skipModeEnabled       = false;
+
+            Parameters["FastPeriod"]              = fastPeriod;
+            Parameters["SlowPeriod"]              = slowPeriod;
+            Parameters["FastMaMethod"]            = fastMaMethod;
+            Parameters["SlowMaMethod"]            = slowMaMethod;
+            Parameters["PriceSource"]             = priceSource;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]           = flatModeIndex;
+            Parameters["SkipModeIndex"]           = skipModeIndex;
+            Parameters["RuleModeIndex"]           = ruleModeIndex;
+            Parameters["StartTime"]               = startTime;
+            Parameters["StopTime"]                = stopTime;
+            Parameters["StartDay"]                = startDay;
+            Parameters["StopDay"]                 = stopDay;
+            Parameters["IsTimeEnabled"]           = isTimeEnabled;
+            Parameters["IsDayEnabled"]            = isDayEnabled;
+            Parameters["TriggerTime"]             = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]    = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]          = buyModeEnabled;
+            Parameters["SellModeEnabled"]         = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]   = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]     = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]         = flatModeEnabled;
+            Parameters["SkipModeEnabled"]         = skipModeEnabled;
 
             // Initialize base strategy
             Initialize(data, indicators);
@@ -163,7 +167,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                         $"fastMA={fastMA.Length}, slowMA={slowMA.Length}, source={source.Length}");
                 }
 
-                //Log($"Strategy initialized: Fast={fastPeriod}, Slow={slowPeriod}, SignalModeIndex={signalModeIndex}");
+                //Log($"Strategy initialized: Fast={fastPeriod}, Slow={slowPeriod}, BuySignalModeIndex={buySignalModeIndex}, SellSignalModeIndex={sellSignalModeIndex}");
             }
             catch (NotImplementedException)
             {
@@ -237,170 +241,239 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
-            // signalModeIndex ile buy/sell yöntemi seçilir - detay için sınıf başı doc comment
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: Fast/Slow MA kesişimi - fastMA slowMA'yı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, fastMA, slowMA)) buy  = true;
-                if (AsagiKesti(currentIndex, fastMA, slowMA))  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: Fiyat-FastMA kesişimi - fiyat fastMA'yı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, source, fastMA)) buy  = true;
-                if (AsagiKesti(currentIndex, source, fastMA))  sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: SlowMA slope flip - slowMA'nın kendi yönü dönüyor (düşen/düz → yükselen = AL)
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = slowMA[currentIndex] - slowMA[currentIndex - 1];
-                    double slopePrev = slowMA[currentIndex - 1] - slowMA[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    // 0: Fast/Slow MA kesişimi - fastMA slowMA'yı yukarı kesince AL
+                    if (YukarıKesti(currentIndex, fastMA, slowMA)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: Fast/Slow MA state - fastMA'nın slowMA'ya göre konumu (kesişim değil, koşul sürdükçe her bar)
-                if (Buyuk(currentIndex, fastMA, slowMA)) buy  = true;
-                if (Kucuk(currentIndex, fastMA, slowMA)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi - fastMA slowMA'dan %bandThreshold'dan fazla uzaklaşınca (trend-following)
-                const double bandThreshold = 0.01; // %1
-                if (currentSlowMA != 0.0)
+                else if (buySignalModeIndex == 1)
                 {
-                    double distanceRatio = (currentFastMA - currentSlowMA) / currentSlowMA;
-                    if (distanceRatio > bandThreshold)  buy  = true;
-                    if (distanceRatio < -bandThreshold) sell = true;
+                    // 1: Fiyat-FastMA kesişimi - fiyat fastMA'yı yukarı kesince AL
+                    if (YukarıKesti(currentIndex, source, fastMA)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest - son retestLookback bar içinde fast/slow kesişti, şimdi fiyat
-                //    slowMA'ya geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
-                const int retestLookback = 10;
-                double barLow  = Data[currentIndex].Low;
-                double barHigh = Data[currentIndex].High;
-
-                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                else if (buySignalModeIndex == 2)
                 {
-                    if (k < 1) continue;
-
-                    if (!buy && YukarıKesti(k, fastMA, slowMA)
-                        && barLow <= currentSlowMA          // bu bar slowMA'ya geri dokundu (retest)
-                        && currentPrice > currentSlowMA)    // ama üstünde kapattı (retest tuttu)
+                    // 2: SlowMA slope flip - slowMA'nın kendi yönü dönüyor (düşen/düz → yükselen = AL)
+                    if (currentIndex >= 2)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(k, fastMA, slowMA)
-                        && barHigh >= currentSlowMA
-                        && currentPrice < currentSlowMA)
-                    {
-                        sell = true;
+                        double slopeNow  = slowMA[currentIndex] - slowMA[currentIndex - 1];
+                        double slopePrev = slowMA[currentIndex - 1] - slowMA[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars - kesişim confirmBars bar önce oldu ve o zamandan beri fastMA
-                //    hep slowMA'nın aynı tarafında kaldıysa gir
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 3)
                 {
-                    int crossBar = currentIndex - confirmBars;
-
-                    bool stayedAbove = YukarıKesti(crossBar, fastMA, slowMA);
-                    bool stayedBelow = AsagiKesti(crossBar, fastMA, slowMA);
-                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    // 3: Fast/Slow MA state - fastMA'nın slowMA'ya göre konumu (kesişim değil, koşul sürdükçe her bar)
+                    if (Buyuk(currentIndex, fastMA, slowMA)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - fastMA slowMA'dan %bandThreshold'dan fazla uzaklaşınca (trend-following)
+                    const double bandThreshold = 0.01; // %1
+                    if (currentSlowMA != 0.0)
                     {
-                        stayedAbove &= fastMA[k] > slowMA[k];
-                        stayedBelow &= fastMA[k] < slowMA[k];
+                        double distanceRatio = (currentFastMA - currentSlowMA) / currentSlowMA;
+                        if (distanceRatio > bandThreshold) buy = true;
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - son retestLookback bar içinde fast/slow kesişti, şimdi fiyat
+                    //    slowMA'ya geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
+                    const int retestLookback = 10;
+                    double barLow = Data[currentIndex].Low;
+
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!buy && YukarıKesti(k, fastMA, slowMA)
+                            && barLow <= currentSlowMA          // bu bar slowMA'ya geri dokundu (retest)
+                            && currentPrice > currentSlowMA)    // ama üstünde kapattı (retest tuttu)
+                        {
+                            buy = true;
+                        }
+                    }
+                }
+                else if (buySignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kesişim confirmBars bar önce oldu ve o zamandan beri fastMA
+                    //    hep slowMA'nın aynı tarafında kaldıysa gir
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, fastMA, slowMA);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedAbove &= fastMA[k] > slowMA[k];
+                        }
+                        if (stayedAbove) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: FastMA eğimi + Fast/Slow state - rejim (fastMA-slowMA konumu) + momentum (fastMA N-bar eğimi)
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool fastMARising = fastMA[currentIndex] > fastMA[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, fastMA, slowMA) && fastMARising) buy = true;
+                    }
                 }
             }
-            else if (signalModeIndex == 7)
+
+            if (sellModeEnabled)
             {
-                // 7: FastMA eğimi + Fast/Slow state - rejim (fastMA-slowMA konumu) + momentum (fastMA N-bar eğimi)
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                if (sellSignalModeIndex == 0)
                 {
-                    bool fastMARising  = fastMA[currentIndex] > fastMA[currentIndex - slopeLookback];
-                    bool fastMAFalling = fastMA[currentIndex] < fastMA[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, fastMA, slowMA) && fastMARising)  buy  = true;
-                    if (Kucuk(currentIndex, fastMA, slowMA) && fastMAFalling) sell = true;
+                    // 0: Fast/Slow MA kesişimi - fastMA slowMA'yı aşağı kesince SAT
+                    if (AsagiKesti(currentIndex, fastMA, slowMA)) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: Fiyat-FastMA kesişimi - fiyat fastMA'yı aşağı kesince SAT
+                    if (AsagiKesti(currentIndex, source, fastMA)) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: SlowMA slope flip - slowMA'nın kendi yönü dönüyor (yükselen/düz → düşen = SAT)
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = slowMA[currentIndex] - slowMA[currentIndex - 1];
+                        double slopePrev = slowMA[currentIndex - 1] - slowMA[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: Fast/Slow MA state - fastMA'nın slowMA'ya göre konumu (kesişim değil, koşul sürdükçe her bar)
+                    if (Kucuk(currentIndex, fastMA, slowMA)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - fastMA slowMA'dan %bandThreshold'dan fazla uzaklaşınca (trend-following)
+                    const double bandThreshold = 0.01; // %1
+                    if (currentSlowMA != 0.0)
+                    {
+                        double distanceRatio = (currentFastMA - currentSlowMA) / currentSlowMA;
+                        if (distanceRatio < -bandThreshold) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - son retestLookback bar içinde fast/slow kesişti, şimdi fiyat
+                    //    slowMA'ya geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
+                    const int retestLookback = 10;
+                    double barHigh = Data[currentIndex].High;
+
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!sell && AsagiKesti(k, fastMA, slowMA)
+                            && barHigh >= currentSlowMA
+                            && currentPrice < currentSlowMA)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kesişim confirmBars bar önce oldu ve o zamandan beri fastMA
+                    //    hep slowMA'nın aynı tarafında kaldıysa gir
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, fastMA, slowMA);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedBelow &= fastMA[k] < slowMA[k];
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: FastMA eğimi + Fast/Slow state - rejim (fastMA-slowMA konumu) + momentum (fastMA N-bar eğimi)
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool fastMAFalling = fastMA[currentIndex] < fastMA[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, fastMA, slowMA) && fastMAFalling) sell = true;
+                    }
                 }
             }
             // ************************************************************************************************************************
 
-            if (1 == 1 && Trader != null)
+            if (takeProfitExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (takeProfitExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
@@ -408,17 +481,23 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (flatModeIndex == 0)
+            if (flatModeEnabled)
             {
-                // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                flat = false;
+                if (flatModeIndex == 0)
+                {
+                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                    flat = false;
+                }
             }
             // ************************************************************************************************************************
 
-            if (skipModeIndex == 0)
+            if (skipModeEnabled)
             {
-                // Skip olma durumu burada incelenir ve skip flag'i setlenir            
-                skip = false;
+                if (skipModeIndex == 0)
+                {
+                    // Skip olma durumu burada incelenir ve skip flag'i setlenir
+                    skip = false;
+                }
             }
             // ************************************************************************************************************************
 

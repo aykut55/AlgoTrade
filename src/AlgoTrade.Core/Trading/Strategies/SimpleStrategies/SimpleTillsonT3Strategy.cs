@@ -18,7 +18,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// Parametreler:
     /// - period: T3 periyodu (varsayılan 5)
     /// - priceSource: T3'ün beslendiği kaynak (varsayılan Close - klasik T3)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: Fiyat-T3 kırılımı           (fiyat T3'ü yukarı/aşağı kesince)
     ///     1: Eğim-teyitli kırılım        (fiyat T3'ü kesince VE T3 aynı yönde eğimliyse - ikinci referans çizgisi olmadığı için T3'ün kendi eğimi teyit görevi görür)
     ///     2: T3 slope flip               (T3'ün kendi yönü dönünce)
@@ -27,7 +28,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest           (T3 kırılıp fiyat geri gelip retest tutunca)
     ///     6: Confirmation bars           (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
     ///     7: Fiyat eğimi + T3 state      (rejim: fiyat-T3 konumu + momentum: fiyatın N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden:
     ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
     ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
     /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
@@ -50,9 +52,9 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int period;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex'in dispatch mantigi (OnStep'teki if/else zincirleri) stratejiye ozgu, burada kalir.
 
         private readonly PriceSource priceSource = PriceSource.Close;
 
@@ -67,15 +69,17 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleTillsonT3Strategy(List<StockData> data, IndicatorManager indicators,
             int period = 5, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.period          = period;
-            this.priceSource     = priceSource;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-            this.ruleModeIndex   = ruleModeIndex;
+            this.period                  = period;
+            this.priceSource             = priceSource;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -88,21 +92,34 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Period"]               = period;
-            Parameters["PriceSource"]          = priceSource;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
-            Parameters["FlatModeIndex"]        = flatModeIndex;
-            Parameters["SkipModeIndex"]        = skipModeIndex;
-            Parameters["RuleModeIndex"]        = ruleModeIndex;
-            Parameters["StartTime"]            = startTime;
-            Parameters["StopTime"]             = stopTime;
-            Parameters["StartDay"]             = startDay;
-            Parameters["StopDay"]              = stopDay;
-            Parameters["IsTimeEnabled"]        = isTimeEnabled;
-            Parameters["IsDayEnabled"]         = isDayEnabled;
-            Parameters["TriggerTime"]          = triggerTime;
-            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            // Bu stratejide takeProfit/stopLoss orijinalde kosulsuz aktifti (if (1 == 1 && Trader != null)) -
+            // BaseStrategy varsayilani zaten true, burada aciklik icin ayrica true set edilir.
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
+            Parameters["Period"]                  = period;
+            Parameters["PriceSource"]             = priceSource;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]           = flatModeIndex;
+            Parameters["SkipModeIndex"]           = skipModeIndex;
+            Parameters["RuleModeIndex"]           = ruleModeIndex;
+            Parameters["StartTime"]               = startTime;
+            Parameters["StopTime"]                = stopTime;
+            Parameters["StartDay"]                = startDay;
+            Parameters["StopDay"]                 = stopDay;
+            Parameters["IsTimeEnabled"]           = isTimeEnabled;
+            Parameters["IsDayEnabled"]            = isDayEnabled;
+            Parameters["TriggerTime"]             = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]    = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]          = buyModeEnabled;
+            Parameters["SellModeEnabled"]         = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]   = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]     = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]         = flatModeEnabled;
+            Parameters["SkipModeEnabled"]         = skipModeEnabled;
 
             Initialize(data, indicators);
         }
@@ -173,167 +190,238 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonS)         { }
             else if (isSonYonF)         { }
 
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: Fiyat-T3 kırılımı (klasik)
-                if (YukarıKesti(currentIndex, source, t3)) buy  = true;
-                if (AsagiKesti(currentIndex, source, t3))  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: Eğim-teyitli kırılım - fiyat T3'ü kesip T3 de aynı yönde eğimliyse
-                if (currentIndex >= 1)
+                if (buySignalModeIndex == 0)
                 {
-                    bool t3Rising  = t3[currentIndex] > t3[currentIndex - 1];
-                    bool t3Falling = t3[currentIndex] < t3[currentIndex - 1];
-                    if (YukarıKesti(currentIndex, source, t3) && t3Rising)  buy  = true;
-                    if (AsagiKesti(currentIndex, source, t3) && t3Falling) sell = true;
+                    // 0: Fiyat-T3 kırılımı (klasik) - fiyat T3'ü yukarı kesince AL
+                    if (YukarıKesti(currentIndex, source, t3)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: T3 slope flip
-                if (currentIndex >= 2)
+                else if (buySignalModeIndex == 1)
                 {
-                    double slopeNow  = t3[currentIndex]     - t3[currentIndex - 1];
-                    double slopePrev = t3[currentIndex - 1] - t3[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
-                }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: T3 state
-                if (Buyuk(currentIndex, source, t3)) buy  = true;
-                if (Kucuk(currentIndex, source, t3)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi
-                const double bandThreshold = 0.01; // %1
-                if (currentT3 != 0.0)
-                {
-                    double distanceRatio = (currentPrice - currentT3) / currentT3;
-                    if (distanceRatio >  bandThreshold) buy  = true;
-                    if (distanceRatio < -bandThreshold) sell = true;
-                }
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest
-                const int retestLookback = 10;
-                double barLow  = Data[currentIndex].Low;
-                double barHigh = Data[currentIndex].High;
-
-                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
-                {
-                    if (m < 1) continue;
-
-                    if (!buy && YukarıKesti(m, source, t3)
-                        && barLow <= currentT3
-                        && currentPrice > currentT3)
+                    // 1: Eğim-teyitli kırılım - fiyat T3'ü kesip T3 de aynı yönde eğimliyse
+                    if (currentIndex >= 1)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(m, source, t3)
-                        && barHigh >= currentT3
-                        && currentPrice < currentT3)
-                    {
-                        sell = true;
+                        bool t3Rising = t3[currentIndex] > t3[currentIndex - 1];
+                        if (YukarıKesti(currentIndex, source, t3) && t3Rising) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 2)
                 {
-                    int crossBar = currentIndex - confirmBars;
-
-                    bool stayedAbove = YukarıKesti(crossBar, source, t3);
-                    bool stayedBelow = AsagiKesti(crossBar, source, t3);
-                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    // 2: T3 slope flip
+                    if (currentIndex >= 2)
                     {
-                        stayedAbove &= source[m] > t3[m];
-                        stayedBelow &= source[m] < t3[m];
+                        double slopeNow  = t3[currentIndex]     - t3[currentIndex - 1];
+                        double slopePrev = t3[currentIndex - 1] - t3[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
                 }
-            }
-            else if (signalModeIndex == 7)
-            {
-                // 7: Fiyat eğimi + T3 state
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                else if (buySignalModeIndex == 3)
                 {
-                    bool priceRising  = source[currentIndex] > source[currentIndex - slopeLookback];
-                    bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, source, t3) && priceRising)  buy  = true;
-                    if (Kucuk(currentIndex, source, t3) && priceFalling) sell = true;
+                    // 3: T3 state
+                    if (Buyuk(currentIndex, source, t3)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi
+                    const double bandThreshold = 0.01; // %1
+                    if (currentT3 != 0.0)
+                    {
+                        double distanceRatio = (currentPrice - currentT3) / currentT3;
+                        if (distanceRatio > bandThreshold) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    double barLow = Data[currentIndex].Low;
+
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                    {
+                        if (m < 1) continue;
+
+                        if (!buy && YukarıKesti(m, source, t3)
+                            && barLow <= currentT3
+                            && currentPrice > currentT3)
+                        {
+                            buy = true;
+                        }
+                    }
+                }
+                else if (buySignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, source, t3);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedAbove &= source[m] > t3[m];
+                        }
+                        if (stayedAbove) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + T3 state
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceRising = source[currentIndex] > source[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, source, t3) && priceRising) buy = true;
+                    }
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (sellModeEnabled)
             {
-                if (exitModeIndex == 0)
+                if (sellSignalModeIndex == 0)
+                {
+                    // 0: Fiyat-T3 kırılımı (klasik) - fiyat T3'ü aşağı kesince SAT
+                    if (AsagiKesti(currentIndex, source, t3)) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: Eğim-teyitli kırılım - fiyat T3'ü kesip T3 de aynı yönde eğimliyse
+                    if (currentIndex >= 1)
+                    {
+                        bool t3Falling = t3[currentIndex] < t3[currentIndex - 1];
+                        if (AsagiKesti(currentIndex, source, t3) && t3Falling) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: T3 slope flip
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = t3[currentIndex]     - t3[currentIndex - 1];
+                        double slopePrev = t3[currentIndex - 1] - t3[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: T3 state
+                    if (Kucuk(currentIndex, source, t3)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi
+                    const double bandThreshold = 0.01; // %1
+                    if (currentT3 != 0.0)
+                    {
+                        double distanceRatio = (currentPrice - currentT3) / currentT3;
+                        if (distanceRatio < -bandThreshold) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    double barHigh = Data[currentIndex].High;
+
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                    {
+                        if (m < 1) continue;
+
+                        if (!sell && AsagiKesti(m, source, t3)
+                            && barHigh >= currentT3
+                            && currentPrice < currentT3)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, source, t3);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedBelow &= source[m] < t3[m];
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + T3 state
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, source, t3) && priceFalling) sell = true;
+                    }
+                }
+            }
+
+            if (takeProfitExitModeEnabled && Trader != null)
+            {
+                if (takeProfitExitModeIndex == 0)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
                 }
             }
 
-            if (flatModeIndex == 0) flat = false;
-            if (skipModeIndex == 0) skip = false;
+            if (flatModeEnabled) { if (flatModeIndex == 0) flat = false; }
+            if (skipModeEnabled) { if (skipModeIndex == 0) skip = false; }
 
             // ------------------------------------------------------------------------------------------------------------------
             // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.

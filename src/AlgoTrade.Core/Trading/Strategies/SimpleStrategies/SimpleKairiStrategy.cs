@@ -19,7 +19,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - period: MA periyodu (varsayılan 20)
     /// - positiveThreshold/negativeThreshold: seviyeler (varsayılan 5/-5)
     /// - priceSource: MA'nın beslendiği kaynak (varsayılan Close - klasik Kairi)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: Pozitif/negatif eşik kesişimi (klasik)
     ///     1: Orta hat (0) kesişimi        (Kairi 0'ı yukarı/aşağı kesince)
     ///     2: Kairi slope flip             (Kairi'nin kendi yönü dönünce)
@@ -28,7 +29,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest            (eşik kırılıp Kairi geri yaklaşıp tutunca)
     ///     6: Confirmation bars            (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
     ///     7: Kairi eğimi + state combo    (rejim: 0'a göre konum + momentum: Kairi N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden:
     ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
     ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
     /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
@@ -53,9 +55,9 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly double positiveThreshold;
         private readonly double negativeThreshold;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex'in dispatch mantigi (OnStep'teki if/else zincirleri) stratejiye ozgu, burada kalir.
 
         private readonly PriceSource priceSource = PriceSource.Close;
 
@@ -71,17 +73,19 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleKairiStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 20, double positiveThreshold = 5, double negativeThreshold = -5, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.period            = period;
-            this.positiveThreshold = positiveThreshold;
-            this.negativeThreshold = negativeThreshold;
-            this.priceSource       = priceSource;
-            this.signalModeIndex   = signalModeIndex;
-            this.exitModeIndex     = exitModeIndex;
-            this.flatModeIndex     = flatModeIndex;
-            this.skipModeIndex     = skipModeIndex;
-            this.ruleModeIndex     = ruleModeIndex;
+            this.period                  = period;
+            this.positiveThreshold       = positiveThreshold;
+            this.negativeThreshold       = negativeThreshold;
+            this.priceSource             = priceSource;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -94,23 +98,36 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Period"]               = period;
-            Parameters["PositiveThreshold"]    = positiveThreshold;
-            Parameters["NegativeThreshold"]    = negativeThreshold;
-            Parameters["PriceSource"]          = priceSource;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
-            Parameters["FlatModeIndex"]        = flatModeIndex;
-            Parameters["SkipModeIndex"]        = skipModeIndex;
-            Parameters["RuleModeIndex"]        = ruleModeIndex;
-            Parameters["StartTime"]            = startTime;
-            Parameters["StopTime"]             = stopTime;
-            Parameters["StartDay"]             = startDay;
-            Parameters["StopDay"]              = stopDay;
-            Parameters["IsTimeEnabled"]        = isTimeEnabled;
-            Parameters["IsDayEnabled"]         = isDayEnabled;
-            Parameters["TriggerTime"]          = triggerTime;
-            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            // Bu stratejide takeProfit/stopLoss eskiden kosulsuz (1 == 1) aktifti - BaseStrategy
+            // varsayilani zaten true, davranis degismesin diye burada acikca da true birakiliyor.
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
+            Parameters["Period"]                  = period;
+            Parameters["PositiveThreshold"]       = positiveThreshold;
+            Parameters["NegativeThreshold"]       = negativeThreshold;
+            Parameters["PriceSource"]             = priceSource;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]           = flatModeIndex;
+            Parameters["SkipModeIndex"]           = skipModeIndex;
+            Parameters["RuleModeIndex"]           = ruleModeIndex;
+            Parameters["StartTime"]               = startTime;
+            Parameters["StopTime"]                = stopTime;
+            Parameters["StartDay"]                = startDay;
+            Parameters["StopDay"]                 = stopDay;
+            Parameters["IsTimeEnabled"]           = isTimeEnabled;
+            Parameters["IsDayEnabled"]            = isDayEnabled;
+            Parameters["TriggerTime"]             = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]    = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]          = buyModeEnabled;
+            Parameters["SellModeEnabled"]         = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]   = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]     = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]         = flatModeEnabled;
+            Parameters["SkipModeEnabled"]         = skipModeEnabled;
 
             Initialize(data, indicators);
         }
@@ -185,158 +202,231 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonS)         { }
             else if (isSonYonF)         { }
 
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: Pozitif/negatif eşik kesişimi (klasik)
-                if (YukarıKesti(currentIndex, kairi, positiveThreshold)) buy  = true;
-                if (AsagiKesti(currentIndex, kairi, negativeThreshold))  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: Orta hat (0) kesişimi
-                const double zero = 0.0;
-                if (YukarıKesti(currentIndex, kairi, zero)) buy  = true;
-                if (AsagiKesti(currentIndex, kairi, zero))  sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: Kairi slope flip
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = kairi[currentIndex]     - kairi[currentIndex - 1];
-                    double slopePrev = kairi[currentIndex - 1] - kairi[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    // 0: Pozitif/negatif eşik kesişimi (klasik)
+                    if (YukarıKesti(currentIndex, kairi, positiveThreshold)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: Kairi state
-                if (Buyuk(currentIndex, kairi, 0.0)) buy  = true;
-                if (Kucuk(currentIndex, kairi, 0.0)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi
-                const double bandThreshold = 10.0;
-                if (currentKairi >  bandThreshold) buy  = true;
-                if (currentKairi < -bandThreshold) sell = true;
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest
-                const int retestLookback = 10;
-                const double retestBand  = 1.0;
-
-                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                else if (buySignalModeIndex == 1)
                 {
-                    if (m < 1) continue;
-
-                    if (!buy && YukarıKesti(m, kairi, positiveThreshold)
-                        && currentKairi <= positiveThreshold + retestBand
-                        && currentKairi > positiveThreshold)
+                    // 1: Orta hat (0) kesişimi
+                    const double zero = 0.0;
+                    if (YukarıKesti(currentIndex, kairi, zero)) buy = true;
+                }
+                else if (buySignalModeIndex == 2)
+                {
+                    // 2: Kairi slope flip
+                    if (currentIndex >= 2)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(m, kairi, negativeThreshold)
-                        && currentKairi >= negativeThreshold - retestBand
-                        && currentKairi < negativeThreshold)
-                    {
-                        sell = true;
+                        double slopeNow  = kairi[currentIndex]     - kairi[currentIndex - 1];
+                        double slopePrev = kairi[currentIndex - 1] - kairi[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 3)
                 {
-                    int crossBar = currentIndex - confirmBars;
+                    // 3: Kairi state
+                    if (Buyuk(currentIndex, kairi, 0.0)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi
+                    const double bandThreshold = 10.0;
+                    if (currentKairi > bandThreshold) buy = true;
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    const double retestBand  = 1.0;
 
-                    bool stayedAbove = YukarıKesti(crossBar, kairi, positiveThreshold);
-                    bool stayedBelow = AsagiKesti(crossBar, kairi, negativeThreshold);
-                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
                     {
-                        stayedAbove &= kairi[m] > positiveThreshold;
-                        stayedBelow &= kairi[m] < negativeThreshold;
+                        if (m < 1) continue;
+
+                        if (!buy && YukarıKesti(m, kairi, positiveThreshold)
+                            && currentKairi <= positiveThreshold + retestBand
+                            && currentKairi > positiveThreshold)
+                        {
+                            buy = true;
+                        }
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
                 }
-            }
-            else if (signalModeIndex == 7)
-            {
-                // 7: Kairi eğimi + state combo
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                else if (buySignalModeIndex == 6)
                 {
-                    bool kairiRising  = kairi[currentIndex] > kairi[currentIndex - slopeLookback];
-                    bool kairiFalling = kairi[currentIndex] < kairi[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, kairi, 0.0) && kairiRising)  buy  = true;
-                    if (Kucuk(currentIndex, kairi, 0.0) && kairiFalling) sell = true;
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, kairi, positiveThreshold);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedAbove &= kairi[m] > positiveThreshold;
+                        }
+                        if (stayedAbove) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: Kairi eğimi + state combo
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool kairiRising = kairi[currentIndex] > kairi[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, kairi, 0.0) && kairiRising) buy = true;
+                    }
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (sellModeEnabled)
             {
-                if (exitModeIndex == 0)
+                if (sellSignalModeIndex == 0)
+                {
+                    // 0: Pozitif/negatif eşik kesişimi (klasik)
+                    if (AsagiKesti(currentIndex, kairi, negativeThreshold)) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: Orta hat (0) kesişimi
+                    const double zero = 0.0;
+                    if (AsagiKesti(currentIndex, kairi, zero)) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: Kairi slope flip
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = kairi[currentIndex]     - kairi[currentIndex - 1];
+                        double slopePrev = kairi[currentIndex - 1] - kairi[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: Kairi state
+                    if (Kucuk(currentIndex, kairi, 0.0)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi
+                    const double bandThreshold = 10.0;
+                    if (currentKairi < -bandThreshold) sell = true;
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    const double retestBand  = 1.0;
+
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                    {
+                        if (m < 1) continue;
+
+                        if (!sell && AsagiKesti(m, kairi, negativeThreshold)
+                            && currentKairi >= negativeThreshold - retestBand
+                            && currentKairi < negativeThreshold)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, kairi, negativeThreshold);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedBelow &= kairi[m] < negativeThreshold;
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: Kairi eğimi + state combo
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool kairiFalling = kairi[currentIndex] < kairi[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, kairi, 0.0) && kairiFalling) sell = true;
+                    }
+                }
+            }
+
+            if (takeProfitExitModeEnabled && Trader != null)
+            {
+                if (takeProfitExitModeIndex == 0)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
                 }
             }
 
-            if (flatModeIndex == 0) flat = false;
-            if (skipModeIndex == 0) skip = false;
+            if (flatModeEnabled)
+            {
+                if (flatModeIndex == 0) flat = false;
+            }
+
+            if (skipModeEnabled)
+            {
+                if (skipModeIndex == 0) skip = false;
+            }
 
             // ------------------------------------------------------------------------------------------------------------------
             // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.

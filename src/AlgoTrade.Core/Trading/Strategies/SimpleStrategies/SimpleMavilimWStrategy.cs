@@ -17,7 +17,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///
     /// Parametreler:
     /// - param1/param2: hassasiyet parametreleri (varsayılan 3/5)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: Fiyat-MavilimW kırılımı     (fiyat MavilimW'yi yukarı/aşağı kesince)
     ///     1: MavilimW-Trendline kesişimi (MavilimW, Trendline'ı yukarı/aşağı kesince)
     ///     2: MavilimW slope flip         (MavilimW'nin kendi yönü dönünce)
@@ -26,7 +27,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest           (MavilimW kırılıp fiyat geri gelip retest tutunca)
     ///     6: Confirmation bars           (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
     ///     7: Fiyat eğimi + state combo   (rejim: fiyat-MavilimW konumu + momentum: fiyatın N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden seçilir:
     ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
     ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
     /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
@@ -50,9 +52,9 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int param1;
         private readonly int param2;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex'in dispatch mantigi (OnStep'teki if/else zincirleri) stratejiye ozgu, burada kalir.
 
         // startTime/stopTime/startDay/stopDay/isTimeEnabled/isDayEnabled/triggerTime/isTriggerTimeEnabled
         // artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri asagida constructor'da atanir.
@@ -65,15 +67,17 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleMavilimWStrategy(List<StockData> data, IndicatorManager indicators,
             int param1 = 3, int param2 = 5,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.param1          = param1;
-            this.param2          = param2;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-            this.ruleModeIndex   = ruleModeIndex;
+            this.param1                  = param1;
+            this.param2                  = param2;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -86,10 +90,17 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Param1"]               = param1;
-            Parameters["Param2"]               = param2;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
+            // Orijinalde takeProfit/stopLoss guard'i kosulsuzdu ("1 == 1 && Trader != null") - ayni
+            // davranisi acikca korumak icin enable flag'leri burada true olarak setleniyor.
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
+            Parameters["Param1"]                  = param1;
+            Parameters["Param2"]                  = param2;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
             Parameters["FlatModeIndex"]        = flatModeIndex;
             Parameters["SkipModeIndex"]        = skipModeIndex;
             Parameters["RuleModeIndex"]        = ruleModeIndex;
@@ -101,6 +112,12 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["IsDayEnabled"]         = isDayEnabled;
             Parameters["TriggerTime"]          = triggerTime;
             Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]        = buyModeEnabled;
+            Parameters["SellModeEnabled"]       = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"] = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]   = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]       = flatModeEnabled;
+            Parameters["SkipModeEnabled"]       = skipModeEnabled;
 
             Initialize(data, indicators);
         }
@@ -172,162 +189,236 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonS)         { }
             else if (isSonYonF)         { }
 
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: Fiyat-MavilimW kırılımı (klasik)
-                if (YukarıKesti(currentIndex, closePrices, mavilimW)) buy  = true;
-                if (AsagiKesti(currentIndex, closePrices, mavilimW))  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: MavilimW-Trendline kesişimi
-                if (YukarıKesti(currentIndex, mavilimW, trendline)) buy  = true;
-                if (AsagiKesti(currentIndex, mavilimW, trendline))  sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: MavilimW slope flip
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = mavilimW[currentIndex]     - mavilimW[currentIndex - 1];
-                    double slopePrev = mavilimW[currentIndex - 1] - mavilimW[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    // 0: Fiyat-MavilimW kırılımı (klasik)
+                    if (YukarıKesti(currentIndex, closePrices, mavilimW)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: MavilimW state
-                if (Buyuk(currentIndex, closePrices, mavilimW)) buy  = true;
-                if (Kucuk(currentIndex, closePrices, mavilimW)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi
-                const double bandThreshold = 0.01; // %1
-                if (currentMavilim != 0.0)
+                else if (buySignalModeIndex == 1)
                 {
-                    double distanceRatio = (currentPrice - currentMavilim) / currentMavilim;
-                    if (distanceRatio >  bandThreshold) buy  = true;
-                    if (distanceRatio < -bandThreshold) sell = true;
+                    // 1: MavilimW-Trendline kesişimi
+                    if (YukarıKesti(currentIndex, mavilimW, trendline)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest
-                const int retestLookback = 10;
-                double barLow  = Data[currentIndex].Low;
-                double barHigh = Data[currentIndex].High;
-
-                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                else if (buySignalModeIndex == 2)
                 {
-                    if (m < 1) continue;
-
-                    if (!buy && YukarıKesti(m, closePrices, mavilimW)
-                        && barLow <= currentMavilim
-                        && currentPrice > currentMavilim)
+                    // 2: MavilimW slope flip
+                    if (currentIndex >= 2)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(m, closePrices, mavilimW)
-                        && barHigh >= currentMavilim
-                        && currentPrice < currentMavilim)
-                    {
-                        sell = true;
+                        double slopeNow  = mavilimW[currentIndex]     - mavilimW[currentIndex - 1];
+                        double slopePrev = mavilimW[currentIndex - 1] - mavilimW[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 3)
                 {
-                    int crossBar = currentIndex - confirmBars;
-
-                    bool stayedAbove = YukarıKesti(crossBar, closePrices, mavilimW);
-                    bool stayedBelow = AsagiKesti(crossBar, closePrices, mavilimW);
-                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    // 3: MavilimW state
+                    if (Buyuk(currentIndex, closePrices, mavilimW)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi
+                    const double bandThreshold = 0.01; // %1
+                    if (currentMavilim != 0.0)
                     {
-                        stayedAbove &= closePrices[m] > mavilimW[m];
-                        stayedBelow &= closePrices[m] < mavilimW[m];
+                        double distanceRatio = (currentPrice - currentMavilim) / currentMavilim;
+                        if (distanceRatio > bandThreshold) buy = true;
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
                 }
-            }
-            else if (signalModeIndex == 7)
-            {
-                // 7: Fiyat eğimi + state combo
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                else if (buySignalModeIndex == 5)
                 {
-                    bool priceRising  = closePrices[currentIndex] > closePrices[currentIndex - slopeLookback];
-                    bool priceFalling = closePrices[currentIndex] < closePrices[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, closePrices, mavilimW) && priceRising)  buy  = true;
-                    if (Kucuk(currentIndex, closePrices, mavilimW) && priceFalling) sell = true;
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    double barLow = Data[currentIndex].Low;
+
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                    {
+                        if (m < 1) continue;
+
+                        if (!buy && YukarıKesti(m, closePrices, mavilimW)
+                            && barLow <= currentMavilim
+                            && currentPrice > currentMavilim)
+                        {
+                            buy = true;
+                        }
+                    }
+                }
+                else if (buySignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, closePrices, mavilimW);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedAbove &= closePrices[m] > mavilimW[m];
+                        }
+                        if (stayedAbove) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + state combo
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceRising = closePrices[currentIndex] > closePrices[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, closePrices, mavilimW) && priceRising) buy = true;
+                    }
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (sellModeEnabled)
             {
-                if (exitModeIndex == 0)
+                if (sellSignalModeIndex == 0)
+                {
+                    // 0: Fiyat-MavilimW kırılımı (klasik)
+                    if (AsagiKesti(currentIndex, closePrices, mavilimW)) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: MavilimW-Trendline kesişimi
+                    if (AsagiKesti(currentIndex, mavilimW, trendline)) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: MavilimW slope flip
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = mavilimW[currentIndex]     - mavilimW[currentIndex - 1];
+                        double slopePrev = mavilimW[currentIndex - 1] - mavilimW[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: MavilimW state
+                    if (Kucuk(currentIndex, closePrices, mavilimW)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi
+                    const double bandThreshold = 0.01; // %1
+                    if (currentMavilim != 0.0)
+                    {
+                        double distanceRatio = (currentPrice - currentMavilim) / currentMavilim;
+                        if (distanceRatio < -bandThreshold) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    double barHigh = Data[currentIndex].High;
+
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                    {
+                        if (m < 1) continue;
+
+                        if (!sell && AsagiKesti(m, closePrices, mavilimW)
+                            && barHigh >= currentMavilim
+                            && currentPrice < currentMavilim)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, closePrices, mavilimW);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedBelow &= closePrices[m] < mavilimW[m];
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + state combo
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceFalling = closePrices[currentIndex] < closePrices[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, closePrices, mavilimW) && priceFalling) sell = true;
+                    }
+                }
+            }
+
+            if (takeProfitExitModeEnabled && Trader != null)
+            {
+                if (takeProfitExitModeIndex == 0)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
                 }
             }
 
-            if (flatModeIndex == 0) flat = false;
-            if (skipModeIndex == 0) skip = false;
+            if (flatModeEnabled)
+            {
+                if (flatModeIndex == 0) flat = false;
+            }
+            if (skipModeEnabled)
+            {
+                if (skipModeIndex == 0) skip = false;
+            }
 
             // ------------------------------------------------------------------------------------------------------------------
             // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.

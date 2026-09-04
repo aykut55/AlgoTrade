@@ -71,51 +71,51 @@ algoTrader.SymbolPeriod = symbolPeriod;
 algoTrader.Initialize();
 
 var childStrategy0 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMostStrategy",
-    new Dictionary<string, object> { ["period"] = 21, ["percent"] = 1.0, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 21, ["percent"] = 1.0, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy1 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMAStrategy",
-    new Dictionary<string, object> { ["fastPeriod"] = 10, ["slowPeriod"] = 20, ["fastMaMethod"] = "EMA", ["slowMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["fastPeriod"] = 10, ["slowPeriod"] = 20, ["fastMaMethod"] = "EMA", ["slowMaMethod"] = "EMA", ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy2 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleRSIStrategy",
-    new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 30, ["overbought"] = 70, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 30, ["overbought"] = 70, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy3 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleOTTStrategy",
-    new Dictionary<string, object> { ["period"] = 2, ["percent"] = 1.4, ["ottMaMethod"] = "VIDYA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 2, ["percent"] = 1.4, ["ottMaMethod"] = "VIDYA", ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy4 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleSuperTrendStrategy",
-    new Dictionary<string, object> { ["period"] = 10, ["multiplier"] = 3.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 10, ["multiplier"] = 3.0, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy5 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleParabolicSARStrategy",
-    new Dictionary<string, object> { ["step"] = 0.02, ["max"] = 0.2, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["step"] = 0.02, ["max"] = 0.2, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy6 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleADXStrategy",
-    new Dictionary<string, object> { ["period"] = 14, ["adxThreshold"] = 25, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 14, ["adxThreshold"] = 25, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy7 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleDIStrategy",
-    new Dictionary<string, object> { ["period"] = 14, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 14, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy8 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMACDStrategy",
-    new Dictionary<string, object> { ["fastPeriod"] = 12, ["slowPeriod"] = 26, ["signalPeriod"] = 9, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["fastPeriod"] = 12, ["slowPeriod"] = 26, ["signalPeriod"] = 9, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy9 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleStochasticStrategy",
-    new Dictionary<string, object> { ["kPeriod"] = 14, ["dPeriod"] = 3, ["centerLine"] = 50, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["kPeriod"] = 14, ["dPeriod"] = 3, ["centerLine"] = 50, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy10 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleBollingerStrategy",
-    new Dictionary<string, object> { ["period"] = 20, ["multiplier"] = 2.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 20, ["multiplier"] = 2.0, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy11 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleATRStrategy",
-    new Dictionary<string, object> { ["atrPeriod"] = 14, ["maPeriod"] = 20, ["multiplier"] = 2.0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["atrPeriod"] = 14, ["maPeriod"] = 20, ["multiplier"] = 2.0, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy12 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleCMFStrategy",
-    new Dictionary<string, object> { ["period"] = 20, ["positiveThreshold"] = 0.1, ["negativeThreshold"] = -0.1, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 20, ["positiveThreshold"] = 0.1, ["negativeThreshold"] = -0.1, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy13 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMFIStrategy",
-    new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 20, ["overbought"] = 80, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 14, ["oversold"] = 20, ["overbought"] = 80, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy14 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleKairiStrategy",
-    new Dictionary<string, object> { ["period"] = 20, ["positiveThreshold"] = 5, ["negativeThreshold"] = -5, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 20, ["positiveThreshold"] = 5, ["negativeThreshold"] = -5, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy15 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMomentumStrategy",
-    new Dictionary<string, object> { ["period"] = 12, ["positiveThreshold"] = 0, ["negativeThreshold"] = 0, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 12, ["positiveThreshold"] = 0, ["negativeThreshold"] = 0, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy16 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleHHVLLVStrategy",
-    new Dictionary<string, object> { ["period"] = 20, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 20, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy17 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleHYLYStrategy",
-    new Dictionary<string, object> { ["period"] = 20, ["threshold"] = 80, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 20, ["threshold"] = 80, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy18 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleIchimokuStrategy",
-    new Dictionary<string, object> { ["tenkanPeriod"] = 9, ["kijunPeriod"] = 26, ["senkouPeriod"] = 52, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["tenkanPeriod"] = 9, ["kijunPeriod"] = 26, ["senkouPeriod"] = 52, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy19 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleMavilimWStrategy",
-    new Dictionary<string, object> { ["param1"] = 3, ["param2"] = 5, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["param1"] = 3, ["param2"] = 5, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy20 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimplePMaxStrategy",
-    new Dictionary<string, object> { ["atrPeriod"] = 10, ["multiplier"] = 3.0, ["maPeriod"] = 10, ["pmaxMaMethod"] = "EMA", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["atrPeriod"] = 10, ["multiplier"] = 3.0, ["maPeriod"] = 10, ["pmaxMaMethod"] = "EMA", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy21 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleTillsonT3Strategy",
-    new Dictionary<string, object> { ["period"] = 5, ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["period"] = 5, ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 var childStrategy22 = algoTrader.CreateStrategyFromRegistry(data, indicators, "SimpleAlphaTrendStrategy",
-    new Dictionary<string, object> { ["atrPeriod"] = 14, ["coefficient"] = 1.0, ["momentumPeriod"] = 14, ["useMFI"] = true, ["signalModeIndex"] = 0 });
+    new Dictionary<string, object> { ["atrPeriod"] = 14, ["coefficient"] = 1.0, ["momentumPeriod"] = 14, ["useMFI"] = true, ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
 
 // =============================================================================
 // 2. MultipleTrader'i manuel kur (mainTrader + 23 child)

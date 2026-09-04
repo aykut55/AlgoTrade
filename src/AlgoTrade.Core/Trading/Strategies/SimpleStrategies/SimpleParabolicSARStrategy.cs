@@ -24,7 +24,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - step: Hızlanma faktörü adımı (varsayılan 0.02)
     /// - max: Maksimum hızlanma faktörü (varsayılan 0.2)
     /// - priceSource: OnStep sinyal serisi (varsayılan Close - klasik Parabolic SAR)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: Fiyat-SAR kırılımı        (fiyat SAR'ı yukarı/aşağı kesince)
     ///     1: Trend flip                (indikatörün kendi ürettiği Trend dizisi false'dan true'ya/true'dan false'a dönünce - eski choice=0 ile birebir aynı)
     ///     2: SAR slope flip            (SAR'ın kendi yönü dönünce)
@@ -33,7 +34,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest         (SAR kırılıp fiyat geri gelip retest tutunca)
     ///     6: Confirmation bars         (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
     ///     7: Fiyat eğimi + SAR state   (rejim: fiyat-SAR konumu + momentum: fiyatın N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden:
     ///     0: Seviye, seviyeli               (SonFiyataGoreKarAl/ZararKesSeviyeHesaplaSeviyeli)
     ///     1: Yüzde, seviyeli                 (SonFiyataGoreKarAl/ZararKesYuzdeHesaplaSeviyeli)
     ///     2: Seviye, tek seviye              (SonFiyataGoreKarAl/ZararKesSeviyeHesapla)
@@ -63,9 +65,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly double step;
         private readonly double max;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
-        // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/
+        // skipModeIndex/ruleModeIndex artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri
+        // asagida constructor'da parametre olarak atanir. Dispatch mantigi (OnStep'teki if/else zincirleri)
+        // stratejiye ozgu, burada kalir.
 
         // OnStep'teki "fiyat" tarafını besler - indikatörün kendisi (SAR) High/Low'a bağımlı,
         // priceSource'tan etkilenmez.
@@ -84,16 +87,18 @@ namespace AlgoTrade.Core.Trading.Strategies
         // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleParabolicSARStrategy(List<StockData> data, IndicatorManager indicators,
             double step = 0.02, double max = 0.2, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.step            = step;
-            this.max             = max;
-            this.priceSource     = priceSource;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-            this.ruleModeIndex   = ruleModeIndex;
+            this.step                    = step;
+            this.max                     = max;
+            this.priceSource             = priceSource;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -106,22 +111,35 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Step"]                 = step;
-            Parameters["Max"]                  = max;
-            Parameters["PriceSource"]          = priceSource;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
-            Parameters["FlatModeIndex"]        = flatModeIndex;
-            Parameters["SkipModeIndex"]        = skipModeIndex;
-            Parameters["RuleModeIndex"]        = ruleModeIndex;
-            Parameters["StartTime"]            = startTime;
-            Parameters["StopTime"]             = stopTime;
-            Parameters["StartDay"]             = startDay;
-            Parameters["StopDay"]              = stopDay;
-            Parameters["IsTimeEnabled"]        = isTimeEnabled;
-            Parameters["IsDayEnabled"]         = isDayEnabled;
-            Parameters["TriggerTime"]          = triggerTime;
-            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            // BaseStrategy'deki varsayilan degerler zaten true - takeProfit/stopLoss guard'i eskiden
+            // kosulsuz (1==1) acikti, burada ayni davranisi ACIKCA true atayarak koruyoruz.
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
+            Parameters["Step"]                    = step;
+            Parameters["Max"]                     = max;
+            Parameters["PriceSource"]             = priceSource;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]           = flatModeIndex;
+            Parameters["SkipModeIndex"]           = skipModeIndex;
+            Parameters["RuleModeIndex"]           = ruleModeIndex;
+            Parameters["StartTime"]               = startTime;
+            Parameters["StopTime"]                = stopTime;
+            Parameters["StartDay"]                = startDay;
+            Parameters["StopDay"]                 = stopDay;
+            Parameters["IsTimeEnabled"]           = isTimeEnabled;
+            Parameters["IsDayEnabled"]            = isDayEnabled;
+            Parameters["TriggerTime"]             = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]    = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]          = buyModeEnabled;
+            Parameters["SellModeEnabled"]         = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]   = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]     = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]         = flatModeEnabled;
+            Parameters["SkipModeEnabled"]         = skipModeEnabled;
 
             // Initialize base strategy
             Initialize(data, indicators);
@@ -155,7 +173,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                     $"Seri uzunlukları uyuşmuyor (barCount={barCount}): sar={sar.Length}, trend={trend.Length}, source={source.Length}");
             }
 
-            //Log($"SimpleParabolicSARStrategy initialized: Step={step}, Max={max}, SignalModeIndex={signalModeIndex}");
+            //Log($"SimpleParabolicSARStrategy initialized: Step={step}, Max={max}, BuySignalModeIndex={buySignalModeIndex}, SellSignalModeIndex={sellSignalModeIndex}");
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -222,170 +240,241 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
-            // signalModeIndex ile buy/sell yöntemi seçilir - detay için sınıf başı doc comment (0-7)
-            if (signalModeIndex == 0)
+            // buySignalModeIndex/sellSignalModeIndex ile buy/sell yöntemi AYRI seçilir (asymmetric) -
+            // detay için sınıf başı doc comment. İki bağımsız zincir: biri sadece buy, diğeri sadece sell hesaplar.
+            if (buyModeEnabled)
             {
-                // 0: Fiyat-SAR kırılımı - fiyat SAR'ı yukarı kesince AL, aşağı kesince SAT
-                if (YukarıKesti(currentIndex, source, sar)) buy  = true;
-                if (AsagiKesti(currentIndex, source, sar))  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: Trend flip - indikatörün kendi Trend dizisi false'dan true'ya (AL) / true'dan false'a (SAT) dönüyor
-                if (!prevTrend && currentTrend) buy  = true;
-                if (prevTrend && !currentTrend) sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: SAR slope flip - SAR'ın kendi yönü dönüyor (düşen/düz → yükselen = AL)
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = sar[currentIndex]     - sar[currentIndex - 1];
-                    double slopePrev = sar[currentIndex - 1] - sar[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    // 0: Fiyat-SAR kırılımı - fiyat SAR'ı yukarı kesince AL
+                    if (YukarıKesti(currentIndex, source, sar)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: SAR state - fiyatın SAR'a göre konumu (kesişim değil, koşul sürdükçe her bar)
-                if (Buyuk(currentIndex, source, sar)) buy  = true;
-                if (Kucuk(currentIndex, source, sar)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi - fiyat SAR'dan %bandThreshold'dan fazla uzaklaşınca (trend-following)
-                const double bandThreshold = 0.01; // %1
-                if (currentSar != 0.0)
+                else if (buySignalModeIndex == 1)
                 {
-                    double distanceRatio = (currentPrice - currentSar) / currentSar;
-                    if (distanceRatio >  bandThreshold) buy  = true;
-                    if (distanceRatio < -bandThreshold) sell = true;
+                    // 1: Trend flip - indikatörün kendi Trend dizisi false'dan true'ya dönüyor (AL)
+                    if (!prevTrend && currentTrend) buy = true;
                 }
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest - son retestLookback bar içinde SAR kırıldı, şimdi fiyat
-                //    SAR'a geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
-                const int retestLookback = 10;
-                double barLow  = Data[currentIndex].Low;
-                double barHigh = Data[currentIndex].High;
-
-                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                else if (buySignalModeIndex == 2)
                 {
-                    if (k < 1) continue;
-
-                    if (!buy && YukarıKesti(k, source, sar)
-                        && barLow <= currentSar           // bu bar SAR'a geri dokundu (retest)
-                        && currentPrice > currentSar)     // ama üstünde kapattı (retest tuttu)
+                    // 2: SAR slope flip - SAR'ın kendi yönü dönüyor (düşen/düz → yükselen = AL)
+                    if (currentIndex >= 2)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(k, source, sar)
-                        && barHigh >= currentSar
-                        && currentPrice < currentSar)
-                    {
-                        sell = true;
+                        double slopeNow  = sar[currentIndex]     - sar[currentIndex - 1];
+                        double slopePrev = sar[currentIndex - 1] - sar[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri fiyat
-                //    hep SAR'ın aynı tarafında kaldıysa gir
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 3)
                 {
-                    int crossBar = currentIndex - confirmBars;
-
-                    bool stayedAbove = YukarıKesti(crossBar, source, sar);
-                    bool stayedBelow = AsagiKesti(crossBar, source, sar);
-                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    // 3: SAR state - fiyatın SAR'a göre konumu (kesişim değil, koşul sürdükçe her bar)
+                    if (Buyuk(currentIndex, source, sar)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - fiyat SAR'dan %bandThreshold'dan fazla uzaklaşınca (trend-following)
+                    const double bandThreshold = 0.01; // %1
+                    if (currentSar != 0.0)
                     {
-                        stayedAbove &= source[k] > sar[k];
-                        stayedBelow &= source[k] < sar[k];
+                        double distanceRatio = (currentPrice - currentSar) / currentSar;
+                        if (distanceRatio > bandThreshold) buy = true;
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - son retestLookback bar içinde SAR kırıldı, şimdi fiyat
+                    //    SAR'a geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
+                    const int retestLookback = 10;
+                    double barLow = Data[currentIndex].Low;
+
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!buy && YukarıKesti(k, source, sar)
+                            && barLow <= currentSar           // bu bar SAR'a geri dokundu (retest)
+                            && currentPrice > currentSar)     // ama üstünde kapattı (retest tuttu)
+                        {
+                            buy = true;
+                        }
+                    }
+                }
+                else if (buySignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri fiyat
+                    //    hep SAR'ın aynı tarafında kaldıysa gir
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, source, sar);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedAbove &= source[k] > sar[k];
+                        }
+                        if (stayedAbove) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + SAR state - rejim (fiyat-SAR konumu) + momentum (fiyatın N-bar eğimi)
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceRising = source[currentIndex] > source[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, source, sar) && priceRising) buy = true;
+                    }
                 }
             }
-            else if (signalModeIndex == 7)
+
+            if (sellModeEnabled)
             {
-                // 7: Fiyat eğimi + SAR state - rejim (fiyat-SAR konumu) + momentum (fiyatın N-bar eğimi)
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                if (sellSignalModeIndex == 0)
                 {
-                    bool priceRising  = source[currentIndex] > source[currentIndex - slopeLookback];
-                    bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, source, sar) && priceRising)  buy  = true;
-                    if (Kucuk(currentIndex, source, sar) && priceFalling) sell = true;
+                    // 0: Fiyat-SAR kırılımı - fiyat SAR'ı aşağı kesince SAT
+                    if (AsagiKesti(currentIndex, source, sar)) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: Trend flip - indikatörün kendi Trend dizisi true'dan false'a dönüyor (SAT)
+                    if (prevTrend && !currentTrend) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: SAR slope flip - SAR'ın kendi yönü dönüyor (yükselen/düz → düşen = SAT)
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = sar[currentIndex]     - sar[currentIndex - 1];
+                        double slopePrev = sar[currentIndex - 1] - sar[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: SAR state - fiyatın SAR'a göre konumu (kesişim değil, koşul sürdükçe her bar)
+                    if (Kucuk(currentIndex, source, sar)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - fiyat SAR'dan %bandThreshold'dan fazla uzaklaşınca (trend-following)
+                    const double bandThreshold = 0.01; // %1
+                    if (currentSar != 0.0)
+                    {
+                        double distanceRatio = (currentPrice - currentSar) / currentSar;
+                        if (distanceRatio < -bandThreshold) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - son retestLookback bar içinde SAR kırıldı, şimdi fiyat
+                    //    SAR'a geri dokunup (retest) kırılım yönünde kapattıysa → sinyal
+                    const int retestLookback = 10;
+                    double barHigh = Data[currentIndex].High;
+
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!sell && AsagiKesti(k, source, sar)
+                            && barHigh >= currentSar
+                            && currentPrice < currentSar)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri fiyat
+                    //    hep SAR'ın aynı tarafında kaldıysa gir
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, source, sar);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedBelow &= source[k] < sar[k];
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + SAR state - rejim (fiyat-SAR konumu) + momentum (fiyatın N-bar eğimi)
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, source, sar) && priceFalling) sell = true;
+                    }
                 }
             }
             // ************************************************************************************************************************
 
-            if (1 == 1 && Trader != null)
+            if (takeProfitExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (takeProfitExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
@@ -393,17 +482,23 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (flatModeIndex == 0)
+            if (flatModeEnabled)
             {
-                // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                flat = false;
+                if (flatModeIndex == 0)
+                {
+                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                    flat = false;
+                }
             }
             // ************************************************************************************************************************
 
-            if (skipModeIndex == 0)
+            if (skipModeEnabled)
             {
-                // Skip olma durumu burada incelenir ve skip flag'i setlenir
-                skip = false;
+                if (skipModeIndex == 0)
+                {
+                    // Skip olma durumu burada incelenir ve skip flag'i setlenir
+                    skip = false;
+                }
             }
             // ************************************************************************************************************************
 

@@ -112,7 +112,8 @@ void ConfigureStrategy()
             ["percent"] = 1.0,
             ["mostMaMethod"] = "EMA",
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 1)
@@ -125,7 +126,8 @@ void ConfigureStrategy()
             ["fastMaMethod"] = "EMA",
             ["slowMaMethod"] = "EMA",
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 2)
@@ -137,7 +139,8 @@ void ConfigureStrategy()
             ["oversold"] = 30,
             ["overbought"] = 70,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 3)
@@ -149,7 +152,8 @@ void ConfigureStrategy()
             ["percent"] = 1.4,
             ["ottMaMethod"] = "VIDYA",
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 4)
@@ -160,7 +164,8 @@ void ConfigureStrategy()
             ["period"] = 10,
             ["multiplier"] = 3.0,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 5)
@@ -171,7 +176,8 @@ void ConfigureStrategy()
             ["step"] = 0.02,
             ["max"] = 0.2,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 6)
@@ -181,7 +187,8 @@ void ConfigureStrategy()
         {
             ["period"] = 14,
             ["adxThreshold"] = 25,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 7)
@@ -190,7 +197,8 @@ void ConfigureStrategy()
         strategyParams = new Dictionary<string, object>
         {
             ["period"] = 14,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 8)
@@ -202,7 +210,8 @@ void ConfigureStrategy()
             ["slowPeriod"] = 26,
             ["signalPeriod"] = 9,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 9)
@@ -213,7 +222,8 @@ void ConfigureStrategy()
             ["kPeriod"] = 14,
             ["dPeriod"] = 3,
             ["centerLine"] = 50,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 10)
@@ -224,7 +234,8 @@ void ConfigureStrategy()
             ["period"] = 20,
             ["multiplier"] = 2.0,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 11)
@@ -236,7 +247,8 @@ void ConfigureStrategy()
             ["maPeriod"] = 20,
             ["multiplier"] = 2.0,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 12)
@@ -247,7 +259,8 @@ void ConfigureStrategy()
             ["period"] = 20,
             ["positiveThreshold"] = 0.1,
             ["negativeThreshold"] = -0.1,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 13)
@@ -258,7 +271,8 @@ void ConfigureStrategy()
             ["period"] = 14,
             ["oversold"] = 20,
             ["overbought"] = 80,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 14)
@@ -270,7 +284,8 @@ void ConfigureStrategy()
             ["positiveThreshold"] = 5,
             ["negativeThreshold"] = -5,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 15)
@@ -282,7 +297,8 @@ void ConfigureStrategy()
             ["positiveThreshold"] = 0,
             ["negativeThreshold"] = 0,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 16)
@@ -292,7 +308,8 @@ void ConfigureStrategy()
         {
             ["period"] = 20,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 17)
@@ -303,7 +320,8 @@ void ConfigureStrategy()
             ["period"] = 20,
             ["threshold"] = 80,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 18)
@@ -314,7 +332,8 @@ void ConfigureStrategy()
             ["tenkanPeriod"] = 9,
             ["kijunPeriod"] = 26,
             ["senkouPeriod"] = 52,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 19)
@@ -324,7 +343,8 @@ void ConfigureStrategy()
         {
             ["param1"] = 3,
             ["param2"] = 5,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 20)
@@ -336,7 +356,8 @@ void ConfigureStrategy()
             ["multiplier"] = 3.0,
             ["maPeriod"] = 10,
             ["pmaxMaMethod"] = "EMA",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 21)
@@ -346,7 +367,8 @@ void ConfigureStrategy()
         {
             ["period"] = 5,
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else if (strategyChoice == 22)
@@ -358,7 +380,8 @@ void ConfigureStrategy()
             ["coefficient"] = 1.0,
             ["momentumPeriod"] = 14,
             ["useMFI"] = true,
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         };
     }
     else

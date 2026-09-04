@@ -23,10 +23,12 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// secim yapan bir eksen degil, bu sinif zaten TEK bir kurali (MA1 x MA2) sabitliyor; bos bir
     /// placeholder eklemek anlamsiz olurdu.
     ///
-    /// signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex: SimpleMostStrategy/
-    /// SimpleComboStrategy ile AYNI standart (2026-08-27 karari) - OnStep'in urettigi 4 sinyal
-    /// kategorisine (buy/sell, takeProfit/stopLoss, flat, skip) birebir karsilik gelen dispatch
-    /// parametreleri. signalModeIndex AKTIF (0: siralama/seviye, 1: kesisim), digerleri PLACEHOLDER.
+    /// buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/
+    /// flatModeIndex/skipModeIndex: SimpleMostStrategy/SimpleComboStrategy ile AYNI standart
+    /// (2026-08-27 karari) - OnStep'in urettigi 4 sinyal kategorisine (buy/sell, takeProfit/
+    /// stopLoss, flat, skip) birebir karsilik gelen, buy/sell ve takeProfit/stopLoss icin BAGIMSIZ
+    /// (asymmetric) dispatch parametreleri. buySignalModeIndex/sellSignalModeIndex AKTIF (0:
+    /// siralama/seviye, 1: kesisim - buy ve sell zamanlamasi AYRI AYRI secilir), digerleri PLACEHOLDER.
     ///
     /// SimpleMostStrategy'deki gibi (Combo'nun aksine): burada sadece TEK bir sabit seri cifti
     /// (MA1 vs MA2) karsilastirildigi icin BuildSignals benzeri bir onceden-hesaplama gecisine
@@ -48,8 +50,9 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int ma1Period;
         private readonly int ma2Period;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex artik BaseStrategy'de tanimli
-        // (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/
+        // flatModeIndex/skipModeIndex artik BaseStrategy'de tanimli (protected, readonly degil) -
+        // degerleri asagida constructor'da parametre olarak atanir.
         private double[]? ma1;
         private double[]? ma2;
 
@@ -59,14 +62,16 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleComboStrategyRule001(List<StockData> data, IndicatorManager indicators,
             int ma1Period = 5, int ma2Period = 8,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
         {
-            this.ma1Period       = ma1Period;
-            this.ma2Period       = ma2Period;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
+            this.ma1Period                = ma1Period;
+            this.ma2Period                = ma2Period;
+            this.buySignalModeIndex       = buySignalModeIndex;
+            this.sellSignalModeIndex      = sellSignalModeIndex;
+            this.takeProfitExitModeIndex  = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex    = stopLossExitModeIndex;
+            this.flatModeIndex            = flatModeIndex;
+            this.skipModeIndex            = skipModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -79,12 +84,20 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Ma1Period"]       = ma1Period;
-            Parameters["Ma2Period"]       = ma2Period;
-            Parameters["SignalModeIndex"] = signalModeIndex;
-            Parameters["ExitModeIndex"]   = exitModeIndex;
-            Parameters["FlatModeIndex"]   = flatModeIndex;
-            Parameters["SkipModeIndex"]   = skipModeIndex;
+            Parameters["Ma1Period"]                = ma1Period;
+            Parameters["Ma2Period"]                = ma2Period;
+            Parameters["BuySignalModeIndex"]       = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]      = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"]  = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]    = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]            = flatModeIndex;
+            Parameters["SkipModeIndex"]            = skipModeIndex;
+            Parameters["BuyModeEnabled"]           = buyModeEnabled;
+            Parameters["SellModeEnabled"]          = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]    = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]      = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]          = flatModeEnabled;
+            Parameters["SkipModeEnabled"]          = skipModeEnabled;
 
             Initialize(data, indicators);
         }
@@ -143,88 +156,103 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
-            // MA1 x MA2 kesisimi - seviye (level) kosulu, ZAMANLAMA asagida signalModeIndex'e gore uygulanir
+            // MA1 x MA2 kesisimi - seviye (level) kosulu, ZAMANLAMA asagida buySignalModeIndex/sellSignalModeIndex'e gore uygulanir
             bool buyLevel      = Buyuk(currentIndex, ma1, ma2);
             bool sellLevel     = Kucuk(currentIndex, ma1, ma2);
             bool prevBuyLevel  = Buyuk(currentIndex - 1, ma1, ma2);
             bool prevSellLevel = Kucuk(currentIndex - 1, ma1, ma2);
 
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // Siralama (level) bazli: kosul true oldugu her barda tekrarlanir
-                buy  = buyLevel;
-                sell = sellLevel;
+                if (buySignalModeIndex == 0)
+                {
+                    // Siralama (level) bazli: kosul true oldugu her barda tekrarlanir
+                    buy = buyLevel;
+                }
+                else
+                {
+                    // Kesisim (crossover) bazli: sadece false->true gecis aninda (bir kere) sinyal
+                    buy = buyLevel && !prevBuyLevel;
+                }
             }
-            else
+
+            if (sellModeEnabled)
             {
-                // Kesisim (crossover) bazli: sadece false->true gecis aninda (bir kere) sinyal
-                buy  = buyLevel && !prevBuyLevel;
-                sell = sellLevel && !prevSellLevel;
+                if (sellSignalModeIndex == 0)
+                {
+                    // Siralama (level) bazli: kosul true oldugu her barda tekrarlanir
+                    sell = sellLevel;
+                }
+                else
+                {
+                    // Kesisim (crossover) bazli: sadece false->true gecis aninda (bir kere) sinyal
+                    sell = sellLevel && !prevSellLevel;
+                }
             }
             // ************************************************************************************************************************
 
-            if (1 == 1 && Trader != null)
+            if (takeProfitExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (takeProfitExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
@@ -232,17 +260,23 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (flatModeIndex == 0)
+            if (flatModeEnabled)
             {
-                // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                flat = false;
+                if (flatModeIndex == 0)
+                {
+                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                    flat = false;
+                }
             }
             // ************************************************************************************************************************
 
-            if (skipModeIndex == 0)
+            if (skipModeEnabled)
             {
-                // Skip olma durumu burada incelenir ve skip flag'i setlenir
-                skip = false;
+                if (skipModeIndex == 0)
+                {
+                    // Skip olma durumu burada incelenir ve skip flag'i setlenir
+                    skip = false;
+                }
             }
             // ************************************************************************************************************************
 

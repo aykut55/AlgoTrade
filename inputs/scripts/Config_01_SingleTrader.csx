@@ -113,7 +113,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 24;
+int strategyChoice = 1;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -127,7 +127,8 @@ if (strategyChoice == 0)
         ["percent"] = 1.0,
         ["mostMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 1)
@@ -135,17 +136,17 @@ else if (strategyChoice == 1)
     strategyName = "SimpleMAStrategy";
     strategyParams = new Dictionary<string, object>
     {
-        ["fastPeriod"] = 8,
-        ["slowPeriod"] = 21,
-        ["fastMaMethod"] = "EMA",
-        ["slowMaMethod"] = "EMA",
-        ["priceSource"] = "Close",
-
-        ["signalModeIndex"] = 0,
-        ["exitModeIndex"]   = 4,     // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
-        ["exitModeIndex"]   = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
-        ["flatModeIndex"]   = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        ["skipModeIndex"]   = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        ["fastPeriod"]              = 8,
+        ["slowPeriod"]              = 21,
+        ["fastMaMethod"]            = "EMA",
+        ["slowMaMethod"]            = "EMA",
+        ["priceSource"]             = "Close",
+        ["buySignalModeIndex"]      = 0,
+        ["sellSignalModeIndex"]     = 0,
+        ["takeProfitExitModeIndex"] = 99,    // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
+        ["stopLossExitModeIndex"]   = 99,
+        ["flatModeIndex"]           = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
+        ["skipModeIndex"]           = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
     };
 }
 else if (strategyChoice == 2)
@@ -154,7 +155,8 @@ else if (strategyChoice == 2)
     strategyParams = new Dictionary<string, object>
     {
         ["ruleModeIndex"]   = 0,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 3)
@@ -166,7 +168,8 @@ else if (strategyChoice == 3)
         ["oversold"] = 30,
         ["overbought"] = 70,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 4)
@@ -178,7 +181,8 @@ else if (strategyChoice == 4)
         ["percent"] = 1.4,
         ["ottMaMethod"] = "VIDYA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 5)
@@ -189,7 +193,8 @@ else if (strategyChoice == 5)
         ["period"] = 10,
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 6)
@@ -200,7 +205,8 @@ else if (strategyChoice == 6)
         ["step"] = 0.02,
         ["max"] = 0.2,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 7)
@@ -210,7 +216,8 @@ else if (strategyChoice == 7)
     {
         ["period"] = 14,
         ["adxThreshold"] = 25,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 8)
@@ -219,7 +226,8 @@ else if (strategyChoice == 8)
     strategyParams = new Dictionary<string, object>
     {
         ["period"] = 14,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 9)
@@ -231,7 +239,8 @@ else if (strategyChoice == 9)
         ["slowPeriod"] = 26,
         ["signalPeriod"] = 9,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 10)
@@ -242,7 +251,8 @@ else if (strategyChoice == 10)
         ["kPeriod"] = 14,
         ["dPeriod"] = 3,
         ["centerLine"] = 50,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 11)
@@ -253,7 +263,8 @@ else if (strategyChoice == 11)
         ["period"] = 20,
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 12)
@@ -265,7 +276,8 @@ else if (strategyChoice == 12)
         ["maPeriod"] = 20,
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 13)
@@ -276,7 +288,8 @@ else if (strategyChoice == 13)
         ["period"] = 20,
         ["positiveThreshold"] = 0.1,
         ["negativeThreshold"] = -0.1,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 14)
@@ -287,7 +300,8 @@ else if (strategyChoice == 14)
         ["period"] = 14,
         ["oversold"] = 20,
         ["overbought"] = 80,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 15)
@@ -299,7 +313,8 @@ else if (strategyChoice == 15)
         ["positiveThreshold"] = 5,
         ["negativeThreshold"] = -5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 16)
@@ -311,7 +326,8 @@ else if (strategyChoice == 16)
         ["positiveThreshold"] = 0,
         ["negativeThreshold"] = 0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 17)
@@ -321,13 +337,17 @@ else if (strategyChoice == 17)
     {
         ["period"]          = 48,   // 4h / 5dk = 48 bar (15dk'da 16, 60dk'da 4)
         ["priceSource"]     = "Close",
-        ["signalModeIndex"] = 8,    // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
-        ["signalModeIndex"] = 1,    // 1: Kanal ortası kesişimi
+        ["buySignalModeIndex"] = 8,    // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
+        ["sellSignalModeIndex"] = 8,    // HHV/LLV eğim state: HHV yükselirken AL, LLV düşerken SAT
+        ["buySignalModeIndex"] = 1,    // 1: Kanal ortası kesişimi
+        ["sellSignalModeIndex"] = 1,    // 1: Kanal ortası kesişimi
 
-        ["exitModeIndex"] = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
+        ["takeProfitExitModeIndex"] = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
+        ["stopLossExitModeIndex"] = 99,    // 0-5 dışı → takeProfit/stopLoss hiç hesaplanmaz (saf kesişim)
         ["flatModeIndex"] = 99,    // 0-5 dışı → flat mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
         ["skipModeIndex"] = 99     // 0-5 dışı → skip mode dispatch'i çalışmaz (şu an placeholder, etkisiz)
-        //["exitModeIndex"] = 4      // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
+        //["takeProfitExitModeIndex"] = 4,    // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
+        //["stopLossExitModeIndex"] = 4    // 4: Anlık P&L ≥ 1000 TL → kâr-al (SimpleMAStrategy.cs:358)
     };
 }
 else if (strategyChoice == 18)
@@ -338,7 +358,8 @@ else if (strategyChoice == 18)
         ["period"] = 20,
         ["threshold"] = 80,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 19)
@@ -349,7 +370,8 @@ else if (strategyChoice == 19)
         ["tenkanPeriod"] = 9,
         ["kijunPeriod"] = 26,
         ["senkouPeriod"] = 52,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 20)
@@ -359,7 +381,8 @@ else if (strategyChoice == 20)
     {
         ["param1"] = 3,
         ["param2"] = 5,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 21)
@@ -371,7 +394,8 @@ else if (strategyChoice == 21)
         ["multiplier"] = 3.0,
         ["maPeriod"] = 10,
         ["pmaxMaMethod"] = "EMA",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 22)
@@ -381,7 +405,8 @@ else if (strategyChoice == 22)
     {
         ["period"] = 5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 23)
@@ -393,7 +418,8 @@ else if (strategyChoice == 23)
         ["coefficient"] = 1.0,
         ["momentumPeriod"] = 14,
         ["useMFI"] = true,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 24)
@@ -401,10 +427,12 @@ else if (strategyChoice == 24)
     strategyName = "Strategy001_BarAcilisi";
     strategyParams = new Dictionary<string, object>
     {
-        ["signalModeIndex"] = 0,
-        ["exitModeIndex"]   = 0,
-        ["flatModeIndex"]   = 0,
-        ["skipModeIndex"]   = 0
+        ["buySignalModeIndex"]      = 0,
+        ["sellSignalModeIndex"]     = 0,
+        ["takeProfitExitModeIndex"] = 0,
+        ["stopLossExitModeIndex"]   = 0,
+        ["flatModeIndex"]           = 0,
+        ["skipModeIndex"]           = 0
     };
 }
 else

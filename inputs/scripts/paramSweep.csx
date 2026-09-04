@@ -29,7 +29,8 @@ if (strategyChoice == 0)
     {
         ["mostMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 1)
@@ -44,7 +45,8 @@ else if (strategyChoice == 1)
         ["fastMaMethod"] = "EMA",
         ["slowMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 2)
@@ -58,7 +60,8 @@ else if (strategyChoice == 2)
     {
         ["overbought"] = 70,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 3)
@@ -72,7 +75,8 @@ else if (strategyChoice == 3)
     {
         ["ottMaMethod"] = "VIDYA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 4)
@@ -85,7 +89,8 @@ else if (strategyChoice == 4)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 5)
@@ -98,7 +103,8 @@ else if (strategyChoice == 5)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 6)
@@ -110,7 +116,8 @@ else if (strategyChoice == 6)
     sweepParam2Values = new object[] { 15, 20, 25, 30 };
     fixedParams = new Dictionary<string, object>
     {
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 7)
@@ -118,7 +125,7 @@ else if (strategyChoice == 7)
     strategyName = "SimpleDIStrategy";
     sweepParam1Name   = "period";
     sweepParam1Values = new object[] { 7, 10, 14, 21 };
-    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Name   = "buySignalModeIndex";
     sweepParam2Values = new object[] { 0, 1, 3, 7 };
     fixedParams = new Dictionary<string, object>();
 }
@@ -133,7 +140,8 @@ else if (strategyChoice == 8)
     {
         ["signalPeriod"] = 9,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 9)
@@ -146,7 +154,8 @@ else if (strategyChoice == 9)
     fixedParams = new Dictionary<string, object>
     {
         ["centerLine"] = 50,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 10)
@@ -159,7 +168,8 @@ else if (strategyChoice == 10)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 11)
@@ -173,7 +183,8 @@ else if (strategyChoice == 11)
     {
         ["maPeriod"] = 20,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 12)
@@ -186,7 +197,8 @@ else if (strategyChoice == 12)
     fixedParams = new Dictionary<string, object>
     {
         ["negativeThreshold"] = -0.1,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 13)
@@ -199,7 +211,8 @@ else if (strategyChoice == 13)
     fixedParams = new Dictionary<string, object>
     {
         ["overbought"] = 80,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 14)
@@ -213,7 +226,8 @@ else if (strategyChoice == 14)
     {
         ["negativeThreshold"] = -5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 15)
@@ -221,7 +235,7 @@ else if (strategyChoice == 15)
     strategyName = "SimpleMomentumStrategy";
     sweepParam1Name   = "period";
     sweepParam1Values = new object[] { 7, 10, 12, 21 };
-    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Name   = "buySignalModeIndex";
     sweepParam2Values = new object[] { 0, 1, 3, 7 };
     fixedParams = new Dictionary<string, object>
     {
@@ -233,7 +247,7 @@ else if (strategyChoice == 16)
     strategyName = "SimpleHHVLLVStrategy";
     sweepParam1Name   = "period";
     sweepParam1Values = new object[] { 10, 15, 20, 30 };
-    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Name   = "buySignalModeIndex";
     sweepParam2Values = new object[] { 0, 1, 3, 7 };
     fixedParams = new Dictionary<string, object>
     {
@@ -250,7 +264,8 @@ else if (strategyChoice == 17)
     fixedParams = new Dictionary<string, object>
     {
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 18)
@@ -263,7 +278,8 @@ else if (strategyChoice == 18)
     fixedParams = new Dictionary<string, object>
     {
         ["senkouPeriod"] = 52,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 19)
@@ -275,7 +291,8 @@ else if (strategyChoice == 19)
     sweepParam2Values = new object[] { 4, 5, 6, 7 };
     fixedParams = new Dictionary<string, object>
     {
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 20)
@@ -289,7 +306,8 @@ else if (strategyChoice == 20)
     {
         ["maPeriod"] = 10,
         ["pmaxMaMethod"] = "EMA",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 21)
@@ -297,7 +315,7 @@ else if (strategyChoice == 21)
     strategyName = "SimpleTillsonT3Strategy";
     sweepParam1Name   = "period";
     sweepParam1Values = new object[] { 3, 5, 7, 9 };
-    sweepParam2Name   = "signalModeIndex";
+    sweepParam2Name   = "buySignalModeIndex";
     sweepParam2Values = new object[] { 0, 1, 3, 7 };
     fixedParams = new Dictionary<string, object>
     {
@@ -315,7 +333,8 @@ else if (strategyChoice == 22)
     {
         ["momentumPeriod"] = 14,
         ["useMFI"] = true,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else

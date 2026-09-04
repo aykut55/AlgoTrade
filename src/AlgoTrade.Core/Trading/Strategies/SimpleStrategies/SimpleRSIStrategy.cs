@@ -21,7 +21,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - oversold: Aşırı satım seviyesi (varsayılan 30)
     /// - overbought: Aşırı alım seviyesi (varsayılan 70)
     /// - priceSource: RSI'ın beslendiği kaynak + OnStep sinyal serisi (varsayılan Close - klasik RSI)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: Oversold/Overbought kesişimi (fiyat MOST'un fiyat-MOST kesişiminin analogu)
     ///     1: Orta hat (50) kesişimi     (RSI 50'yi yukarı/aşağı kesince)
     ///     2: RSI slope flip             (RSI'ın kendi yönü dönünce)
@@ -30,7 +31,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     5: Breakout + retest          (RSI oversold/overbought kırılıp geri gelip retest tutunca)
     ///     6: Confirmation bars          (kırılımdan sonra confirmBars bar aynı tarafta kalınca)
     ///     7: RSI eğimi + RSI state      (rejim: RSI-50 konumu + momentum: RSI N-bar eğimi)
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden:
     ///     0: Seviye, seviyeli               (SonFiyataGoreKarAl/ZararKesSeviyeHesaplaSeviyeli)
     ///     1: Yüzde, seviyeli                 (SonFiyataGoreKarAl/ZararKesYuzdeHesaplaSeviyeli)
     ///     2: Seviye, tek seviye              (SonFiyataGoreKarAl/ZararKesSeviyeHesapla)
@@ -61,9 +63,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly double oversold;
         private readonly double overbought;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
-        // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/
+        // skipModeIndex/ruleModeIndex artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri
+        // asagida constructor'da parametre olarak atanir. Dispatch mantigi (OnStep'teki if/else zincirleri)
+        // stratejiye ozgu, burada kalir.
 
         // RSI hesabı - parametreli ctor'dan gelir; verilmezse Close (klasik RSI ile birebir aynı).
         private readonly PriceSource priceSource = PriceSource.Close;
@@ -80,17 +83,19 @@ namespace AlgoTrade.Core.Trading.Strategies
         // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleRSIStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 14, double oversold = 30, double overbought = 70, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
-            this.period          = period;
-            this.oversold        = oversold;
-            this.overbought      = overbought;
-            this.priceSource     = priceSource;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
-            this.flatModeIndex   = flatModeIndex;
-            this.skipModeIndex   = skipModeIndex;
-            this.ruleModeIndex   = ruleModeIndex;
+            this.period                  = period;
+            this.oversold                = oversold;
+            this.overbought              = overbought;
+            this.priceSource             = priceSource;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
+            this.flatModeIndex           = flatModeIndex;
+            this.skipModeIndex           = skipModeIndex;
+            this.ruleModeIndex           = ruleModeIndex;
 
             // Gun ici saat penceresi / tarih penceresi / triggerTime - alanlar BaseStrategy'de tanimli,
             // degerleri burada (sabit, kod icinde) atanir.
@@ -103,23 +108,36 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
-            Parameters["Period"]               = period;
-            Parameters["Oversold"]             = oversold;
-            Parameters["Overbought"]           = overbought;
-            Parameters["PriceSource"]          = priceSource;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
-            Parameters["FlatModeIndex"]        = flatModeIndex;
-            Parameters["SkipModeIndex"]        = skipModeIndex;
-            Parameters["RuleModeIndex"]        = ruleModeIndex;
-            Parameters["StartTime"]            = startTime;
-            Parameters["StopTime"]             = stopTime;
-            Parameters["StartDay"]             = startDay;
-            Parameters["StopDay"]              = stopDay;
-            Parameters["IsTimeEnabled"]        = isTimeEnabled;
-            Parameters["IsDayEnabled"]         = isDayEnabled;
-            Parameters["TriggerTime"]          = triggerTime;
-            Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            // BaseStrategy'deki varsayilan degerler zaten true - takeProfit/stopLoss guard'i eskiden
+            // kosulsuz (1==1) acikti, burada ayni davranisi ACIKCA true atayarak koruyoruz.
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
+            Parameters["Period"]                  = period;
+            Parameters["Oversold"]                = oversold;
+            Parameters["Overbought"]              = overbought;
+            Parameters["PriceSource"]             = priceSource;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]           = flatModeIndex;
+            Parameters["SkipModeIndex"]           = skipModeIndex;
+            Parameters["RuleModeIndex"]           = ruleModeIndex;
+            Parameters["StartTime"]               = startTime;
+            Parameters["StopTime"]                = stopTime;
+            Parameters["StartDay"]                = startDay;
+            Parameters["StopDay"]                 = stopDay;
+            Parameters["IsTimeEnabled"]           = isTimeEnabled;
+            Parameters["IsDayEnabled"]            = isDayEnabled;
+            Parameters["TriggerTime"]             = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]    = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]          = buyModeEnabled;
+            Parameters["SellModeEnabled"]         = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"]   = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]     = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]         = flatModeEnabled;
+            Parameters["SkipModeEnabled"]         = skipModeEnabled;
 
             // Initialize base strategy
             Initialize(data, indicators);
@@ -149,7 +167,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                     $"Seri uzunlukları uyuşmuyor (barCount={barCount}): rsi={rsi.Length}, source={source.Length}");
             }
 
-            //Log($"SimpleRSIStrategy initialized: Period={period}, Oversold={oversold}, Overbought={overbought}, SignalModeIndex={signalModeIndex}");
+            //Log($"SimpleRSIStrategy initialized: Period={period}, Oversold={oversold}, Overbought={overbought}, BuySignalModeIndex={buySignalModeIndex}, SellSignalModeIndex={sellSignalModeIndex}");
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -216,170 +234,241 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonF)         { }
             // ************************************************************************************************************************
 
-            // signalModeIndex ile buy/sell yöntemi seçilir - detay için sınıf başı doc comment (0-7)
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: Oversold/Overbought kesişimi - RSI oversold'u yukarı kesince AL, overbought'u aşağı kesince SAT
-                if (YukarıKesti(currentIndex, rsi, oversold))   buy  = true;
-                if (AsagiKesti(currentIndex, rsi, overbought))  sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: Orta hat (50) kesişimi - RSI 50'yi yukarı kesince AL, aşağı kesince SAT
-                const double midline = 50.0;
-                if (YukarıKesti(currentIndex, rsi, midline)) buy  = true;
-                if (AsagiKesti(currentIndex, rsi, midline))  sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: RSI slope flip - RSI'ın kendi yönü dönüyor (düşen/düz → yükselen = AL)
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = rsi[currentIndex]     - rsi[currentIndex - 1];
-                    double slopePrev = rsi[currentIndex - 1] - rsi[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    // 0: Oversold/Overbought kesişimi - RSI oversold'u yukarı kesince AL
+                    if (YukarıKesti(currentIndex, rsi, oversold)) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: RSI state - RSI'ın 50'ye göre konumu (kesişim değil, koşul sürdükçe her bar)
-                const double midline = 50.0;
-                if (Buyuk(currentIndex, rsi, midline)) buy  = true;
-                if (Kucuk(currentIndex, rsi, midline)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Band / uzaklık filtresi - RSI 50'den bandThreshold puandan fazla uzaklaşınca (trend-following)
-                const double midline       = 50.0;
-                const double bandThreshold = 20.0; // RSI puanı (50±20 => 70/30 seviyeleri)
-                double distance = currentRSI - midline;
-                if (distance >  bandThreshold) buy  = true;
-                if (distance < -bandThreshold) sell = true;
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest - son retestLookback bar içinde RSI oversold/overbought'u kırdı, şimdi RSI
-                //    seviyeye geri yaklaşıp (retest) kırılım yönünde tuttuysa → sinyal
-                const int retestLookback = 10;
-                const double retestBand  = 2.0; // RSI puanı toleransı
-
-                for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                else if (buySignalModeIndex == 1)
                 {
-                    if (k < 1) continue;
-
-                    if (!buy && YukarıKesti(k, rsi, oversold)
-                        && currentRSI <= oversold + retestBand   // RSI oversold'a geri yaklaştı (retest)
-                        && currentRSI > oversold)                // ama üstünde tuttu (retest tuttu)
+                    // 1: Orta hat (50) kesişimi - RSI 50'yi yukarı kesince AL
+                    const double midline = 50.0;
+                    if (YukarıKesti(currentIndex, rsi, midline)) buy = true;
+                }
+                else if (buySignalModeIndex == 2)
+                {
+                    // 2: RSI slope flip - RSI'ın kendi yönü dönüyor (düşen/düz → yükselen = AL)
+                    if (currentIndex >= 2)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(k, rsi, overbought)
-                        && currentRSI >= overbought - retestBand
-                        && currentRSI < overbought)
-                    {
-                        sell = true;
+                        double slopeNow  = rsi[currentIndex]     - rsi[currentIndex - 1];
+                        double slopePrev = rsi[currentIndex - 1] - rsi[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri RSI
-                //    hep seviyenin aynı tarafında kaldıysa gir
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 3)
                 {
-                    int crossBar = currentIndex - confirmBars;
+                    // 3: RSI state - RSI'ın 50'ye göre konumu (kesişim değil, koşul sürdükçe her bar)
+                    const double midline = 50.0;
+                    if (Buyuk(currentIndex, rsi, midline)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - RSI 50'den bandThreshold puandan fazla uzaklaşınca (trend-following)
+                    const double midline       = 50.0;
+                    const double bandThreshold = 20.0; // RSI puanı (50±20 => 70/30 seviyeleri)
+                    double distance = currentRSI - midline;
+                    if (distance > bandThreshold) buy = true;
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - son retestLookback bar içinde RSI oversold'u kırdı, şimdi RSI
+                    //    seviyeye geri yaklaşıp (retest) kırılım yönünde tuttuysa → sinyal
+                    const int retestLookback = 10;
+                    const double retestBand  = 2.0; // RSI puanı toleransı
 
-                    bool stayedAbove = YukarıKesti(crossBar, rsi, oversold);
-                    bool stayedBelow = AsagiKesti(crossBar, rsi, overbought);
-                    for (int k = crossBar + 1; k <= currentIndex; k++)
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
                     {
-                        stayedAbove &= rsi[k] > oversold;
-                        stayedBelow &= rsi[k] < overbought;
+                        if (k < 1) continue;
+
+                        if (!buy && YukarıKesti(k, rsi, oversold)
+                            && currentRSI <= oversold + retestBand   // RSI oversold'a geri yaklaştı (retest)
+                            && currentRSI > oversold)                // ama üstünde tuttu (retest tuttu)
+                        {
+                            buy = true;
+                        }
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
+                }
+                else if (buySignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri RSI
+                    //    hep seviyenin aynı tarafında kaldıysa gir
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, rsi, oversold);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedAbove &= rsi[k] > oversold;
+                        }
+                        if (stayedAbove) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 7)
+                {
+                    // 7: RSI eğimi + RSI state - rejim (RSI-50 konumu) + momentum (RSI N-bar eğimi)
+                    const int slopeLookback = 3;
+                    const double midline     = 50.0;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool rsiRising = rsi[currentIndex] > rsi[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, rsi, midline) && rsiRising) buy = true;
+                    }
                 }
             }
-            else if (signalModeIndex == 7)
+
+            if (sellModeEnabled)
             {
-                // 7: RSI eğimi + RSI state - rejim (RSI-50 konumu) + momentum (RSI N-bar eğimi)
-                const int slopeLookback = 3;
-                const double midline     = 50.0;
-                if (currentIndex >= slopeLookback)
+                if (sellSignalModeIndex == 0)
                 {
-                    bool rsiRising  = rsi[currentIndex] > rsi[currentIndex - slopeLookback];
-                    bool rsiFalling = rsi[currentIndex] < rsi[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, rsi, midline) && rsiRising)  buy  = true;
-                    if (Kucuk(currentIndex, rsi, midline) && rsiFalling) sell = true;
+                    // 0: Oversold/Overbought kesişimi - RSI overbought'u aşağı kesince SAT
+                    if (AsagiKesti(currentIndex, rsi, overbought)) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: Orta hat (50) kesişimi - RSI 50'yi aşağı kesince SAT
+                    const double midline = 50.0;
+                    if (AsagiKesti(currentIndex, rsi, midline)) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: RSI slope flip - RSI'ın kendi yönü dönüyor (yükselen/düz → düşen = SAT)
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = rsi[currentIndex]     - rsi[currentIndex - 1];
+                        double slopePrev = rsi[currentIndex - 1] - rsi[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: RSI state - RSI'ın 50'ye göre konumu (kesişim değil, koşul sürdükçe her bar)
+                    const double midline = 50.0;
+                    if (Kucuk(currentIndex, rsi, midline)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Band / uzaklık filtresi - RSI 50'den bandThreshold puandan fazla uzaklaşınca (trend-following)
+                    const double midline       = 50.0;
+                    const double bandThreshold = 20.0; // RSI puanı (50±20 => 70/30 seviyeleri)
+                    double distance = currentRSI - midline;
+                    if (distance < -bandThreshold) sell = true;
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest - son retestLookback bar içinde RSI overbought'u kırdı, şimdi RSI
+                    //    seviyeye geri yaklaşıp (retest) kırılım yönünde tuttuysa → sinyal
+                    const int retestLookback = 10;
+                    const double retestBand  = 2.0; // RSI puanı toleransı
+
+                    for (int k = currentIndex - retestLookback; k < currentIndex; k++)
+                    {
+                        if (k < 1) continue;
+
+                        if (!sell && AsagiKesti(k, rsi, overbought)
+                            && currentRSI >= overbought - retestBand
+                            && currentRSI < overbought)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars - kırılım confirmBars bar önce oldu ve o zamandan beri RSI
+                    //    hep seviyenin aynı tarafında kaldıysa gir
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, rsi, overbought);
+                        for (int k = crossBar + 1; k <= currentIndex; k++)
+                        {
+                            stayedBelow &= rsi[k] < overbought;
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: RSI eğimi + RSI state - rejim (RSI-50 konumu) + momentum (RSI N-bar eğimi)
+                    const int slopeLookback = 3;
+                    const double midline     = 50.0;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool rsiFalling = rsi[currentIndex] < rsi[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, rsi, midline) && rsiFalling) sell = true;
+                    }
                 }
             }
             // ************************************************************************************************************************
 
-            if (1 == 1 && Trader != null)
+            if (takeProfitExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (takeProfitExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     // 0: Seviye, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     // 1: Yüzde, seviyeli
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     // 2: Seviye, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     // 3: Yüzde, tek seviye
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
@@ -387,17 +476,23 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            if (flatModeIndex == 0)
+            if (flatModeEnabled)
             {
-                // Flat olma durumu burada incelenir ve flat flag'i setlenir
-                flat = false;
+                if (flatModeIndex == 0)
+                {
+                    // Flat olma durumu burada incelenir ve flat flag'i setlenir
+                    flat = false;
+                }
             }
             // ************************************************************************************************************************
 
-            if (skipModeIndex == 0)
+            if (skipModeEnabled)
             {
-                // Skip olma durumu burada incelenir ve skip flag'i setlenir
-                skip = false;
+                if (skipModeIndex == 0)
+                {
+                    // Skip olma durumu burada incelenir ve skip flag'i setlenir
+                    skip = false;
+                }
             }
             // ************************************************************************************************************************
 

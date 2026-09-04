@@ -20,7 +20,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// Parametreler:
     /// - period: HHV/LLV lookback periyodu (varsayılan 20)
     /// - priceSource: OnStep sinyal serisi (varsayılan Close - klasik HHV/LLV)
-    /// - signalModeIndex: buy/sell yöntemini seçer:
+    /// - buySignalModeIndex/sellSignalModeIndex: buy ve sell yöntemini AYRI AYRI seçer (asymmetric -
+    ///   buy başka bir moddan, sell başka bir moddan gelebilir). Her ikisi de aynı mod kümesinden seçilir:
     ///     0: HHV/LLV kırılımı (klasik)   (fiyat önceki barın HHV'sini yukarı / LLV'sini aşağı kırınca)
     ///     1: Kanal ortası kesişimi        (fiyat (HHV+LLV)/2'yi yukarı/aşağı kesince)
     ///     2: HHV slope flip               (HHV'nin kendi yönü dönünce - kanal rejimi)
@@ -32,7 +33,8 @@ namespace AlgoTrade.Core.Trading.Strategies
     ///     8: HHV/LLV eğim state           (HHV yükselirken AL, LLV düşerken SAT - koşul sürdükçe her bar;
     ///                                      mode 2'nin flip yerine sürekli-state hali. MTF rejim için:
     ///                                      period'i 4h/tf gibi büyük seç -> "kanal tavani hala yukseliyor mu")
-    /// - exitModeIndex: takeProfit/stopLoss yöntemini seçer (Trader.karAlZararKes üzerinden):
+    /// - takeProfitExitModeIndex/stopLossExitModeIndex: takeProfit/stopLoss yöntemini AYRI AYRI seçer
+    ///   (Trader.karAlZararKes üzerinden), her ikisi de aynı mod kümesinden:
     ///     0: Seviye, seviyeli   1: Yüzde, seviyeli   2: Seviye, tek seviye   3: Yüzde, tek seviye
     ///     4: Anlık kar/zarar fiyat seviyesi   5: Anlık kar/zarar yüzdesi
     /// - flatModeIndex/skipModeIndex/ruleModeIndex: PLACEHOLDER, henuz okunmuyor
@@ -55,9 +57,9 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int period;
 
-        // signalModeIndex/exitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
+        // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
-        // signalModeIndex'in dispatch mantigi (OnStep'teki if/else zinciri) stratejiye ozgu, burada kalir.
+        // buySignalModeIndex/sellSignalModeIndex'in dispatch mantigi (OnStep'teki if/else zincirleri) stratejiye ozgu, burada kalir.
 
         private readonly PriceSource priceSource = PriceSource.Close;
 
@@ -74,12 +76,14 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleHHVLLVStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 20, PriceSource priceSource = PriceSource.Close,
-            int signalModeIndex = 0, int exitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
         {
             this.period          = period;
             this.priceSource     = priceSource;
-            this.signalModeIndex = signalModeIndex;
-            this.exitModeIndex   = exitModeIndex;
+            this.buySignalModeIndex      = buySignalModeIndex;
+            this.sellSignalModeIndex     = sellSignalModeIndex;
+            this.takeProfitExitModeIndex = takeProfitExitModeIndex;
+            this.stopLossExitModeIndex   = stopLossExitModeIndex;
             this.flatModeIndex   = flatModeIndex;
             this.skipModeIndex   = skipModeIndex;
             this.ruleModeIndex   = ruleModeIndex;
@@ -95,10 +99,17 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
+            // TP/SL bu stratejide onceden kosulsuz aktifti (if (1==1 && Trader != null)) - anlam korunarak
+            // acikca true birakildi (BaseStrategy varsayilani zaten true).
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+
             Parameters["Period"]               = period;
             Parameters["PriceSource"]          = priceSource;
-            Parameters["SignalModeIndex"]      = signalModeIndex;
-            Parameters["ExitModeIndex"]        = exitModeIndex;
+            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
             Parameters["FlatModeIndex"]        = flatModeIndex;
             Parameters["SkipModeIndex"]        = skipModeIndex;
             Parameters["RuleModeIndex"]        = ruleModeIndex;
@@ -110,6 +121,12 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["IsDayEnabled"]         = isDayEnabled;
             Parameters["TriggerTime"]          = triggerTime;
             Parameters["IsTriggerTimeEnabled"] = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]        = buyModeEnabled;
+            Parameters["SellModeEnabled"]       = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"] = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]   = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]       = flatModeEnabled;
+            Parameters["SkipModeEnabled"]       = skipModeEnabled;
 
             Initialize(data, indicators);
         }
@@ -191,171 +208,253 @@ namespace AlgoTrade.Core.Trading.Strategies
             else if (isSonYonS)         { }
             else if (isSonYonF)         { }
 
-            if (signalModeIndex == 0)
+            if (buyModeEnabled)
             {
-                // 0: HHV/LLV kırılımı (klasik) - önceki barın HHV/LLV'sine göre
-                double prevPrice = source[currentIndex - 1];
-                if (prevPrice <= prevHHV && currentPrice > prevHHV) buy  = true;
-                if (prevPrice >= prevLLV && currentPrice < prevLLV) sell = true;
-            }
-            else if (signalModeIndex == 1)
-            {
-                // 1: Kanal ortası kesişimi
-                if (YukarıKesti(currentIndex, source, mid)) buy  = true;
-                if (AsagiKesti(currentIndex, source, mid))  sell = true;
-            }
-            else if (signalModeIndex == 2)
-            {
-                // 2: HHV slope flip - kanal rejimi
-                if (currentIndex >= 2)
+                if (buySignalModeIndex == 0)
                 {
-                    double slopeNow  = hhv[currentIndex]     - hhv[currentIndex - 1];
-                    double slopePrev = hhv[currentIndex - 1] - hhv[currentIndex - 2];
-                    if (slopePrev <= 0.0 && slopeNow > 0.0) buy  = true;
-                    if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    // 0: HHV/LLV kırılımı (klasik) - önceki barın HHV/LLV'sine göre
+                    double prevPrice = source[currentIndex - 1];
+                    if (prevPrice <= prevHHV && currentPrice > prevHHV) buy = true;
                 }
-            }
-            else if (signalModeIndex == 3)
-            {
-                // 3: Kanal state
-                if (Buyuk(currentIndex, source, hhv)) buy  = true;
-                if (Kucuk(currentIndex, source, llv)) sell = true;
-            }
-            else if (signalModeIndex == 4)
-            {
-                // 4: Kanal genişliği filtresi
-                const double bandWidthThreshold = 0.04; // %4
-                double width = (currentHHV - currentLLV) / currentPrice;
-                if (width > bandWidthThreshold && currentPrice > mid[currentIndex]) buy  = true;
-                if (width > bandWidthThreshold && currentPrice < mid[currentIndex]) sell = true;
-            }
-            else if (signalModeIndex == 5)
-            {
-                // 5: Breakout + retest
-                const int retestLookback = 10;
-                double barLow  = Data[currentIndex].Low;
-                double barHigh = Data[currentIndex].High;
-
-                for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                else if (buySignalModeIndex == 1)
                 {
-                    if (m < 1) continue;
-
-                    if (!buy && YukarıKesti(m, source, hhv)
-                        && barLow <= currentHHV
-                        && currentPrice > currentHHV)
+                    // 1: Kanal ortası kesişimi
+                    if (YukarıKesti(currentIndex, source, mid)) buy = true;
+                }
+                else if (buySignalModeIndex == 2)
+                {
+                    // 2: HHV slope flip - kanal rejimi
+                    if (currentIndex >= 2)
                     {
-                        buy = true;
-                    }
-
-                    if (!sell && AsagiKesti(m, source, llv)
-                        && barHigh >= currentLLV
-                        && currentPrice < currentLLV)
-                    {
-                        sell = true;
+                        double slopeNow  = hhv[currentIndex]     - hhv[currentIndex - 1];
+                        double slopePrev = hhv[currentIndex - 1] - hhv[currentIndex - 2];
+                        if (slopePrev <= 0.0 && slopeNow > 0.0) buy = true;
                     }
                 }
-            }
-            else if (signalModeIndex == 6)
-            {
-                // 6: Confirmation bars
-                const int confirmBars = 3;
-                if (currentIndex >= confirmBars + 1)
+                else if (buySignalModeIndex == 3)
                 {
-                    int crossBar = currentIndex - confirmBars;
+                    // 3: Kanal state
+                    if (Buyuk(currentIndex, source, hhv)) buy = true;
+                }
+                else if (buySignalModeIndex == 4)
+                {
+                    // 4: Kanal genişliği filtresi
+                    const double bandWidthThreshold = 0.04; // %4
+                    double width = (currentHHV - currentLLV) / currentPrice;
+                    if (width > bandWidthThreshold && currentPrice > mid[currentIndex]) buy = true;
+                }
+                else if (buySignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    double barLow = Data[currentIndex].Low;
 
-                    bool stayedAbove = YukarıKesti(crossBar, source, hhv);
-                    bool stayedBelow = AsagiKesti(crossBar, source, llv);
-                    for (int m = crossBar + 1; m <= currentIndex; m++)
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
                     {
-                        stayedAbove &= source[m] > hhv[m];
-                        stayedBelow &= source[m] < llv[m];
+                        if (m < 1) continue;
+
+                        if (!buy && YukarıKesti(m, source, hhv)
+                            && barLow <= currentHHV
+                            && currentPrice > currentHHV)
+                        {
+                            buy = true;
+                        }
                     }
-                    if (stayedAbove) buy  = true;
-                    if (stayedBelow) sell = true;
                 }
-            }
-            else if (signalModeIndex == 7)
-            {
-                // 7: Fiyat eğimi + kanal state
-                const int slopeLookback = 3;
-                if (currentIndex >= slopeLookback)
+                else if (buySignalModeIndex == 6)
                 {
-                    bool priceRising  = source[currentIndex] > source[currentIndex - slopeLookback];
-                    bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
-                    if (Buyuk(currentIndex, source, hhv) && priceRising)  buy  = true;
-                    if (Kucuk(currentIndex, source, llv) && priceFalling) sell = true;
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedAbove = YukarıKesti(crossBar, source, hhv);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedAbove &= source[m] > hhv[m];
+                        }
+                        if (stayedAbove) buy = true;
+                    }
                 }
-            }
-            else if (signalModeIndex == 8)
-            {
-                // 8: HHV/LLV eğim state - kanal tavani yukselirken AL, tabani duserken SAT (kosul surdukce her bar).
-                //    Mode 2 (slope flip) kenar-tetikli; bu sürekli-state. MTF rejim filtresi olarak:
-                //    period'i büyük seç (ör. 4h/tf) -> "son N barin tepesi hala yeni yapiyor mu".
-                if (currentIndex >= 1)
+                else if (buySignalModeIndex == 7)
                 {
-                    if (hhv[currentIndex] > hhv[currentIndex - 1]) buy  = true;
-                    if (llv[currentIndex] < llv[currentIndex - 1]) sell = true;
+                    // 7: Fiyat eğimi + kanal state
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceRising = source[currentIndex] > source[currentIndex - slopeLookback];
+                        if (Buyuk(currentIndex, source, hhv) && priceRising) buy = true;
+                    }
+                }
+                else if (buySignalModeIndex == 8)
+                {
+                    // 8: HHV/LLV eğim state - kanal tavani yukselirken AL (kosul surdukce her bar).
+                    //    Mode 2 (slope flip) kenar-tetikli; bu sürekli-state. MTF rejim filtresi olarak:
+                    //    period'i büyük seç (ör. 4h/tf) -> "son N barin tepesi hala yeni yapiyor mu".
+                    if (currentIndex >= 1)
+                    {
+                        if (hhv[currentIndex] > hhv[currentIndex - 1]) buy = true;
+                    }
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (sellModeEnabled)
             {
-                if (exitModeIndex == 0)
+                if (sellSignalModeIndex == 0)
+                {
+                    // 0: HHV/LLV kırılımı (klasik) - önceki barın HHV/LLV'sine göre
+                    double prevPrice = source[currentIndex - 1];
+                    if (prevPrice >= prevLLV && currentPrice < prevLLV) sell = true;
+                }
+                else if (sellSignalModeIndex == 1)
+                {
+                    // 1: Kanal ortası kesişimi
+                    if (AsagiKesti(currentIndex, source, mid)) sell = true;
+                }
+                else if (sellSignalModeIndex == 2)
+                {
+                    // 2: HHV slope flip - kanal rejimi
+                    if (currentIndex >= 2)
+                    {
+                        double slopeNow  = hhv[currentIndex]     - hhv[currentIndex - 1];
+                        double slopePrev = hhv[currentIndex - 1] - hhv[currentIndex - 2];
+                        if (slopePrev >= 0.0 && slopeNow < 0.0) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 3)
+                {
+                    // 3: Kanal state
+                    if (Kucuk(currentIndex, source, llv)) sell = true;
+                }
+                else if (sellSignalModeIndex == 4)
+                {
+                    // 4: Kanal genişliği filtresi
+                    const double bandWidthThreshold = 0.04; // %4
+                    double width = (currentHHV - currentLLV) / currentPrice;
+                    if (width > bandWidthThreshold && currentPrice < mid[currentIndex]) sell = true;
+                }
+                else if (sellSignalModeIndex == 5)
+                {
+                    // 5: Breakout + retest
+                    const int retestLookback = 10;
+                    double barHigh = Data[currentIndex].High;
+
+                    for (int m = currentIndex - retestLookback; m < currentIndex; m++)
+                    {
+                        if (m < 1) continue;
+
+                        if (!sell && AsagiKesti(m, source, llv)
+                            && barHigh >= currentLLV
+                            && currentPrice < currentLLV)
+                        {
+                            sell = true;
+                        }
+                    }
+                }
+                else if (sellSignalModeIndex == 6)
+                {
+                    // 6: Confirmation bars
+                    const int confirmBars = 3;
+                    if (currentIndex >= confirmBars + 1)
+                    {
+                        int crossBar = currentIndex - confirmBars;
+
+                        bool stayedBelow = AsagiKesti(crossBar, source, llv);
+                        for (int m = crossBar + 1; m <= currentIndex; m++)
+                        {
+                            stayedBelow &= source[m] < llv[m];
+                        }
+                        if (stayedBelow) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 7)
+                {
+                    // 7: Fiyat eğimi + kanal state
+                    const int slopeLookback = 3;
+                    if (currentIndex >= slopeLookback)
+                    {
+                        bool priceFalling = source[currentIndex] < source[currentIndex - slopeLookback];
+                        if (Kucuk(currentIndex, source, llv) && priceFalling) sell = true;
+                    }
+                }
+                else if (sellSignalModeIndex == 8)
+                {
+                    // 8: HHV/LLV eğim state - kanal tabani duserken SAT (kosul surdukce her bar).
+                    //    Mode 2 (slope flip) kenar-tetikli; bu sürekli-state. MTF rejim filtresi olarak:
+                    //    period'i büyük seç (ör. 4h/tf) -> "son N barin tabani hala yeni dip yapiyor mu".
+                    if (currentIndex >= 1)
+                    {
+                        if (llv[currentIndex] < llv[currentIndex - 1]) sell = true;
+                    }
+                }
+            }
+
+            if (takeProfitExitModeEnabled && Trader != null)
+            {
+                if (takeProfitExitModeIndex == 0)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(currentIndex, 5, 50, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (takeProfitExitModeIndex == 1)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (takeProfitExitModeIndex == 2)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (takeProfitExitModeIndex == 3)
                 {
                     takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (takeProfitExitModeIndex == 4)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (takeProfitExitModeIndex == 5)
                 {
                     takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
                 }
             }
 
-            if (1 == 1 && Trader != null)
+            if (stopLossExitModeEnabled && Trader != null)
             {
-                if (exitModeIndex == 0)
+                if (stopLossExitModeIndex == 0)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(currentIndex, -1, -10, 1000) != 0;
                 }
-                else if (exitModeIndex == 1)
+                else if (stopLossExitModeIndex == 1)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 }
-                else if (exitModeIndex == 2)
+                else if (stopLossExitModeIndex == 2)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 }
-                else if (exitModeIndex == 3)
+                else if (stopLossExitModeIndex == 3)
                 {
                     stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
                 }
-                else if (exitModeIndex == 4)
+                else if (stopLossExitModeIndex == 4)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
                 }
-                else if (exitModeIndex == 5)
+                else if (stopLossExitModeIndex == 5)
                 {
                     stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
                 }
             }
 
-            if (flatModeIndex == 0) flat = false;
-            if (skipModeIndex == 0) skip = false;
+            if (flatModeEnabled)
+            {
+                if (flatModeIndex == 0) flat = false;
+            }
+
+            if (skipModeEnabled)
+            {
+                if (skipModeIndex == 0) skip = false;
+            }
 
             // ------------------------------------------------------------------------------------------------------------------
             // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.

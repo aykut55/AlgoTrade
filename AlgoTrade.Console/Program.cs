@@ -433,7 +433,8 @@ void ConfigureStrategy(bool bShowConfigSelectionMenu = true)
             ["percent"] = 1.0,
             ["mostMaMethod"] = "EMA",
             ["priceSource"] = "Close",
-            ["signalModeIndex"] = 0
+            ["buySignalModeIndex"] = 0,
+            ["sellSignalModeIndex"] = 0
         });
     }
 }
@@ -549,9 +550,9 @@ void ConfigureStrategies()
         LogManager.LogRaw($"\nStrategy config file not found: {configPath}");
         algoTrader.ClearStrategyConfigs();
         algoTrader.AddStrategyConfig(0, "SimpleMostStrategy", new Dictionary<string, object>
-            { ["period"] = 21, ["percent"] = 1.0, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+            { ["period"] = 21, ["percent"] = 1.0, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
         algoTrader.AddStrategyConfig(1, "SimpleMostStrategy", new Dictionary<string, object>
-            { ["period"] = 14, ["percent"] = 0.5, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["signalModeIndex"] = 0 });
+            { ["period"] = 14, ["percent"] = 0.5, ["mostMaMethod"] = "EMA", ["priceSource"] = "Close", ["buySignalModeIndex"] = 0, ["sellSignalModeIndex"] = 0 });
         LogManager.LogRaw("\nStrategy config file not found, fallback configured.");
     }
 }

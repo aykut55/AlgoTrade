@@ -100,7 +100,8 @@ void ConfigureStrategies()
         ["percent"] = 1.0,
         ["mostMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=1 : SimpleMAStrategy
@@ -111,7 +112,8 @@ void ConfigureStrategies()
         ["fastMaMethod"] = "EMA",
         ["slowMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=2 : SimpleRSIStrategy
@@ -121,7 +123,8 @@ void ConfigureStrategies()
         ["oversold"] = 30,
         ["overbought"] = 70,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=3 : SimpleOTTStrategy
@@ -131,7 +134,8 @@ void ConfigureStrategies()
         ["percent"] = 1.4,
         ["ottMaMethod"] = "VIDYA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=4 : SimpleSuperTrendStrategy
@@ -140,7 +144,8 @@ void ConfigureStrategies()
         ["period"] = 10,
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=5 : SimpleParabolicSARStrategy
@@ -149,7 +154,8 @@ void ConfigureStrategies()
         ["step"] = 0.02,
         ["max"] = 0.2,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=6 : SimpleADXStrategy
@@ -157,14 +163,16 @@ void ConfigureStrategies()
     {
         ["period"] = 14,
         ["adxThreshold"] = 25,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=7 : SimpleDIStrategy
     algoTrader.AddStrategyConfig(7, "SimpleDIStrategy", new Dictionary<string, object>
     {
         ["period"] = 14,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=8 : SimpleMACDStrategy
@@ -174,7 +182,8 @@ void ConfigureStrategies()
         ["slowPeriod"] = 26,
         ["signalPeriod"] = 9,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=9 : SimpleStochasticStrategy
@@ -183,7 +192,8 @@ void ConfigureStrategies()
         ["kPeriod"] = 14,
         ["dPeriod"] = 3,
         ["centerLine"] = 50,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=10 : SimpleBollingerStrategy
@@ -192,7 +202,8 @@ void ConfigureStrategies()
         ["period"] = 20,
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=11 : SimpleATRStrategy
@@ -202,7 +213,8 @@ void ConfigureStrategies()
         ["maPeriod"] = 20,
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=12 : SimpleCMFStrategy
@@ -211,7 +223,8 @@ void ConfigureStrategies()
         ["period"] = 20,
         ["positiveThreshold"] = 0.1,
         ["negativeThreshold"] = -0.1,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=13 : SimpleMFIStrategy
@@ -220,7 +233,8 @@ void ConfigureStrategies()
         ["period"] = 14,
         ["oversold"] = 20,
         ["overbought"] = 80,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=14 : SimpleKairiStrategy
@@ -230,7 +244,8 @@ void ConfigureStrategies()
         ["positiveThreshold"] = 5,
         ["negativeThreshold"] = -5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=15 : SimpleMomentumStrategy
@@ -240,7 +255,8 @@ void ConfigureStrategies()
         ["positiveThreshold"] = 0,
         ["negativeThreshold"] = 0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=16 : SimpleHHVLLVStrategy
@@ -248,7 +264,8 @@ void ConfigureStrategies()
     {
         ["period"] = 20,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=17 : SimpleHYLYStrategy
@@ -257,7 +274,8 @@ void ConfigureStrategies()
         ["period"] = 20,
         ["threshold"] = 80,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=18 : SimpleIchimokuStrategy
@@ -266,7 +284,8 @@ void ConfigureStrategies()
         ["tenkanPeriod"] = 9,
         ["kijunPeriod"] = 26,
         ["senkouPeriod"] = 52,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=19 : SimpleMavilimWStrategy
@@ -274,7 +293,8 @@ void ConfigureStrategies()
     {
         ["param1"] = 3,
         ["param2"] = 5,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=20 : SimplePMaxStrategy
@@ -284,7 +304,8 @@ void ConfigureStrategies()
         ["multiplier"] = 3.0,
         ["maPeriod"] = 10,
         ["pmaxMaMethod"] = "EMA",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=21 : SimpleTillsonT3Strategy
@@ -292,7 +313,8 @@ void ConfigureStrategies()
     {
         ["period"] = 5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 
     // Id=22 : SimpleAlphaTrendStrategy
@@ -302,7 +324,8 @@ void ConfigureStrategies()
         ["coefficient"] = 1.0,
         ["momentumPeriod"] = 14,
         ["useMFI"] = true,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     });
 }
 

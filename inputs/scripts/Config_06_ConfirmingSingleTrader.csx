@@ -83,7 +83,8 @@ if (strategyChoice == 0)
         ["percent"] = 1.0,
         ["mostMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 1)
@@ -96,7 +97,8 @@ else if (strategyChoice == 1)
         ["fastMaMethod"] = "EMA",
         ["slowMaMethod"] = "EMA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 2)
@@ -108,7 +110,8 @@ else if (strategyChoice == 2)
         ["oversold"] = 30,
         ["overbought"] = 70,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 3)
@@ -120,7 +123,8 @@ else if (strategyChoice == 3)
         ["percent"] = 1.4,
         ["ottMaMethod"] = "VIDYA",
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 4)
@@ -131,7 +135,8 @@ else if (strategyChoice == 4)
         ["period"] = 10,
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 5)
@@ -142,7 +147,8 @@ else if (strategyChoice == 5)
         ["step"] = 0.02,
         ["max"] = 0.2,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 6)
@@ -152,7 +158,8 @@ else if (strategyChoice == 6)
     {
         ["period"] = 14,
         ["adxThreshold"] = 25,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 7)
@@ -161,7 +168,8 @@ else if (strategyChoice == 7)
     strategyParameters = new Dictionary<string, object>
     {
         ["period"] = 14,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 8)
@@ -173,7 +181,8 @@ else if (strategyChoice == 8)
         ["slowPeriod"] = 26,
         ["signalPeriod"] = 9,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 9)
@@ -184,7 +193,8 @@ else if (strategyChoice == 9)
         ["kPeriod"] = 14,
         ["dPeriod"] = 3,
         ["centerLine"] = 50,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 10)
@@ -195,7 +205,8 @@ else if (strategyChoice == 10)
         ["period"] = 20,
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 11)
@@ -207,7 +218,8 @@ else if (strategyChoice == 11)
         ["maPeriod"] = 20,
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 12)
@@ -218,7 +230,8 @@ else if (strategyChoice == 12)
         ["period"] = 20,
         ["positiveThreshold"] = 0.1,
         ["negativeThreshold"] = -0.1,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 13)
@@ -229,7 +242,8 @@ else if (strategyChoice == 13)
         ["period"] = 14,
         ["oversold"] = 20,
         ["overbought"] = 80,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 14)
@@ -241,7 +255,8 @@ else if (strategyChoice == 14)
         ["positiveThreshold"] = 5,
         ["negativeThreshold"] = -5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 15)
@@ -253,7 +268,8 @@ else if (strategyChoice == 15)
         ["positiveThreshold"] = 0,
         ["negativeThreshold"] = 0,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 16)
@@ -263,7 +279,8 @@ else if (strategyChoice == 16)
     {
         ["period"] = 20,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 17)
@@ -274,7 +291,8 @@ else if (strategyChoice == 17)
         ["period"] = 20,
         ["threshold"] = 80,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 18)
@@ -285,7 +303,8 @@ else if (strategyChoice == 18)
         ["tenkanPeriod"] = 9,
         ["kijunPeriod"] = 26,
         ["senkouPeriod"] = 52,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 19)
@@ -295,7 +314,8 @@ else if (strategyChoice == 19)
     {
         ["param1"] = 3,
         ["param2"] = 5,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 20)
@@ -307,7 +327,8 @@ else if (strategyChoice == 20)
         ["multiplier"] = 3.0,
         ["maPeriod"] = 10,
         ["pmaxMaMethod"] = "EMA",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 21)
@@ -317,7 +338,8 @@ else if (strategyChoice == 21)
     {
         ["period"] = 5,
         ["priceSource"] = "Close",
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else if (strategyChoice == 22)
@@ -329,7 +351,8 @@ else if (strategyChoice == 22)
         ["coefficient"] = 1.0,
         ["momentumPeriod"] = 14,
         ["useMFI"] = true,
-        ["signalModeIndex"] = 0
+        ["buySignalModeIndex"] = 0,
+        ["sellSignalModeIndex"] = 0
     };
 }
 else
