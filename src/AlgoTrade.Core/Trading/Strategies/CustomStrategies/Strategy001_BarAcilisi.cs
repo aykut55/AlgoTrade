@@ -87,7 +87,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             stopDay              = default;
             isTimeEnabled        = false;
             isDayEnabled         = false;
-            isTriggerTimeEnabled = true;
+            isTriggerTimeEnabled = false;
 
             Parameters["SignalModeIndex"] = signalModeIndex;
             Parameters["ExitModeIndex"]   = exitModeIndex;
