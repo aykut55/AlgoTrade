@@ -49,6 +49,13 @@ public class AppSettingsConfig
     /// Geçerli değerler: SingleTrader | MultipleTrader | SingleTraderOptimizer | ConfirmingSingleTrader | ConfirmingMultipleTrader
     /// </summary>
     public string AutoRunMode { get; set; } = "";
+
+    /// <summary>
+    /// Plot/grafik backend seçimi (npz bundle + view.json ile beslenen yeni plotter'lar için).
+    /// 0 → DearPyGuiDataPlotter (DearPyGui tabanlı)
+    /// 1 → DearImGuiBundleDataPlotter (imgui_bundle/implot tabanlı)
+    /// </summary>
+    public int PlotBackend { get; set; } = 0;
 }
 
 // =============================================================================

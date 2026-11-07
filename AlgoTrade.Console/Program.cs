@@ -4,6 +4,7 @@ using AlgoTrade.Core.Logging;
 using AlgoTrade.Core.Logging.Sinks;
 using AlgoTrade.Core.Python;
 using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
+using AlgoTrade.Core.Python.DearImGuiBundleDataPlotter;
 using AlgoTrade.Core.Scripting;
 using AlgoTrade.Core.StockDataReader;
 using AlgoTrade.Core.Timer;
@@ -46,6 +47,7 @@ StockDataReader?    stockDataReader                 = null;
 ConcurrentDictionary<string, string>? stockMetaData = null;
 AlgoTrader?         algoTrader                      = null;
 DearPyGuiDataPlotter? dearPyGuiTestPlotter           = null; // TODO: demo/test - bkz. docs/yapilacak.md
+DearImGuiBundleDataPlotter? dearImGuiBundleTestPlotter = null; // TODO: demo/test - bkz. docs/yapilacak.md
 TimeManager         timer                           = TimeManager.GetInstance();
 LogManager          logger                          = LogManager.GetInstance();
 TraderRunMode       selectedRunMode                 = TraderRunMode.TradeOnly;
@@ -815,15 +817,16 @@ async Task runSingleTraderAlgoTrade()
             else
                 LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
 
-            // TODO: DearPyGuiDataPlotter converter/switch TESTİ - bkz. docs/yapilacak.md.
-            // Gerçek PlotBackend switch'i entegre olunca bu blok kaldırılıp yukarıdaki
-            // pythonnet/imgui_bundle çağrısıyla aynı yerde düzgünce (switch ile) sarılacak.
-            // Şimdilik pythonnet akışına dokunmadan, AYNI SingleTrader'dan npz bundle
-            // üretip DearPyGuiDataPlotter'da da açıyor (converter'ı gerçek veriyle test etmek için).
+            // PlotBackend switch (AppConfig.json: AppSettings.PlotBackend, 0=DearPyGuiDataPlotter,
+            // 1=DearImGuiBundleDataPlotter). AYNI SingleTrader'dan npz bundle üretip seçili
+            // backend'de açar - pythonnet/imgui_bundle (eski, yukarıdaki) çağrısına dokunmaz.
             try
             {
                 var bundleConverter = new TradeDataBundleConverter();
-                string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+                bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+                string bundleOutDir = Path.Combine(
+                    useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
+                    "inputs");
                 var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(
                     algoTrader.SingleTrader, bundleOutDir);
 
@@ -839,15 +842,26 @@ async Task runSingleTraderAlgoTrade()
                 bundleConverter.ConvertSingleTrader(
                     algoTrader.SingleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
 
-                dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
-                dearPyGuiTestPlotter.SetLogger(logger);
-                dearPyGuiTestPlotter.StartPlotter();
-                dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
-                LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                if (useImGuiBundle)
+                {
+                    dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+                    dearImGuiBundleTestPlotter.SetLogger(logger);
+                    dearImGuiBundleTestPlotter.StartPlotter();
+                    dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
+                else
+                {
+                    dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                    dearPyGuiTestPlotter.SetLogger(logger);
+                    dearPyGuiTestPlotter.StartPlotter();
+                    dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                    LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
             }
             catch (Exception ex)
             {
-                LogManager.LogError($"[DearPyGuiDataPlotter] Converter test hatası: {ex.Message}", ex);
+                LogManager.LogError($"[PlotBackend] Converter/plotter hatası: {ex.Message}", ex);
             }
         }
 
@@ -906,15 +920,16 @@ async Task runMultipleTraderAlgoTrade()
             else
                 LogManager.LogError("Python setup failed. PlotMultipleTraderData skipped.");
 
-            // TODO: DearPyGuiDataPlotter converter/switch TESTİ - bkz. docs/yapilacak.md.
-            // Gerçek PlotBackend switch'i entegre olunca bu blok kaldırılıp yukarıdaki
-            // pythonnet/imgui_bundle çağrısıyla aynı yerde düzgünce (switch ile) sarılacak.
-            // Şimdilik pythonnet akışına dokunmadan, AYNI MultipleTrader'dan npz bundle
-            // üretip DearPyGuiDataPlotter'da da açıyor ([5]'teki SingleTrader test hook'unun aynısı).
+            // PlotBackend switch (AppConfig.json: AppSettings.PlotBackend, 0=DearPyGuiDataPlotter,
+            // 1=DearImGuiBundleDataPlotter). AYNI MultipleTrader'dan npz bundle üretip seçili
+            // backend'de açar - pythonnet/imgui_bundle (eski, yukarıdaki) çağrısına dokunmaz.
             try
             {
                 var bundleConverter = new TradeDataBundleConverter();
-                string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
+                bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+                string bundleOutDir = Path.Combine(
+                    useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
+                    "inputs");
                 var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(
                     algoTrader.MultipleTrader, bundleOutDir);
 
@@ -930,15 +945,26 @@ async Task runMultipleTraderAlgoTrade()
                 bundleConverter.ConvertMultipleTrader(
                     algoTrader.MultipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
 
-                dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
-                dearPyGuiTestPlotter.SetLogger(logger);
-                dearPyGuiTestPlotter.StartPlotter();
-                dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
-                LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                if (useImGuiBundle)
+                {
+                    dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+                    dearImGuiBundleTestPlotter.SetLogger(logger);
+                    dearImGuiBundleTestPlotter.StartPlotter();
+                    dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
+                else
+                {
+                    dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                    dearPyGuiTestPlotter.SetLogger(logger);
+                    dearPyGuiTestPlotter.StartPlotter();
+                    dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                    LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
             }
             catch (Exception ex)
             {
-                LogManager.LogError($"[DearPyGuiDataPlotter] Converter test hatası: {ex.Message}", ex);
+                LogManager.LogError($"[PlotBackend] Converter/plotter hatası: {ex.Message}", ex);
             }
         }
 
@@ -3946,7 +3972,8 @@ void showMainMenu()
     // TODO: Demo/test bölümü - gerçek switch entegre olunca silinecek (bkz. handleDearPyGuiPlotterTest()).
     Console.WriteLine("╠═══ DearPyGuiDataPlotter (Test) ════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("║    [9]  DearPyGuiDataPlotter (Start/Stop Test)                     ║");
+    Console.WriteLine("║    [9]   DearPyGuiDataPlotter (Start/Stop Test)                    ║");
+    Console.WriteLine("║    [9b]  DearImGuiBundleDataPlotter (Start/Stop Test)              ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Tarama ═════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -4038,6 +4065,62 @@ void handleDearPyGuiPlotterTest()
     LogManager.LogRaw("[DearPyGuiDataPlotter] Process durduruldu.", ConsoleColor.Yellow);
 }
 
+// TODO: Bu fonksiyon + ana menüdeki [9b] seçeneği (case "9b" ve showMainMenu()
+// içindeki "DearImGuiBundleDataPlotter (Start/Stop Test)" satırı) sadece
+// DearImGuiBundleDataPlotter process başlatma/StopPlotter/LoadBundle akışını
+// doğrulamak için eklenmiş DEMO/TEST amaçlı koddur — handleDearPyGuiPlotterTest()'in
+// birebir paraleli. Gerçek switch (PlotBackend seçimi) entegre olunca bu demo
+// kod ve menü seçeneği de (ikisiyle birlikte) silinecek.
+void handleDearImGuiBundlePlotterTest()
+{
+    LogManager.LogRaw("");
+    LogManager.LogRaw("[DearImGuiBundleDataPlotter] Process başlatılıyor...", ConsoleColor.Cyan);
+
+    using var plotter = new DearImGuiBundleDataPlotter();
+    plotter.SetLogger(logger);
+
+    try
+    {
+        plotter.StartPlotter();
+        LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Başlatıldı. IsRunning={plotter.IsRunning}", ConsoleColor.Green);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"[DearImGuiBundleDataPlotter] Başlatma hatası: {ex.Message}");
+        return;
+    }
+
+    // Test amaçlı örnek bundle: DearPyGuiDataPlotter'ın committed örneği yeniden kullanılır
+    // (view.json şeması iki plotter arasında ortak — bkz. plan §10).
+    string testBundlePath = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs", "latest_bundle.npz");
+    string testViewPath   = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs", "latest_bundle.view.json");
+
+    if (File.Exists(testBundlePath))
+    {
+        plotter.LoadBundle(testBundlePath, File.Exists(testViewPath) ? testViewPath : null);
+        LogManager.LogRaw($"[DearImGuiBundleDataPlotter] load_bundle komutu gönderildi: {Path.GetFileName(testBundlePath)}", ConsoleColor.Green);
+    }
+    else
+    {
+        LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Test bundle bulunamadı, load_bundle atlandı: {testBundlePath}", ConsoleColor.DarkYellow);
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("  [ENTER] Panel 0'ı temizle (clear_panel testi)   [ESC] Kapat ve ana menüye dön");
+    if (ReadMenuInput() != null)
+    {
+        plotter.ClearPanel(0);
+        LogManager.LogRaw("[DearImGuiBundleDataPlotter] clear_panel komutu gönderildi: panelId=0", ConsoleColor.Green);
+
+        Console.WriteLine();
+        Console.WriteLine("  [ENTER] Plotter'ı kapat ve ana menüye dön");
+        ReadMenuInput();
+    }
+
+    plotter.StopPlotter();
+    LogManager.LogRaw("[DearImGuiBundleDataPlotter] Process durduruldu.", ConsoleColor.Yellow);
+}
+
 // =============================================================================
 // Main
 // =============================================================================
@@ -4121,10 +4204,10 @@ async Task main()
     while (running && !exitRequested)
     {
         showMainMenu();
-        var input = returnedFromAutoRun ? MenuInput("") : MenuInput("5");
+        var input = MenuInput("9b");
         returnedFromAutoRun = false;
         if (input == null) { running = false; break; }
-        if (string.IsNullOrEmpty(input)) input = "5";
+        if (string.IsNullOrEmpty(input)) input = "9b";
 
         switch (input)
         {
@@ -4137,6 +4220,7 @@ async Task main()
             case "7": if (handleReadData()) await handleSingleTraderOpt();  break;
             case "8": await runFullScript();                                break;
             case "9": handleDearPyGuiPlotterTest();                         break; // TODO: demo/test, silinecek
+            case "9b": handleDearImGuiBundlePlotterTest();                  break; // TODO: demo/test, silinecek
             case "10": await handleSymbolScan();                            break;
             case "11": await handleTimeframeScan();                         break;
             case "12": await handleMultiStrategyTimeframeScan();             break;

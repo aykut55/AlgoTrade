@@ -23,6 +23,12 @@ public static class AppSettings
     public static string DearPyGuiDataPlotterDir => Path.Combine(_baseDir, "src", "DearPyGuiDataPlotter");
 
     /// <summary>
+    /// DearPyGuiDataPlotter'ın mimarisini imgui_bundle/implot render backend'ine taşıyan
+    /// yeni plotter'ın proje klasörü — bkz. src/DearImGuiBundleDataPlotter.
+    /// </summary>
+    public static string DearImGuiBundleDataPlotterDir => Path.Combine(_baseDir, "src", "DearImGuiBundleDataPlotter");
+
+    /// <summary>
     /// inputs/python/ altındaki, kod TAŞINDIKTAN SONRA (2026-08-26) geriye kalan ve sadece
     /// runtime bundle çıktısı için kullanılan alt klasörlerin ortak kökü.
     /// </summary>
@@ -36,6 +42,12 @@ public static class AppSettings
     /// tutulur — kod nereye taşınırsa taşınsın bu, runtime veri konumu olarak sabit kalır.
     /// </summary>
     public static string DearPyGuiPlotterBundleDir => Path.Combine(PythonRuntimeDataDir, "dearPyGuiDataPlotter");
+
+    /// <summary>
+    /// DearImGuiBundleDataPlotter'ın kendi runtime bundle kopyası için kullandığı klasör —
+    /// <see cref="DearPyGuiPlotterBundleDir"/> ile aynı desen, ayrı plotter.
+    /// </summary>
+    public static string DearImGuiBundlePlotterBundleDir => Path.Combine(PythonRuntimeDataDir, "dearImGuiBundleDataPlotter");
 
     /// <summary>
     /// Eski tip plotter'ın (PythonPlotter, pythonnet/imgui_bundle) AlgoTrade'e özgü, kendi

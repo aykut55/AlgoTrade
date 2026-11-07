@@ -2,9 +2,11 @@
   "AppSettings": {
     "StockDataFile": "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv",
     "AutoRunMode": "None",
-    "MenuTimeoutSeconds": 5
+    "MenuTimeoutSeconds": 5,
+    "PlotBackend": 1
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
 	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
+	// PlotBackend: 0 = DearPyGuiDataPlotter | 1 = DearImGuiBundleDataPlotter
   },
 
   "ReadData": {
