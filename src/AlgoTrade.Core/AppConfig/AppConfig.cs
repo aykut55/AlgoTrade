@@ -56,6 +56,14 @@ public class AppSettingsConfig
     /// 1 → DearImGuiBundleDataPlotter (imgui_bundle/implot tabanlı)
     /// </summary>
     public int PlotBackend { get; set; } = 0;
+
+    /// <summary>
+    /// Eski pythonnet tabanli PythonPlotter cizimini acar/kapatir.
+    /// 0 -> PythonPlotter ile cizim yapilmaz (varsayilan)
+    /// 1 -> PythonPlotter ile cizim yapilir
+    /// DearPyGui/DearImGui bundle backend seciminden bagimsizdir.
+    /// </summary>
+    public int PythonPlotterEnabled { get; set; } = 0;
 }
 
 // =============================================================================

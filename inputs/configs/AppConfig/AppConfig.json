@@ -3,10 +3,12 @@
     "StockDataFile": "C:\\data\\csvFiles\\VIP\\05\\VIP-X030-T.csv",
     "AutoRunMode": "None",
     "MenuTimeoutSeconds": 5,
-    "PlotBackend": 1
+    "PlotBackend": 1,
+    "PythonPlotterEnabled": 0
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
 	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
 	// PlotBackend: 0 = DearPyGuiDataPlotter | 1 = DearImGuiBundleDataPlotter
+	// PythonPlotterEnabled: 0 = PythonPlotter cizimi kapali | 1 = PythonPlotter cizimi acik
   },
 
   "ReadData": {

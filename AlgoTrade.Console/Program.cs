@@ -812,10 +812,13 @@ async Task runSingleTraderAlgoTrade()
         {
             LogManager.LogRaw("");
 
-            if (algoTrader.SetupPython())
-                await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
-            else
-                LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+            if (appConfig.AppSettings.PythonPlotterEnabled == 1)
+            {
+                if (algoTrader.SetupPython())
+                    await algoTrader.PlotSingleTraderData(algoTrader.SingleTrader);
+                else
+                    LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
+            }
 
             // PlotBackend switch (AppConfig.json: AppSettings.PlotBackend, 0=DearPyGuiDataPlotter,
             // 1=DearImGuiBundleDataPlotter). AYNI SingleTrader'dan npz bundle üretip seçili
@@ -915,10 +918,13 @@ async Task runMultipleTraderAlgoTrade()
         {
             LogManager.LogRaw("");
 
-            if (algoTrader.SetupPython())
-                await algoTrader.PlotMultipleTraderData(algoTrader.MultipleTrader);
-            else
-                LogManager.LogError("Python setup failed. PlotMultipleTraderData skipped.");
+            if (appConfig.AppSettings.PythonPlotterEnabled == 1)
+            {
+                if (algoTrader.SetupPython())
+                    await algoTrader.PlotMultipleTraderData(algoTrader.MultipleTrader);
+                else
+                    LogManager.LogError("Python setup failed. PlotMultipleTraderData skipped.");
+            }
 
             // PlotBackend switch (AppConfig.json: AppSettings.PlotBackend, 0=DearPyGuiDataPlotter,
             // 1=DearImGuiBundleDataPlotter). AYNI MultipleTrader'dan npz bundle üretip seçili
@@ -1020,7 +1026,7 @@ async Task runConfirmingSingleTraderAlgoTrade()
 
         var mainTrader = algoTrader.ConfirmingSingleTrader!.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
-        if (plotEnabled)
+        if (plotEnabled && appConfig.AppSettings.PythonPlotterEnabled == 1)
         {
             LogManager.LogRaw("");
             LogManager.LogRaw("[Plot] mainTrader'ın gerçek/konfirme edilmiş sinyalleri çiziliyor (VirtualSignals overlay henüz yok — bkz. ConfirmingSingleTrader.VirtualSignals/.Signals).");
@@ -1081,7 +1087,7 @@ async Task runConfirmingMultipleTraderAlgoTrade()
 
         var mainTrader = algoTrader.ConfirmingMultipleTrader!.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
-        if (plotEnabled)
+        if (plotEnabled && appConfig.AppSettings.PythonPlotterEnabled == 1)
         {
             LogManager.LogRaw("");
             LogManager.LogRaw("[Plot] mainTrader'ın gerçek/konfirme edilmiş sinyalleri çiziliyor (VirtualSignals overlay henüz yok).");
