@@ -19,6 +19,7 @@ from .externalIndicatorWindowManager import ExternalIndicatorWindowManager
 from .menuBar import MenuBar
 from .leftMenuPanel import LeftMenuPanel
 from .panelManagerWindow import PanelManagerWindow
+from .panelManagerWindow2 import PanelManagerWindow2
 from ..trading.stockDataReader import StockDataReader, FilterMode
 from ..trading.indicatorManager import IndicatorManager
 from ..trading.indicators import Indicators
@@ -104,6 +105,8 @@ class GuiManager:
 
         self.panelManagerWindow = PanelManagerWindow()
         self.panelManagerWindow.setPanelManager(self.panelManager)
+        self.panelManagerWindow2 = PanelManagerWindow2()
+        self.panelManagerWindow2.setPanelManager(self.panelManager)
 
         self.menuBar = MenuBar()
         self.menuBar.set_callback(
@@ -115,6 +118,7 @@ class GuiManager:
             on_toggle_script=lambda: self.scriptPanel.setVisible(not self.scriptPanel.getVisible()),
             on_toggle_console=self.consolePanel.toggle,
             on_manage_panels=self.panelManagerWindow.toggle,
+            on_manage_panels2=self.panelManagerWindow2.toggle,
             on_manage_data=self.dataManager.toggle,
             on_open_all=self.panelManager.showAllPanels,
             on_collapse_all=self.panelManager.collapseAllPanels,
@@ -129,6 +133,7 @@ class GuiManager:
         scriptsDir = os.path.join(projectDir, "scripts")
         scriptRunner = ScriptRunner(scriptsDir)
         scriptRunner.setGlobals(gm=self, pm=self.panelManager, pool=self.poolDataManager,
+                                pm2=self.panelManagerWindow2,
                                 Panel=Panel, PanelData=PanelData,
                                 TradeSignalRenderer=TradeSignalRenderer, tsr=self.tsr,
                                 StockDataReader=StockDataReader, FilterMode=FilterMode,
@@ -281,6 +286,10 @@ class GuiManager:
         if visible:
             self.panelManagerWindow.show()
 
+        # Panel Manager 2 ayri bir alternatif arayuzdur; ilk acilista menu
+        # veya Script Panel'deki ``pm2.show()`` ile acilir.
+        self.panelManagerWindow2.build(580, 120, 760, 900)
+
         coords, visible = coordsOf("leftMenu", True)
         self.leftMenuPanel.build(coords.get("x", 10), coords.get("y", 160),
                                  coords.get("width", 300), coords.get("height", 700))
@@ -404,6 +413,7 @@ class GuiManager:
         self.externalIndicatorWindowManager.render()
         self.leftMenuPanel.render()
         self.panelManagerWindow.render()
+        self.panelManagerWindow2.render()
         if rangeNavigatorVisible and self._rangeNavigatorDetached:
             self._renderDetachedRangeNavigator()
 
@@ -435,6 +445,7 @@ class GuiManager:
     def toggleDataManager(self): self.dataManager.toggle()
     def toggleLeftMenu(self): self.leftMenuPanel.toggle()
     def togglePanelManagerWindow(self): self.panelManagerWindow.toggle()
+    def togglePanelManagerWindow2(self): self.panelManagerWindow2.toggle()
     def togglePoolPanel(self): self.poolPanel.toggle()
 
     def _onCommandQuery(self, query):
@@ -446,6 +457,7 @@ class GuiManager:
             "script": lambda: self.scriptPanel.setVisible(not self.scriptPanel.getVisible()),
             "console": self.consolePanel.toggle,
             "panel manager": self.panelManagerWindow.toggle,
+            "panel manager 2": self.panelManagerWindow2.toggle,
             "data manager": self.dataManager.toggle,
             "indicator": self.externalIndicatorWindowManager.openDefaultIndicatorWindow,
             "theme": self.toggleTheme,

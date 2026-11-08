@@ -1,4 +1,4 @@
 {
-  "bundle": "src/DearPyGuiDataPlotter/inputs/latest_bundle.npz",
-  "view": "src/DearPyGuiDataPlotter/inputs/latest_bundle.view.json"
+  "bundle": "src/DearImGuiBundleDataPlotter/inputs/latest_bundle.npz",
+  "view": "src/DearImGuiBundleDataPlotter/inputs/latest_bundle.view.json"
 }

@@ -4204,10 +4204,10 @@ async Task main()
     while (running && !exitRequested)
     {
         showMainMenu();
-        var input = MenuInput("9b");
+        var input = MenuInput("5");
         returnedFromAutoRun = false;
         if (input == null) { running = false; break; }
-        if (string.IsNullOrEmpty(input)) input = "9b";
+        if (string.IsNullOrEmpty(input)) input = "5";
 
         switch (input)
         {

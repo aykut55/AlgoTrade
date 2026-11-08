@@ -38,6 +38,7 @@ class MenuBar:
                     ("Script Panel", "on_toggle_script"),
                     ("Console Panel", "on_toggle_console"),
                     ("Panel Manager", "on_manage_panels"),
+                    ("Panel Manager 2", "on_manage_panels2"),
                     ("Data Manager", "on_manage_data"),
                 )
                 for label, callback in items:
