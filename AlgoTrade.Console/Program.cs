@@ -54,8 +54,10 @@ TraderRunMode       selectedRunMode                 = TraderRunMode.TradeOnly;
 bool                addHeadTailInfo                 = false;
 
 string              appConfigPath                   = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "AppConfig.json");
+string              startupSequencePath             = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "LastStartupSequence.json");
 AppConfig           appConfig                       = new();          // populated with AppConfigLoader.Load() at startup
 string              stockDataFullFileName           = "";
+bool                startupSequenceIncludesReadData = false;
 
 bool exitRequested = false;
 
@@ -353,6 +355,70 @@ TraderRunMode ParseRunMode(string s) => s.Trim().ToLowerInvariant() switch
     "queryonly"     => TraderRunMode.QueryOnly,
     _               => TraderRunMode.TradeOnly
 };
+
+void saveStartupSequence(string operation, TraderRunMode? runMode = null)
+{
+    var sequence = new StartupSequence
+    {
+        Operation = operation,
+        // Ana menude once [1] ile veri okunup sonra [2]/[3]/... secilmisse
+        // bu bagimliligi de baslangic sekansina dahil et.
+        ReadData = startupSequenceIncludesReadData || (stockDataReader?.IsDataReady ?? false),
+        RunMode = (runMode ?? selectedRunMode).ToString()
+    };
+    sequence.Save(startupSequencePath);
+    LogManager.LogRaw($"[StartupSequence] Saved: {operation} (ReadData={sequence.ReadData}, RunMode={sequence.RunMode})",
+                      ConsoleColor.DarkGray);
+}
+
+async Task runLastStartupSequence()
+{
+    var sequence = StartupSequence.Load(startupSequencePath);
+    if (sequence is null || string.IsNullOrWhiteSpace(sequence.Operation))
+    {
+        // Ilk kullanimda henuz bir kayit yoktur. Ana menunun varsayilan
+        // secimi [5] ile ayni sekansi olustur: Read Data + SingleTrader.
+        sequence = new StartupSequence
+        {
+            Operation = "SingleTrader",
+            ReadData = true,
+            RunMode = appConfig.SingleTrader.RunMode
+        };
+        sequence.Save(startupSequencePath);
+        LogManager.LogRaw("[StartupSequence] Ilk kayit olusturuldu: Read Data + SingleTrader",
+                          ConsoleColor.Cyan);
+    }
+
+    // Hizli calistirma: MenuInput/preview/confirm akislari bilincli olarak
+    // kullanilmaz. Guncel AppConfig okunur ve runner dogrudan cagrilir.
+    reloadAppConfig();
+    LogManager.LogRaw($"[StartupSequence] Fast run: {sequence.Operation}", ConsoleColor.Cyan);
+    if (sequence.ReadData)
+        readStockData(appConfig.ReadData);
+
+    selectedRunMode = ParseRunMode(sequence.RunMode);
+    switch (sequence.Operation.ToUpperInvariant())
+    {
+        case "SINGLETRADER":
+            await runSingleTraderAlgoTrade();
+            break;
+        case "MULTIPLETRADER":
+            await runMultipleTraderAlgoTrade();
+            break;
+        case "SINGLETRADEROPTIMIZER":
+            await runSingleTraderOptimization();
+            break;
+        case "CONFIRMINGSINGLETRADER":
+            await runConfirmingSingleTraderAlgoTrade();
+            break;
+        case "CONFIRMINGMULTIPLETRADER":
+            await runConfirmingMultipleTraderAlgoTrade();
+            break;
+        default:
+            LogManager.LogRaw($"[StartupSequence] Desteklenmeyen islem: {sequence.Operation}", ConsoleColor.Red);
+            break;
+    }
+}
 
 void editAndReloadAppConfig()
 {
@@ -3138,6 +3204,7 @@ async Task handleSingleTrader()
         }
 
         // ENTER → çalıştır
+        saveStartupSequence("SingleTrader", selectedRunMode);
         await runSingleTraderAlgoTrade();
 
         // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
@@ -3193,6 +3260,7 @@ async Task handleMultipleTrader()
         }
 
         selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
+        saveStartupSequence("MultipleTrader", selectedRunMode);
         await runMultipleTraderAlgoTrade();
 
         // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
@@ -3248,6 +3316,7 @@ async Task handleConfirmingSingleTrader()
         }
 
         selectedRunMode = ParseRunMode(appConfig.ConfirmingSingleTrader.RunMode);
+        saveStartupSequence("ConfirmingSingleTrader", selectedRunMode);
         await runConfirmingSingleTraderAlgoTrade();
 
         // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
@@ -3303,6 +3372,7 @@ async Task handleConfirmingMultipleTrader()
         }
 
         selectedRunMode = ParseRunMode(appConfig.ConfirmingMultipleTrader.RunMode);
+        saveStartupSequence("ConfirmingMultipleTrader", selectedRunMode);
         await runConfirmingMultipleTraderAlgoTrade();
 
         // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
@@ -3357,6 +3427,7 @@ async Task handleSingleTraderOpt()
             continue;
         }
 
+        saveStartupSequence("SingleTraderOptimizer");
         await runSingleTraderOptimization();
 
         // Run tamamlandı: ENTER ana menü, R tekrar çalıştır, ESC uygulamadan çık
@@ -3999,12 +4070,16 @@ void showMainMenu()
     Console.WriteLine("║    [20]  Sorgu Tarama (Multi-Query Symbol Scan)                    ║");
     Console.WriteLine("║    [21]  Sorgu Tarama (Multi-Query Symbol-Timeframe Scan)          ║");
     Console.WriteLine("║                                                                    ║");
-    Console.WriteLine("╠═══ Confirming (Sanal Pozisyon Konfirmasyonu) ═════════════════════╣");
+    Console.WriteLine("╠═══ Confirming (Sanal Pozisyon Konfirmasyonu) ══════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [22]  ConfirmingSingleTrader                                    ║");
     Console.WriteLine("║    [23]  Read Data + ConfirmingSingleTrader                        ║");
     Console.WriteLine("║    [24]  ConfirmingMultipleTrader                                  ║");
     Console.WriteLine("║    [25]  Read Data + ConfirmingMultipleTrader                      ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ Fast Run ═══════════════════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [F]   Fast Run - Son baslangic sekansini calistir               ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠════════════════════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -4173,21 +4248,31 @@ async Task main()
             {
                 case "SINGLETRADER":
                     selectedRunMode = ParseRunMode(appConfig.SingleTrader.RunMode);
+                    startupSequenceIncludesReadData = true;
+                    saveStartupSequence("SingleTrader", selectedRunMode);
                     await runSingleTraderAlgoTrade();
                     break;
                 case "MULTIPLETRADER":
                     selectedRunMode = ParseRunMode(appConfig.MultipleTrader.RunMode);
+                    startupSequenceIncludesReadData = true;
+                    saveStartupSequence("MultipleTrader", selectedRunMode);
                     await runMultipleTraderAlgoTrade();
                     break;
                 case "SINGLETRADEROPTIMIZER":
+                    startupSequenceIncludesReadData = true;
+                    saveStartupSequence("SingleTraderOptimizer");
                     await runSingleTraderOptimization();
                     break;
                 case "CONFIRMINGSINGLETRADER":
                     selectedRunMode = ParseRunMode(appConfig.ConfirmingSingleTrader.RunMode);
+                    startupSequenceIncludesReadData = true;
+                    saveStartupSequence("ConfirmingSingleTrader", selectedRunMode);
                     await runConfirmingSingleTraderAlgoTrade();
                     break;
                 case "CONFIRMINGMULTIPLETRADER":
                     selectedRunMode = ParseRunMode(appConfig.ConfirmingMultipleTrader.RunMode);
+                    startupSequenceIncludesReadData = true;
+                    saveStartupSequence("ConfirmingMultipleTrader", selectedRunMode);
                     await runConfirmingMultipleTraderAlgoTrade();
                     break;
                 default:
@@ -4214,16 +4299,17 @@ async Task main()
         returnedFromAutoRun = false;
         if (input == null) { running = false; break; }
         if (string.IsNullOrEmpty(input)) input = "5";
+        startupSequenceIncludesReadData = false;
 
-        switch (input)
+        switch (input.ToLowerInvariant())
         {
             case "1": handleReadData();                                     break;
             case "2": await handleSingleTrader();                           break;
             case "3": await handleMultipleTrader();                         break;
             case "4": await handleSingleTraderOpt();                        break;
-            case "5": if (handleReadData()) await handleSingleTrader();     break;
-            case "6": if (handleReadData()) await handleMultipleTrader();   break;
-            case "7": if (handleReadData()) await handleSingleTraderOpt();  break;
+            case "5": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleSingleTrader(); }     break;
+            case "6": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleMultipleTrader(); }   break;
+            case "7": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleSingleTraderOpt(); }  break;
             case "8": await runFullScript();                                break;
             case "9": handleDearPyGuiPlotterTest();                         break; // TODO: demo/test, silinecek
             case "9b": handleDearImGuiBundlePlotterTest();                  break; // TODO: demo/test, silinecek
@@ -4240,9 +4326,10 @@ async Task main()
             case "20": await handleMultiQuerySymbolScan();                  break;
             case "21": await handleMultiQuerySymbolTimeframeScan();         break;
             case "22": await handleConfirmingSingleTrader();                break;
-            case "23": if (handleReadData()) await handleConfirmingSingleTrader(); break;
+            case "23": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleConfirmingSingleTrader(); } break;
             case "24": await handleConfirmingMultipleTrader();              break;
-            case "25": if (handleReadData()) await handleConfirmingMultipleTrader(); break;
+            case "25": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleConfirmingMultipleTrader(); } break;
+            case "f": await runLastStartupSequence();                       break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
         }
