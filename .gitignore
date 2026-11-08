@@ -92,6 +92,9 @@ src/DearImGuiBundleDataPlotter/*.ini
 src/DearImGuiBundleDataPlotter/inputs/runtime_commands/
 src/DearImGuiBundleDataPlotter/inputs/latest_bundle.npz
 src/DearImGuiBundleDataPlotter/inputs/latest_bundle.view.json
+# Bundle yaninda uretilen trader rapor paketi runtime ciktisidir.
+src/DearImGuiBundleDataPlotter/inputs/*.reports.json
+src/DearImGuiBundleDataPlotter/inputs/*.reports/
 # latest_bundle.npz / latest_bundle.view.json artik ignore'da (2026-09-01, kullanici karari) -
 # her plotter kosusunda uzerine yazilan ~20MB'lik calisma ciktisi, git history'yi sisiriyordu.
 # Onceden "standalone demo verisi gelsin" diye commitliydi; standalone demo gerekiyorsa sabit

@@ -20,6 +20,7 @@ from .menuBar import MenuBar
 from .leftMenuPanel import LeftMenuPanel
 from .panelManagerWindow import PanelManagerWindow
 from .panelManagerWindow2 import PanelManagerWindow2
+from .reportsWindow import ReportsWindow
 from ..trading.stockDataReader import StockDataReader, FilterMode
 from ..trading.indicatorManager import IndicatorManager
 from ..trading.indicators import Indicators
@@ -107,6 +108,7 @@ class GuiManager:
         self.panelManagerWindow.setPanelManager(self.panelManager)
         self.panelManagerWindow2 = PanelManagerWindow2()
         self.panelManagerWindow2.setPanelManager(self.panelManager)
+        self.reportsWindow = ReportsWindow(self)
 
         self.menuBar = MenuBar()
         self.menuBar.set_callback(
@@ -119,6 +121,7 @@ class GuiManager:
             on_toggle_console=self.consolePanel.toggle,
             on_manage_panels=self.panelManagerWindow.toggle,
             on_manage_panels2=self.panelManagerWindow2.toggle,
+            on_toggle_reports=self.reportsWindow.toggle,
             on_manage_data=self.dataManager.toggle,
             on_open_all=self.panelManager.showAllPanels,
             on_collapse_all=self.panelManager.collapseAllPanels,
@@ -414,6 +417,7 @@ class GuiManager:
         self.leftMenuPanel.render()
         self.panelManagerWindow.render()
         self.panelManagerWindow2.render()
+        self.reportsWindow.render()
         if rangeNavigatorVisible and self._rangeNavigatorDetached:
             self._renderDetachedRangeNavigator()
 
@@ -446,6 +450,7 @@ class GuiManager:
     def toggleLeftMenu(self): self.leftMenuPanel.toggle()
     def togglePanelManagerWindow(self): self.panelManagerWindow.toggle()
     def togglePanelManagerWindow2(self): self.panelManagerWindow2.toggle()
+    def toggleReportsWindow(self): self.reportsWindow.toggle()
     def togglePoolPanel(self): self.poolPanel.toggle()
 
     def _onCommandQuery(self, query):
@@ -458,6 +463,7 @@ class GuiManager:
             "console": self.consolePanel.toggle,
             "panel manager": self.panelManagerWindow.toggle,
             "panel manager 2": self.panelManagerWindow2.toggle,
+            "reports": self.reportsWindow.toggle,
             "data manager": self.dataManager.toggle,
             "indicator": self.externalIndicatorWindowManager.openDefaultIndicatorWindow,
             "theme": self.toggleTheme,

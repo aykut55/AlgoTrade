@@ -4,11 +4,13 @@
     "AutoRunMode": "None",
     "MenuTimeoutSeconds": 5,
     "PlotBackend": 1,
-    "PythonPlotterEnabled": 0
+    "PythonPlotterEnabled": 0,
+    "BundleReportsEnabled": false
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
 	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
 	// PlotBackend: 0 = DearPyGuiDataPlotter | 1 = DearImGuiBundleDataPlotter
 	// PythonPlotterEnabled: 0 = PythonPlotter cizimi kapali | 1 = PythonPlotter cizimi acik
+	// BundleReportsEnabled: true = bundle yanina raporlari kopyala | false = rapor paketi olusturma
   },
 
   "ReadData": {

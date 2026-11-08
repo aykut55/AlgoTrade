@@ -64,6 +64,13 @@ public class AppSettingsConfig
     /// DearPyGui/DearImGui bundle backend seciminden bagimsizdir.
     /// </summary>
     public int PythonPlotterEnabled { get; set; } = 0;
+
+    /// <summary>
+    /// Bundle yanina trader rapor paketi kopyalanmasini kontrol eder.
+    /// true  -> .reports klasoru ve .reports.json indeksi olusturulur.
+    /// false -> yalniz bundle/view olusturulur.
+    /// </summary>
+    public bool BundleReportsEnabled { get; set; } = false;
 }
 
 // =============================================================================

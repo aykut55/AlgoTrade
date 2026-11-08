@@ -77,10 +77,14 @@ class App:
         panelManagerWindow2 = hello_imgui.DockableWindow(
             "Panel Manager 2", "RightDockSpace", self.guiManager.panelManagerWindow2.renderDockContent,
             self.guiManager.panelManagerWindow2.getVisible(), True)
+        reportsWindow = hello_imgui.DockableWindow(
+            "Reports", "RightDockSpace", self.guiManager.reportsWindow.renderDockContent,
+            self.guiManager.reportsWindow.getVisible(), True)
         dataManagerWindow.remember_is_visible = False
         poolWindow.remember_is_visible = False
         panelManagerWindow.remember_is_visible = False
         panelManagerWindow2.remember_is_visible = False
+        reportsWindow.remember_is_visible = False
         consoleWindow = hello_imgui.DockableWindow(
             "Console Panel", "ConsoleDockSpace", self.guiManager.consolePanel.renderDockContent,
             self.guiManager.consolePanel.getVisible(), True)
@@ -88,7 +92,7 @@ class App:
         runnerParams.docking_params.docking_splits = [topSplit, leftSplit, rightSplit, consoleSplit]
         runnerParams.docking_params.dockable_windows = [
             topWindow, mainWindow, leftWindow, scriptWindow, dataManagerWindow,
-            poolWindow, panelManagerWindow, panelManagerWindow2, consoleWindow]
+            poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow, consoleWindow]
         runnerParams.docking_params.layout_condition = \
             hello_imgui.DockingLayoutCondition.application_start
 
@@ -102,12 +106,14 @@ class App:
         actualPoolWindow = runnerParams.docking_params.dockable_window_of_name("Pool")
         actualPanelManagerWindow = runnerParams.docking_params.dockable_window_of_name("Panel Manager")
         actualPanelManagerWindow2 = runnerParams.docking_params.dockable_window_of_name("Panel Manager 2")
+        actualReportsWindow = runnerParams.docking_params.dockable_window_of_name("Reports")
         self.guiManager.leftMenuPanel.setDockWindow(actualLeftWindow)
         self.guiManager.scriptPanel.setDockWindow(actualScriptWindow)
         self.guiManager.dataManager.setDockWindow(actualDataManagerWindow)
         self.guiManager.poolPanel.setDockWindow(actualPoolWindow)
         self.guiManager.panelManagerWindow.setDockWindow(actualPanelManagerWindow)
         self.guiManager.panelManagerWindow2.setDockWindow(actualPanelManagerWindow2)
+        self.guiManager.reportsWindow.setDockWindow(actualReportsWindow)
         self.guiManager.consolePanel.setDockWindow(actualConsoleWindow)
 
         addOns = immapp.AddOnsParams(with_implot=True)

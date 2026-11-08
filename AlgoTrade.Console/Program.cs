@@ -872,6 +872,8 @@ async Task runSingleTraderAlgoTrade()
         await algoTrader.RunSingleTraderWithProgressAsync();
 
         var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
+        await writeTask;
+        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
 
         bool plotEnabled = algoTrader.SingleTrader.PlotEnabled;
         if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
@@ -911,6 +913,14 @@ async Task runSingleTraderAlgoTrade()
                 bundleConverter.ConvertSingleTrader(
                     algoTrader.SingleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
 
+                if (appConfig.AppSettings.BundleReportsEnabled)
+                {
+                    string reportsIndexPath = BundleReportPackager.Create(
+                        bundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "SingleTrader");
+                    LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
+                                      ConsoleColor.Green);
+                }
+
                 if (useImGuiBundle)
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
@@ -934,8 +944,6 @@ async Task runSingleTraderAlgoTrade()
             }
         }
 
-        await writeTask;
-        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
     }
     catch (Exception ex)
     {
@@ -977,6 +985,10 @@ async Task runMultipleTraderAlgoTrade()
         await algoTrader.RunMultipleTraderWithProgressAsync();
 
         var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader!);
+        await writeTask;
+        LogManager.LogRaw(algoTrader.MultipleTrader.WriteChildTradersDataToFiles
+            ? "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)"
+            : "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
 
         var mainTrader = algoTrader.MultipleTrader.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
@@ -1017,6 +1029,14 @@ async Task runMultipleTraderAlgoTrade()
                 bundleConverter.ConvertMultipleTrader(
                     algoTrader.MultipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
 
+                if (appConfig.AppSettings.BundleReportsEnabled)
+                {
+                    string reportsIndexPath = BundleReportPackager.Create(
+                        bundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "MultipleTrader");
+                    LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
+                                      ConsoleColor.Green);
+                }
+
                 if (useImGuiBundle)
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
@@ -1040,10 +1060,6 @@ async Task runMultipleTraderAlgoTrade()
             }
         }
 
-        await writeTask;
-        LogManager.LogRaw(algoTrader.MultipleTrader.WriteChildTradersDataToFiles
-            ? "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)"
-            : "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
     }
     catch (Exception ex)
     {
@@ -4171,10 +4187,11 @@ void handleDearImGuiBundlePlotterTest()
         return;
     }
 
-    // Test amaçlı örnek bundle: DearPyGuiDataPlotter'ın committed örneği yeniden kullanılır
-    // (view.json şeması iki plotter arasında ortak — bkz. plan §10).
-    string testBundlePath = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs", "latest_bundle.npz");
-    string testViewPath   = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs", "latest_bundle.view.json");
+    // DearImGui kendi inputs bundle'ini acar. Boylece 5/6 akisi tarafindan
+    // ayni bundle'in yanina uretilen .reports.json da Reports penceresinde
+    // otomatik bulunur.
+    string testBundlePath = Path.Combine(AppSettings.DearImGuiBundleDataPlotterDir, "inputs", "latest_bundle.npz");
+    string testViewPath   = Path.Combine(AppSettings.DearImGuiBundleDataPlotterDir, "inputs", "latest_bundle.view.json");
 
     if (File.Exists(testBundlePath))
     {
