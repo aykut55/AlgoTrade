@@ -99,12 +99,16 @@ class PoolPanel:
                 self._onCloseCallback()
 
     def _renderTree(self):
-        if not imgui.tree_node("Symbols"):
+        # DearPyGui portundaki default_open=True davranisi: agac yalniz ilk
+        # olustugunda acik baslar; ImGui sonraki frame'lerde kullanicinin
+        # kapatma/acma tercihini kendi state'inde korur.
+        defaultOpen = imgui.TreeNodeFlags_.default_open.value
+        if not imgui.tree_node_ex("Symbols", defaultOpen):
             return
         for symbol, groups in self._tree.items():
-            if imgui.tree_node(symbol):
+            if imgui.tree_node_ex(symbol, defaultOpen):
                 for group, items in groups.items():
-                    if imgui.tree_node(group):
+                    if imgui.tree_node_ex(group, defaultOpen):
                         for item in items:
                             self._renderDragItem(item)
                         imgui.tree_pop()

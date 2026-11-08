@@ -58,8 +58,10 @@ dogan, kacinilmaz uyarlamalardir (tasarim tercihi degil):
    Crosshair cizgileri: DPG'nin "hep var ama gizli" add_drag_line'i -> implot'ta immediate-mode
    oldugu icin "gizleme" yok, o FRAME gosterilmeyecekse cagrisi hic YAPILMAZ.
 
-7) Havuz (pool) drag-drop entegrasyonu bu oturumda DEFERRED (plan: silly-mapping-hopper.md) -
-   method imzalari derlenebilirlik icin DURUYOR ama govdeleri no-op.
+7) Havuz (pool) drag-drop entegrasyonu immediate-mode API'ye uyarlandi: PoolPanel
+   string item id'lerini frame-yerel integer payload id'lerine cevirir; her panelin
+   ImPlot item'i her frame drop target olur. Drop sonrasi DPG portuyla ayni sekilde
+   drawPanelData() cagrilarak seri/LOD durumu ve eksen limitleri yenilenir.
 """
 
 import math
@@ -175,7 +177,7 @@ class PanelManager:
         }
 
     def setPoolDropHandler(self, handler):
-        """Pool drag-drop deferred (bkz. plan) - saklanir ama kullanilmaz."""
+        """PoolPanel'den gelen drop'u uygulama katmanina ileten handler'i baglar."""
         self._poolDropHandler = handler
 
     # ------------------------------------------------------- ek cizim hook'lari
@@ -366,14 +368,24 @@ class PanelManager:
         data.setParent(panel)
         data.setVisible(True)
         panel.dataList.append(data)
+
+        # DearPyGui portuyla ayni drop-sonrasi davranis: DPG
+        # addPoolItemToPanel(), plot daha once cizildiyse drawPanelData() cagirir.
+        # Immediate-mode'da seri zaten bir sonraki render frame'inde dataList'ten
+        # cizilir; yine de drawPanelData() LOD/fresh-load durumunu ve yeni seriyi
+        # kapsayacak eksen limitlerini yenilemek icin gereklidir. Boylece Fast MA
+        # gibi herhangi bir Pool serisi OHLC ya da baska bir hedef plot'a
+        # birakildiginda model ve gorunum birlikte yenilenir.
+        if panelId in self._drawnPanelIds:
+            self.drawPanelData(panelId)
         return data
 
     def _handlePoolDrop(self, panelId):
-        """Panelin child_window'u ACIKKEN cagrilir - implot/imgui'nin drag-drop
-        target API'siyle PoolPanel'den suruklenen bir item'i yakalar. Immediate-
-        mode'da DPG'nin drop_callback'inin karsiligi: her frame begin_drag_drop_
-        target()/accept_drag_drop_payload_py_id() ile sorgulanir, native bir
-        'callback kaydi' yoktur."""
+        """Panelin implot.end_plot() cagrisi hemen ardindan calisir; ImGui'nin
+        drag-drop target API'siyle PoolPanel'den suruklenen item'i yakalar.
+        Immediate-mode'da DPG'nin plot drop_callback'inin karsiligi: her frame
+        begin_drag_drop_target()/accept_drag_drop_payload_py_id() ile sorgulanir,
+        native bir 'callback kaydi' yoktur."""
         if self._poolDropHandler is None:
             return
         if not imgui.begin_drag_drop_target():
@@ -414,10 +426,16 @@ class PanelManager:
     def drawPanelData(self, panelId):
         """Veri degisikligini isler - immediate-mode'da ayrica 'cizmeye' gerek yok
         (render() zaten panel.dataList'i her frame okur), ama 'fresh load' bayragini
-        ve LOD onbellek-iptalini DPG orijinaliyle AYNI semantikle tetikler."""
+        ve LOD onbellek-iptalini DPG orijinaliyle AYNI semantikle tetikler.
+
+        DPG drawPanelData(), serileri guncelledikten sonra _applyAxisPadding()
+        cagirir. Burada kalici seri item'i olmadigi icin yalniz model okunur, fakat
+        ayni eksen yenilemesi zorunludur: sonradan eklenen Pool serisi mevcut
+        ImPlot Y araliginin disinda kalabilir."""
         panel = self._panels.get(panelId)
         if panel is None:
             return
+        self._applyAxisPadding(panelId, panel)
         self._maybeApplyDefaultViewOnLoad(panelId)
         self._lodLastRange.pop(panelId, None)
 
@@ -448,7 +466,7 @@ class PanelManager:
                                spec=implot.Spec(fill_color=color, fill_alpha=0.8))
 
     def _drawCandleSeries(self, panelId, d, xMin, xMax, colorBull, colorBear,
-                          denseStates=None, colorBySignal=None):
+                          denseStates=None, colorBySignal=None, showLegend=False):
         """Bir candle PanelData'yi [xMin,xMax] gorunur araligina gore LOD-decimate
         ederek, bar-bar _drawCandleBar ile cizer - en fazla LOD_MAX_POINTS bar
         (veri seti/gorunur aralik buyuklugunden BAGIMSIZ sabit bir ust sinir).
@@ -475,6 +493,11 @@ class PanelManager:
             opens, closes, lows, highs = d.open, d.close, d.low, d.high
         denseLen = len(denseStates) if denseStates is not None else 0
         for i in range(len(xs)):
+            # Mumlar ImPlot primitive'leriyle tek tek cizildigi icin normalde
+            # gizli ##candle etiketi kullanilir. DPG davranisiyla ayni olarak,
+            # panelde ikinci bir gorunur seri varsa ilk mum OHLC serisinin
+            # legend kaydini olusturur; yalniz OHLC varken legend'e girmez.
+            candleLabel = d.name if showLegend and i == 0 else "##candle"
             overrideColor = None
             if denseLen:
                 idx = int(round(xs[i]))
@@ -483,9 +506,11 @@ class PanelManager:
                     if state:
                         overrideColor = colorBySignal.get(state)
             if overrideColor is not None:
-                self._drawCandleBar(xs[i], opens[i], highs[i], lows[i], closes[i], overrideColor, overrideColor)
+                self._drawCandleBar(xs[i], opens[i], highs[i], lows[i], closes[i],
+                                    overrideColor, overrideColor, label=candleLabel)
             else:
-                self._drawCandleBar(xs[i], opens[i], highs[i], lows[i], closes[i], colorBull, colorBear)
+                self._drawCandleBar(xs[i], opens[i], highs[i], lows[i], closes[i],
+                                    colorBull, colorBear, label=candleLabel)
 
     def _drawLineOrBarSeries(self, panelId, d, xMin, xMax):
         useLod = d.fullCount > self.LOD_ACTIVATION_THRESHOLD
@@ -1659,7 +1684,6 @@ class PanelManager:
             imgui.set_window_size((actualPanelWidth, float(restoreHeight)), imgui.Cond_.always.value)
         elif not detached and not getattr(panel, "_collapsed", False):
             panel.height = max(80, int(imgui.get_window_size().y))
-        self._handlePoolDrop(panelId)
         panelRectPos = imgui.get_cursor_screen_pos()
 
         self._renderPanelHeader(panelId, panel, detached)
@@ -1690,7 +1714,8 @@ class PanelManager:
 
         if implot.begin_plot(panel.caption if self._showCaptions else f"##plot_{panelId}",
                              size=(-1, -1), flags=plotFlags):
-            implot.setup_legend(implot.Location_.north_east.value)
+            # DearPyGuiDataPlotter parity: legend plotun icinde sag altta.
+            implot.setup_legend(implot.Location_.south_east.value)
             implot.setup_axis(implot.ImAxis_.x1.value, "")
             implot.setup_axis(implot.ImAxis_.y1.value, panel.getYLabel())
 
@@ -1725,6 +1750,7 @@ class PanelManager:
 
             colorBull = (0.0, 1.0, 0.0, 1.0)
             colorBear = (1.0, 0.0, 0.0, 1.0)
+            visibleSeriesCount = sum(1 for item in panel.dataList if item.isVisible)
             for d in panel.dataList:
                 if not d.isVisible:
                     continue
@@ -1733,7 +1759,8 @@ class PanelManager:
                     denseStates = tsr.getDenseStates(panelId, d.id) if tsr is not None else None
                     colorBySignal = tsr.getColorBySignal() if denseStates is not None else None
                     self._drawCandleSeries(panelId, d, xMin, xMax, colorBull, colorBear,
-                                           denseStates=denseStates, colorBySignal=colorBySignal)
+                                           denseStates=denseStates, colorBySignal=colorBySignal,
+                                           showLegend=visibleSeriesCount > 1)
                     if tsr is not None:
                         tsr.renderInPlot(panelId, d.id, xMin, xMax)
                 else:
@@ -1774,6 +1801,14 @@ class PanelManager:
             self._drawCrossHairInline(panelId)
 
             implot.end_plot()
+
+            # ImGui drag-drop target'i her zaman SON cizilen item'a aittir.
+            # Bu nedenle hedefi begin_child() hemen sonrasinda kurmak paneli/
+            # plot'u hedeflemiyordu ve Pool payload'i hic yakalanmiyordu.
+            # DearPyGui portundaki plot_{id} drop_callback karsiligi burada,
+            # end_plot() plot item'ini son item yaptiktan hemen sonra kurulur.
+            # Drop ile eklenen seri bir sonraki immediate-mode frame'inde cizilir.
+            self._handlePoolDrop(panelId)
         else:
             self._lastPlotRect[panelId] = (0.0, 0.0)
             self._lastPlotScreenRect.pop(panelId, None)
