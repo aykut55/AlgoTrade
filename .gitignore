@@ -113,3 +113,5 @@ inputs/python/pythonPlotter/latest_bundle.view.json
 # playlist.json'dan bagimsiz elle uretilen/kopyalanan ornek veri - kullanici karari,
 # 2026-08-26). playlist.json/input.json/combined.npz/combined.view.json COMMITLI kaliyor.
 inputs/python/offlineReplay/samples/
+# Deploy runtime log
+deploy.log

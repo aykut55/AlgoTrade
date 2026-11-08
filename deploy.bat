@@ -2,11 +2,13 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM Asil deploy ikinci calismada log dosyasina yonlendirilir. Ilk calisma
-REM tamamlaninca logu ekrana basar ve basari/hata fark etmeksizin bekler.
+REM ciktisini hem anlik ekrana verir hem deploy.log dosyasina yazar.
+REM Tamamlaninca basari/hata fark etmeksizin kullaniciyi bekler.
 if /I not "%~1"=="--logged" (
-    call "%~f0" --logged >"%~dp0deploy.log" 2>&1
+    set "DEPLOY_SCRIPT=%~f0"
+    set "DEPLOY_LOG=%~dp0deploy.log"
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$cmd='call '+[char]34+$env:DEPLOY_SCRIPT+[char]34+' --logged'; & $env:ComSpec /d /c $cmd 2>&1 | Tee-Object -FilePath $env:DEPLOY_LOG; exit $LASTEXITCODE"
     set "DEPLOY_EXIT=!ERRORLEVEL!"
-    type "%~dp0deploy.log"
     echo.
     echo Ayrintili cikti: %~dp0deploy.log
     echo Kapatmak icin bir tusa basin...

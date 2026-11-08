@@ -17,6 +17,7 @@ SimpleADXStrategy|v1|Default|period:int:14|adxThreshold:double:25|signalModeInde
 SimpleDIStrategy|v1|Default|period:int:14|signalModeIndex:int:0
 SimpleMACDStrategy|v1|Default|fastPeriod:int:12|slowPeriod:int:26|signalPeriod:int:9|priceSource:string:Close|signalModeIndex:int:0
 SimpleStochasticStrategy|v1|Default|kPeriod:int:14|dPeriod:int:3|centerLine:double:50|signalModeIndex:int:0
+SimpleWaveTrendStrategy|v1|Default|channelLength:int:10|averageLength:int:21|signalLength:int:4|overboughtLevel1:double:60|overboughtLevel2:double:53|oversoldLevel1:double:-60|oversoldLevel2:double:-53|signalModeIndex:int:0
 SimpleBollingerStrategy|v1|Default|period:int:20|multiplier:double:2.0|priceSource:string:Close|signalModeIndex:int:0
 SimpleATRStrategy|v1|Default|atrPeriod:int:14|maPeriod:int:20|multiplier:double:2.0|priceSource:string:Close|signalModeIndex:int:0
 SimpleCMFStrategy|v1|Default|period:int:20|positiveThreshold:double:0.1|negativeThreshold:double:-0.1|signalModeIndex:int:0

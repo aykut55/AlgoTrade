@@ -591,5 +591,110 @@ namespace AlgoTrade.Core.Trading.Indicators.Momentum
 
             return new StochasticOTTResult(k, d, ott, support, kPeriod, smoothKPeriod, smoothDPeriod, ottPeriod, ottPercent);
         }
+
+        /// <summary>
+        /// WaveTrend momentum oscillator with bullish/bearish crosses.
+        /// Based on "WaveTrend with Crosses [LazyBear]" by LazyBear.
+        /// </summary>
+        public WaveTrendResult WaveTrend(
+            int channelLength = 10, int averageLength = 21, int signalLength = 4,
+            double overboughtLevel1 = 60.0, double overboughtLevel2 = 53.0,
+            double oversoldLevel1 = -60.0, double oversoldLevel2 = -53.0)
+        {
+            if (!_manager.IsInitialized)
+                throw new InvalidOperationException("Manager not initialized with data");
+            if (channelLength <= 0 || averageLength <= 0 || signalLength <= 0)
+                throw new ArgumentException("WaveTrend periods must be positive");
+
+            var highs = _manager.GetHighPrices();
+            var lows = _manager.GetLowPrices();
+            var closes = _manager.GetClosePrices();
+            int length = closes.Length;
+
+            var averagePrice = new double[length];
+            for (int i = 0; i < length; i++)
+                averagePrice[i] = (highs[i] + lows[i] + closes[i]) / 3.0;
+
+            var esa = EmaWithLeadingNaN(averagePrice, channelLength);
+            var absoluteDeviation = new double[length];
+            for (int i = 0; i < length; i++)
+                absoluteDeviation[i] = double.IsNaN(esa[i]) ? double.NaN : Math.Abs(averagePrice[i] - esa[i]);
+
+            var deviation = EmaWithLeadingNaN(absoluteDeviation, channelLength);
+            var channelIndex = new double[length];
+            for (int i = 0; i < length; i++)
+            {
+                double denominator = 0.015 * deviation[i];
+                channelIndex[i] = double.IsNaN(esa[i]) || double.IsNaN(denominator) || denominator == 0.0
+                    ? double.NaN
+                    : (averagePrice[i] - esa[i]) / denominator;
+            }
+
+            var wt1 = EmaWithLeadingNaN(channelIndex, averageLength);
+            var wt2 = SmaWithLeadingNaN(wt1, signalLength);
+            var histogram = new double[length];
+            var crossUp = new bool[length];
+            var crossDown = new bool[length];
+
+            for (int i = 0; i < length; i++)
+            {
+                histogram[i] = double.IsNaN(wt1[i]) || double.IsNaN(wt2[i])
+                    ? double.NaN
+                    : wt1[i] - wt2[i];
+
+                if (i == 0 || double.IsNaN(wt1[i]) || double.IsNaN(wt2[i]) ||
+                    double.IsNaN(wt1[i - 1]) || double.IsNaN(wt2[i - 1]))
+                    continue;
+
+                crossUp[i] = wt1[i] > wt2[i] && wt1[i - 1] <= wt2[i - 1];
+                crossDown[i] = wt1[i] < wt2[i] && wt1[i - 1] >= wt2[i - 1];
+            }
+
+            return new WaveTrendResult(
+                wt1, wt2, histogram, crossUp, crossDown,
+                channelLength, averageLength, signalLength,
+                overboughtLevel1, overboughtLevel2, oversoldLevel1, oversoldLevel2);
+        }
+
+        private static double[] EmaWithLeadingNaN(double[] source, int period)
+        {
+            var result = Enumerable.Repeat(double.NaN, source.Length).ToArray();
+            int first = Array.FindIndex(source, value => !double.IsNaN(value));
+            if (first < 0 || source.Length - first < period) return result;
+
+            double sum = 0.0;
+            for (int i = first; i < first + period; i++) sum += source[i];
+            int seedIndex = first + period - 1;
+            result[seedIndex] = sum / period;
+            double multiplier = 2.0 / (period + 1.0);
+
+            for (int i = seedIndex + 1; i < source.Length; i++)
+                result[i] = double.IsNaN(source[i])
+                    ? result[i - 1]
+                    : (source[i] - result[i - 1]) * multiplier + result[i - 1];
+
+            return result;
+        }
+
+        private static double[] SmaWithLeadingNaN(double[] source, int period)
+        {
+            var result = Enumerable.Repeat(double.NaN, source.Length).ToArray();
+            int first = Array.FindIndex(source, value => !double.IsNaN(value));
+            if (first < 0 || source.Length - first < period) return result;
+
+            double sum = 0.0;
+            for (int i = first; i < first + period; i++) sum += source[i];
+            int start = first + period - 1;
+            result[start] = sum / period;
+
+            for (int i = start + 1; i < source.Length; i++)
+            {
+                if (double.IsNaN(source[i])) continue;
+                sum += source[i] - source[i - period];
+                result[i] = sum / period;
+            }
+
+            return result;
+        }
     }
 }
