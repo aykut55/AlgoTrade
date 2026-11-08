@@ -104,7 +104,11 @@ class LeftMenuPanel:
             imgui.end_popup()
         if expanded:
             for data in list(panel.iterateAllData()):
-                imgui.selectable(f"{data.name} ({data.id}) [{data.dataType}]##left_data_{panel.id}_{data.id}", False)
+                changed, visible = imgui.checkbox(
+                    f"{data.name} ({data.id}) [{data.dataType}]##left_data_{panel.id}_{data.id}",
+                    bool(data.isVisible))
+                if changed:
+                    data.setVisible(visible)
                 if imgui.begin_popup_context_item(f"data_ctx_{panel.id}_{data.id}"):
                     if imgui.menu_item_simple("Delete"):
                         panel.deleteData(data.id)
