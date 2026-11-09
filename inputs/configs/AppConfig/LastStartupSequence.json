@@ -1,6 +1,6 @@
 {
-  "Operation": "MultipleTrader",
+  "Operation": "ConfirmingSingleTrader",
   "ReadData": true,
   "RunMode": "TradeOnly",
-  "SavedAtUtc": "2026-11-09T18:31:17.3461882Z"
+  "SavedAtUtc": "2026-11-09T18:35:37.5157839Z"
 }

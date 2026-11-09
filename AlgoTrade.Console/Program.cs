@@ -1220,10 +1220,13 @@ async Task runConfirmingSingleTraderAlgoTrade()
 
         await algoTrader.RunConfirmingSingleTraderWithProgressAsync();
 
-        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.ConfirmingSingleTrader!);
-
-        var mainTrader = algoTrader.ConfirmingSingleTrader!.GetMainTrader();
+        var confirmingTrader = algoTrader.ConfirmingSingleTrader!;
+        var mainTrader = confirmingTrader.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
+        bool plotStarted = false;
+        string? primaryBundlePath = null;
+        bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+        Task<bool>? plotReadyTask = null;
         if (plotEnabled && appConfig.AppSettings.PythonPlotterEnabled == 1)
         {
             LogManager.LogRaw("");
@@ -1235,8 +1238,92 @@ async Task runConfirmingSingleTraderAlgoTrade()
                 LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
         }
 
-        await writeTask;
-        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + signalTrader + ConfirmingSingleTraderLists)");
+        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
+        {
+            try
+            {
+                var bundleConverter = new TradeDataBundleConverter();
+                string bundleOutDir = Path.Combine(
+                    useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
+                    "inputs");
+                var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(mainTrader, bundleOutDir);
+                primaryBundlePath = bundlePath;
+
+                if (useImGuiBundle)
+                {
+                    dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+                    dearImGuiBundleTestPlotter.SetLogger(logger);
+                    dearImGuiBundleTestPlotter.StartPlotter();
+                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                        commandFileName, TimeSpan.FromMinutes(2));
+                    plotStarted = true;
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek ConfirmingSingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
+                else
+                {
+                    dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                    dearPyGuiTestPlotter.SetLogger(logger);
+                    dearPyGuiTestPlotter.StartPlotter();
+                    dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotStarted = true;
+                    LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek ConfirmingSingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError($"[PlotBackend] ConfirmingSingleTrader converter/plotter hatası: {ex.Message}", ex);
+            }
+        }
+
+        if (plotStarted && primaryBundlePath is not null)
+        {
+            var completedAlgoTrader = algoTrader;
+            string completedBundlePath = primaryBundlePath;
+            bool createBundleReports = appConfig.AppSettings.BundleReportsEnabled;
+            Task<bool>? completedPlotReadyTask = plotReadyTask;
+
+            await RunOutputInBackground("ConfirmingSingleTrader statistics and auxiliary bundles", async () =>
+            {
+                var consoleCapture = logger.BeginConsoleCapture();
+                Task outputTask = Task.Run(async () =>
+                {
+                    await completedAlgoTrader.WriteTraderDataToFilesAsync(confirmingTrader);
+                    LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + signalTrader + ConfirmingSingleTraderLists)");
+
+                    var backgroundConverter = new TradeDataBundleConverter();
+                    backgroundConverter.ConvertSingleTrader(
+                        mainTrader, AppSettings.LogsDir, fileBaseName: "ConfirmingSingleTraderBundle");
+                    backgroundConverter.ConvertSingleTrader(
+                        mainTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+                    backgroundConverter.ConvertSingleTrader(
+                        mainTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+
+                    if (createBundleReports)
+                    {
+                        string reportsIndexPath = BundleReportPackager.Create(
+                            completedBundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "ConfirmingSingleTrader");
+                        LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}", ConsoleColor.Green);
+                    }
+                });
+
+                if (completedPlotReadyTask is not null)
+                {
+                    bool plotReady = await completedPlotReadyTask;
+                    if (!plotReady)
+                        LogManager.LogRaw("[PlotBackend] Plot yükleme onayı zaman aşımına uğradı; tamponlanan loglar gösteriliyor.", ConsoleColor.Yellow);
+                }
+
+                consoleCapture.Dispose();
+                consoleCapture.Replay();
+                await outputTask;
+            });
+        }
+        else
+        {
+            await algoTrader.WriteTraderDataToFilesAsync(confirmingTrader);
+            LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + signalTrader + ConfirmingSingleTraderLists)");
+        }
     }
     catch (Exception ex)
     {
@@ -1281,10 +1368,13 @@ async Task runConfirmingMultipleTraderAlgoTrade()
 
         await algoTrader.RunConfirmingMultipleTraderWithProgressAsync();
 
-        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.ConfirmingMultipleTrader!);
-
-        var mainTrader = algoTrader.ConfirmingMultipleTrader!.GetMainTrader();
+        var confirmingTrader = algoTrader.ConfirmingMultipleTrader!;
+        var mainTrader = confirmingTrader.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
+        bool plotStarted = false;
+        string? primaryBundlePath = null;
+        bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+        Task<bool>? plotReadyTask = null;
         if (plotEnabled && appConfig.AppSettings.PythonPlotterEnabled == 1)
         {
             LogManager.LogRaw("");
@@ -1296,8 +1386,92 @@ async Task runConfirmingMultipleTraderAlgoTrade()
                 LogManager.LogError("Python setup failed. PlotSingleTraderData skipped.");
         }
 
-        await writeTask;
-        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + ConfirmingMultipleTraderLists)");
+        if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
+        {
+            try
+            {
+                var bundleConverter = new TradeDataBundleConverter();
+                string bundleOutDir = Path.Combine(
+                    useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
+                    "inputs");
+                var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(mainTrader, bundleOutDir);
+                primaryBundlePath = bundlePath;
+
+                if (useImGuiBundle)
+                {
+                    dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+                    dearImGuiBundleTestPlotter.SetLogger(logger);
+                    dearImGuiBundleTestPlotter.StartPlotter();
+                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                        commandFileName, TimeSpan.FromMinutes(2));
+                    plotStarted = true;
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek ConfirmingMultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
+                else
+                {
+                    dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                    dearPyGuiTestPlotter.SetLogger(logger);
+                    dearPyGuiTestPlotter.StartPlotter();
+                    dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotStarted = true;
+                    LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek ConfirmingMultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.LogError($"[PlotBackend] ConfirmingMultipleTrader converter/plotter hatası: {ex.Message}", ex);
+            }
+        }
+
+        if (plotStarted && primaryBundlePath is not null)
+        {
+            var completedAlgoTrader = algoTrader;
+            string completedBundlePath = primaryBundlePath;
+            bool createBundleReports = appConfig.AppSettings.BundleReportsEnabled;
+            Task<bool>? completedPlotReadyTask = plotReadyTask;
+
+            await RunOutputInBackground("ConfirmingMultipleTrader statistics and auxiliary bundles", async () =>
+            {
+                var consoleCapture = logger.BeginConsoleCapture();
+                Task outputTask = Task.Run(async () =>
+                {
+                    await completedAlgoTrader.WriteTraderDataToFilesAsync(confirmingTrader);
+                    LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + ConfirmingMultipleTraderLists)");
+
+                    var backgroundConverter = new TradeDataBundleConverter();
+                    backgroundConverter.ConvertSingleTrader(
+                        mainTrader, AppSettings.LogsDir, fileBaseName: "ConfirmingMultipleTraderBundle");
+                    backgroundConverter.ConvertSingleTrader(
+                        mainTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+                    backgroundConverter.ConvertSingleTrader(
+                        mainTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+
+                    if (createBundleReports)
+                    {
+                        string reportsIndexPath = BundleReportPackager.Create(
+                            completedBundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "ConfirmingMultipleTrader");
+                        LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}", ConsoleColor.Green);
+                    }
+                });
+
+                if (completedPlotReadyTask is not null)
+                {
+                    bool plotReady = await completedPlotReadyTask;
+                    if (!plotReady)
+                        LogManager.LogRaw("[PlotBackend] Plot yükleme onayı zaman aşımına uğradı; tamponlanan loglar gösteriliyor.", ConsoleColor.Yellow);
+                }
+
+                consoleCapture.Dispose();
+                consoleCapture.Replay();
+                await outputTask;
+            });
+        }
+        else
+        {
+            await algoTrader.WriteTraderDataToFilesAsync(confirmingTrader);
+            LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + ConfirmingMultipleTraderLists)");
+        }
     }
     catch (Exception ex)
     {
