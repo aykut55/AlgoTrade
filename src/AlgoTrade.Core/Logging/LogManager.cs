@@ -42,6 +42,37 @@ namespace AlgoTrade.Core.Logging
         private readonly List<ILogSink> _sinks = new List<ILogSink>();
         private readonly object _sinksLock = new object();
         private bool _isDisposed;
+        private static readonly System.Threading.AsyncLocal<ConsoleCaptureScope?> _consoleCapture = new();
+
+        public sealed class ConsoleCaptureScope : IDisposable
+        {
+            private readonly LogManager _owner;
+            private readonly ConsoleCaptureScope? _previous;
+            private readonly ConcurrentQueue<LogEntry> _entries = new();
+            private bool _disposed;
+
+            internal ConsoleCaptureScope(LogManager owner, ConsoleCaptureScope? previous)
+            {
+                _owner = owner;
+                _previous = previous;
+            }
+
+            internal void Capture(LogEntry entry) => _entries.Enqueue(entry);
+
+            public void Replay()
+            {
+                foreach (var entry in _entries)
+                    _owner.SendToConsoleSink(entry);
+            }
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _disposed = true;
+                if (ReferenceEquals(_consoleCapture.Value, this))
+                    _consoleCapture.Value = _previous;
+            }
+        }
 
         /// <summary>
         /// Master switch - false yapılırsa tüm loglama durur
@@ -141,6 +172,17 @@ namespace AlgoTrade.Core.Logging
         /// DebugSink'i tekrar aktif et.
         /// </summary>
         public static void EnableDebugSink() => Instance.EnableSink(LogSinks.Debug, true);
+
+        /// <summary>
+        /// Yalnız mevcut async akışın konsol mesajlarını tamponlar. Diğer sink'ler
+        /// (özellikle dosya logu) anlık yazmaya devam eder.
+        /// </summary>
+        public ConsoleCaptureScope BeginConsoleCapture()
+        {
+            var scope = new ConsoleCaptureScope(this, _consoleCapture.Value);
+            _consoleCapture.Value = scope;
+            return scope;
+        }
 
         // ====================================================================
         // SHOW/HIDE - Timestamp, Level, Source
@@ -533,8 +575,34 @@ namespace AlgoTrade.Core.Logging
                         if ((entry.TargetSinks & sink.SinkType) == 0)
                             continue;
 
+                        if (sink.SinkType == LogSinks.Console && _consoleCapture.Value is { } capture)
+                        {
+                            capture.Capture(entry);
+                            continue;
+                        }
+
                         sink.Write(entry);
                     }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Sink {sink.Name} error: {ex.Message}");
+                    }
+                }
+            }
+        }
+
+        private void SendToConsoleSink(LogEntry entry)
+        {
+            lock (_sinksLock)
+            {
+                foreach (var sink in _sinks)
+                {
+                    if (!sink.IsEnabled || sink.SinkType != LogSinks.Console)
+                        continue;
+                    if ((entry.TargetSinks & LogSinks.Console) == 0)
+                        continue;
+
+                    try { sink.Write(entry); }
                     catch (Exception ex)
                     {
                         System.Diagnostics.Debug.WriteLine($"Sink {sink.Name} error: {ex.Message}");

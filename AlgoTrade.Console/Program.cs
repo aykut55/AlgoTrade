@@ -58,8 +58,46 @@ string              startupSequencePath             = Path.Combine(AppSettings.C
 AppConfig           appConfig                       = new();          // populated with AppConfigLoader.Load() at startup
 string              stockDataFullFileName           = "";
 bool                startupSequenceIncludesReadData = false;
+var                 backgroundOutputTasks           = new ConcurrentDictionary<int, Task>();
+int                 nextBackgroundOutputTaskId      = 0;
 
 bool exitRequested = false;
+
+void RunOutputInBackground(string operationName, Func<Task> operation)
+{
+    int taskId = Interlocked.Increment(ref nextBackgroundOutputTaskId);
+    Task task = Task.Run(async () =>
+    {
+        try
+        {
+            await operation();
+            LogManager.LogRaw($"[Background] {operationName} completed.", ConsoleColor.Green);
+        }
+        catch (Exception ex)
+        {
+            LogManager.LogError($"[Background] {operationName} failed: {ex.Message}", ex);
+        }
+    });
+
+    backgroundOutputTasks[taskId] = task;
+    _ = task.ContinueWith(
+        completedTask => backgroundOutputTasks.TryRemove(taskId, out _),
+        CancellationToken.None,
+        TaskContinuationOptions.ExecuteSynchronously,
+        TaskScheduler.Default);
+    LogManager.LogRaw($"[Background] {operationName} started; plot can be used while files are written.",
+                      ConsoleColor.Cyan);
+}
+
+async Task WaitForBackgroundOutputsAsync()
+{
+    Task[] pending = backgroundOutputTasks.Values.ToArray();
+    if (pending.Length == 0) return;
+
+    LogManager.LogRaw($"[Background] Waiting for {pending.Length} output task(s) before shutdown...",
+                      ConsoleColor.Cyan);
+    await Task.WhenAll(pending);
+}
 
 // =============================================================================
 // Callbacks
@@ -871,11 +909,11 @@ async Task runSingleTraderAlgoTrade()
 
         await algoTrader.RunSingleTraderWithProgressAsync();
 
-        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
-        await writeTask;
-        LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
-
         bool plotEnabled = algoTrader.SingleTrader.PlotEnabled;
+        bool plotStarted = false;
+        string? primaryBundlePath = null;
+        bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+        Task<bool>? plotReadyTask = null;
         if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
         {
             LogManager.LogRaw("");
@@ -894,39 +932,22 @@ async Task runSingleTraderAlgoTrade()
             try
             {
                 var bundleConverter = new TradeDataBundleConverter();
-                bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
                 string bundleOutDir = Path.Combine(
                     useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
                     "inputs");
                 var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(
                     algoTrader.SingleTrader, bundleOutDir);
-
-                // Ayni bundle'i outputs/logs'a da yaz (SingleTraderLists.csv/Statistics.txt ile
-                // ayni klasor) - gorunurluk icin, "normal" konumun yaninda. 01.csx ile parity.
-                bundleConverter.ConvertSingleTrader(
-                    algoTrader.SingleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
-
-                // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri
-                // fiziksel kopyalar - bkz. docs/todo.md "Kalıntı çift ROOT yapısı"). 01.csx ile parity.
-                bundleConverter.ConvertSingleTrader(
-                    algoTrader.SingleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
-                bundleConverter.ConvertSingleTrader(
-                    algoTrader.SingleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
-
-                if (appConfig.AppSettings.BundleReportsEnabled)
-                {
-                    string reportsIndexPath = BundleReportPackager.Create(
-                        bundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "SingleTrader");
-                    LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
-                                      ConsoleColor.Green);
-                }
+                primaryBundlePath = bundlePath;
 
                 if (useImGuiBundle)
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
                     dearImGuiBundleTestPlotter.StartPlotter();
-                    dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                        commandFileName, TimeSpan.FromMinutes(2));
+                    plotStarted = true;
                     LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
                 }
                 else
@@ -935,6 +956,7 @@ async Task runSingleTraderAlgoTrade()
                     dearPyGuiTestPlotter.SetLogger(logger);
                     dearPyGuiTestPlotter.StartPlotter();
                     dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotStarted = true;
                     LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
                 }
             }
@@ -942,6 +964,59 @@ async Task runSingleTraderAlgoTrade()
             {
                 LogManager.LogError($"[PlotBackend] Converter/plotter hatası: {ex.Message}", ex);
             }
+        }
+
+        if (plotStarted && primaryBundlePath is not null)
+        {
+            var completedAlgoTrader = algoTrader;
+            var completedTrader = algoTrader.SingleTrader;
+            string completedBundlePath = primaryBundlePath;
+            bool createBundleReports = appConfig.AppSettings.BundleReportsEnabled;
+            Task<bool>? completedPlotReadyTask = plotReadyTask;
+
+            RunOutputInBackground("SingleTrader statistics and auxiliary bundles", async () =>
+            {
+                var consoleCapture = logger.BeginConsoleCapture();
+                Exception? outputError = null;
+                try
+                {
+                    await completedAlgoTrader.WriteTraderDataToFilesAsync(completedTrader);
+
+                    var backgroundConverter = new TradeDataBundleConverter();
+                    backgroundConverter.ConvertSingleTrader(
+                        completedTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
+                    backgroundConverter.ConvertSingleTrader(
+                        completedTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+                    backgroundConverter.ConvertSingleTrader(
+                        completedTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+
+                    if (createBundleReports)
+                    {
+                        string reportsIndexPath = BundleReportPackager.Create(
+                            completedBundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "SingleTrader");
+                        LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
+                                          ConsoleColor.Green);
+                    }
+                }
+                catch (Exception ex) { outputError = ex; }
+                finally { consoleCapture.Dispose(); }
+
+                if (completedPlotReadyTask is not null)
+                {
+                    bool plotReady = await completedPlotReadyTask;
+                    if (!plotReady)
+                        LogManager.LogRaw("[PlotBackend] Plot yükleme onayı zaman aşımına uğradı; tamponlanan loglar gösteriliyor.",
+                                          ConsoleColor.Yellow);
+                }
+
+                consoleCapture.Replay();
+                if (outputError is not null) throw outputError;
+            });
+        }
+        else
+        {
+            await algoTrader.WriteTraderDataToFilesAsync(algoTrader.SingleTrader);
+            LogManager.LogRaw("[WriteTraderDataToFilesAsync] File writing confirmed complete.");
         }
 
     }
@@ -4352,6 +4427,7 @@ async Task main()
         }
     }
 
+    await WaitForBackgroundOutputsAsync();
     LogManager.LogRaw("Application finished", ConsoleColor.Green);
 
     algoTrader?.Dispose();

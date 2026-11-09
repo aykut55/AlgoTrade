@@ -124,7 +124,7 @@ public class DearImGuiBundleDataPlotter : IDisposable
     /// arka planda çalışmaya devam eder ve üstüne <see cref="LoadBundle"/>/<see cref="ReloadCurrent"/>
     /// ile başka komutlar gönderilebilir (hot-reload akışı).
     /// </param>
-    public void LoadBundle(string bundlePath, string? viewPath = null, bool blockUntilClosed = false)
+    public string LoadBundle(string bundlePath, string? viewPath = null, bool blockUntilClosed = false)
     {
         if (string.IsNullOrEmpty(bundlePath))
             throw new ArgumentException("bundlePath boş olamaz.", nameof(bundlePath));
@@ -137,10 +137,38 @@ public class DearImGuiBundleDataPlotter : IDisposable
         if (!string.IsNullOrEmpty(viewPath))
             payload["viewPath"] = ToInputsRelativePath(viewPath);
 
-        WriteCommand("load_bundle", payload);
+        string commandFileName = WriteCommand("load_bundle", payload);
 
         if (blockUntilClosed)
             WaitForExit();
+
+        return commandFileName;
+    }
+
+    /// <summary>
+    /// Python tarafının komutu başarıyla uygulayıp processed klasörüne taşımasını bekler.
+    /// Süre dolarsa false döner; plotter süreci kapanırsa beklemeyi erken sonlandırır.
+    /// </summary>
+    public async Task<bool> WaitForCommandProcessedAsync(
+        string commandFileName,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(commandFileName))
+            throw new ArgumentException("Komut dosya adı boş olamaz.", nameof(commandFileName));
+
+        string processedPath = Path.Combine(CommandsDir, "processed", commandFileName);
+        var stopwatch = Stopwatch.StartNew();
+
+        while (stopwatch.Elapsed < timeout)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(processedPath)) return true;
+            if (_process is { HasExited: true }) return false;
+            await Task.Delay(50, cancellationToken).ConfigureAwait(false);
+        }
+
+        return File.Exists(processedPath);
     }
 
     /// <summary>
@@ -258,7 +286,7 @@ public class DearImGuiBundleDataPlotter : IDisposable
     /// rename ile ".json" yapılır. Python tarafı yalnızca ".json" dosyalarını
     /// okuduğu için yarım yazılmış dosya asla okunmaz.
     /// </summary>
-    private void WriteCommand(string commandName, object payload)
+    private string WriteCommand(string commandName, object payload)
     {
         Directory.CreateDirectory(CommandsDir);
 
@@ -267,11 +295,20 @@ public class DearImGuiBundleDataPlotter : IDisposable
         string finalPath = Path.Combine(CommandsDir, fileName);
         string tempPath = finalPath + ".tmp";
 
+        // Yeni process'lerde sequence yeniden 1'den başladığı için önceki çalışmadan
+        // kalmış aynı adlı sonuç, tamamlanma bekleyicisini yanlışlıkla tetiklemesin.
+        foreach (string resultDir in new[] { "processed", "failed" })
+        {
+            string staleResultPath = Path.Combine(CommandsDir, resultDir, fileName);
+            if (File.Exists(staleResultPath)) File.Delete(staleResultPath);
+        }
+
         string json = JsonConvert.SerializeObject(payload, Formatting.Indented);
         File.WriteAllText(tempPath, json);
         File.Move(tempPath, finalPath);
 
         _logger?.WriteRaw($"[DearImGuiBundleDataPlotter] Command yazıldı: {fileName}");
+        return fileName;
     }
 
     #endregion
