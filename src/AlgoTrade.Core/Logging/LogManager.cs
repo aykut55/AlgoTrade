@@ -48,7 +48,9 @@ namespace AlgoTrade.Core.Logging
         {
             private readonly LogManager _owner;
             private readonly ConsoleCaptureScope? _previous;
-            private readonly ConcurrentQueue<LogEntry> _entries = new();
+            private readonly Queue<LogEntry> _entries = new();
+            private readonly object _gate = new();
+            private bool _isCapturing = true;
             private bool _disposed;
 
             internal ConsoleCaptureScope(LogManager owner, ConsoleCaptureScope? previous)
@@ -57,11 +59,26 @@ namespace AlgoTrade.Core.Logging
                 _previous = previous;
             }
 
-            internal void Capture(LogEntry entry) => _entries.Enqueue(entry);
+            internal bool TryCapture(LogEntry entry)
+            {
+                lock (_gate)
+                {
+                    if (!_isCapturing) return false;
+                    _entries.Enqueue(entry);
+                    return true;
+                }
+            }
 
             public void Replay()
             {
-                foreach (var entry in _entries)
+                List<LogEntry> entries;
+                lock (_gate)
+                {
+                    entries = _entries.ToList();
+                    _entries.Clear();
+                }
+
+                foreach (var entry in entries)
                     _owner.SendToConsoleSink(entry);
             }
 
@@ -69,6 +86,7 @@ namespace AlgoTrade.Core.Logging
             {
                 if (_disposed) return;
                 _disposed = true;
+                lock (_gate) _isCapturing = false;
                 if (ReferenceEquals(_consoleCapture.Value, this))
                     _consoleCapture.Value = _previous;
             }
@@ -575,9 +593,10 @@ namespace AlgoTrade.Core.Logging
                         if ((entry.TargetSinks & sink.SinkType) == 0)
                             continue;
 
-                        if (sink.SinkType == LogSinks.Console && _consoleCapture.Value is { } capture)
+                        if (sink.SinkType == LogSinks.Console &&
+                            _consoleCapture.Value is { } capture &&
+                            capture.TryCapture(entry))
                         {
-                            capture.Capture(entry);
                             continue;
                         }
 

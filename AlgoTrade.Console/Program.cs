@@ -63,7 +63,7 @@ int                 nextBackgroundOutputTaskId      = 0;
 
 bool exitRequested = false;
 
-void RunOutputInBackground(string operationName, Func<Task> operation)
+Task RunOutputInBackground(string operationName, Func<Task> operation)
 {
     int taskId = Interlocked.Increment(ref nextBackgroundOutputTaskId);
     Task task = Task.Run(async () =>
@@ -87,6 +87,7 @@ void RunOutputInBackground(string operationName, Func<Task> operation)
         TaskScheduler.Default);
     LogManager.LogRaw($"[Background] {operationName} started; plot can be used while files are written.",
                       ConsoleColor.Cyan);
+    return task;
 }
 
 async Task WaitForBackgroundOutputsAsync()
@@ -974,11 +975,10 @@ async Task runSingleTraderAlgoTrade()
             bool createBundleReports = appConfig.AppSettings.BundleReportsEnabled;
             Task<bool>? completedPlotReadyTask = plotReadyTask;
 
-            RunOutputInBackground("SingleTrader statistics and auxiliary bundles", async () =>
+            await RunOutputInBackground("SingleTrader statistics and auxiliary bundles", async () =>
             {
                 var consoleCapture = logger.BeginConsoleCapture();
-                Exception? outputError = null;
-                try
+                Task outputTask = Task.Run(async () =>
                 {
                     await completedAlgoTrader.WriteTraderDataToFilesAsync(completedTrader);
 
@@ -997,9 +997,7 @@ async Task runSingleTraderAlgoTrade()
                         LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
                                           ConsoleColor.Green);
                     }
-                }
-                catch (Exception ex) { outputError = ex; }
-                finally { consoleCapture.Dispose(); }
+                });
 
                 if (completedPlotReadyTask is not null)
                 {
@@ -1009,8 +1007,11 @@ async Task runSingleTraderAlgoTrade()
                                           ConsoleColor.Yellow);
                 }
 
+                // Plot hazır olduktan sonra o ana kadar biriken mesajlar gösterilir.
+                // Devam eden dosya yazma mesajları capture pasif olduğu için canlı akar.
+                consoleCapture.Dispose();
                 consoleCapture.Replay();
-                if (outputError is not null) throw outputError;
+                await outputTask;
             });
         }
         else
@@ -1059,14 +1060,12 @@ async Task runMultipleTraderAlgoTrade()
 
         await algoTrader.RunMultipleTraderWithProgressAsync();
 
-        var writeTask = algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader!);
-        await writeTask;
-        LogManager.LogRaw(algoTrader.MultipleTrader.WriteChildTradersDataToFiles
-            ? "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)"
-            : "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
-
         var mainTrader = algoTrader.MultipleTrader.GetMainTrader();
         bool plotEnabled = mainTrader.PlotEnabled;
+        bool plotStarted = false;
+        string? primaryBundlePath = null;
+        bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+        Task<bool>? plotReadyTask = null;
         if (algoTrader.SingleTraderRunMode != TraderRunMode.QueryOnly && plotEnabled)
         {
             LogManager.LogRaw("");
@@ -1085,39 +1084,22 @@ async Task runMultipleTraderAlgoTrade()
             try
             {
                 var bundleConverter = new TradeDataBundleConverter();
-                bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
                 string bundleOutDir = Path.Combine(
                     useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
                     "inputs");
                 var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(
                     algoTrader.MultipleTrader, bundleOutDir);
-
-                // Ayni bundle'i outputs/logs'a da yaz (MultipleTraderLists.csv/Statistics.txt ile
-                // ayni klasor) - gorunurluk icin, "normal" konumun yaninda. 02.csx ile parity.
-                bundleConverter.ConvertMultipleTrader(
-                    algoTrader.MultipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
-
-                // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri
-                // fiziksel kopyalar - bkz. docs/todo.md "Kalıntı çift ROOT yapısı"). 02.csx ile parity.
-                bundleConverter.ConvertMultipleTrader(
-                    algoTrader.MultipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
-                bundleConverter.ConvertMultipleTrader(
-                    algoTrader.MultipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
-
-                if (appConfig.AppSettings.BundleReportsEnabled)
-                {
-                    string reportsIndexPath = BundleReportPackager.Create(
-                        bundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "MultipleTrader");
-                    LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
-                                      ConsoleColor.Green);
-                }
+                primaryBundlePath = bundlePath;
 
                 if (useImGuiBundle)
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
                     dearImGuiBundleTestPlotter.StartPlotter();
-                    dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                        commandFileName, TimeSpan.FromMinutes(2));
+                    plotStarted = true;
                     LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
                 }
                 else
@@ -1126,6 +1108,7 @@ async Task runMultipleTraderAlgoTrade()
                     dearPyGuiTestPlotter.SetLogger(logger);
                     dearPyGuiTestPlotter.StartPlotter();
                     dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+                    plotStarted = true;
                     LogManager.LogRaw($"[DearPyGuiDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
                 }
             }
@@ -1133,6 +1116,64 @@ async Task runMultipleTraderAlgoTrade()
             {
                 LogManager.LogError($"[PlotBackend] Converter/plotter hatası: {ex.Message}", ex);
             }
+        }
+
+        if (plotStarted && primaryBundlePath is not null)
+        {
+            var completedAlgoTrader = algoTrader;
+            var completedMultipleTrader = algoTrader.MultipleTrader;
+            string completedBundlePath = primaryBundlePath;
+            bool createBundleReports = appConfig.AppSettings.BundleReportsEnabled;
+            Task<bool>? completedPlotReadyTask = plotReadyTask;
+
+            await RunOutputInBackground("MultipleTrader statistics and auxiliary bundles", async () =>
+            {
+                var consoleCapture = logger.BeginConsoleCapture();
+                Task outputTask = Task.Run(async () =>
+                {
+                    await completedAlgoTrader.WriteTraderDataToFilesAsync(completedMultipleTrader);
+                    LogManager.LogRaw(completedMultipleTrader.WriteChildTradersDataToFiles
+                        ? "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)"
+                        : "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
+
+                    var backgroundConverter = new TradeDataBundleConverter();
+                    backgroundConverter.ConvertMultipleTrader(
+                        completedMultipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
+                    backgroundConverter.ConvertMultipleTrader(
+                        completedMultipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
+                    backgroundConverter.ConvertMultipleTrader(
+                        completedMultipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
+
+                    if (createBundleReports)
+                    {
+                        string reportsIndexPath = BundleReportPackager.Create(
+                            completedBundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "MultipleTrader");
+                        LogManager.LogRaw($"[BundleReports] Rapor paketi olusturuldu: {reportsIndexPath}",
+                                          ConsoleColor.Green);
+                    }
+                });
+
+                if (completedPlotReadyTask is not null)
+                {
+                    bool plotReady = await completedPlotReadyTask;
+                    if (!plotReady)
+                        LogManager.LogRaw("[PlotBackend] Plot yükleme onayı zaman aşımına uğradı; tamponlanan loglar gösteriliyor.",
+                                          ConsoleColor.Yellow);
+                }
+
+                // Plot hazır olduktan sonra o ana kadar biriken mesajlar gösterilir.
+                // Devam eden dosya yazma mesajları capture pasif olduğu için canlı akar.
+                consoleCapture.Dispose();
+                consoleCapture.Replay();
+                await outputTask;
+            });
+        }
+        else
+        {
+            await algoTrader.WriteTraderDataToFilesAsync(algoTrader.MultipleTrader);
+            LogManager.LogRaw(algoTrader.MultipleTrader.WriteChildTradersDataToFiles
+                ? "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + childTraders)"
+                : "[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader only)");
         }
 
     }
