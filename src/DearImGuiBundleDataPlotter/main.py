@@ -49,6 +49,8 @@ class App:
             "MainDockSpace", "LeftDockSpace", imgui.Dir_.left, 0.18)
         rightSplit = hello_imgui.DockingSplit(
             "MainDockSpace", "RightDockSpace", imgui.Dir_.right, 0.32)
+        swingSplit = hello_imgui.DockingSplit(
+            "RightDockSpace", "SwingDockSpace", imgui.Dir_.right, 0.58)
         consoleSplit = hello_imgui.DockingSplit(
             "RightDockSpace", "ConsoleDockSpace", imgui.Dir_.down, 0.35)
 
@@ -80,19 +82,26 @@ class App:
         reportsWindow = hello_imgui.DockableWindow(
             "Reports", "RightDockSpace", self.guiManager.reportsWindow.renderDockContent,
             self.guiManager.reportsWindow.getVisible(), True)
+        swingControlsWindow = hello_imgui.DockableWindow(
+            "Swing Controls", "SwingDockSpace",
+            self.guiManager.swingAnnotationController.renderDockContent,
+            self.guiManager.swingAnnotationController.getVisible(), True)
         dataManagerWindow.remember_is_visible = False
         poolWindow.remember_is_visible = False
         panelManagerWindow.remember_is_visible = False
         panelManagerWindow2.remember_is_visible = False
         reportsWindow.remember_is_visible = False
+        swingControlsWindow.remember_is_visible = False
         consoleWindow = hello_imgui.DockableWindow(
             "Console Panel", "ConsoleDockSpace", self.guiManager.consolePanel.renderDockContent,
             self.guiManager.consolePanel.getVisible(), True)
 
-        runnerParams.docking_params.docking_splits = [topSplit, leftSplit, rightSplit, consoleSplit]
+        runnerParams.docking_params.docking_splits = [
+            topSplit, leftSplit, rightSplit, swingSplit, consoleSplit]
         runnerParams.docking_params.dockable_windows = [
             topWindow, mainWindow, leftWindow, scriptWindow, dataManagerWindow,
-            poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow, consoleWindow]
+            poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow,
+            swingControlsWindow, consoleWindow]
         runnerParams.docking_params.layout_condition = \
             hello_imgui.DockingLayoutCondition.application_start
 
@@ -107,6 +116,7 @@ class App:
         actualPanelManagerWindow = runnerParams.docking_params.dockable_window_of_name("Panel Manager")
         actualPanelManagerWindow2 = runnerParams.docking_params.dockable_window_of_name("Panel Manager 2")
         actualReportsWindow = runnerParams.docking_params.dockable_window_of_name("Reports")
+        actualSwingControlsWindow = runnerParams.docking_params.dockable_window_of_name("Swing Controls")
         self.guiManager.leftMenuPanel.setDockWindow(actualLeftWindow)
         self.guiManager.scriptPanel.setDockWindow(actualScriptWindow)
         self.guiManager.dataManager.setDockWindow(actualDataManagerWindow)
@@ -114,6 +124,7 @@ class App:
         self.guiManager.panelManagerWindow.setDockWindow(actualPanelManagerWindow)
         self.guiManager.panelManagerWindow2.setDockWindow(actualPanelManagerWindow2)
         self.guiManager.reportsWindow.setDockWindow(actualReportsWindow)
+        self.guiManager.swingAnnotationController.setDockWindow(actualSwingControlsWindow)
         self.guiManager.consolePanel.setDockWindow(actualConsoleWindow)
 
         addOns = immapp.AddOnsParams(with_implot=True)

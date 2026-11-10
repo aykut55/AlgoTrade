@@ -61,6 +61,11 @@ class PreparedData:
         self.size = []
         self.indicatorNames = []
         self.indicatorValues = []
+        self.zigZagProfileNames = []
+        self.zigZagPivots = []
+        self.zigZagPivotPrices = []
+        self.zigZagShowMarkers = []
+        self.zigZagVisible = []
         self.signals = []
         self.signalSteps = []
         self.signalDetails = []
@@ -92,6 +97,7 @@ class App:
 
         # 1) UI reset: onceki run'dan kalan panel/pool state'ini temizle.
         self._resetUi()
+        gm.swingAnnotationController.deactivate()
 
         # 2) Opsiyonel test input uretimi. Gercek C# akisine gecince kapali kalir.
         if CREATE_TEST_BUNDLE_ON_RUN:
@@ -103,6 +109,8 @@ class App:
         self.bundlePath = self.resolveBundlePath(self.inputConfig)
         self.viewPath = self.resolveViewPath(self.inputConfig, self.bundlePath)
         self.view = self.loadViewDescription(self.viewPath)
+        gm.applySwingWorkspaceMode(self.view.get("mode") == "swing_annotation")
+        self.configureInitialWindow(self.view)
 
         # 4) View description'a gore panel modelini kur.
         self.stage3BuildPanelsFromView(self.view)
@@ -131,6 +139,9 @@ class App:
         gm.leftMenuPanel.refresh()
         gm.poolPanel.refresh()
         gm._refreshActivePanelCombo()
+        gm.swingAnnotationController.configure(
+            self.view, self.ohlcPanel.id if self.ohlcPanel else None,
+            len(self.data.xs) if self.data else 0, self.data)
 
         print("Binary viewer hazir:")
         print(f"  bundle : {self.bundlePath or 'not loaded'}")
@@ -217,6 +228,30 @@ class App:
             ]
         }
 
+    def configureInitialWindow(self, view):
+        """Etiketleme view'undaki bar penceresini ilk veri yüklemesine uygular."""
+        # Ayni process daha sonra normal trade bundle'i yuklerse etiketleme
+        # penceresi kalici olmasin; her yuklemede once standart moda donulur.
+        pm.setDefaultViewMode("FitToScreen (Ultra)")
+        window = view.get("window") if isinstance(view, dict) else None
+        if not isinstance(window, dict):
+            return
+
+        try:
+            mode = str(window.get("initialViewMode", "FitToScreen (Ultra)"))
+            width = max(1, int(window.get("initialWidthBars", 2000)))
+            offset = max(0, int(window.get("initialOffsetBars", 0)))
+        except (TypeError, ValueError):
+            print("Swing annotation window ayarlari gecersiz; varsayilan gorunum kullaniliyor.")
+            return
+
+        if mode.startswith("FitToScreen"):
+            pm.setDefaultViewMode(mode)
+            print(f"Swing annotation window: mode={mode}, position=last data")
+        else:
+            pm.setDefaultViewMode("Range", n=offset, n2=width)
+            print(f"Swing annotation window: mode=Range, offset={offset}, width={width}")
+
     def _resetUi(self):
         pm.deleteAllPanels()
         pm.sync()
@@ -248,6 +283,14 @@ class App:
         data.volume = self._arrayToFloatList(bundle["volume"]) if "volume" in bundle else [0.0] * n
         data.size = [int(v) for v in bundle["size"].tolist()] if "size" in bundle else [0] * n
         data.indicatorNames, data.indicatorValues = self._readIndicators(bundle, n)
+        data.zigZagProfileNames = ([str(x) for x in bundle["zigzag_profile_names"].tolist()]
+                                   if "zigzag_profile_names" in bundle else [])
+        data.zigZagPivots = self._readMatrix(bundle, "zigzag_pivots", n)
+        data.zigZagPivotPrices = self._readMatrix(bundle, "zigzag_pivot_prices", n)
+        data.zigZagShowMarkers = ([bool(int(x)) for x in bundle["zigzag_show_markers"].tolist()]
+                                  if "zigzag_show_markers" in bundle else [])
+        data.zigZagVisible = ([bool(int(x)) for x in bundle["zigzag_visible"].tolist()]
+                              if "zigzag_visible" in bundle else [])
         data.signals = self._readSignals(bundle, n)
         data.signalSteps = self._readSignalSteps(bundle, data.signals, n)
         data.signalDetails = self._readSignalDetails(bundle, n)
@@ -282,6 +325,14 @@ class App:
             values = values.reshape(1, -1)
         series = [values[i, :n].tolist() for i in range(min(len(names), values.shape[0]))]
         return names[:len(series)], series
+
+    def _readMatrix(self, bundle, name, n):
+        if name not in bundle:
+            return []
+        values = np.asarray(bundle[name], dtype=np.float64)
+        if values.ndim == 1:
+            values = values.reshape(1, -1)
+        return [values[i, :n].tolist() for i in range(values.shape[0])]
 
     def _readSignals(self, bundle, n):
         if "signal_codes" not in bundle:

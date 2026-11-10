@@ -453,6 +453,9 @@ async Task runLastStartupSequence()
         case "CONFIRMINGMULTIPLETRADER":
             await runConfirmingMultipleTraderAlgoTrade();
             break;
+        case "SWINGANNOTATION":
+            await handleSwingAnnotation();
+            break;
         default:
             LogManager.LogRaw($"[StartupSequence] Desteklenmeyen islem: {sequence.Operation}", ConsoleColor.Red);
             break;
@@ -944,6 +947,8 @@ async Task runSingleTraderAlgoTrade()
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
+                    if (!dearImGuiBundleTestPlotter.IsRunning)
+                        dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
                     dearImGuiBundleTestPlotter.StartPlotter();
                     string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
                     plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
@@ -1095,6 +1100,8 @@ async Task runMultipleTraderAlgoTrade()
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
+                    if (!dearImGuiBundleTestPlotter.IsRunning)
+                        dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
                     dearImGuiBundleTestPlotter.StartPlotter();
                     string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
                     plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
@@ -1253,6 +1260,8 @@ async Task runConfirmingSingleTraderAlgoTrade()
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
+                    if (!dearImGuiBundleTestPlotter.IsRunning)
+                        dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
                     dearImGuiBundleTestPlotter.StartPlotter();
                     string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
                     plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
@@ -1401,6 +1410,8 @@ async Task runConfirmingMultipleTraderAlgoTrade()
                 {
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
+                    if (!dearImGuiBundleTestPlotter.IsRunning)
+                        dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
                     dearImGuiBundleTestPlotter.StartPlotter();
                     string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
                     plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
@@ -4327,6 +4338,140 @@ async Task runInteractiveScript()
 // Main Menu
 // =============================================================================
 
+async Task handleSwingAnnotation()
+{
+    if (stockDataReader is null || !stockDataReader.IsDataReady)
+    {
+        LogManager.LogError("[SwingAnnotation] Data not loaded — run [1] Read Data first or use [27].");
+        return;
+    }
+
+    try
+    {
+        saveStartupSequence("SwingAnnotation");
+        IReadOnlyList<StockData> data = stockDataReader.GetData();
+        string symbol = stockMetaData?.GetValueOrDefault("GrafikSembol", "OHLC") ?? "OHLC";
+        string period = stockMetaData?.GetValueOrDefault("GrafikPeriyot", "N/A") ?? "N/A";
+        string outputDir = Path.Combine(AppSettings.DearImGuiBundleDataPlotterDir, "inputs");
+        string configPath = Path.Combine(AppSettings.ConfigsDir, "SwingAnnotationConfig.json");
+        static string SafePathPart(string value) => string.Concat(
+            value.Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch));
+        string sessionDir = Path.Combine(AppSettings.RootDir, "outputs", "annotations",
+            $"{SafePathPart(symbol)}_{SafePathPart(period)}", "current");
+        SwingAnnotationConfig annotationConfig = SwingAnnotationConfig.Load(configPath);
+
+        static double[] BuildZigZagLine(double[] pivotPrices)
+        {
+            var line = Enumerable.Repeat(double.NaN, pivotPrices.Length).ToArray();
+            int[] indices = Enumerable.Range(0, pivotPrices.Length)
+                .Where(i => !double.IsNaN(pivotPrices[i]))
+                .ToArray();
+            for (int pair = 1; pair < indices.Length; pair++)
+            {
+                int left = indices[pair - 1];
+                int right = indices[pair];
+                double start = pivotPrices[left];
+                double end = pivotPrices[right];
+                int distance = right - left;
+                for (int i = left; i <= right; i++)
+                    line[i] = start + (end - start) * (i - left) / distance;
+            }
+            if (indices.Length == 1) line[indices[0]] = pivotPrices[indices[0]];
+            return line;
+        }
+
+        var zigZagSeries = new List<OhlcZigZagSeries>();
+        var enabledProfiles = (appConfig.SwingAnnotation?.ZigZagProfiles ?? [])
+            .Where(profile => profile.Enabled && profile.Deviation > 0)
+            .ToList();
+        if (enabledProfiles.Count > 0)
+        {
+            using var indicators = new AlgoTrade.Core.Trading.Indicators.IndicatorManager(data.ToList());
+            var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (ZigZagProfileConfig profile in enabledProfiles)
+            {
+                string baseName = string.IsNullOrWhiteSpace(profile.Name)
+                    ? $"ZigZag {profile.Deviation:g}%"
+                    : profile.Name.Trim();
+                string name = baseName;
+                int suffix = 2;
+                while (!usedNames.Add(name)) name = $"{baseName} ({suffix++})";
+
+                var result = indicators.PriceAction.ZigZag(profile.Deviation);
+                int[] color = profile.Color is { Length: >= 4 }
+                    ? profile.Color.Take(4).Select(value => Math.Clamp(value, 0, 255)).ToArray()
+                    : [255, 215, 0, 255];
+                zigZagSeries.Add(new OhlcZigZagSeries(
+                    name, profile.Deviation, BuildZigZagLine(result.ZigZag),
+                    result.Pivots, result.ZigZag, color, profile.ShowPivotMarkers,
+                    profile.Visible));
+                LogManager.LogRaw(
+                    $"[SwingAnnotation] {name}: deviation={profile.Deviation:g}%, " +
+                    $"pivots={result.Pivots.Count(value => value != 0)}",
+                    ConsoleColor.DarkCyan);
+            }
+        }
+
+        LogManager.LogRaw(
+            $"[SwingAnnotation] OHLC bundle hazırlanıyor: {data.Count} bar, " +
+            $"pencere={annotationConfig.Window.InitialWidthBars}, adım={annotationConfig.Window.NavigationStepBars}, " +
+            $"zigzag={zigZagSeries.Count}...",
+            ConsoleColor.Cyan);
+        var converter = new OhlcAnnotationBundleConverter();
+        var (bundlePath, viewPath) = await Task.Run(() =>
+            converter.Convert(data, outputDir, symbol, period, annotationConfig, sessionDir, zigZagSeries,
+                              appConfig.SwingAnnotation.ShowManualMarkers,
+                              appConfig.SwingAnnotation.ShowZigZagMarkers));
+
+        ZigZagExportConfig exportConfig = appConfig.SwingAnnotation.ZigZagExport;
+        if (exportConfig.Enabled && zigZagSeries.Count > 0)
+        {
+            string zigZagOutputDir = Path.Combine(
+                AppSettings.RootDir, "outputs", "zigzag_analysis",
+                $"{SafePathPart(symbol)}_{SafePathPart(period)}", "current");
+            _ = RunOutputInBackground("ZigZag TXT/CSV matrix export", () =>
+            {
+                var exporter = new ZigZagMatrixExporter();
+                var paths = exporter.Export(data, zigZagSeries, zigZagOutputDir,
+                                            symbol, period, exportConfig);
+                LogManager.LogRaw(
+                    $"[SwingAnnotation] ZigZag export completed: " +
+                    $"{paths.csvPath ?? "CSV disabled"}, {paths.txtPath ?? "TXT disabled"}",
+                    ConsoleColor.Green);
+                return Task.CompletedTask;
+            });
+        }
+
+        dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+        dearImGuiBundleTestPlotter.SetLogger(logger);
+        if (!dearImGuiBundleTestPlotter.IsRunning)
+            dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
+        dearImGuiBundleTestPlotter.StartPlotter();
+        string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+        bool loaded = await dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+            commandFileName, TimeSpan.FromMinutes(2));
+
+        if (loaded)
+        {
+            LogManager.LogRaw($"[SwingAnnotation] OHLC plotu hazır: {symbol} / {period} / {data.Count} bar",
+                              ConsoleColor.Green);
+            LogManager.LogRaw("[SwingAnnotation] Etiketleme oturumu açık. Ana menüye dönmek için plot penceresini kapatın.",
+                              ConsoleColor.Cyan);
+
+            await Task.Run(() => dearImGuiBundleTestPlotter.WaitForExit());
+            dearImGuiBundleTestPlotter.StopPlotter();
+            LogManager.LogRaw("[SwingAnnotation] Plot penceresi kapatıldı; ana menüye dönülüyor.",
+                              ConsoleColor.Yellow);
+        }
+        else
+            LogManager.LogRaw("[SwingAnnotation] Plot yükleme onayı alınamadı.", ConsoleColor.Yellow);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"[SwingAnnotation] OHLC plotu açılamadı: {ex.Message}", ex);
+    }
+}
+
 void showMainMenu()
 {
     Console.WriteLine();
@@ -4382,6 +4527,11 @@ void showMainMenu()
     Console.WriteLine("║    [23]  Read Data + ConfirmingSingleTrader                        ║");
     Console.WriteLine("║    [24]  ConfirmingMultipleTrader                                  ║");
     Console.WriteLine("║    [25]  Read Data + ConfirmingMultipleTrader                      ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ OHLC Swing Annotation ══════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [26]  OHLC Swing Annotation                                     ║");
+    Console.WriteLine("║    [27]  Read Data + OHLC Swing Annotation                         ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Fast Run ═══════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -4636,6 +4786,8 @@ async Task main()
             case "23": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleConfirmingSingleTrader(); } break;
             case "24": await handleConfirmingMultipleTrader();              break;
             case "25": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleConfirmingMultipleTrader(); } break;
+            case "26": await handleSwingAnnotation();                       break;
+            case "27": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleSwingAnnotation(); } break;
             case "f": await runLastStartupSequence();                       break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;

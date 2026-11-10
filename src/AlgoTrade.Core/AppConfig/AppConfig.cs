@@ -8,6 +8,7 @@ public class AppConfig
 {
     public AppSettingsConfig     AppSettings    { get; set; } = new();
     public ReadDataConfig        ReadData       { get; set; } = new();
+    public SwingAnnotationAppConfig SwingAnnotation { get; set; } = new();
     public SingleTraderConfig    SingleTrader   { get; set; } = new();
     public MultipleTraderConfig  MultipleTrader { get; set; } = new();
     public ConfirmingSingleTraderConfig ConfirmingSingleTrader { get; set; } = new();
@@ -25,6 +26,32 @@ public class AppConfig
     public QuerySymbolTimeframeScanConfig QuerySymbolTimeframeScan { get; set; } = new();
     public MultiQuerySymbolScanConfig MultiQuerySymbolScan { get; set; } = new();
     public MultiQuerySymbolTimeframeScanConfig MultiQuerySymbolTimeframeScan { get; set; } = new();
+}
+
+public class SwingAnnotationAppConfig
+{
+    public bool ShowManualMarkers { get; set; } = false;
+    public bool ShowZigZagMarkers { get; set; } = false;
+    public ZigZagExportConfig ZigZagExport { get; set; } = new();
+    public List<ZigZagProfileConfig> ZigZagProfiles { get; set; } = new();
+}
+
+public class ZigZagExportConfig
+{
+    public bool Enabled { get; set; } = true;
+    public bool WriteCsv { get; set; } = true;
+    public bool WriteTxt { get; set; } = true;
+    public bool IncludeUnconfirmedLastPivot { get; set; } = false;
+}
+
+public class ZigZagProfileConfig
+{
+    public string Name { get; set; } = "ZigZag";
+    public bool Enabled { get; set; } = true;
+    public bool Visible { get; set; } = false;
+    public double Deviation { get; set; } = 5.0;
+    public int[] Color { get; set; } = [255, 215, 0, 255];
+    public bool ShowPivotMarkers { get; set; } = true;
 }
 
 // =============================================================================

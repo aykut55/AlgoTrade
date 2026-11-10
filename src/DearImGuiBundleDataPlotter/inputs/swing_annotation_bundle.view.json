@@ -1,0 +1,122 @@
+{
+  "mode": "swing_annotation",
+  "session": {
+    "directory": "D:\\Aykut\\Projects\\AlgoTrade\\outputs\\annotations\\VIP'VIP-X030-T_5\\current",
+    "symbol": "VIP'VIP-X030-T",
+    "period": "5",
+    "schemaVersion": 1
+  },
+  "window": {
+    "initialViewMode": "FitToScreen (Ultra)",
+    "initialWidthBars": 2000,
+    "navigationStepBars": 500,
+    "initialOffsetBars": 0,
+    "minimumWidthBars": 100,
+    "maximumWidthBars": 20000,
+    "clampLastWindowToData": true,
+    "autoSaveOnWindowChange": true,
+    "presets": [
+      250,
+      500,
+      1000,
+      2000,
+      5000,
+      10000
+    ],
+    "totalBars": 562894
+  },
+  "rendering": {
+    "maxCandlesWithoutAggregation": 10000,
+    "showManualMarkers": false,
+    "showZigZagMarkers": false
+  },
+  "panels": [
+    {
+      "id": "ohlc",
+      "name": "OHLC",
+      "caption": "OHLC Dip/Tepe Etiketleme",
+      "height": 720,
+      "ySyncId": 0,
+      "series": [
+        {
+          "source": "ohlc",
+          "name": "VIP'VIP-X030-T",
+          "label": "VIP'VIP-X030-T",
+          "dataId": 0
+        },
+        {
+          "source": "indicator",
+          "name": "ZigZag 0.1%",
+          "label": "ZigZag 0.1%",
+          "dataId": 1,
+          "color": [
+            0,
+            220,
+            255,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ZigZag 0.5%",
+          "label": "ZigZag 0.5%",
+          "dataId": 2,
+          "color": [
+            80,
+            255,
+            180,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ZigZag 1%",
+          "label": "ZigZag 1%",
+          "dataId": 3,
+          "color": [
+            100,
+            255,
+            100,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ZigZag 2%",
+          "label": "ZigZag 2%",
+          "dataId": 4,
+          "color": [
+            255,
+            215,
+            0,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ZigZag 5%",
+          "label": "ZigZag 5%",
+          "dataId": 5,
+          "color": [
+            255,
+            90,
+            160,
+            255
+          ]
+        },
+        {
+          "source": "indicator",
+          "name": "ZigZag 10%",
+          "label": "ZigZag 10%",
+          "dataId": 6,
+          "color": [
+            255,
+            255,
+            255,
+            255
+          ]
+        }
+      ]
+    }
+  ]
+}

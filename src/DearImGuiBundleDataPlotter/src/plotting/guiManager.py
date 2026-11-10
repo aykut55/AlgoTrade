@@ -21,6 +21,7 @@ from .leftMenuPanel import LeftMenuPanel
 from .panelManagerWindow import PanelManagerWindow
 from .panelManagerWindow2 import PanelManagerWindow2
 from .reportsWindow import ReportsWindow
+from .swingAnnotationController import SwingAnnotationController
 from ..trading.stockDataReader import StockDataReader, FilterMode
 from ..trading.indicatorManager import IndicatorManager
 from ..trading.indicators import Indicators
@@ -81,6 +82,7 @@ class GuiManager:
         self.consolePanel.attachStdout()
 
         self.panelManager = PanelManager()
+        self.swingAnnotationController = SwingAnnotationController(self.panelManager)
 
         self.tsr = TradeSignalRenderer(self.panelManager)
         self.panelManager.setTradeSignalRenderer(self.tsr)
@@ -162,6 +164,7 @@ class GuiManager:
         self._bottomPanelVisible = False
         self._statusText = ""
         self._panStatusText = ""
+        self._lastPanStatusState = None
         self._zoomStatusText = "(0,0)"
         self._zoomStates = {}  # {panelId: {"x0","y0","xCount","yCount"}}
         self._topViewModeValues = {}
@@ -193,6 +196,7 @@ class GuiManager:
         self._rangeNavigatorCollapsed = False
         self._rangeNavigatorDetached = False
         self._rangeNavigatorDetachedSizePending = False
+        self._swingWorkspaceMode = False
 
     def _loadTopPanelConfig(self):
         raw = self.configManager.get("topPanel") or {}
@@ -301,6 +305,39 @@ class GuiManager:
         else:
             self.leftMenuPanel.hide()
 
+    def applySwingWorkspaceMode(self, enabled):
+        """Swing modunda yardimci dock'lari gizler; normal modda config'i geri uygular."""
+        self._swingWorkspaceMode = bool(enabled)
+        if enabled:
+            self._enforceSwingWorkspaceVisibility()
+            return
+        panelsCfg = self.configManager.get("panels") or {}
+
+        def configuredVisible(name, default=False):
+            return bool((panelsCfg.get(name) or {}).get("visible", default))
+
+        self.scriptPanel.setVisible(configuredVisible("scriptPanel", True))
+        if configuredVisible("leftMenu", True): self.leftMenuPanel.show()
+        else: self.leftMenuPanel.hide()
+        self.dataManager.setVisible(configuredVisible("dataManager", False))
+        self.poolPanel.setVisible(configuredVisible("poolPanel", False))
+        self.panelManagerWindow.setVisible(configuredVisible("panelManagerWindow", False))
+        self.panelManagerWindow2.setVisible(configuredVisible("panelManagerWindow2", False))
+        self.reportsWindow.setVisible(configuredVisible("reportsWindow", False))
+        self.consolePanel.setVisible(configuredVisible("consolePanel", False))
+
+    def _enforceSwingWorkspaceVisibility(self):
+        if not self._swingWorkspaceMode:
+            return
+        self.scriptPanel.setVisible(False)
+        self.leftMenuPanel.hide()
+        self.dataManager.setVisible(False)
+        self.poolPanel.setVisible(False)
+        self.panelManagerWindow.setVisible(False)
+        self.panelManagerWindow2.setVisible(False)
+        self.reportsWindow.setVisible(False)
+        self.consolePanel.setVisible(False)
+
     def _onPoolItemDroppedOnPanel(self, panelId, dragId):
         """panelManager.setPoolDropHandler ile baglanir - panelManager'in
         drag-drop target'i yakaladigi (panelId, imgui payload int'i) ciftini
@@ -382,6 +419,7 @@ class GuiManager:
         """Top dock'un altinda kalan merkez grafik ve arac pencereleri."""
         if self._shutdownRequested:
             return
+        self._enforceSwingWorkspaceVisibility()
         self._applyThemeForFrame()
         avail = imgui.get_content_region_avail()
         bottomSpace = self.BOTTOM_HEIGHT + self.MARGIN if self._bottomPanelVisible else 0.0
@@ -418,9 +456,15 @@ class GuiManager:
         self.panelManagerWindow.render()
         self.panelManagerWindow2.render()
         self.reportsWindow.render()
+        self.swingAnnotationController.render()
         if rangeNavigatorVisible and self._rangeNavigatorDetached:
             self._renderDetachedRangeNavigator()
 
+        # Pan etiketi sadece toolbar butonlarindan degil, gercek OHLC X
+        # araligindan beslenir. Boylece ImPlot uzerinde fareyle pan/zoom,
+        # Range Navigator ve programatik view degisiklikleri de etikete
+        # bir sonraki frame'de yansir.
+        self._syncPanStatusFromSource()
         self._updateAutoSyncX()
         self._updateAutoSyncY()
         self.interactionManager.onTick()
@@ -835,6 +879,20 @@ class GuiManager:
         self._panStatusText = self._formatViewStatusText(panelId, result)
 
     def _onRangeNavigatorViewChanged(self, panelId, xLimits):
+        self._panStatusText = self._formatViewStatusText(panelId, xLimits)
+
+    def _syncPanStatusFromSource(self):
+        panelId = self.rangeSliderBar.getSourcePanelId()
+        if panelId is None:
+            return
+        xLimits = self.panelManager.getXAxisLimits(panelId)
+        if xLimits is None:
+            return
+        state = (panelId, float(xLimits[0]), float(xLimits[1]),
+                 self.panelManager.getPanelDataCount(panelId))
+        if state == self._lastPanStatusState:
+            return
+        self._lastPanStatusState = state
         self._panStatusText = self._formatViewStatusText(panelId, xLimits)
 
     def _doZoom(self, axes, direction):

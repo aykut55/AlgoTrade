@@ -47,6 +47,29 @@ public class DearImGuiBundleDataPlotter : IDisposable
 
     public void SetLogger(LogManager? logger) => _logger = logger;
 
+    /// <summary>
+    /// Plotter process'i baslatilmadan once inputs/input.json'u hedef bundle ile hazirlar.
+    /// Boylece uygulama onceki oturumun bundle'ini gecici olarak yuklemez.
+    /// </summary>
+    public void PrepareStartupBundle(string bundlePath, string? viewPath = null)
+    {
+        if (string.IsNullOrWhiteSpace(bundlePath))
+            throw new ArgumentException("bundlePath bos olamaz.", nameof(bundlePath));
+
+        var input = new Dictionary<string, object?>
+        {
+            ["bundle"] = ToInputsRelativePath(bundlePath),
+        };
+        if (!string.IsNullOrWhiteSpace(viewPath))
+            input["view"] = ToInputsRelativePath(viewPath);
+
+        string inputPath = Path.Combine(ProjectDir, "inputs", "input.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(inputPath)!);
+        string tempPath = inputPath + ".tmp";
+        File.WriteAllText(tempPath, JsonConvert.SerializeObject(input, Formatting.Indented));
+        File.Move(tempPath, inputPath, overwrite: true);
+    }
+
     #endregion
 
     #region Process Lifecycle

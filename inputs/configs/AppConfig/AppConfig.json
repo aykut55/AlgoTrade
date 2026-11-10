@@ -13,6 +13,43 @@
 	// BundleReportsEnabled: true = bundle yanina raporlari kopyala | false = rapor paketi olusturma
   },
 
+  "SwingAnnotation": {
+    "ShowManualMarkers": false,
+    "ShowZigZagMarkers": false,
+    "ZigZagExport": {
+      "Enabled": true,
+      "WriteCsv": true,
+      "WriteTxt": true,
+      "IncludeUnconfirmedLastPivot": false
+    },
+    "ZigZagProfiles": [
+      { "Name": "ZigZag 0.01%", "Enabled": false, "Visible": false, "Deviation": 0.01, "Color": [160, 160, 160, 255], "ShowPivotMarkers": false },
+      { "Name": "ZigZag 0.05%", "Enabled": true,  "Visible": false, "Deviation": 0.05, "Color": [100, 180, 255, 255], "ShowPivotMarkers": true },
+      { "Name": "ZigZag 0.1%",  "Enabled": true,  "Visible": true,  "Deviation": 0.1,  "Color": [0, 220, 255, 255],   "ShowPivotMarkers": true },
+      { "Name": "ZigZag 0.2%",  "Enabled": true,  "Visible": false, "Deviation": 0.2,  "Color": [0, 180, 220, 255],   "ShowPivotMarkers": true },
+      { "Name": "ZigZag 0.5%",  "Enabled": true,  "Visible": true,  "Deviation": 0.5,  "Color": [80, 255, 180, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 1%",    "Enabled": true,  "Visible": true,  "Deviation": 1.0,  "Color": [100, 255, 100, 255], "ShowPivotMarkers": true },
+      { "Name": "ZigZag 1.5%",  "Enabled": true,  "Visible": false, "Deviation": 1.5,  "Color": [180, 255, 80, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 2%",    "Enabled": true,  "Visible": true,  "Deviation": 2.0,  "Color": [255, 215, 0, 255],   "ShowPivotMarkers": true },
+      { "Name": "ZigZag 2.5%",  "Enabled": true,  "Visible": false, "Deviation": 2.5,  "Color": [255, 180, 0, 255],   "ShowPivotMarkers": true },
+      { "Name": "ZigZag 3%",    "Enabled": true,  "Visible": false, "Deviation": 3.0,  "Color": [255, 145, 0, 255],   "ShowPivotMarkers": true },
+      { "Name": "ZigZag 3.5%",  "Enabled": true,  "Visible": false, "Deviation": 3.5,  "Color": [255, 110, 40, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 4%",    "Enabled": true,  "Visible": false, "Deviation": 4.0,  "Color": [255, 80, 80, 255],   "ShowPivotMarkers": true },
+      { "Name": "ZigZag 4.5%",  "Enabled": true,  "Visible": false, "Deviation": 4.5,  "Color": [255, 70, 120, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 5%",    "Enabled": true,  "Visible": true,  "Deviation": 5.0,  "Color": [255, 90, 160, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 5.5%",  "Enabled": true,  "Visible": false, "Deviation": 5.5,  "Color": [230, 90, 200, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 6%",    "Enabled": true,  "Visible": false, "Deviation": 6.0,  "Color": [200, 100, 240, 255], "ShowPivotMarkers": true },
+      { "Name": "ZigZag 6.5%",  "Enabled": true,  "Visible": false, "Deviation": 6.5,  "Color": [170, 110, 255, 255], "ShowPivotMarkers": true },
+      { "Name": "ZigZag 7%",    "Enabled": true,  "Visible": false, "Deviation": 7.0,  "Color": [140, 120, 255, 255], "ShowPivotMarkers": true },
+      { "Name": "ZigZag 7.5%",  "Enabled": true,  "Visible": false, "Deviation": 7.5,  "Color": [110, 140, 255, 255], "ShowPivotMarkers": true },
+      { "Name": "ZigZag 8%",    "Enabled": true,  "Visible": false, "Deviation": 8.0,  "Color": [80, 160, 255, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 8.5%",  "Enabled": true,  "Visible": false, "Deviation": 8.5,  "Color": [60, 185, 235, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 9%",    "Enabled": true,  "Visible": false, "Deviation": 9.0,  "Color": [50, 205, 205, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 9.5%",  "Enabled": true,  "Visible": false, "Deviation": 9.5,  "Color": [40, 225, 175, 255],  "ShowPivotMarkers": true },
+      { "Name": "ZigZag 10%",   "Enabled": true,  "Visible": true,  "Deviation": 10.0, "Color": [255, 255, 255, 255], "ShowPivotMarkers": true }
+    ]
+  },
+
   "ReadData": {
     "FilterMode": "All",
     "N1": 100000,
