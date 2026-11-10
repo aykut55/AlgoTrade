@@ -158,13 +158,18 @@ public sealed class ZigZagMatrixExporter
                 // Windows'ta Notepad/preview gibi okuyucular hedef dosyayi acik
                 // tutarken rename/delete engellenebilir. Hedef paylasimli modda
                 // bastan yazilarak bu kilit turu tolere edilir.
-                using var source = new FileStream(
-                    temporaryPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                using var target = new FileStream(
-                    targetPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite,
-                    bufferSize: 1024 * 1024, FileOptions.SequentialScan);
-                source.CopyTo(target, 1024 * 1024);
-                target.Flush(flushToDisk: true);
+                // File.Delete'ten once iki stream de kapanmis olmali. "using var"
+                // kullanilirsa scope sonuna kadar acik kalir ve exporter kendi
+                // temporary dosyasini kilitlemis olur.
+                using (var source = new FileStream(
+                           temporaryPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var target = new FileStream(
+                           targetPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite,
+                           bufferSize: 1024 * 1024, FileOptions.SequentialScan))
+                {
+                    source.CopyTo(target, 1024 * 1024);
+                    target.Flush(flushToDisk: true);
+                }
                 File.Delete(temporaryPath);
                 return;
             }

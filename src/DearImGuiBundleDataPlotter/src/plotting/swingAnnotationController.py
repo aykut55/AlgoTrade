@@ -36,6 +36,9 @@ class SwingAnnotationController:
         self._selectedSegmentEndIndex = None
         self._showManualMarkers = True
         self._showZigZagMarkers = True
+        self._measureEnabled = False
+        self._measureStartIndex = None
+        self._measureEndIndex = None
 
     def setDockWindow(self, dockWindow):
         self._dockWindow = dockWindow
@@ -70,6 +73,9 @@ class SwingAnnotationController:
         self._deleteAllPending = False
         self._selectedSegmentEndIndex = None
         self._hoveredAnnotationIndex = None
+        self._measureEnabled = False
+        self._measureStartIndex = None
+        self._measureEndIndex = None
         self._totalBars = max(0, int(totalBars or 0))
         self._minWidth = max(1, int(cfg.get("minimumWidthBars", 100)))
         self._maxWidth = max(self._minWidth, int(cfg.get("maximumWidthBars", 20000)))
@@ -145,6 +151,7 @@ class SwingAnnotationController:
         imgui.text_wrapped(self._status)
         hoveredText = "-" if self._hoveredBarIndex is None else str(self._hoveredBarIndex)
         imgui.text(f"Target Bar: {hoveredText}  Annotations: {len(self._annotations)}")
+        self._renderRangeMeasurement()
         self._renderSegmentSummary()
         if imgui.button("1 - Add Dip", (120, 0)): self._addAnnotationAtHoveredBar("Dip")
         imgui.same_line()
@@ -215,6 +222,76 @@ class SwingAnnotationController:
         imgui.same_line()
         if imgui.button("Go", (110, 0)):
             self._start = self._clampStart(self._gotoIndex); self._applyWindow()
+
+    def _renderRangeMeasurement(self):
+        imgui.separator()
+        if self._measureEnabled:
+            if imgui.button("Measuring: click plot", (210, 0)):
+                self._measureEnabled = False
+        else:
+            if imgui.button("Measure Range", (210, 0)):
+                self._measureEnabled = True
+                self._measureStartIndex = None
+                self._measureEndIndex = None
+                self._status = "Range measurement: click the first bar (A)."
+        imgui.same_line()
+        if imgui.button("Clear Measure", (140, 0)):
+            self._clearMeasurement()
+
+        startIndex = self._measureStartIndex
+        endIndex = self._measureEndIndex
+        if startIndex is None:
+            imgui.text_disabled("Range Measurement: select A and B on the plot")
+            imgui.separator()
+            return
+
+        startTime = str(self._data.timestamps[startIndex])
+        startClose = float(self._data.close[startIndex])
+        imgui.text_colored((0.25, 0.85, 1.0, 1.0),
+                           f"A: Bar {startIndex} | Close {startClose:.6g}")
+        imgui.text_wrapped(startTime)
+        if endIndex is None:
+            imgui.text_disabled("Click the second bar (B).")
+            imgui.separator()
+            return
+
+        endTime = str(self._data.timestamps[endIndex])
+        endClose = float(self._data.close[endIndex])
+        difference = endClose - startClose
+        percent = difference / startClose * 100.0 if startClose else None
+        elapsed = self._store._elapsedSeconds(startTime, endTime)
+        if elapsed is not None:
+            elapsed = abs(elapsed)
+        color = ((0.25, 0.9, 0.35, 1.0) if difference >= 0
+                 else (1.0, 0.35, 0.3, 1.0))
+        imgui.text_colored((1.0, 0.7, 0.2, 1.0),
+                           f"B: Bar {endIndex} | Close {endClose:.6g}")
+        imgui.text_wrapped(endTime)
+        imgui.text(f"Bars: {abs(endIndex - startIndex)}  "
+                   f"Time: {self._formatDuration(elapsed)}")
+        if percent is None:
+            imgui.text_colored(color, f"Difference: {difference:+.6g}")
+        else:
+            imgui.text_colored(color, f"Difference: {difference:+.6g}  "
+                               f"Change: {percent:+.3f}%")
+        imgui.text_disabled("The next plot click starts a new measurement.")
+        imgui.separator()
+
+    def _clearMeasurement(self):
+        self._measureEnabled = False
+        self._measureStartIndex = None
+        self._measureEndIndex = None
+        self._status = "Range measurement cleared."
+
+    def _selectMeasurementBar(self, index):
+        if self._measureStartIndex is None or self._measureEndIndex is not None:
+            self._measureStartIndex = index
+            self._measureEndIndex = None
+            self._status = f"Range A selected: bar={index}. Click the second bar (B)."
+            return
+        self._measureEndIndex = index
+        self._status = (f"Range selected: bar {self._measureStartIndex} -> {index}. "
+                        "Click again to start a new measurement.")
 
     def _renderSegmentSummary(self):
         ordered = sorted(self._annotations.items())
@@ -333,6 +410,9 @@ class SwingAnnotationController:
             self._addAnnotationAtHoveredBar("Tepe")
         elif imgui.is_key_pressed(imgui.Key.delete, repeat=False):
             self._deleteAnnotationAtHoveredBar()
+        elif imgui.is_key_pressed(imgui.Key.escape, repeat=False) and self._measureEnabled:
+            self._measureEnabled = False
+            self._status = "Range measurement mode closed; lines were preserved."
 
     def _drawAnnotationsAndHandleClick(self, pm, panelId, panel):
         data = self._data
@@ -384,6 +464,15 @@ class SwingAnnotationController:
             implot.annotation(float(index), float(annotation["price"]),
                               color, offset, False, text)
 
+        if self._measureStartIndex is not None:
+            implot.drag_line_x(710001, float(self._measureStartIndex),
+                               (0.25, 0.85, 1.0, 0.95), 2,
+                               implot.DragToolFlags_.no_inputs.value)
+        if self._measureEndIndex is not None:
+            implot.drag_line_x(710002, float(self._measureEndIndex),
+                               (1.0, 0.7, 0.2, 0.95), 2,
+                               implot.DragToolFlags_.no_inputs.value)
+
         if not implot.is_plot_hovered():
             # Imlec Swing Controls penceresine tasindiginda son gecerli hedef
             # korunur; aksi halde penceredeki Add/Delete dugmeleri hedefini
@@ -396,6 +485,8 @@ class SwingAnnotationController:
             return
         self._hoveredBarIndex = index
         self._hoveredAnnotationIndex = index if index in self._annotations else None
+        if self._measureEnabled and imgui.is_mouse_clicked(0):
+            self._selectMeasurementBar(index)
 
     def _addAnnotationAtHoveredBar(self, annotationType):
         index = self._hoveredBarIndex
