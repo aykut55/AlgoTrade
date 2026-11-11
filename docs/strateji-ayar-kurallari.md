@@ -66,3 +66,10 @@ Böylece hangi sonucun hangi ayardan geldiği hep izlenebilir kalır.
 - [x] `Config_03` optChoice 27'deki trader gün sonu ve zaman filtresi ayarları kaldırıldı. `optChoice` varsayılanı 1'e döndü
 - [x] `AppConfig.json` oturum öncesi haline döndü
 - [ ] Vade günü kuralı (çift ayın son iş günü 18:55 kapat), gerekirse strateji parametresi olarak
+- [ ] **Karar bekliyor:** Şablon `SimpleMAStrategy`'ye de `gunSonuKapat`, `islemPenceresi`, `pencereBaslangic`,
+  `pencereBitis` parametreleri eklensin mi (varsayılan kapalı)? Gün sonu kuralı şablondaki boş
+  `if (isLastOfDay) { }` bloğuna yazılır. Pencere için mevcut gate kullanılır, ama bitiş hariç (`<`).
+  Eklenirse Strategy002'deki gün sonu kontrolü de aynı yapıya (isLastOfDay bloğu) taşınır.
+  Alternatif: ortak kuralı BaseStrategy'ye koymak.
+  Not (kullanıcı): SimpleMAStrategy fiilen şablon gibi davranıyor, diğer Simple*Strategy'ler de ona çok benziyor.
+  Kural yalnızca şablona eklenirse mevcut stratejilere tek tek eklemek gerekir. BaseStrategy'ye eklenirse ortak kod bir kez yazılır.
