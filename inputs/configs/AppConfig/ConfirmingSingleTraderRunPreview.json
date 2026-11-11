@@ -1,0 +1,82 @@
+{
+  "RunMode": "TradeOnly",
+  "SignalTrader": {
+    "Strategy": {
+      "StrategyName": "SimpleMostStrategy",
+      "Version": "v1",
+      "DisplayName": "Default",
+      "Parameters": {
+        "period": 21,
+        "percent": 1,
+        "mostMaMethod": "EMA",
+        "priceSource": "Close",
+        "signalModeIndex": 0
+      }
+    },
+    "Signals": {
+      "AlEnabled": true,
+      "SatEnabled": true,
+      "FlatOlEnabled": true,
+      "PasGecEnabled": false,
+      "KarAlEnabled": false,
+      "ZararKesEnabled": false,
+      "GunSonuPozKapatEnabled": false,
+      "TimeFilteringEnabled": false,
+      "StartDateTime": "2025.05.25 09:35:00",
+      "StopDateTime": "2025.06.02 17:55:00",
+      "TradeStartBarIndexEnabled": false,
+      "TradeStartBarIndex": 0
+    }
+  },
+  "Confirmation": {
+    "ThresholdIsPercentage": false,
+    "ProfitThreshold": 5000,
+    "LossThreshold": -3000,
+    "Trigger": "Both",
+    "ConflictMode": "CancelAndRestart",
+    "FlattenImmediatelyOnFlatSignal": true
+  },
+  "MainTrader": {
+    "TradeParams": {
+      "MarketType": "ViopEndex",
+      "IlkBakiye": 100000,
+      "KontratSayisi": 1,
+      "LotSayisi": 0.01,
+      "HisseSayisi": 1000,
+      "KomisyonCarpan": 20,
+      "KaymaMiktari": 0,
+      "PyramidingEnabled": false
+    },
+    "Signals": {
+      "AlEnabled": true,
+      "SatEnabled": true,
+      "FlatOlEnabled": true,
+      "PasGecEnabled": false,
+      "KarAlEnabled": false,
+      "ZararKesEnabled": false,
+      "GunSonuPozKapatEnabled": false,
+      "TimeFilteringEnabled": false,
+      "StartDateTime": "2025.05.25 09:35:00",
+      "StopDateTime": "2025.06.02 17:55:00",
+      "TradeStartBarIndexEnabled": false,
+      "TradeStartBarIndex": 0
+    },
+    "EquityCurveFilter": {
+      "Version": "v1",
+      "DisplayName": "Disabled",
+      "Enabled": false,
+      "ThresholdTypeIsPercent": true,
+      "ProfitThreshold": 0.05,
+      "LossThreshold": -0.05,
+      "Trigger": "Both"
+    }
+  },
+  "Save": {
+    "SaveStatisticsToFile": true,
+    "SaveConfirmingSingleTraderListsTxtEnabled": true,
+    "SaveConfirmingSingleTraderListsCsvEnabled": true,
+    "ConfirmingSingleTraderListsTxtFileName": "ConfirmingSingleTraderLists.txt",
+    "ConfirmingSingleTraderListsCsvFileName": "ConfirmingSingleTraderLists.csv",
+    "FilePrefix": "ConfirmingSingleTrader"
+  }
+}

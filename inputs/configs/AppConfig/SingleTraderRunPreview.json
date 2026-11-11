@@ -1,0 +1,86 @@
+{
+  "RunMode": "TradeOnly",
+  "Strategy": {
+    "StrategyName": "SimpleMAStrategy",
+    "Version": "v1",
+    "DisplayName": "Default",
+    "Parameters": {
+      "fastPeriod": 10,
+      "slowPeriod": 20,
+      "fastMaMethod": "SIMPLE",
+      "slowMaMethod": "SIMPLE",
+      "priceSource": "Close",
+      "signalModeIndex": 0
+    }
+  },
+  "EquityCurveFilter": {
+    "Version": "v1",
+    "DisplayName": "Disabled",
+    "Enabled": false,
+    "ThresholdTypeIsPercent": true,
+    "ProfitThreshold": 0.05,
+    "LossThreshold": -0.05,
+    "Trigger": "Both"
+  },
+  "TradeParams": {
+    "MarketType": "ViopEndex",
+    "IlkBakiye": 100000,
+    "KontratSayisi": 1,
+    "LotSayisi": 0.01,
+    "HisseSayisi": 1000,
+    "KomisyonCarpan": 20,
+    "KaymaMiktari": 0,
+    "PyramidingEnabled": false
+  },
+  "Signals": {
+    "AlEnabled": true,
+    "SatEnabled": true,
+    "FlatOlEnabled": true,
+    "PasGecEnabled": false,
+    "KarAlEnabled": false,
+    "ZararKesEnabled": false,
+    "GunSonuPozKapatEnabled": false,
+    "TimeFilteringEnabled": false,
+    "StartDateTime": "2025.05.25 09:35:00",
+    "StopDateTime": "2025.06.02 17:55:00",
+    "TradeStartBarIndexEnabled": false,
+    "TradeStartBarIndex": 0
+  },
+  "Plot": {
+    "PlotEnabled": true
+  },
+  "Optimization": {
+    "OptimizationEnabled": false
+  },
+  "Save": {
+    "SaveStatisticsToFile": true,
+    "SaveFullStatsTxtEnabled": true,
+    "SaveFullStatsCsvEnabled": true,
+    "SaveMinimalStatsTxtEnabled": true,
+    "SaveMinimalStatsCsvEnabled": true,
+    "SaveFullListsTxtEnabled": true,
+    "SaveFullListsCsvEnabled": true,
+    "SaveMinimalListsTxtEnabled": true,
+    "SaveMinimalListsCsvEnabled": true,
+    "SaveFullStatsTxtFormattedEnabled": true,
+    "SaveMinimalStatsTxtFormattedEnabled": true,
+    "SaveGridStatsTxtEnabled": true,
+    "SaveMinimalGridStatsTxtEnabled": true,
+    "SavePerformansTxtEnabled": true,
+    "SavePerformansCsvEnabled": true,
+    "FullStatsTxtFileName": "SingleTraderStatistics.txt",
+    "FullStatsCsvFileName": "SingleTraderStatistics.csv",
+    "MinimalStatsTxtFileName": "SingleTraderStatisticsMinimal.txt",
+    "MinimalStatsCsvFileName": "SingleTraderStatisticsMinimal.csv",
+    "FullListsTxtFileName": "SingleTraderLists.txt",
+    "FullListsCsvFileName": "SingleTraderLists.csv",
+    "MinimalListsTxtFileName": "SingleTraderListsMinimal.txt",
+    "MinimalListsCsvFileName": "SingleTraderListsMinimal.csv",
+    "FullStatsTxtFormattedFileName": "SingleTraderStatisticsFormatted.txt",
+    "MinimalStatsTxtFormattedFileName": "SingleTraderStatisticsMinimalFormatted.txt",
+    "GridStatsTxtFileName": "StatisticsGrid.txt",
+    "MinimalGridStatsTxtFileName": "StatisticsMinimalGrid.txt",
+    "PerformansTxtFileName": "SingleTraderPerformans.txt",
+    "PerformansCsvFileName": "SingleTraderPerformans.csv"
+  }
+}

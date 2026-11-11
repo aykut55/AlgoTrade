@@ -2973,6 +2973,13 @@ void showSingleTraderRunPreview(TraderRunMode mode)
 
     string json = JsonSerializer.Serialize(preview, jsonOpts);
 
+    try
+    {
+        string previewPath = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "SingleTraderRunPreview.json");
+        File.WriteAllText(previewPath, json);
+    }
+    catch { }
+
     string sep = new string('═', 66);
     Console.WriteLine();
     Console.WriteLine("══ SingleTrader — Run Preview ════════════════════════════════════");
@@ -3100,6 +3107,13 @@ void showSingleTraderOptRunPreview()
     };
 
     string json = JsonSerializer.Serialize(preview, jsonOpts);
+
+    try
+    {
+        string previewPath = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "SingleTraderOptRunPreview.json");
+        File.WriteAllText(previewPath, json);
+    }
+    catch { }
 
     string sep = new string('═', 66);
     Console.WriteLine();
@@ -3236,6 +3250,13 @@ void showMultipleTraderRunPreview()
 
     string json = JsonSerializer.Serialize(preview, jsonOpts);
 
+    try
+    {
+        string previewPath = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "MultipleTraderRunPreview.json");
+        File.WriteAllText(previewPath, json);
+    }
+    catch { }
+
     string sep = new string('═', 66);
     Console.WriteLine();
     Console.WriteLine("══ MultipleTrader — Run Preview ════════════════════════════════════");
@@ -3321,6 +3342,13 @@ void showConfirmingSingleTraderRunPreview()
     };
 
     string json = JsonSerializer.Serialize(preview, jsonOpts);
+
+    try
+    {
+        string previewPath = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "ConfirmingSingleTraderRunPreview.json");
+        File.WriteAllText(previewPath, json);
+    }
+    catch { }
 
     string sep = new string('═', 66);
     Console.WriteLine();
@@ -3436,6 +3464,13 @@ void showConfirmingMultipleTraderRunPreview()
     };
 
     string json = JsonSerializer.Serialize(preview, jsonOpts);
+
+    try
+    {
+        string previewPath = Path.Combine(AppSettings.ConfigsDir, "AppConfig", "ConfirmingMultipleTraderRunPreview.json");
+        File.WriteAllText(previewPath, json);
+    }
+    catch { }
 
     string sep = new string('═', 66);
     Console.WriteLine();

@@ -107,6 +107,12 @@ if errorlevel 8 (
     echo DEPLOY BASARISIZ: Python plotter kaynaklari kopyalanamadi.
     exit /b 1
 )
+robocopy "%ROOT%src\ConfigEditor" "%DESTINATION%\src\ConfigEditor" /MIR /R:2 /W:1 /NFL /NDL /NJH /NJS /NP /XD ".venv" "__pycache__"
+if errorlevel 8 (
+    echo DEPLOY BASARISIZ: ConfigEditor kaynaklari kopyalanamadi.
+    exit /b 1
+)
+copy /Y "%ROOT%runConfigEditor.bat" "%DESTINATION%\runConfigEditor.bat" >nul
 
 echo [4/6] Ortak Python sanal ortami kopyalaniyor...
 if not exist "%ROOT%.venv\Scripts\python.exe" (

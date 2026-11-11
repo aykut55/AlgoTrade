@@ -1,0 +1,5 @@
+{
+  "SingleTrader": {
+    "RunMode": ["TradeOnly", "TradeAndQuery", "QueryOnly"]
+  }
+}
