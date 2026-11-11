@@ -72,6 +72,7 @@ class GuiManager:
         "autoSyncY": False,
         "showOhlc": True,
         "showPlotCaptions": True,
+        "plotKeys": True,
     }
 
     def __init__(self, configManager):
@@ -197,6 +198,7 @@ class GuiManager:
         self._autoSyncYEnabled = bool(topCfg["autoSyncY"])
         self._showOhlc = bool(topCfg["showOhlc"])
         self._showPlotCaptions = bool(topCfg["showPlotCaptions"])
+        self._plotKeysEnabled = bool(topCfg.get("plotKeys", True))
         self._lastAutoSyncXTime = 0.0
         self._lastAutoSyncYTime = 0.0
         self._autoSyncIntervalSec = 0.15
@@ -472,6 +474,7 @@ class GuiManager:
         self.measurePanel.render()
         self.swingAnnotationController.render()
         self.rangeMeasureTool.handleKeyboard()
+        self._handlePlotKeyboard()
         if rangeNavigatorVisible and self._rangeNavigatorDetached:
             self._renderDetachedRangeNavigator()
 
@@ -774,6 +777,21 @@ class GuiManager:
         changed, self._showPlotCaptions = imgui.checkbox("Show Plot Captions", self._showPlotCaptions)
         if changed:
             self.panelManager.setShowCaptions(self._showPlotCaptions)
+        imgui.same_line()
+        _, self._plotKeysEnabled = imgui.checkbox("Plot Keys", self._plotKeysEnabled)
+        if imgui.is_item_hovered():
+            imgui.set_tooltip("Fare plot uzerindeyken:\n"
+                              "Sol/Sag, A/D : pan (Pan Controls modu)\n"
+                              "PageUp/PageDown : ekran genisligi kadar pan\n"
+                              "Home/End : basa / sona\n"
+                              "Yukari/Asagi : X zoom in / out\n"
+                              "Shift+Yukari/Asagi : Y zoom in / out\n"
+                              "Ctrl+Sol/Sag : gorunumu %10 sola/saga kaydir\n"
+                              "Ctrl+Yukari/Asagi : gorunumu %10 yukari/asagi kaydir\n"
+                              "Enter : Adjust All\n"
+                              "Space : mevcut pencerede plotu ortala (Y'leri oturt)\n"
+                              "Backspace : Reset All\n"
+                              "M / Esc : olcum modu")
 
         if imgui.button("Script", (55, 0)):
             self.scriptPanel.setVisible(not self.scriptPanel.getVisible())
@@ -882,13 +900,118 @@ class GuiManager:
         self.rangeSliderBar.syncScrollToView(panelId)
         self._updateViewStatusText(panelId, result)
 
-    def _doPan(self, direction):
+    def _handlePlotKeyboard(self):
+        """Normal plotlar icin klavye kisayollari (Swing Controls'takine benzer).
+        Her tus ust bardaki ilgili dugmenin fonksiyonunu cagirir. Sadece fare bir
+        plot uzerindeyken, yazi yazilmiyorken ve swing modu disinda calisir."""
+        if not self._plotKeysEnabled or self._swingWorkspaceMode:
+            return
+        io = imgui.get_io()
+        if io.want_text_input or io.key_alt:
+            return
+        if not self.panelManager.isAnyPlotHovered():
+            return
+
+        def pressed(key, repeat=True):
+            return imgui.is_key_pressed(key, repeat=repeat)
+
+        if io.key_ctrl:
+            # Ctrl + yon tuslari: grafigi gorunen araligin %10'u kadar ince tasir.
+            # Sol/Sag -> X (fiyat paneli, digerleri Auto Sync X ile izler),
+            # Yukari/Asagi -> aktif panelin Y ekseni.
+            if pressed(imgui.Key.left_arrow):
+                self._nudgeX("left")
+            elif pressed(imgui.Key.right_arrow):
+                self._nudgeX("right")
+            elif pressed(imgui.Key.up_arrow):
+                self._nudgeY("up")
+            elif pressed(imgui.Key.down_arrow):
+                self._nudgeY("down")
+            return
+
+        if pressed(imgui.Key.left_arrow) or pressed(imgui.Key.a):
+            self._doPan("left")
+        elif pressed(imgui.Key.right_arrow) or pressed(imgui.Key.d):
+            self._doPan("right")
+        elif pressed(imgui.Key.page_up):
+            self._doPan("left", mode="VisibleScreenWidth")
+        elif pressed(imgui.Key.page_down):
+            self._doPan("right", mode="VisibleScreenWidth")
+        elif pressed(imgui.Key.home, repeat=False):
+            self._doPan("start")
+        elif pressed(imgui.Key.end, repeat=False):
+            self._doPan("end")
+        elif pressed(imgui.Key.up_arrow):
+            # Shift basiliysa Y ekseni, degilse X ekseni.
+            self._doZoom("y" if io.key_shift else "x", "in")
+        elif pressed(imgui.Key.down_arrow):
+            self._doZoom("y" if io.key_shift else "x", "out")
+        elif (pressed(imgui.Key.enter, repeat=False) or
+              pressed(imgui.Key.keypad_enter, repeat=False)):
+            self._onAdjustAllAxes()
+        elif pressed(imgui.Key.space, repeat=False):
+            self._centerCurrentWindow()
+        elif pressed(imgui.Key.backspace, repeat=False):
+            self._onResetViewAll()
+
+    KEY_NUDGE_RATIO = 0.10  # Ctrl + yon tuslari: gorunen araligin bu orani kadar tasi
+
+    def _nudgeX(self, direction):
+        """Ctrl+Sol/Sag: X'i gorunen genisligin %10'u kadar (en az 1 bar) kaydirir.
+        _doPan ile ayni yol (Y ayari, Range Navigator, pan durum metni)."""
+        panelId = self.rangeSliderBar.getSourcePanelId()
+        limits = self.panelManager.getXAxisLimits(panelId)
+        if limits is None:
+            return
+        step = max(1, int(round((limits[1] - limits[0]) * self.KEY_NUDGE_RATIO)))
+        previousStep = self._panStep
+        self._panStep = step
+        try:
+            self._doPan(direction, mode="UserDefined")
+        finally:
+            self._panStep = previousStep
+
+    def _centerCurrentWindow(self):
+        """Space: Swing'deki gibi o anki pencerede plotu ekrana oturtur. Fiyat
+        panelinin mevcut X araligi korunur (Reset All gibi baska bir araliga
+        gidilmez); tum gorunur panellerin Y ekseni bu araliktaki veriye gore
+        yeniden ayarlanir ve diger paneller ayni X araligina hizalanir. Boylece
+        fareyle/Ctrl ile kaydirilmis ya da Y'de zoom yapilmis grafik ortalanir."""
+        panelId = self.rangeSliderBar.getSourcePanelId()
+        limits = self.panelManager.getXAxisLimits(panelId)
+        if limits is None:
+            self._setStatusText("Center: no OHLC panel")
+            return
+        xMin, xMax = float(limits[0]), float(limits[1])
+        for otherId in self.panelManager.getPanelOrder():
+            if otherId != panelId:
+                self.panelManager.setPanelAxisLimits(otherId, xLimits=(xMin, xMax))
+        count = self.panelManager.adjustAllYAxesForXRange(xMin, xMax)
+        self.rangeSliderBar.syncScrollToView(panelId)
+        self._setStatusText(f"Center: {count} panels, bars {int(xMin)}-{int(xMax)}")
+
+    def _nudgeY(self, direction):
+        """Ctrl+Yukari/Asagi: aktif panelin Y eksenini gorunen yuksekligin %10'u
+        kadar kaydirir (grafik asagi/yukari tasinir)."""
+        panelId = self.panelManager.getActivePanelId()
+        limits = self.panelManager.getYAxisLimits(panelId)
+        if limits is None:
+            return
+        yMin, yMax = limits
+        delta = (yMax - yMin) * self.KEY_NUDGE_RATIO
+        if direction == "down":
+            delta = -delta
+        self.panelManager.setPanelAxisLimits(panelId, yLimits=(yMin + delta, yMax + delta))
+        self._setStatusText(f"Move Y {direction}: panel {panelId}")
+
+    def _doPan(self, direction, mode=None):
         # Range Navigator ve Auto Sync X gibi Pan Controls da sabit olarak
         # OHLC/candle panelini kaynak alir. Baska bir panele tiklamak pan
         # kaynagini degistirmemelidir.
         panelId = self.rangeSliderBar.getSourcePanelId()
         result = self.panelManager.panPanel(panelId, direction=direction,
-                                            mode=self.PAN_MODES[self._panModeIdx], step=self._panStep)
+                                            mode=mode or self.PAN_MODES[self._panModeIdx],
+                                            step=self._panStep)
         if result is None:
             self._panStatusText = "Pan: no OHLC panel"
             return

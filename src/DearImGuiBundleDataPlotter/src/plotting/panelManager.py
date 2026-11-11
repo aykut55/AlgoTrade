@@ -204,6 +204,11 @@ class PanelManager:
     def getRangeMeasureTool(self):
         return self._rangeMeasureTool
 
+    def isAnyPlotHovered(self):
+        """Onceki tamamlanmis frame'de fare herhangi bir panelin plot alaninin
+        uzerinde miydi (klavye kisayollari sadece o zaman calisir)."""
+        return self._prevHoverState is not None
+
     def createPanel(self, name, caption="", parent="", alignment=None):
         panelId = self._nextId
         self._nextId += 1
