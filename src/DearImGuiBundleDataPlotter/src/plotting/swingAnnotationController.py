@@ -2,6 +2,7 @@ from imgui_bundle import imgui, implot
 from datetime import datetime, timezone
 
 from .swingAnnotationStore import SwingAnnotationStore
+from .rangeMeasureTool import RangeMeasureTool
 
 
 class SwingAnnotationController:
@@ -237,45 +238,79 @@ class SwingAnnotationController:
         imgui.same_line()
         if imgui.button("Clear Measure", (140, 0)):
             self._clearMeasurement()
+        imgui.same_line()
+        imgui.begin_disabled(self._measureStartIndex is None)
+        if imgui.button("Copy Measure", (140, 0)):
+            self._copyMeasurement()
+        imgui.end_disabled()
+        imgui.same_line()
+        imgui.begin_disabled(self._measureStartIndex is None or self._measureEndIndex is None)
+        if imgui.button("Save Measure", (140, 0)):
+            self._saveMeasurement()
+        imgui.end_disabled()
 
-        startIndex = self._measureStartIndex
-        endIndex = self._measureEndIndex
-        if startIndex is None:
+        metrics = self._measureMetrics()
+        if metrics is None:
             imgui.text_disabled("Range Measurement: select A and B on the plot")
             imgui.separator()
             return
 
+        # Measure paneli ve Copy Measure metniyle ayni duzen
+        # (bkz. RangeMeasureTool.metricsRows/renderMetrics).
+        RangeMeasureTool.renderMetrics(metrics, "##swingMeasureRows")
+        if metrics["endIndex"] is None:
+            imgui.text_disabled("Click the second bar (B).")
+        else:
+            imgui.text_disabled("The next plot click starts a new measurement.")
+        imgui.separator()
+
+    def _measureMetrics(self):
+        """Swing'in kendi A/B secimini RangeMeasureTool.computeMetrics ile ayni
+        alanlara sahip dict'e cevirir; secim yoksa None."""
+        startIndex = self._measureStartIndex
+        if startIndex is None or self._data is None:
+            return None
+        endIndex = self._measureEndIndex
         startTime = str(self._data.timestamps[startIndex])
         startClose = float(self._data.close[startIndex])
-        imgui.text_colored((0.25, 0.85, 1.0, 1.0),
-                           f"A: Bar {startIndex} | Close {startClose:.6g}")
-        imgui.text_wrapped(startTime)
-        if endIndex is None:
-            imgui.text_disabled("Click the second bar (B).")
-            imgui.separator()
-            return
+        metrics = {
+            "seriesName": self._store.symbol if self._store is not None else "",
+            "startIndex": startIndex, "endIndex": endIndex,
+            "startValue": startClose, "startTime": startTime,
+            "endValue": None, "endTime": None, "bars": None,
+            "elapsedSeconds": None, "difference": None, "percent": None,
+        }
+        if endIndex is not None:
+            endTime = str(self._data.timestamps[endIndex])
+            endClose = float(self._data.close[endIndex])
+            difference = endClose - startClose
+            elapsed = self._store._elapsedSeconds(startTime, endTime)
+            metrics.update({
+                "endValue": endClose, "endTime": endTime,
+                "bars": abs(endIndex - startIndex),
+                "elapsedSeconds": abs(elapsed) if elapsed is not None else None,
+                "difference": difference,
+                "percent": difference / startClose * 100.0 if startClose else None,
+            })
+        return metrics
 
-        endTime = str(self._data.timestamps[endIndex])
-        endClose = float(self._data.close[endIndex])
-        difference = endClose - startClose
-        percent = difference / startClose * 100.0 if startClose else None
-        elapsed = self._store._elapsedSeconds(startTime, endTime)
-        if elapsed is not None:
-            elapsed = abs(elapsed)
-        color = ((0.25, 0.9, 0.35, 1.0) if difference >= 0
-                 else (1.0, 0.35, 0.3, 1.0))
-        imgui.text_colored((1.0, 0.7, 0.2, 1.0),
-                           f"B: Bar {endIndex} | Close {endClose:.6g}")
-        imgui.text_wrapped(endTime)
-        imgui.text(f"Bars: {abs(endIndex - startIndex)}  "
-                   f"Time: {self._formatDuration(elapsed)}")
-        if percent is None:
-            imgui.text_colored(color, f"Difference: {difference:+.6g}")
-        else:
-            imgui.text_colored(color, f"Difference: {difference:+.6g}  "
-                               f"Change: {percent:+.3f}%")
-        imgui.text_disabled("The next plot click starts a new measurement.")
-        imgui.separator()
+    def _copyMeasurement(self):
+        """Copy Measure: A/B olcumunu Measure panelindekiyle ayni duz metin
+        formatinda panoya kopyalar (bkz. RangeMeasureTool.formatMetricsText)."""
+        metrics = self._measureMetrics()
+        if metrics is None:
+            return
+        imgui.set_clipboard_text(RangeMeasureTool.formatMetricsText(metrics))
+        self._status = "Measurement copied to clipboard."
+
+    def _saveMeasurement(self):
+        """Save Measure: Measure panelindekiyle ayni dosyaya/formatta append
+        eder (bkz. RangeMeasureTool.saveMeasurement)."""
+        tool = self._pm.getRangeMeasureTool() if self._pm is not None else None
+        if tool is None:
+            self._status = "Save Measure unavailable."
+            return
+        _, self._status = tool.saveMeasurement(self._measureMetrics(), "Swing Controls")
 
     def _clearMeasurement(self):
         self._measureEnabled = False

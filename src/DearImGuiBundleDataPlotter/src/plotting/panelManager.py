@@ -136,6 +136,7 @@ class PanelManager:
         self._hoverState = None  # BU frame icinde yakalanan hover - {"panelId","mx","my"}
         self._prevHoverState = None  # ONCEKI TAMAMLANMIS frame'in hover'i - overlay karar/cizim pass'i bunu okur
         self._panelDrawHooks = {}  # {panelId: [callback(pm, panelId, panel), ...]} - TradeSignalRenderer gibi ek cizim katmanlari icin (bkz. addPanelDrawHook)
+        self._rangeMeasureTool = None  # bkz. setRangeMeasureTool - A/B olcum cizgileri tum panellerde cizilir
         self._tradeSignalRenderer = None  # bkz. setTradeSignalRenderer - candle cizim dongusu her frame bunun isColorBarsActive/renderInPlot'unu cagirir
         self._detachedPanelIds = set()
         self._detachedInitialSizePending = set()
@@ -193,6 +194,15 @@ class PanelManager:
 
     def removePanelDrawHooks(self, panelId):
         self._panelDrawHooks.pop(panelId, None)
+
+    def setRangeMeasureTool(self, tool):
+        """A/B aralik olcum aracini baglar (bkz. rangeMeasureTool.py). Hook'larin
+        aksine panel bazinda degil, TUM paneller icin her frame cizilir ve
+        deleteAllPanels'te silinmez (sadece reset edilir)."""
+        self._rangeMeasureTool = tool
+
+    def getRangeMeasureTool(self):
+        return self._rangeMeasureTool
 
     def createPanel(self, name, caption="", parent="", alignment=None):
         panelId = self._nextId
@@ -278,6 +288,8 @@ class PanelManager:
         self._lastPlotScreenRect.clear()
         self._lastPanelRect.clear()
         self._panelDrawHooks.clear()
+        if self._rangeMeasureTool is not None:
+            self._rangeMeasureTool.reset()
         self._detachedPanelIds.clear()
         self._detachedInitialSizePending.clear()
         self._panelHeightRestorePending.clear()
@@ -1789,10 +1801,16 @@ class PanelManager:
             for hook in self._panelDrawHooks.get(panelId, []):
                 hook(self, panelId, panel)
 
+            measureTool = self._rangeMeasureTool
+            if measureTool is not None:
+                measureTool.drawInPlot(panelId)
+
             if implot.is_plot_hovered():
                 mx, my = implot.get_plot_mouse_pos()
                 idx = int(round(mx))
                 clicked = imgui.is_mouse_clicked(0)
+                if measureTool is not None:
+                    measureTool.handlePlotClick(panelId, idx, clicked)
                 dblClicked = imgui.is_mouse_double_clicked(0)
                 if dblClicked:
                     self._applyAxisPadding(panelId, panel)

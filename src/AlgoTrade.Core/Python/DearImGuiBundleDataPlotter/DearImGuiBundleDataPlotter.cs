@@ -328,7 +328,10 @@ public class DearImGuiBundleDataPlotter : IDisposable
 
         string json = JsonConvert.SerializeObject(payload, Formatting.Indented);
         File.WriteAllText(tempPath, json);
-        File.Move(tempPath, finalPath);
+        // Onceki process komutu tuketemeden kapandiysa (orn. Python acilista
+        // hata verdi) ayni adli .json kalir; sequence yine 1'den basladigi icin
+        // eski, okunmamis komutun uzerine yazilir.
+        File.Move(tempPath, finalPath, overwrite: true);
 
         _logger?.WriteRaw($"[DearImGuiBundleDataPlotter] Command yazıldı: {fileName}");
         return fileName;

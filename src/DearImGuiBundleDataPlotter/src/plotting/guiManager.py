@@ -22,6 +22,8 @@ from .panelManagerWindow import PanelManagerWindow
 from .panelManagerWindow2 import PanelManagerWindow2
 from .reportsWindow import ReportsWindow
 from .swingAnnotationController import SwingAnnotationController
+from .rangeMeasureTool import RangeMeasureTool
+from .measurePanel import MeasurePanel
 from ..trading.stockDataReader import StockDataReader, FilterMode
 from ..trading.indicatorManager import IndicatorManager
 from ..trading.indicators import Indicators
@@ -83,6 +85,10 @@ class GuiManager:
 
         self.panelManager = PanelManager()
         self.swingAnnotationController = SwingAnnotationController(self.panelManager)
+        self.rangeMeasureTool = RangeMeasureTool(self.panelManager)
+        self.rangeMeasureTool.bundlePathProvider = lambda: getattr(self, "currentBundlePath", None)
+        self.panelManager.setRangeMeasureTool(self.rangeMeasureTool)
+        self.measurePanel = MeasurePanel(self.rangeMeasureTool)
 
         self.tsr = TradeSignalRenderer(self.panelManager)
         self.panelManager.setTradeSignalRenderer(self.tsr)
@@ -124,6 +130,7 @@ class GuiManager:
             on_manage_panels=self.panelManagerWindow.toggle,
             on_manage_panels2=self.panelManagerWindow2.toggle,
             on_toggle_reports=self.reportsWindow.toggle,
+            on_toggle_measure=self.measurePanel.toggle,
             on_manage_data=self.dataManager.toggle,
             on_open_all=self.panelManager.showAllPanels,
             on_collapse_all=self.panelManager.collapseAllPanels,
@@ -324,7 +331,9 @@ class GuiManager:
         self.panelManagerWindow.setVisible(configuredVisible("panelManagerWindow", False))
         self.panelManagerWindow2.setVisible(configuredVisible("panelManagerWindow2", False))
         self.reportsWindow.setVisible(configuredVisible("reportsWindow", False))
+        self.measurePanel.setVisible(configuredVisible("measurePanel", True))
         self.consolePanel.setVisible(configuredVisible("consolePanel", False))
+        self.rangeMeasureTool.setSuspended(False)
 
     def _enforceSwingWorkspaceVisibility(self):
         if not self._swingWorkspaceMode:
@@ -336,7 +345,11 @@ class GuiManager:
         self.panelManagerWindow.setVisible(False)
         self.panelManagerWindow2.setVisible(False)
         self.reportsWindow.setVisible(False)
+        self.measurePanel.setVisible(False)
         self.consolePanel.setVisible(False)
+        # Swing Controls kendi olcumunu kullanir; ortak arac bu modda pasif.
+        if not self.rangeMeasureTool.suspended:
+            self.rangeMeasureTool.setSuspended(True)
 
     def _onPoolItemDroppedOnPanel(self, panelId, dragId):
         """panelManager.setPoolDropHandler ile baglanir - panelManager'in
@@ -456,7 +469,9 @@ class GuiManager:
         self.panelManagerWindow.render()
         self.panelManagerWindow2.render()
         self.reportsWindow.render()
+        self.measurePanel.render()
         self.swingAnnotationController.render()
+        self.rangeMeasureTool.handleKeyboard()
         if rangeNavigatorVisible and self._rangeNavigatorDetached:
             self._renderDetachedRangeNavigator()
 
@@ -495,6 +510,7 @@ class GuiManager:
     def togglePanelManagerWindow(self): self.panelManagerWindow.toggle()
     def togglePanelManagerWindow2(self): self.panelManagerWindow2.toggle()
     def toggleReportsWindow(self): self.reportsWindow.toggle()
+    def toggleMeasurePanel(self): self.measurePanel.toggle()
     def togglePoolPanel(self): self.poolPanel.toggle()
 
     def _onCommandQuery(self, query):
@@ -508,6 +524,7 @@ class GuiManager:
             "panel manager": self.panelManagerWindow.toggle,
             "panel manager 2": self.panelManagerWindow2.toggle,
             "reports": self.reportsWindow.toggle,
+            "measure": self.measurePanel.toggle,
             "data manager": self.dataManager.toggle,
             "indicator": self.externalIndicatorWindowManager.openDefaultIndicatorWindow,
             "theme": self.toggleTheme,
@@ -769,6 +786,9 @@ class GuiManager:
         imgui.same_line()
         if imgui.button("Console", (55, 0)):
             self.consolePanel.toggle()
+        imgui.same_line()
+        if imgui.button("Measure", (60, 0)):
+            self.measurePanel.toggle()
         imgui.same_line()
         if imgui.button("Theme", (55, 0)):
             self.toggleTheme()

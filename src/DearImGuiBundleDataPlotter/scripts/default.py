@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 
 import numpy as np
+from imgui_bundle import implot
 
 # Stage2 binary import config. C# tarafindan ayni alanlari tasiyan .npz bundle
 # uretildiginde Python tarafi sadece bunu okuyup cizer.
@@ -30,6 +31,13 @@ SHOW_TRADE_SIGNALS = False
 SHOW_TRADE_SIGNAL_LINES = True
 COLOR_BARS_BY_SIGNAL = True
 SHOW_SIGNAL_STEP_PANEL = True
+
+# Gun gecis cizgileri: her yeni gunun ilk barina, TUM panellerde dikey cizgi.
+# Sadece intraday veride anlamlidir; gunluk/haftalik veride otomatik atlanir.
+SHOW_DAY_SEPARATORS = True
+DAY_SEPARATOR_COLOR = (0.6, 0.6, 0.6, 0.35)   # RGBA 0..1
+DAY_SEPARATOR_WEIGHT = 1.0
+DAY_SEPARATOR_MAX_VISIBLE = 2000              # cok uzaktan bakarken cizme (kalabalik olmasin)
 
 # Yalnizca DearImGuiBundleDataPlotter'a ozgu varsayilan seri renkleri.
 # View acikca bir renk verirse o renk her zaman onceliklidir.
@@ -133,6 +141,8 @@ class App:
         self.stage3FillPanels()
         self.stage3FillPool()
         self.stage3DrawPanelDataOnly()
+        if SHOW_DAY_SEPARATORS:
+            self.addDaySeparators()
 
         # 8) Yan UI'lari ve top controls state'ini tazele.
         gm.seedTopViewRangeInputs(len(self.data.xs) if self.data else 0)
@@ -154,6 +164,51 @@ class App:
     def createTestBundle(self):
         import create_test_bundle
         create_test_bundle.main()
+
+    def addDaySeparators(self):
+        """Gun gecislerine (bir onceki bardan farkli gune ait ilk bar) tum
+        panellerde dikey cizgi ekler. SHOW_DAY_SEPARATORS ile acilip kapanir.
+
+        Cizgiler panel.addVline yerine draw-hook ile cizilir: her frame sadece
+        gorunen X araligindaki gun baslari tek bir plot_inf_lines cagrisiyla
+        basilir, boylece yillarca intraday veride de yavaslatmaz. Hook'lar
+        pm.deleteAllPanels'te silindigi icin script her calistiginda tekrar
+        eklenir, ust uste binmez."""
+        if not self.data or not self.data.timestamps:
+            return
+        if not bool(self.data.meta.get("intraday", True)):
+            print("  daySep : atlandi (intraday degil)")
+            return
+
+        ts = self.data.timestamps
+        xs = self.data.xs
+        starts = []
+        for i in range(1, min(len(ts), len(xs))):
+            prev, cur = ts[i - 1], ts[i]
+            if not (hasattr(prev, "date") and hasattr(cur, "date")):
+                continue
+            if cur.date() != prev.date():
+                starts.append(float(xs[i]))
+        # Neredeyse her bar yeni gunse (gunluk veri ama meta intraday=True) cizme.
+        if not starts or len(starts) > 0.5 * len(xs):
+            print(f"  daySep : atlandi ({len(starts)} gun gecisi)")
+            return
+
+        dayStarts = np.asarray(starts, dtype=np.float64)
+        spec = implot.Spec(line_color=DAY_SEPARATOR_COLOR, line_weight=DAY_SEPARATOR_WEIGHT)
+
+        def drawDaySeparators(pm, panelId, panel):
+            limits = pm.getXAxisLimits(panelId)
+            if limits is None:
+                return
+            lo, hi = np.searchsorted(dayStarts, [limits[0], limits[1]])
+            visible = dayStarts[lo:hi]
+            if 0 < len(visible) <= DAY_SEPARATOR_MAX_VISIBLE:
+                implot.plot_inf_lines("##daySeparators", visible, spec)
+
+        for panelId in pm.getPanelOrder():
+            pm.addPanelDrawHook(panelId, drawDaySeparators)
+        print(f"  daySep : {len(starts)} gun gecisi")
 
     def loadInputConfig(self):
         for configPath in INPUT_CONFIG_CANDIDATES:

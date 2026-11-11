@@ -82,6 +82,9 @@ class App:
         reportsWindow = hello_imgui.DockableWindow(
             "Reports", "RightDockSpace", self.guiManager.reportsWindow.renderDockContent,
             self.guiManager.reportsWindow.getVisible(), True)
+        measureWindow = hello_imgui.DockableWindow(
+            "Measure", "RightDockSpace", self.guiManager.measurePanel.renderDockContent,
+            self.guiManager.measurePanel.getVisible(), True)
         swingControlsWindow = hello_imgui.DockableWindow(
             "Swing Controls", "SwingDockSpace",
             self.guiManager.swingAnnotationController.renderDockContent,
@@ -91,6 +94,7 @@ class App:
         panelManagerWindow.remember_is_visible = False
         panelManagerWindow2.remember_is_visible = False
         reportsWindow.remember_is_visible = False
+        measureWindow.remember_is_visible = False
         swingControlsWindow.remember_is_visible = False
         consoleWindow = hello_imgui.DockableWindow(
             "Console Panel", "ConsoleDockSpace", self.guiManager.consolePanel.renderDockContent,
@@ -101,7 +105,7 @@ class App:
         runnerParams.docking_params.dockable_windows = [
             topWindow, mainWindow, leftWindow, scriptWindow, dataManagerWindow,
             poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow,
-            swingControlsWindow, consoleWindow]
+            measureWindow, swingControlsWindow, consoleWindow]
         runnerParams.docking_params.layout_condition = \
             hello_imgui.DockingLayoutCondition.application_start
 
@@ -116,6 +120,7 @@ class App:
         actualPanelManagerWindow = runnerParams.docking_params.dockable_window_of_name("Panel Manager")
         actualPanelManagerWindow2 = runnerParams.docking_params.dockable_window_of_name("Panel Manager 2")
         actualReportsWindow = runnerParams.docking_params.dockable_window_of_name("Reports")
+        actualMeasureWindow = runnerParams.docking_params.dockable_window_of_name("Measure")
         actualSwingControlsWindow = runnerParams.docking_params.dockable_window_of_name("Swing Controls")
         self.guiManager.leftMenuPanel.setDockWindow(actualLeftWindow)
         self.guiManager.scriptPanel.setDockWindow(actualScriptWindow)
@@ -124,6 +129,7 @@ class App:
         self.guiManager.panelManagerWindow.setDockWindow(actualPanelManagerWindow)
         self.guiManager.panelManagerWindow2.setDockWindow(actualPanelManagerWindow2)
         self.guiManager.reportsWindow.setDockWindow(actualReportsWindow)
+        self.guiManager.measurePanel.setDockWindow(actualMeasureWindow)
         self.guiManager.swingAnnotationController.setDockWindow(actualSwingControlsWindow)
         self.guiManager.consolePanel.setDockWindow(actualConsoleWindow)
 
