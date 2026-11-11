@@ -117,6 +117,19 @@ namespace AlgoTrade.Core.Trading.Statistics
         /// <summary>Komisyonun brut kardan (GetiriFiyat) aldigi pay, %. Brut kar &lt;= 0 ise -1.</summary>
         public double KomisyonBrutKarPayiYuzde { get; set; }
 
+        // --- Donemsel getiri dizileri (bkz. HesaplaDonemselGetiriler) ---
+        /// <summary>Dizilerde tutulan onceki donem sayisi (indeks 0 = Bu, 1..50 = onceki donemler).</summary>
+        public const int DonemselGetiriMaxDonem = 50;
+        /// <summary>
+        /// SingleTraderStatistics.txt sonundaki donemsel getiri tablolarinda gosterilecek onceki donem
+        /// sayisi (1..DonemselGetiriMaxDonem). Diziler her zaman 50 donem tutar; bu sadece yazdirmayi sinirlar.
+        /// </summary>
+        public int DonemselGetiriTabloUzunlugu { get; set; } = 10;
+        /// <summary>Anahtar: olcu + donem, orn. "GetiriFiyatNetGun". Deger: [0] = Bu, [1..50] = onceki donemler.</summary>
+        public Dictionary<string, double[]> DonemselGetiriler { get; } = new Dictionary<string, double[]>();
+        /// <summary>Ayni anahtarlar icin veride gercekten bulunan donem sayisi (Bu dahil).</summary>
+        public Dictionary<string, int> DonemselGetiriDonemSayisi { get; } = new Dictionary<string, int>();
+
         #endregion
 
         #region Trade Counts
@@ -776,6 +789,98 @@ namespace AlgoTrade.Core.Trading.Statistics
             IslemIciZararYuzde2AsanSayisi = maeYuzde.Count(v => v < -2.0);
         }
 
+        /// <summary>
+        /// Donemsel getiriler (GetiriPuan/GetiriFiyat/GetiriFiyatNet x BuAy/Ay1-5, BuHafta/Hafta1-5,
+        /// BuGun/Gun1-5, BuSaat/Saat1-5). Referans bar = SecilenBarNumarasi (varsayilan son bar):
+        ///   Bu{Donem} : referans barin bulundugu donemin basindan referans bara kadarki getiri
+        ///   {Donem}N  : ondan onceki N. donemin tam getirisi
+        /// Getiri = kumulatif getiri listesinin donemin son barindaki degeri eksi bir onceki donemin
+        /// son barindaki deger (verinin basindaysa 0). "Onceki donem", veride bari olan bir onceki
+        /// donemdir: Gun1 bir onceki ISLEM gunu (hafta sonu atlanir). Hafta Pazartesi baslar.
+        /// </summary>
+        private void HesaplaDonemselGetiriler()
+        {
+            DonemselGetiriler.Clear();
+            DonemselGetiriDonemSayisi.Clear();
+
+            var data = Trader?.Data;
+            var lists = Trader?.lists;
+            if (data == null || data.Count == 0 || lists == null)
+                return;
+
+            int refIndex = Math.Max(0, Math.Min(SecilenBarNumarasi, data.Count - 1));
+
+            static long MonthKey(DateTime t) => t.Year * 12L + t.Month;
+            static long WeekKey(DateTime t) => t.Date.AddDays(-(((int)t.DayOfWeek + 6) % 7)).Ticks;
+            static long DayKey(DateTime t) => t.Date.Ticks;
+            static long HourKey(DateTime t) => t.Date.Ticks + t.Hour * TimeSpan.TicksPerHour;
+
+            // Bu + onceki DonemselGetiriMaxDonem donem. Veride o kadar donem yoksa kalanlar 0 kalir;
+            // gercekte kac donem bulundugu DonemselGetiriDonemSayisi'na yazilir (tabloda "-" icin).
+            double[] Donemler(string anahtar, IList<double>? getiriList, Func<DateTime, long> key)
+            {
+                var result = new double[DonemselGetiriMaxDonem + 1];
+                int bulunan = 0;
+                if (getiriList != null && getiriList.Count > 0)
+                {
+                    int i = Math.Min(refIndex, getiriList.Count - 1);
+                    for (int k = 0; k < result.Length && i >= 0; k++)
+                    {
+                        long donem = key(data[i].DateTime);
+                        int sonBar = i;
+                        while (i >= 0 && key(data[i].DateTime) == donem)
+                            i--;
+                        double oncekiDeger = i >= 0 ? getiriList[i] : 0.0;
+                        result[k] = getiriList[sonBar] - oncekiDeger;
+                        bulunan = k + 1;
+                    }
+                }
+                DonemselGetiriler[anahtar] = result;
+                DonemselGetiriDonemSayisi[anahtar] = bulunan;
+                return result;
+            }
+
+            var puanAy    = Donemler("GetiriPuanAy",        lists.GetiriPuanList,      MonthKey);
+            var puanHafta = Donemler("GetiriPuanHafta",     lists.GetiriPuanList,      WeekKey);
+            var puanGun   = Donemler("GetiriPuanGun",       lists.GetiriPuanList,      DayKey);
+            var puanSaat  = Donemler("GetiriPuanSaat",      lists.GetiriPuanList,      HourKey);
+            var fiyatAy    = Donemler("GetiriFiyatAy",      lists.GetiriFiyatList,     MonthKey);
+            var fiyatHafta = Donemler("GetiriFiyatHafta",   lists.GetiriFiyatList,     WeekKey);
+            var fiyatGun   = Donemler("GetiriFiyatGun",     lists.GetiriFiyatList,     DayKey);
+            var fiyatSaat  = Donemler("GetiriFiyatSaat",    lists.GetiriFiyatList,     HourKey);
+            var netAy    = Donemler("GetiriFiyatNetAy",     lists.GetiriFiyatNetList,  MonthKey);
+            var netHafta = Donemler("GetiriFiyatNetHafta",  lists.GetiriFiyatNetList,  WeekKey);
+            var netGun   = Donemler("GetiriFiyatNetGun",    lists.GetiriFiyatNetList,  DayKey);
+            var netSaat  = Donemler("GetiriFiyatNetSaat",   lists.GetiriFiyatNetList,  HourKey);
+
+            GetiriPuanBuAy = puanAy[0]; GetiriPuanAy1 = puanAy[1]; GetiriPuanAy2 = puanAy[2];
+            GetiriPuanAy3 = puanAy[3]; GetiriPuanAy4 = puanAy[4]; GetiriPuanAy5 = puanAy[5];
+            GetiriPuanBuHafta = puanHafta[0]; GetiriPuanHafta1 = puanHafta[1]; GetiriPuanHafta2 = puanHafta[2];
+            GetiriPuanHafta3 = puanHafta[3]; GetiriPuanHafta4 = puanHafta[4]; GetiriPuanHafta5 = puanHafta[5];
+            GetiriPuanBuGun = puanGun[0]; GetiriPuanGun1 = puanGun[1]; GetiriPuanGun2 = puanGun[2];
+            GetiriPuanGun3 = puanGun[3]; GetiriPuanGun4 = puanGun[4]; GetiriPuanGun5 = puanGun[5];
+            GetiriPuanBuSaat = puanSaat[0]; GetiriPuanSaat1 = puanSaat[1]; GetiriPuanSaat2 = puanSaat[2];
+            GetiriPuanSaat3 = puanSaat[3]; GetiriPuanSaat4 = puanSaat[4]; GetiriPuanSaat5 = puanSaat[5];
+
+            GetiriFiyatBuAy = fiyatAy[0]; GetiriFiyatAy1 = fiyatAy[1]; GetiriFiyatAy2 = fiyatAy[2];
+            GetiriFiyatAy3 = fiyatAy[3]; GetiriFiyatAy4 = fiyatAy[4]; GetiriFiyatAy5 = fiyatAy[5];
+            GetiriFiyatBuHafta = fiyatHafta[0]; GetiriFiyatHafta1 = fiyatHafta[1]; GetiriFiyatHafta2 = fiyatHafta[2];
+            GetiriFiyatHafta3 = fiyatHafta[3]; GetiriFiyatHafta4 = fiyatHafta[4]; GetiriFiyatHafta5 = fiyatHafta[5];
+            GetiriFiyatBuGun = fiyatGun[0]; GetiriFiyatGun1 = fiyatGun[1]; GetiriFiyatGun2 = fiyatGun[2];
+            GetiriFiyatGun3 = fiyatGun[3]; GetiriFiyatGun4 = fiyatGun[4]; GetiriFiyatGun5 = fiyatGun[5];
+            GetiriFiyatBuSaat = fiyatSaat[0]; GetiriFiyatSaat1 = fiyatSaat[1]; GetiriFiyatSaat2 = fiyatSaat[2];
+            GetiriFiyatSaat3 = fiyatSaat[3]; GetiriFiyatSaat4 = fiyatSaat[4]; GetiriFiyatSaat5 = fiyatSaat[5];
+
+            GetiriFiyatNetBuAy = netAy[0]; GetiriFiyatNetAy1 = netAy[1]; GetiriFiyatNetAy2 = netAy[2];
+            GetiriFiyatNetAy3 = netAy[3]; GetiriFiyatNetAy4 = netAy[4]; GetiriFiyatNetAy5 = netAy[5];
+            GetiriFiyatNetBuHafta = netHafta[0]; GetiriFiyatNetHafta1 = netHafta[1]; GetiriFiyatNetHafta2 = netHafta[2];
+            GetiriFiyatNetHafta3 = netHafta[3]; GetiriFiyatNetHafta4 = netHafta[4]; GetiriFiyatNetHafta5 = netHafta[5];
+            GetiriFiyatNetBuGun = netGun[0]; GetiriFiyatNetGun1 = netGun[1]; GetiriFiyatNetGun2 = netGun[2];
+            GetiriFiyatNetGun3 = netGun[3]; GetiriFiyatNetGun4 = netGun[4]; GetiriFiyatNetGun5 = netGun[5];
+            GetiriFiyatNetBuSaat = netSaat[0]; GetiriFiyatNetSaat1 = netSaat[1]; GetiriFiyatNetSaat2 = netSaat[2];
+            GetiriFiyatNetSaat3 = netSaat[3]; GetiriFiyatNetSaat4 = netSaat[4]; GetiriFiyatNetSaat5 = netSaat[5];
+        }
+
         public int Hesapla(int secilenBarNumarasi)
         {
             int result = 0;
@@ -845,6 +950,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
             HesaplaIslemGunuKapsami();
             HesaplaIslemIciZarar();
+            HesaplaDonemselGetiriler();
 
             // Maximum Drawdown hesaplaması (puan, brut fiyat, net fiyat)
             var maxDDPuan           = CalculateMaxDD(Trader.lists.BakiyePuanList, IlkBakiyePuan);

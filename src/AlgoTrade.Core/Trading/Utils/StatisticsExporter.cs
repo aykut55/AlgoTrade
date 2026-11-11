@@ -37,8 +37,64 @@ public class StatisticsExporter
                 sb.AppendLine($"{kvp.Key.PadRight(40)} : {kvp.Value}");
         }
 
+        AppendPeriodicReturnsTables(sb);
+
         sb.AppendLine("================================================================================");
         WriteAllTextShared(filePath, sb.ToString());
+    }
+
+    /// <summary>
+    /// Donemsel getirileri (Statistics.HesaplaDonemselGetiriler) okunmasi kolay tablolar halinde
+    /// ekler: satirlar Saat/Gun/Hafta/Ay, sutunlar Bu ve onceki 1..N donem.
+    /// N = Statistics.DonemselGetiriTabloUzunlugu (1..50). Degerler 50 donemlik dizilerden
+    /// (Statistics.DonemselGetiriler) okunur; veride olmayan donemler "-" yazilir.
+    /// </summary>
+    private void AppendPeriodicReturnsTables(StringBuilder sb)
+    {
+        int n = Math.Max(1, Math.Min(_statistics.DonemselGetiriTabloUzunlugu,
+                                      AlgoTrade.Core.Trading.Statistics.Statistics.DonemselGetiriMaxDonem));
+        var tables = new (string Title, string Prefix)[]
+        {
+            ("DONEMSEL GETIRI - NET (TL, komisyon sonrasi)", "GetiriFiyatNet"),
+            ("DONEMSEL GETIRI - BRUT (TL)",                  "GetiriFiyat"),
+            ("DONEMSEL GETIRI - PUAN",                       "GetiriPuan"),
+        };
+        var periods = new[] { "Saat", "Gun", "Hafta", "Ay" };
+        const int labelWidth = 8;
+        const int colWidth = 14;
+
+        string SecilenBar() =>
+            _statistics.StatisticsMap.TryGetValue("SecilenBarTarihSaati", out var v) ? (v ?? "") : "...";
+
+        sb.AppendLine();
+        sb.AppendLine($"Referans bar: {SecilenBar()}  (Bu = referans barin donemi, 1-{n} = onceki donemler)");
+        foreach (var (title, prefix) in tables)
+        {
+            sb.AppendLine();
+            sb.AppendLine(title);
+            var header = new StringBuilder("".PadRight(labelWidth));
+            header.Append("Bu".PadLeft(colWidth));
+            for (int k = 1; k <= n; k++)
+                header.Append(k.ToString().PadLeft(colWidth));
+            sb.AppendLine(header.ToString());
+            sb.AppendLine(new string('-', labelWidth + (n + 1) * colWidth));
+            foreach (var period in periods)
+            {
+                string key = prefix + period;
+                _statistics.DonemselGetiriler.TryGetValue(key, out var values);
+                int bulunan = _statistics.DonemselGetiriDonemSayisi.TryGetValue(key, out var c) ? c : 0;
+                var row = new StringBuilder(period.PadRight(labelWidth));
+                for (int k = 0; k <= n; k++)
+                {
+                    string cell = values != null && k < bulunan
+                        ? values[k].ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+                        : "-";
+                    row.Append(cell.PadLeft(colWidth));
+                }
+                sb.AppendLine(row.ToString());
+            }
+        }
+        sb.AppendLine();
     }
 
     public void SaveToCsv(string filePath)
