@@ -216,6 +216,7 @@ class App:
         for panelId in pm.getPanelOrder():
             pm.addPanelDrawHook(panelId, drawDaySeparators)
         print(f"  daySep : {len(starts)} gun gecisi")
+        print()
 
     def loadInputConfig(self):
         for configPath in INPUT_CONFIG_CANDIDATES:
@@ -224,6 +225,7 @@ class App:
             config = self._readJsonConfig(configPath)
             if config is not None:
                 print(f"Input config: {configPath}")
+                print()
                 return config if isinstance(config, dict) else {"bundle": config}
         print("Input config bulunamadi, default bundle/view kullaniliyor.")
         return {}
@@ -244,6 +246,7 @@ class App:
                    DEFAULT_BUNDLE_PATH)
         path = self._resolvePath(rawPath, ROOT_DIR)
         print(f"Input bundle: {path}")
+        print()
         return path
 
     def resolveViewPath(self, inputConfig, bundlePath):
@@ -254,6 +257,7 @@ class App:
             base, _ = os.path.splitext(bundlePath or DEFAULT_BUNDLE_PATH)
             path = base + ".view.json"
         print(f"Input view: {path}")
+        print()
         return path
 
     def _resolvePath(self, path, baseDir):

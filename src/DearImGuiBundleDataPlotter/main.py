@@ -33,7 +33,9 @@ class App:
         self.guiManager.render()
 
     def run(self):
-        subprocess.call("cls", shell=True)
+        # subprocess.call("cls", shell=True)  # KALDIRILDI (2026-11-11): AlgoTrade.Console
+        # ile ayni konsolu paylastigimiz icin bu, SingleTrader'in az once yazdirdigi ozet
+        # kutusunu/Run Preview'i siliyordu. Eski konsol ciktisi korunmasi istenirse geri alinabilir.
         window = self.configManager.get("window")
 
         runnerParams = hello_imgui.RunnerParams()

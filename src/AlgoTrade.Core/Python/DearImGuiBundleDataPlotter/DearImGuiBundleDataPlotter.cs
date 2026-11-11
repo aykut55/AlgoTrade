@@ -334,6 +334,7 @@ public class DearImGuiBundleDataPlotter : IDisposable
         File.Move(tempPath, finalPath, overwrite: true);
 
         _logger?.WriteRaw($"[DearImGuiBundleDataPlotter] Command yazıldı: {fileName}");
+        _logger?.WriteRaw("");
         return fileName;
     }
 

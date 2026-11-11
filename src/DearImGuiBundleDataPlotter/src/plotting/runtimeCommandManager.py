@@ -79,6 +79,7 @@ class RuntimeCommandManager:
             self._moveTo(claimedPath, self._failedDir, fileName)
             return
 
+        print()
         print(f"[RuntimeCommand] Uygulandi: '{commandName}' ({fileName})")
         self._moveTo(claimedPath, self._processedDir, fileName)
 

@@ -74,7 +74,8 @@ class App:
         self.menuBar.render()
 
     def run(self):
-        subprocess.call("cls", shell=True)
+        # subprocess.call("cls", shell=True)  # KALDIRILDI (2026-11-11): konsolu paylasan baska
+        # bir process'in (AlgoTrade.Console gibi) eski ciktisini silmesin diye. Geri alinabilir.
 
         runnerParams = hello_imgui.RunnerParams()
         runnerParams.app_window_params.window_title = "AlgoTrade Config Editor"

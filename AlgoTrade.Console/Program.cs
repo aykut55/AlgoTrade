@@ -87,6 +87,7 @@ Task RunOutputInBackground(string operationName, Func<Task> operation)
         TaskScheduler.Default);
     LogManager.LogRaw($"[Background] {operationName} started; plot can be used while files are written.",
                       ConsoleColor.Cyan);
+    LogManager.LogRaw("");
     return task;
 }
 
