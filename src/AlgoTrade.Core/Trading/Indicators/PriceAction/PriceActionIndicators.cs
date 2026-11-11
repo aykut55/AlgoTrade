@@ -356,5 +356,52 @@ namespace AlgoTrade.Core.Trading.Indicators.PriceAction
         {
             return _manager.Utils.LLV(source, period);
         }
+
+        /// <summary>
+        /// Heikin-Ashi candles
+        /// Gercek OHLC'den turetilmis, smoothed (duzgunlestirilmis) bir mum serisi -
+        /// trend/gurultu ayrimini kolaylastirir, gercek fiyat degil. Her bar onceki
+        /// Heikin-Ashi barina bagli (stateful), bu yuzden tum seri icin bir kere
+        /// hesaplanir.
+        /// - HA_Close = (Open+High+Low+Close) / 4
+        /// - HA_Open  = (onceki HA_Open + onceki HA_Close) / 2 (ilk bar: (Open+Close)/2)
+        /// - HA_High  = max(High, HA_Open, HA_Close)
+        /// - HA_Low   = min(Low, HA_Open, HA_Close)
+        /// </summary>
+        /// <returns>HeikinAshiResult containing HA open/high/low/close arrays</returns>
+        public HeikinAshiResult HeikinAshi()
+        {
+            if (!_manager.IsInitialized)
+                throw new InvalidOperationException("Manager not initialized with data");
+
+            var opens = _manager.GetOpenPrices();
+            var highs = _manager.GetHighPrices();
+            var lows = _manager.GetLowPrices();
+            var closes = _manager.GetClosePrices();
+
+            var length = closes.Length;
+            var haOpen = new double[length];
+            var haHigh = new double[length];
+            var haLow = new double[length];
+            var haClose = new double[length];
+
+            if (length == 0)
+                return new HeikinAshiResult(haOpen, haHigh, haLow, haClose);
+
+            haClose[0] = (opens[0] + highs[0] + lows[0] + closes[0]) / 4.0;
+            haOpen[0] = (opens[0] + closes[0]) / 2.0;
+            haHigh[0] = Math.Max(highs[0], Math.Max(haOpen[0], haClose[0]));
+            haLow[0] = Math.Min(lows[0], Math.Min(haOpen[0], haClose[0]));
+
+            for (int i = 1; i < length; i++)
+            {
+                haClose[i] = (opens[i] + highs[i] + lows[i] + closes[i]) / 4.0;
+                haOpen[i] = (haOpen[i - 1] + haClose[i - 1]) / 2.0;
+                haHigh[i] = Math.Max(highs[i], Math.Max(haOpen[i], haClose[i]));
+                haLow[i] = Math.Min(lows[i], Math.Min(haOpen[i], haClose[i]));
+            }
+
+            return new HeikinAshiResult(haOpen, haHigh, haLow, haClose);
+        }
     }
 }
