@@ -1024,7 +1024,23 @@ public class StatisticsExporter
             ("P95 In-Trade Max Loss %", "IslemIciMaxZararYuzdeP95"),
             ("Worst In-Trade Loss %", "IslemIciMaxZararYuzdeEnKotu"),
             ("Trades With In-Trade Loss > 1%", "IslemIciZararYuzde1AsanSayisi"),
-            ("Trades With In-Trade Loss > 2%", "IslemIciZararYuzde2AsanSayisi")
+            ("Trades With In-Trade Loss > 2%", "IslemIciZararYuzde2AsanSayisi"),
+            ("Worst Day (Net)", "EnKotuGunNet"),
+            ("Worst Day (Net) Date", "EnKotuGunNetTarih"),
+            ("Worst Day (Gross)", "EnKotuGunBrut"),
+            ("Worst Day (Gross) Date", "EnKotuGunBrutTarih"),
+            ("Avg per Trading Day (Net)", "IslemGunuBasinaNetGetiri"),
+            ("Avg per Trading Day (Gross)", "IslemGunuBasinaBrutGetiri"),
+            ("Profitable Days % (Net)", "KarliGunOraniNet"),
+            ("Profitable Days % (Gross)", "KarliGunOraniBrut"),
+            ("Longest DD Net (Days)", "EnUzunDDSuresiGunNet"),
+            ("Longest DD Net (Trd Days)", "EnUzunDDSuresiIslemGunuNet"),
+            ("Longest DD Net Start", "EnUzunDDBaslangicNet"),
+            ("Longest DD Net End", "EnUzunDDBitisNet"),
+            ("Longest DD Gross (Days)", "EnUzunDDSuresiGunBrut"),
+            ("Longest DD Gross (Trd Days)", "EnUzunDDSuresiIslemGunuBrut"),
+            ("Longest DD Gross Start", "EnUzunDDBaslangicBrut"),
+            ("Longest DD Gross End", "EnUzunDDBitisBrut")
         );
 
         AddSection(sb, "SCORE",
@@ -1274,7 +1290,23 @@ public class StatisticsExporter
             ("P95 In-Trade Max Loss %", "IslemIciMaxZararYuzdeP95"),
             ("Worst In-Trade Loss %", "IslemIciMaxZararYuzdeEnKotu"),
             ("Trades With In-Trade Loss > 1%", "IslemIciZararYuzde1AsanSayisi"),
-            ("Trades With In-Trade Loss > 2%", "IslemIciZararYuzde2AsanSayisi")
+            ("Trades With In-Trade Loss > 2%", "IslemIciZararYuzde2AsanSayisi"),
+            ("Worst Day (Net)", "EnKotuGunNet"),
+            ("Worst Day (Net) Date", "EnKotuGunNetTarih"),
+            ("Worst Day (Gross)", "EnKotuGunBrut"),
+            ("Worst Day (Gross) Date", "EnKotuGunBrutTarih"),
+            ("Avg per Trading Day (Net)", "IslemGunuBasinaNetGetiri"),
+            ("Avg per Trading Day (Gross)", "IslemGunuBasinaBrutGetiri"),
+            ("Profitable Days % (Net)", "KarliGunOraniNet"),
+            ("Profitable Days % (Gross)", "KarliGunOraniBrut"),
+            ("Longest DD Net (Days)", "EnUzunDDSuresiGunNet"),
+            ("Longest DD Net (Trd Days)", "EnUzunDDSuresiIslemGunuNet"),
+            ("Longest DD Net Start", "EnUzunDDBaslangicNet"),
+            ("Longest DD Net End", "EnUzunDDBitisNet"),
+            ("Longest DD Gross (Days)", "EnUzunDDSuresiGunBrut"),
+            ("Longest DD Gross (Trd Days)", "EnUzunDDSuresiIslemGunuBrut"),
+            ("Longest DD Gross Start", "EnUzunDDBaslangicBrut"),
+            ("Longest DD Gross End", "EnUzunDDBitisBrut")
         }),
         ("SCORE", new (string Label, string Key)[]
         {
@@ -1690,7 +1722,10 @@ public class StatisticsExporter
             ("ScoreFiyat", "ScoreFiyat"),
             ("ScorePuan", "ScorePuan"),
             ("IslemIciMaxZararYuzdeP95", "IslemIciMaxZararYuzdeP95"),
-            ("IslemIciMaxZararYuzdeEnKotu", "IslemIciMaxZararYuzdeEnKotu")
+            ("IslemIciMaxZararYuzdeEnKotu", "IslemIciMaxZararYuzdeEnKotu"),
+            ("EnKotuGunNet", "EnKotuGunNet"),
+            ("IslemGunuBasinaNetGetiri", "IslemGunuBasinaNetGetiri"),
+            ("EnUzunDDSuresiGunNet", "EnUzunDDSuresiGunNet")
         }),
         ("ASSET & POSITION INFO", new (string Label, string Key)[]
         {

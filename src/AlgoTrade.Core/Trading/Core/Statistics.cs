@@ -117,6 +117,30 @@ namespace AlgoTrade.Core.Trading.Statistics
         /// <summary>Komisyonun brut kardan (GetiriFiyat) aldigi pay, %. Brut kar &lt;= 0 ise -1.</summary>
         public double KomisyonBrutKarPayiYuzde { get; set; }
 
+        // --- Gunluk sonuclar ve DD suresi, NET ve BRUT ayri (bkz. HesaplaGunlukSonuclarVeDDSuresi) ---
+        // Net = GetiriFiyatNetList / BakiyeFiyatNetList (komisyon sonrasi), Brut = GetiriFiyatList / BakiyeFiyatList.
+        /// <summary>Verinin tamamindaki en kotu gunun getirisi (TL).</summary>
+        public double EnKotuGunNet { get; set; }
+        public string EnKotuGunNetTarih { get; set; } = "";
+        public double EnKotuGunBrut { get; set; }
+        public string EnKotuGunBrutTarih { get; set; } = "";
+        /// <summary>Islem gunu (veride bari olan gun) basina ortalama getiri (TL).</summary>
+        public double IslemGunuBasinaNetGetiri { get; set; }
+        public double IslemGunuBasinaBrutGetiri { get; set; }
+        /// <summary>Getirisi pozitif olan gunlerin orani (%).</summary>
+        public double KarliGunOraniNet { get; set; }
+        public double KarliGunOraniBrut { get; set; }
+        /// <summary>Bakiyenin onceki tepesinin altinda kaldigi en uzun sure (takvim gunu / islem gunu).</summary>
+        public int EnUzunDDSuresiGunNet { get; set; }
+        public int EnUzunDDSuresiIslemGunuNet { get; set; }
+        public string EnUzunDDBaslangicNet { get; set; } = "";
+        /// <summary>Bitis tarihi; veri sonunda hala tepenin altindaysa "devam ediyor".</summary>
+        public string EnUzunDDBitisNet { get; set; } = "";
+        public int EnUzunDDSuresiGunBrut { get; set; }
+        public int EnUzunDDSuresiIslemGunuBrut { get; set; }
+        public string EnUzunDDBaslangicBrut { get; set; } = "";
+        public string EnUzunDDBitisBrut { get; set; } = "";
+
         // --- Donemsel getiri dizileri (bkz. HesaplaDonemselGetiriler) ---
         /// <summary>Dizilerde tutulan onceki donem sayisi (indeks 0 = Bu, 1..50 = onceki donemler).</summary>
         public const int DonemselGetiriMaxDonem = 50;
@@ -881,6 +905,113 @@ namespace AlgoTrade.Core.Trading.Statistics
             GetiriFiyatNetSaat3 = netSaat[3]; GetiriFiyatNetSaat4 = netSaat[4]; GetiriFiyatNetSaat5 = netSaat[5];
         }
 
+        /// <summary>
+        /// Verinin tamamindan gunluk sonuclar ve en uzun DD suresi; NET (GetiriFiyatNetList / BakiyeFiyatNetList)
+        /// ve BRUT (GetiriFiyatList / BakiyeFiyatList) icin ayri ayri:
+        ///   EnKotuGun (+tarih)       : en kotu gunun getirisi (gunun son barindaki deger - onceki gunun son barindaki)
+        ///   IslemGunuBasina...Getiri : toplam getiri / islem gunu sayisi
+        ///   KarliGunOrani            : getirisi > 0 olan gunlerin yuzdesi
+        ///   EnUzunDDSuresi (gun / islem gunu, baslangic, bitis): bakiyenin onceki tepesinin altinda kaldigi
+        ///                              en uzun sure. Tepeye geri donulen bar bitistir; donulmediyse "devam ediyor".
+        /// </summary>
+        private void HesaplaGunlukSonuclarVeDDSuresi()
+        {
+            var r = GunlukSonuclarVeDD(Trader?.lists?.GetiriFiyatNetList, Trader?.lists?.BakiyeFiyatNetList);
+            EnKotuGunNet = r.EnKotuGun; EnKotuGunNetTarih = r.EnKotuGunTarih;
+            IslemGunuBasinaNetGetiri = r.GunBasina; KarliGunOraniNet = r.KarliGunOrani;
+            EnUzunDDSuresiGunNet = r.DDGun; EnUzunDDSuresiIslemGunuNet = r.DDIslemGunu;
+            EnUzunDDBaslangicNet = r.DDBaslangic; EnUzunDDBitisNet = r.DDBitis;
+
+            r = GunlukSonuclarVeDD(Trader?.lists?.GetiriFiyatList, Trader?.lists?.BakiyeFiyatList);
+            EnKotuGunBrut = r.EnKotuGun; EnKotuGunBrutTarih = r.EnKotuGunTarih;
+            IslemGunuBasinaBrutGetiri = r.GunBasina; KarliGunOraniBrut = r.KarliGunOrani;
+            EnUzunDDSuresiGunBrut = r.DDGun; EnUzunDDSuresiIslemGunuBrut = r.DDIslemGunu;
+            EnUzunDDBaslangicBrut = r.DDBaslangic; EnUzunDDBitisBrut = r.DDBitis;
+        }
+
+        private (double EnKotuGun, string EnKotuGunTarih, double GunBasina, double KarliGunOrani,
+                 int DDGun, int DDIslemGunu, string DDBaslangic, string DDBitis)
+            GunlukSonuclarVeDD(IList<double>? getiriList, IList<double>? bakiyeList)
+        {
+            double enKotuGun = 0.0; string enKotuGunTarih = "";
+            double gunBasina = 0.0, karliGunOrani = 0.0;
+            int ddGun = 0, ddIslemGunu = 0; string ddBaslangic = "", ddBitis = "";
+
+            var data = Trader?.Data;
+            if (data == null || data.Count == 0 || getiriList == null || bakiyeList == null)
+                return (enKotuGun, enKotuGunTarih, gunBasina, karliGunOrani, ddGun, ddIslemGunu, ddBaslangic, ddBitis);
+            int n = Math.Min(data.Count, Math.Min(getiriList.Count, bakiyeList.Count));
+            if (n == 0)
+                return (enKotuGun, enKotuGunTarih, gunBasina, karliGunOrani, ddGun, ddIslemGunu, ddBaslangic, ddBitis);
+
+            // --- Gunluk getiri ---
+            int gunSayisi = 0, karliGun = 0;
+            bool enKotuVar = false;
+            double oncekiGunSonu = 0.0;
+            for (int i = 0; i < n; i++)
+            {
+                bool gunSonu = i == n - 1 || data[i + 1].DateTime.Date != data[i].DateTime.Date;
+                if (!gunSonu)
+                    continue;
+                double gunGetiri = getiriList[i] - oncekiGunSonu;
+                oncekiGunSonu = getiriList[i];
+                gunSayisi++;
+                if (gunGetiri > 0) karliGun++;
+                if (!enKotuVar || gunGetiri < enKotuGun)
+                {
+                    enKotuVar = true;
+                    enKotuGun = gunGetiri;
+                    enKotuGunTarih = data[i].DateTime.ToString("yyyy.MM.dd");
+                }
+            }
+            if (gunSayisi > 0)
+            {
+                gunBasina = getiriList[n - 1] / gunSayisi;
+                karliGunOrani = 100.0 * karliGun / gunSayisi;
+            }
+
+            // --- En uzun DD suresi ---
+            double tepe = bakiyeList[0];
+            int ddBasIndex = -1;          // tepenin son goruldugu bar
+            void SureyiDegerlendir(int bitisIndex, bool devamEdiyor)
+            {
+                if (ddBasIndex < 0) return;
+                DateTime bas = data[ddBasIndex].DateTime;
+                DateTime bit = data[bitisIndex].DateTime;
+                int takvimGunu = (int)(bit.Date - bas.Date).TotalDays;
+                if (ddBaslangic != "" && takvimGunu <= ddGun)
+                    return;
+                int islemGunu = 0;
+                for (int k = ddBasIndex + 1; k <= bitisIndex; k++)
+                    if (data[k].DateTime.Date != data[k - 1].DateTime.Date) islemGunu++;
+                ddGun = takvimGunu;
+                ddIslemGunu = islemGunu;
+                ddBaslangic = bas.ToString("yyyy.MM.dd");
+                ddBitis = devamEdiyor ? "devam ediyor" : bit.ToString("yyyy.MM.dd");
+            }
+            for (int i = 1; i < n; i++)
+            {
+                double b = bakiyeList[i];
+                if (b >= tepe)
+                {
+                    if (ddBasIndex >= 0)
+                    {
+                        SureyiDegerlendir(i, devamEdiyor: false);
+                        ddBasIndex = -1;
+                    }
+                    tepe = b;
+                }
+                else if (ddBasIndex < 0)
+                {
+                    ddBasIndex = i - 1;
+                }
+            }
+            if (ddBasIndex >= 0)
+                SureyiDegerlendir(n - 1, devamEdiyor: true);
+
+            return (enKotuGun, enKotuGunTarih, gunBasina, karliGunOrani, ddGun, ddIslemGunu, ddBaslangic, ddBitis);
+        }
+
         public int Hesapla(int secilenBarNumarasi)
         {
             int result = 0;
@@ -951,6 +1082,7 @@ namespace AlgoTrade.Core.Trading.Statistics
             HesaplaIslemGunuKapsami();
             HesaplaIslemIciZarar();
             HesaplaDonemselGetiriler();
+            HesaplaGunlukSonuclarVeDDSuresi();
 
             // Maximum Drawdown hesaplaması (puan, brut fiyat, net fiyat)
             var maxDDPuan           = CalculateMaxDD(Trader.lists.BakiyePuanList, IlkBakiyePuan);
@@ -1289,6 +1421,22 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("IslemIciZararYuzde1AsanSayisi", IslemIciZararYuzde1AsanSayisi);
             Add("IslemIciZararYuzde2AsanSayisi", IslemIciZararYuzde2AsanSayisi);
             Add("KomisyonBrutKarPayiYuzde", KomisyonBrutKarPayiYuzde, "F2");
+            Add("EnKotuGunNet", EnKotuGunNet, "F2");
+            Add("EnKotuGunNetTarih", EnKotuGunNetTarih);
+            Add("EnKotuGunBrut", EnKotuGunBrut, "F2");
+            Add("EnKotuGunBrutTarih", EnKotuGunBrutTarih);
+            Add("IslemGunuBasinaNetGetiri", IslemGunuBasinaNetGetiri, "F2");
+            Add("IslemGunuBasinaBrutGetiri", IslemGunuBasinaBrutGetiri, "F2");
+            Add("KarliGunOraniNet", KarliGunOraniNet, "F2");
+            Add("KarliGunOraniBrut", KarliGunOraniBrut, "F2");
+            Add("EnUzunDDSuresiGunNet", EnUzunDDSuresiGunNet);
+            Add("EnUzunDDSuresiIslemGunuNet", EnUzunDDSuresiIslemGunuNet);
+            Add("EnUzunDDBaslangicNet", EnUzunDDBaslangicNet);
+            Add("EnUzunDDBitisNet", EnUzunDDBitisNet);
+            Add("EnUzunDDSuresiGunBrut", EnUzunDDSuresiGunBrut);
+            Add("EnUzunDDSuresiIslemGunuBrut", EnUzunDDSuresiIslemGunuBrut);
+            Add("EnUzunDDBaslangicBrut", EnUzunDDBaslangicBrut);
+            Add("EnUzunDDBitisBrut", EnUzunDDBitisBrut);
 
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
@@ -1665,6 +1813,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("IslemIciMaxZararYuzdeP95", IslemIciMaxZararYuzdeP95, "F3");
             Add("IslemIciMaxZararYuzdeEnKotu", IslemIciMaxZararYuzdeEnKotu, "F3");
             Add("KomisyonBrutKarPayiYuzde", KomisyonBrutKarPayiYuzde, "F2");
+            Add("EnKotuGunNet", EnKotuGunNet, "F2");
+            Add("IslemGunuBasinaNetGetiri", IslemGunuBasinaNetGetiri, "F2");
+            Add("EnUzunDDSuresiGunNet", EnUzunDDSuresiGunNet);
 
             StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
 
