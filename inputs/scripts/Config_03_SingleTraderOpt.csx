@@ -176,7 +176,7 @@ string sortedTxtFileName2 = "singleTraderOptLog_sorted_brut.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 27;   // 27 = Strategy002_MaDamar (Faz 1 MA damar taramasi)
+int optChoice = 1;
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -662,13 +662,20 @@ else if (optChoice == 27)
     //      (firstEntryModeIndex 2, triggerPeriod) eklendi.
     // v4 = 5dk: tetik girisine sabit, izgara uzun tarafa genisletildi, triggerPeriod ve buyuk
     //      kar al degerleri taraniyor (bkz. docs/ma-damar-faz1-sonuclar.md).
-    string maDamarRun = "v4";
+    // v5 = v4 ile ayni izgara + islem penceresi 10:00-18:00 (maDamarSeansPenceresi): 10:00'dan
+    //      once giris yok, 18:00 barinda acik pozisyon kapatilir. Amac: acilis gap/gurultusu ve
+    //      19:00'daki vade gecisi (roll) sicramalarini disarida birakmak.
+    // v6 = parametreler dogrudan 10:00-18:00 penceresi icin secilir (kullanici aksam/gece pozisyon
+    //      tutmak istemiyor). EMA'lar yine tum barlardan hesaplanir (aksam seansi bilgi olarak kullanilir).
+    //      Izgara pencereye gore daha kisa periyotlara kaydirildi; kar al daha sik taraniyor.
+    string maDamarRun = "v6";
 
     stockDataFullFileName = $@"C:\data\csvFiles\VIP\{maDamarTf}\VIP-X030-T.csv";
     // Veri penceresi: v1-v3 = 2021 sonrasi; v4'ten itibaren kullanici karariyla TUM veri (2007+).
     // Not: 2020 oncesi seans daha kisa (gunde daha az bar) ve fiyat seviyesi ~25 kat dusuk; toplam
     // sonuc donemlerin karisimidir, en iyi adaylar ayrica yil yil incelenmeli.
-    bool maDamarAllData = false;   // false = 2021 sonrasi (v1-v3 ile karsilastirilabilir)
+    // Tasarim ilkesi (kullanici): tum veri + tum seanslar uzerinde, kisitlar ilgili yerlerde filtre olarak.
+    bool maDamarAllData = true;    // true = tum veri (2007+). false = 2021 sonrasi (v1-v5 ile karsilastirma icin)
     readDataN1 = 0; readDataN2 = 0;
     readDataDt2           = "";
     if (maDamarAllData)
@@ -682,10 +689,11 @@ else if (optChoice == 27)
         readDataDt1        = "2021.01.01 00:00:00";
     }
 
-    gunSonuPozKapatEnabled = true;    // gun ici: pozisyon gece tasinmaz
-    karAlEnabled           = true;    // takeProfitTL > 0 kombinasyonlarinda net TL kar al (0 = kapali)
-    zararKesEnabled        = false;
-    timeFilteringEnabled   = false;
+    // Sinyal salterleri (alEnabled, karAlEnabled, gunSonuPozKapatEnabled, timeFilteringEnabled ...) bu
+    // blokta DEGISTIRILMEZ; dosyanin basindaki orijinal degerler gecerli (bkz. docs/strateji-ayar-kurallari.md).
+    // Gun sonu kapatma ve islem penceresi STRATEJI parametresidir (fixedParams: gunSonuKapat, islemPenceresi,
+    // pencereBaslangic, pencereBitis). v5'te bunlar trader filtresiyle (gunSonuPozKapatEnabled /
+    // timeFilteringEnabled) yapiliyordu.
 
     // Cikti dosyalari ayri (eski singleTraderOptLog.csv'ye farkli sutunlarla eklenmesin).
     csvFileName        = $"maDamar_{maDamarTf}_{maDamarRun}_opt.csv";
@@ -705,15 +713,15 @@ else if (optChoice == 27)
     {
         optimizationRanges = new List<(string name, double min, double max, double step)>
         {
-            // v4: v3'te en iyi cikan tetik girisi sabit; en iyiler izgaranin kosesindeydi (30/80),
-            // bu yuzden uzun tarafa genisletildi. 2021 sonrasi seans = 153 bar (09:25-22:55);
-            // slow ust siniri 140 bar (~11.7 saat) tek seansi asmaz.
+            // v6: islem penceresi 10:00-18:00 (strateji parametresi). Tetik girisi sabit.
+            // (v4 izgarasi: fast 20-60/10, slow 60-140/20, tetik 3/6/9, TP 0/2000/4000.)
+            // triggerPeriod 1 kullanilmaz: EMA(1) = fiyatin kendisi, tetik hic olusmaz.
             ("firstEntryModeIndex", 2, 2, 1),   // 2 = tetikle giris (sabit)
             ("signalModeIndex", 2, 5, 1),       // 2 Fast/Slow, 3 FastEgim, 4 SlowEgim, 5 Stack
-            ("takeProfitTL",    0, 4000, 2000), // 0 = kar al yok; 2000/4000 TL net (kucuk degerler v3'te zararliydi)
-            ("triggerPeriod",   3, 9, 3),       // tetik EMA: 3/6/9 bar (15/30/45 dakika)
-            ("fastPeriod",     20, 60, 10),
-            ("slowPeriod",     60, 140, 20),
+            ("takeProfitTL",    0, 2000, 500),  // 0 = kar al yok; 500/1000/1500/2000 TL net
+            ("triggerPeriod",   2, 4, 1),       // tetik EMA: 2/3/4 bar (10/15/20 dakika)
+            ("fastPeriod",      5, 35, 10),     // 5/15/25/35 bar
+            ("slowPeriod",     20, 140, 30),    // 20/50/80/110/140 bar
         };
     }
     else if (maDamarTf == "15")
@@ -747,7 +755,12 @@ else if (optChoice == 27)
         ["takeProfitExitModeIndex"] = 99,
         ["stopLossExitModeIndex"]   = 99,
         ["flatModeIndex"]           = 99,
-        ["skipModeIndex"]           = 99
+        ["skipModeIndex"]           = 99,
+        // Strateji kurallari (trader salterleri degil): gun sonu kapatma + 10:00-18:00 islem penceresi.
+        ["gunSonuKapat"]            = true,
+        ["islemPenceresi"]          = true,
+        ["pencereBaslangic"]        = "10:00:00",   // HH:mm ya da HH:mm:ss
+        ["pencereBitis"]            = "18:00:00"    // bu barda kapat
     };
     // triggerPeriod taranmiyorsa (15/60 dk dallari) sabit 5 kullan; taraniyorsa fixedParams'a
     // eklenmez (ayni parametre hem range'de hem fixed'de olmasin).

@@ -72,6 +72,12 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int triggerPeriod;
         private double[]? triggerMA;
 
+        // Strateji kurallari (trader salterleri degil, bkz. docs/strateji-ayar-kurallari.md):
+        // gun sonu kapatma ve islem penceresi. Pencere BaseStrategy'nin isTimeEnabled/startTime/stopTime
+        // alanlarini kullanir.
+        private readonly bool gunSonuKapat;
+        private bool salterUyarisiYazildi;
+
         private double[]? source;
         private double[]? fastMA;
         private double[]? midMA;
@@ -82,11 +88,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             MAMethod maMethod = MAMethod.EMA, PriceSource priceSource = PriceSource.Close, int slopeLookback = 1,
             int buySignalModeIndex = 2, int sellSignalModeIndex = 2, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0,
             int flatModeIndex = 0, int skipModeIndex = 0, int signalModeIndex = -1, int firstEntryModeIndex = 0,
-            double takeProfitTL = 0.0, int triggerPeriod = 5)
+            double takeProfitTL = 0.0, int triggerPeriod = 5,
+            bool gunSonuKapat = false, bool islemPenceresi = false,
+            string pencereBaslangic = "10:00:00", string pencereBitis = "18:00:00")
         {
             this.firstEntryModeIndex = firstEntryModeIndex;
             this.takeProfitTL        = takeProfitTL;
             this.triggerPeriod       = Math.Max(1, triggerPeriod);
+            this.gunSonuKapat        = gunSonuKapat;
             // signalModeIndex >= 0: buy ve sell ayni moda ayarlanir. Opt'ta modlari TEK range ile
             // taramak icin (buy/sell ayri taranirsa 36 asimetrik kombinasyon cikar).
             if (signalModeIndex >= 0)
@@ -121,13 +130,15 @@ namespace AlgoTrade.Core.Trading.Strategies
             flatModeEnabled           = false;
             skipModeEnabled           = false;
 
-            // Saat/gun penceresi kapali (gun ici pencere gerekiyorsa trader'in timeFiltering'i kullanilir).
-            startTime            = TimeOnly.ParseExact("10:05:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
-            stopTime             = TimeOnly.ParseExact("16:45:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            // Islem penceresi (strateji kurali): pencereBaslangic <= bar saati < pencereBitis ise islem
+            // serbest; disinda giris yok, acik pozisyon kapatilir (bitis barinda, trader zaman filtresiyle ayni).
+            // Saatler "HH:mm" ya da "HH:mm:ss" (orn. "10:00", "10:00:50").
+            startTime            = SaatOku(pencereBaslangic, nameof(pencereBaslangic));
+            stopTime             = SaatOku(pencereBitis, nameof(pencereBitis));
             triggerTime          = TimeOnly.ParseExact("10:00:00", "HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
             startDay             = default;
             stopDay              = default;
-            isTimeEnabled        = false;
+            isTimeEnabled        = islemPenceresi;
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
@@ -147,6 +158,10 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["FirstEntryModeIndex"]     = firstEntryModeIndex;
             Parameters["TakeProfitTL"]            = takeProfitTL;
             Parameters["TriggerPeriod"]           = this.triggerPeriod;
+            Parameters["GunSonuKapat"]            = gunSonuKapat;
+            Parameters["IslemPenceresi"]          = islemPenceresi;
+            Parameters["PencereBaslangic"]        = pencereBaslangic;
+            Parameters["PencereBitis"]            = pencereBitis;
             Parameters["TakeProfitExitModeIndex"] = this.takeProfitExitModeIndex;
             Parameters["BuyModeEnabled"]          = buyModeEnabled;
             Parameters["SellModeEnabled"]         = sellModeEnabled;
@@ -207,6 +222,16 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private static int Sign(double value) => value > 0.0 ? 1 : value < 0.0 ? -1 : 0;
 
+        /// <summary>"HH:mm" ya da "HH:mm:ss" metnini TimeOnly'ye cevirir; gecersizse acik hata verir.</summary>
+        private static TimeOnly SaatOku(string deger, string parametreAdi)
+        {
+            var formatlar = new[] { "HH:mm:ss", "HH:mm" };
+            if (TimeOnly.TryParseExact(deger?.Trim(), formatlar, System.Globalization.CultureInfo.InvariantCulture,
+                                       System.Globalization.DateTimeStyles.None, out var saat))
+                return saat;
+            throw new ArgumentException($"{parametreAdi} gecersiz saat: '{deger}'. Beklenen bicim HH:mm ya da HH:mm:ss.");
+        }
+
         /// <summary>
         /// Pozisyonun gidis-donus (acilis + kapanis) komisyonu, TL. SingleTrader'in komisyon
         /// formuluyle ayni: bir bacak = KomisyonCarpan * KomisyonVarlikAdedSayisi(Micro).
@@ -235,7 +260,9 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             TimeOnly currentTime    = times![currentIndex];
             DateOnly currentDate    = dates![currentIndex];
-            bool isWithinTimeWindow = !isTimeEnabled || (currentTime >= startTime && currentTime <= stopTime);
+            // Bitis HARIC (baslangic <= saat < bitis): bitis barinda pozisyon kapatilir. Trader'in zaman
+            // filtresiyle (SingleTrader FilterMode 1) ayni kural - v5 sonuclariyla karsilastirilabilir olsun diye.
+            bool isWithinTimeWindow = !isTimeEnabled || (currentTime >= startTime && currentTime < stopTime);
             bool isWithinDayWindow  = !isDayEnabled  || (currentDate >= startDay  && currentDate <= stopDay);
 
             // Isinma: en uzun MA + egim geriye bakisi dolmadan sinyal yok.
@@ -327,6 +354,20 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
             if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
+            // Gun sonu kapatma (strateji kurali): gunun son barinda giris yok, acik pozisyon kapatilir.
+            // IsLastBarOfDay trader'in ClosePositionEOD'u ile ayni yontemi kullanir (sonraki barin tarihi).
+            if (gunSonuKapat && isLastOfDay) { buy = false; sell = false; flat = true; }
+
+            // Strateji bir kapatma / kar al kurali istiyor ama trader salteri kapaliysa bir kez uyar:
+            // kural sessizce uygulanmamis olmasin (bkz. docs/strateji-ayar-kurallari.md, Kural 4).
+            if (!salterUyarisiYazildi && Trader?.signals != null)
+            {
+                salterUyarisiYazildi = true;
+                if ((gunSonuKapat || isTimeEnabled) && Trader.signals.FlatOlEnabled == false)
+                    LogWarning($"[{Name}] UYARI: gunSonuKapat/islemPenceresi acik ama Trader.FlatOlEnabled=false; pozisyon kapatma UYGULANMAYACAK.");
+                if (takeProfitTL > 0.0 && Trader.signals.KarAlEnabled == false)
+                    LogWarning($"[{Name}] UYARI: takeProfitTL={takeProfitTL} ama Trader.KarAlEnabled=false; kar al UYGULANMAYACAK.");
+            }
 
             if (skip)       return TradeSignals.Skip;
             if (flat)       return TradeSignals.Flat;

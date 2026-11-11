@@ -165,7 +165,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             // Parse parameters (if any)
             for (int i = 3; i < parts.Length; i++)
             {
-                var paramParts = parts[i].Split(':');
+                // Yalnizca ilk iki ':' ayiricidir; deger ':' icerebilir (orn. pencereBaslangic:string:10:00:50).
+                // Degeri ':' icermeyen mevcut satirlar ayni sekilde okunur.
+                var paramParts = parts[i].Split(':', 3);
                 if (paramParts.Length != 3)
                 {
                     throw new FormatException($"Invalid parameter format: {parts[i]}. Expected 'name:type:value'");
