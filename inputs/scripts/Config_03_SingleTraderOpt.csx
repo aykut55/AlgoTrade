@@ -176,7 +176,7 @@ string sortedTxtFileName2 = "singleTraderOptLog_sorted_brut.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 1;
+int optChoice = 27;   // 27 = Strategy002_MaDamar (Faz 1 MA damar taramasi)
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -647,6 +647,115 @@ else if (optChoice == 26)
         ["buySignalModeIndex"] = 0,
         ["sellSignalModeIndex"] = 0
     };
+}
+else if (optChoice == 27)
+{
+    // Strategy002_MaDamar - Faz 1 MA damar taramasi (bkz. docs/damar-strateji-sinyal-katalogu.md).
+    // Bu blok kendi veri/sinyal/cikti ayarlarini yapar; diger optChoice'larin ayarlarina dokunmaz.
+    // Her zaman dilimi icin ayri kosu: maDamarTf'yi "05" / "15" / "60" yapip tekrar calistir.
+    string maDamarTf = "05";
+
+    // Cikti dosyalarinin sürüm eki: parametre listesi (CSV sutunlari) degisince arttir, yoksa
+    // appendEnabled=true ile eski dosyaya farkli sutun duzeniyle eklenir. v1 = ilk tarama,
+    // v2 = firstEntryModeIndex (0 state / 1 kesisimle giris) eklendi.
+    // v3 = takeProfitTL (komisyon sonrasi net TL kar al, zarar kes yok) + tetikle giris
+    //      (firstEntryModeIndex 2, triggerPeriod) eklendi.
+    // v4 = 5dk: tetik girisine sabit, izgara uzun tarafa genisletildi, triggerPeriod ve buyuk
+    //      kar al degerleri taraniyor (bkz. docs/ma-damar-faz1-sonuclar.md).
+    string maDamarRun = "v4";
+
+    stockDataFullFileName = $@"C:\data\csvFiles\VIP\{maDamarTf}\VIP-X030-T.csv";
+    // Veri penceresi: v1-v3 = 2021 sonrasi; v4'ten itibaren kullanici karariyla TUM veri (2007+).
+    // Not: 2020 oncesi seans daha kisa (gunde daha az bar) ve fiyat seviyesi ~25 kat dusuk; toplam
+    // sonuc donemlerin karisimidir, en iyi adaylar ayrica yil yil incelenmeli.
+    bool maDamarAllData = false;   // false = 2021 sonrasi (v1-v3 ile karsilastirilabilir)
+    readDataN1 = 0; readDataN2 = 0;
+    readDataDt2           = "";
+    if (maDamarAllData)
+    {
+        readDataFilterMode = "All";
+        readDataDt1        = "";
+    }
+    else
+    {
+        readDataFilterMode = "AfterDateTime";
+        readDataDt1        = "2021.01.01 00:00:00";
+    }
+
+    gunSonuPozKapatEnabled = true;    // gun ici: pozisyon gece tasinmaz
+    karAlEnabled           = true;    // takeProfitTL > 0 kombinasyonlarinda net TL kar al (0 = kapali)
+    zararKesEnabled        = false;
+    timeFilteringEnabled   = false;
+
+    // Cikti dosyalari ayri (eski singleTraderOptLog.csv'ye farkli sutunlarla eklenmesin).
+    csvFileName        = $"maDamar_{maDamarTf}_{maDamarRun}_opt.csv";
+    txtFileName        = $"maDamar_{maDamarTf}_{maDamarRun}_opt.txt";
+    sortField          = "GetiriFiyatNet";
+    sortedCsvFileName  = $"maDamar_{maDamarTf}_{maDamarRun}_opt_sorted.csv";
+    sortedTxtFileName  = $"maDamar_{maDamarTf}_{maDamarRun}_opt_sorted.txt";
+    sortField2         = "EnUzunIslemsizGunSerisi";
+    sortedCsvFileName2 = $"maDamar_{maDamarTf}_{maDamarRun}_opt_sorted_islemsizGun.csv";
+    sortedTxtFileName2 = $"maDamar_{maDamarTf}_{maDamarRun}_opt_sorted_islemsizGun.txt";
+
+    optimizationStrategyName = "Strategy002_MaDamar";
+    // signalModeIndex en dista: 0 Fiyat/FastMA, 1 Fiyat/SlowMA, 2 Fast/Slow, 3 FastMA egim,
+    // 4 SlowMA egim, 5 Uc MA dizilimi. Periyot araliklari zaman dilimine gore (gun ici olcek:
+    // 5dk'da 2021 sonrasi gunde 153 bar; slow ust siniri bir seansi asmasin).
+    if (maDamarTf == "05")
+    {
+        optimizationRanges = new List<(string name, double min, double max, double step)>
+        {
+            // v4: v3'te en iyi cikan tetik girisi sabit; en iyiler izgaranin kosesindeydi (30/80),
+            // bu yuzden uzun tarafa genisletildi. 2021 sonrasi seans = 153 bar (09:25-22:55);
+            // slow ust siniri 140 bar (~11.7 saat) tek seansi asmaz.
+            ("firstEntryModeIndex", 2, 2, 1),   // 2 = tetikle giris (sabit)
+            ("signalModeIndex", 2, 5, 1),       // 2 Fast/Slow, 3 FastEgim, 4 SlowEgim, 5 Stack
+            ("takeProfitTL",    0, 4000, 2000), // 0 = kar al yok; 2000/4000 TL net (kucuk degerler v3'te zararliydi)
+            ("triggerPeriod",   3, 9, 3),       // tetik EMA: 3/6/9 bar (15/30/45 dakika)
+            ("fastPeriod",     20, 60, 10),
+            ("slowPeriod",     60, 140, 20),
+        };
+    }
+    else if (maDamarTf == "15")
+    {
+        optimizationRanges = new List<(string name, double min, double max, double step)>
+        {
+            ("firstEntryModeIndex", 0, 2, 1),   // 0 state giris, 1 kesisimle giris, 2 tetikle giris
+            ("signalModeIndex", 2, 5, 1),       // 2 Fast/Slow, 3 FastEgim, 4 SlowEgim, 5 Stack (0/1 elendi)
+            ("takeProfitTL",    0, 1500, 500),  // 0 = kar al yok; 500/1000/1500 TL net (komisyon sonrasi)
+            ("fastPeriod",      3, 15, 3),
+            ("slowPeriod",     10, 40, 5),
+        };
+    }
+    else
+    {
+        optimizationRanges = new List<(string name, double min, double max, double step)>
+        {
+            ("firstEntryModeIndex", 0, 2, 1),   // 0 state giris, 1 kesisimle giris, 2 tetikle giris
+            ("signalModeIndex", 2, 5, 1),       // 2 Fast/Slow, 3 FastEgim, 4 SlowEgim, 5 Stack (0/1 elendi)
+            ("takeProfitTL",    0, 1500, 500),  // 0 = kar al yok; 500/1000/1500 TL net (komisyon sonrasi)
+            ("fastPeriod",      2, 10, 2),
+            ("slowPeriod",      6, 30, 4),
+        };
+    }
+    fixedParams = new Dictionary<string, object>
+    {
+        ["maMethod"]                = "EMA",
+        ["priceSource"]             = "Close",
+        ["midPeriod"]               = 0,     // 0 = fast/slow geometrik ortalamasi (sadece mod 5)
+        ["slopeLookback"]           = 1,
+        ["takeProfitExitModeIndex"] = 99,
+        ["stopLossExitModeIndex"]   = 99,
+        ["flatModeIndex"]           = 99,
+        ["skipModeIndex"]           = 99
+    };
+    // triggerPeriod taranmiyorsa (15/60 dk dallari) sabit 5 kullan; taraniyorsa fixedParams'a
+    // eklenmez (ayni parametre hem range'de hem fixed'de olmasin).
+    bool triggerPeriodInRanges = false;
+    foreach (var r in optimizationRanges)
+        if (r.name == "triggerPeriod") triggerPeriodInRanges = true;
+    if (!triggerPeriodInRanges)
+        fixedParams["triggerPeriod"] = 5;
 }
 else
 {

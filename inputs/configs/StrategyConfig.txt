@@ -31,3 +31,5 @@ SimpleMavilimWStrategy|v1|Default|param1:int:3|param2:int:5|signalModeIndex:int:
 SimplePMaxStrategy|v1|Default|atrPeriod:int:10|multiplier:double:3.0|maPeriod:int:10|pmaxMaMethod:string:EMA|signalModeIndex:int:0
 SimpleTillsonT3Strategy|v1|Default|period:int:5|priceSource:string:Close|signalModeIndex:int:0
 SimpleAlphaTrendStrategy|v1|Default|atrPeriod:int:14|coefficient:double:1.0|momentumPeriod:int:14|useMFI:bool:true|signalModeIndex:int:0
+Strategy002_MaDamar|v1|FastSlow30_140_Tetik3|signalModeIndex:int:2|fastPeriod:int:30|slowPeriod:int:140|maMethod:string:EMA|priceSource:string:Close|midPeriod:int:0|slopeLookback:int:1|firstEntryModeIndex:int:2|triggerPeriod:int:3|takeProfitTL:double:0|takeProfitExitModeIndex:int:99|stopLossExitModeIndex:int:99|flatModeIndex:int:99|skipModeIndex:int:99
+Strategy002_MaDamar|v2|Stack50_120_Tetik3|signalModeIndex:int:5|fastPeriod:int:50|slowPeriod:int:120|maMethod:string:EMA|priceSource:string:Close|midPeriod:int:0|slopeLookback:int:1|firstEntryModeIndex:int:2|triggerPeriod:int:3|takeProfitTL:double:0|takeProfitExitModeIndex:int:99|stopLossExitModeIndex:int:99|flatModeIndex:int:99|skipModeIndex:int:99

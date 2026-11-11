@@ -87,6 +87,36 @@ namespace AlgoTrade.Core.Trading.Statistics
         public double OrtGunlukIslemSayisi { get; set; }
         public double OrtSaatlikIslemSayisi { get; set; }
 
+        // --- Islem gunu kapsami (bkz. HesaplaIslemGunuKapsami) ---
+        // "Gun" = veride en az bir bari olan tarih (hafta sonu/tatil sayilmaz).
+        // "Giris" = YonList'te "A" ya da "S" olan bar (pozisyon acilisi veya yon donusu);
+        // "F" (flat / gun sonu kapanis) giris sayilmaz.
+        public int ToplamIslemGunuSayisi { get; set; }
+        public int IslemYapilanGunSayisi { get; set; }
+        public int IslemsizGunSayisi { get; set; }
+        public int EnUzunIslemsizGunSerisi { get; set; }
+        public string EnUzunIslemsizGunSerisiBaslangic { get; set; } = "";
+        public double IslemYapilanGunOrani { get; set; }
+        public int GirisSayisi { get; set; }
+        public double OrtIslemGunuBasinaGiris { get; set; }
+
+        // --- Islem ici zarar (MAE - Maximum Adverse Excursion), bkz. HesaplaIslemIciZarar ---
+        // Her islemin acik oldugu sure boyunca gorulen EN KOTU anlik kar/zarar (puan, 1 birim icin)
+        // ve giris fiyatina gore yuzdesi. Degerler negatif ya da 0'dir (islem hic zarara girmediyse 0).
+        public double IslemIciMaxZararPuanOrt { get; set; }
+        public double IslemIciMaxZararPuanP95 { get; set; }
+        public double IslemIciMaxZararPuanEnKotu { get; set; }
+        public double IslemIciMaxZararYuzdeOrt { get; set; }
+        public double IslemIciMaxZararYuzdeP95 { get; set; }
+        public double IslemIciMaxZararYuzdeEnKotu { get; set; }
+        /// <summary>Islem ici zarari giris fiyatinin %1'ini asan islem sayisi.</summary>
+        public int IslemIciZararYuzde1AsanSayisi { get; set; }
+        /// <summary>Islem ici zarari giris fiyatinin %2'sini asan islem sayisi.</summary>
+        public int IslemIciZararYuzde2AsanSayisi { get; set; }
+
+        /// <summary>Komisyonun brut kardan (GetiriFiyat) aldigi pay, %. Brut kar &lt;= 0 ise -1.</summary>
+        public double KomisyonBrutKarPayiYuzde { get; set; }
+
         #endregion
 
         #region Trade Counts
@@ -579,6 +609,173 @@ namespace AlgoTrade.Core.Trading.Statistics
         internal void AssignToMapForExport() => AssignToMap();
         internal void AssignToMapMinimalForExport() => AssignToMapMinimal();
 
+        /// <summary>
+        /// "Her gun en az 1 islem" kisitini dogrudan olcen istatistikler. OrtGunlukIslemSayisi
+        /// bunu olcemez: ortalama, 3-5 gunluk islemsiz bosluklari gizler. Burada her islem
+        /// gunu (veride bari olan tarih) tek tek bakilir:
+        ///   IslemYapilanGunSayisi   : en az bir giris ("A"/"S") olan gun sayisi
+        ///   IslemsizGunSayisi       : hic giris olmayan gun sayisi
+        ///   EnUzunIslemsizGunSerisi : ust uste girissiz gecen en fazla islem gunu (+ baslangic tarihi)
+        ///   IslemYapilanGunOrani    : IslemYapilanGunSayisi / ToplamIslemGunuSayisi (%)
+        ///   OrtIslemGunuBasinaGiris : GirisSayisi / ToplamIslemGunuSayisi
+        /// Not: Indikator isinma (warmup) gunleri de islemsiz sayilir; veri penceresi
+        /// genisken etkisi ihmal edilebilir.
+        /// </summary>
+        private void HesaplaIslemGunuKapsami()
+        {
+            ToplamIslemGunuSayisi            = 0;
+            IslemYapilanGunSayisi            = 0;
+            IslemsizGunSayisi                = 0;
+            EnUzunIslemsizGunSerisi          = 0;
+            EnUzunIslemsizGunSerisiBaslangic = "";
+            IslemYapilanGunOrani             = 0.0;
+            GirisSayisi                      = 0;
+            OrtIslemGunuBasinaGiris          = 0.0;
+
+            var data = Trader?.Data;
+            var yonList = Trader?.lists?.YonList;
+            if (data == null || data.Count == 0 || yonList == null)
+                return;
+
+            DateTime currentDay = data[0].DateTime.Date;
+            bool dayHasEntry = false;
+            int run = 0;
+            DateTime runStart = default;
+
+            void CloseDay(DateTime day)
+            {
+                ToplamIslemGunuSayisi++;
+                if (dayHasEntry)
+                {
+                    IslemYapilanGunSayisi++;
+                    run = 0;
+                    return;
+                }
+                IslemsizGunSayisi++;
+                if (run == 0)
+                    runStart = day;
+                run++;
+                if (run > EnUzunIslemsizGunSerisi)
+                {
+                    EnUzunIslemsizGunSerisi = run;
+                    EnUzunIslemsizGunSerisiBaslangic = runStart.ToString("yyyy.MM.dd");
+                }
+            }
+
+            int count = Math.Min(data.Count, yonList.Count);
+            for (int i = 0; i < data.Count; i++)
+            {
+                DateTime day = data[i].DateTime.Date;
+                if (day != currentDay)
+                {
+                    CloseDay(currentDay);
+                    currentDay = day;
+                    dayHasEntry = false;
+                }
+                if (i < count)
+                {
+                    string yon = yonList[i];
+                    if (yon == "A" || yon == "S")
+                    {
+                        GirisSayisi++;
+                        dayHasEntry = true;
+                    }
+                }
+            }
+            CloseDay(currentDay);
+
+            if (ToplamIslemGunuSayisi > 0)
+            {
+                IslemYapilanGunOrani    = 100.0 * IslemYapilanGunSayisi / ToplamIslemGunuSayisi;
+                OrtIslemGunuBasinaGiris = 1.0 * GirisSayisi / ToplamIslemGunuSayisi;
+            }
+        }
+
+        /// <summary>
+        /// Islem bazinda MAE: pozisyon acikken (giris barindan bir sonraki giris ya da flat barina
+        /// kadar) KarZararPuanList'teki en kotu deger. MaxZararPuan tum kosunun TEK en kotu anini
+        /// verir; burada her islemin kendi en kotusu alinip dagilimina bakilir (ortalama, %95'lik
+        /// dilim, en kotu, belirli esikleri asan islem sayisi). Yuzde = MAE / giris fiyati * 100.
+        /// </summary>
+        private void HesaplaIslemIciZarar()
+        {
+            IslemIciMaxZararPuanOrt      = 0.0;
+            IslemIciMaxZararPuanP95      = 0.0;
+            IslemIciMaxZararPuanEnKotu   = 0.0;
+            IslemIciMaxZararYuzdeOrt     = 0.0;
+            IslemIciMaxZararYuzdeP95     = 0.0;
+            IslemIciMaxZararYuzdeEnKotu  = 0.0;
+            IslemIciZararYuzde1AsanSayisi = 0;
+            IslemIciZararYuzde2AsanSayisi = 0;
+
+            var lists = Trader?.lists;
+            var data = Trader?.Data;
+            if (lists?.YonList == null || lists.KarZararPuanList == null || lists.SeviyeList == null || data == null)
+                return;
+
+            int n = Math.Min(data.Count, Math.Min(lists.YonList.Count,
+                    Math.Min(lists.KarZararPuanList.Count, lists.SeviyeList.Count)));
+            var maePuan = new List<double>();
+            var maeYuzde = new List<double>();
+
+            bool inTrade = false;
+            double entryPrice = 0.0;
+            double worst = 0.0;
+
+            void CloseTrade()
+            {
+                if (!inTrade) return;
+                maePuan.Add(worst);
+                maeYuzde.Add(entryPrice != 0.0 ? 100.0 * worst / entryPrice : 0.0);
+                inTrade = false;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                string yon = lists.YonList[i];
+                if (yon == "A" || yon == "S")
+                {
+                    CloseTrade();
+                    inTrade = true;
+                    entryPrice = lists.SeviyeList[i];
+                    worst = 0.0;
+                    continue;
+                }
+                if (yon == "F")
+                {
+                    CloseTrade();
+                    continue;
+                }
+                if (inTrade)
+                {
+                    double pnl = lists.KarZararPuanList[i];
+                    if (!double.IsNaN(pnl) && pnl < worst)
+                        worst = pnl;
+                }
+            }
+            CloseTrade();
+
+            if (maePuan.Count == 0)
+                return;
+
+            static double Percentile(List<double> values, double p)
+            {
+                // Zararlar negatif: "%95'lik dilim" = en kotu %5'in sinirindaki deger.
+                var sorted = values.OrderBy(v => v).ToList();
+                int idx = (int)Math.Floor((1.0 - p) * (sorted.Count - 1));
+                return sorted[Math.Max(0, Math.Min(sorted.Count - 1, idx))];
+            }
+
+            IslemIciMaxZararPuanOrt     = maePuan.Average();
+            IslemIciMaxZararPuanP95     = Percentile(maePuan, 0.95);
+            IslemIciMaxZararPuanEnKotu  = maePuan.Min();
+            IslemIciMaxZararYuzdeOrt    = maeYuzde.Average();
+            IslemIciMaxZararYuzdeP95    = Percentile(maeYuzde, 0.95);
+            IslemIciMaxZararYuzdeEnKotu = maeYuzde.Min();
+            IslemIciZararYuzde1AsanSayisi = maeYuzde.Count(v => v < -1.0);
+            IslemIciZararYuzde2AsanSayisi = maeYuzde.Count(v => v < -2.0);
+        }
+
         public int Hesapla(int secilenBarNumarasi)
         {
             int result = 0;
@@ -625,9 +822,11 @@ namespace AlgoTrade.Core.Trading.Statistics
             SonBarKapanisFiyati     = Trader.Data[lastBarIndex].Close;
             SonBarIndex             = lastBarIndex;
 
-            // Calculate time elapsed
+            // Calculate time elapsed - verinin ilk barindan SON barina kadar. (Onceden
+            // DateTime.Now kullaniliyordu: veri bugunden once bitiyorsa aradaki sure de
+            // paydaya giriyor, tum Ort*IslemSayisi degerleri olmasi gerekenden dusuk cikiyordu.)
             DateTime firstDate      = Trader.Data[0].Date;
-            TimeSpan elapsed        = DateTime.Now - firstDate;
+            TimeSpan elapsed        = Trader.Data[lastBarIndex].DateTime - firstDate;
             double sureDakika       = elapsed.TotalMinutes;
             double sureSaat         = elapsed.TotalHours;
             int sureGun             = elapsed.Days;
@@ -643,6 +842,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             OrtHaftalikIslemSayisi  = ToplamGecenSureHafta > 0 ? 1.0 * IslemSayisi / ToplamGecenSureHafta : 0;
             OrtGunlukIslemSayisi    = ToplamGecenSureGun > 0 ? 1.0 * IslemSayisi / ToplamGecenSureGun : 0;
             OrtSaatlikIslemSayisi   = ToplamGecenSureSaat > 0 ? 1.0 * IslemSayisi / ToplamGecenSureSaat : 0;
+
+            HesaplaIslemGunuKapsami();
+            HesaplaIslemIciZarar();
 
             // Maximum Drawdown hesaplaması (puan, brut fiyat, net fiyat)
             var maxDDPuan           = CalculateMaxDD(Trader.lists.BakiyePuanList, IlkBakiyePuan);
@@ -678,6 +880,7 @@ namespace AlgoTrade.Core.Trading.Statistics
 
             // Toplam komisyonu al (son bar'daki kümülatif değer)
             KomisyonFiyat = lastBarIndex >= 0 ? Trader.lists.KomisyonFiyatList[lastBarIndex] : 0.0;
+            KomisyonBrutKarPayiYuzde = GetiriFiyat > 0 ? 100.0 * KomisyonFiyat / GetiriFiyat : -1.0;
 
             // Find min/max values
             for (int i = 1; i < Trader.Data.Count; i++)
@@ -963,6 +1166,23 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("OrtHaftalikIslemSayisi", OrtHaftalikIslemSayisi, "F2");
             Add("OrtGunlukIslemSayisi", OrtGunlukIslemSayisi, "F2");
             Add("OrtSaatlikIslemSayisi", OrtSaatlikIslemSayisi, "F2");
+            Add("ToplamIslemGunuSayisi", ToplamIslemGunuSayisi);
+            Add("IslemYapilanGunSayisi", IslemYapilanGunSayisi);
+            Add("IslemsizGunSayisi", IslemsizGunSayisi);
+            Add("EnUzunIslemsizGunSerisi", EnUzunIslemsizGunSerisi);
+            Add("EnUzunIslemsizGunSerisiBaslangic", EnUzunIslemsizGunSerisiBaslangic);
+            Add("IslemYapilanGunOrani", IslemYapilanGunOrani, "F2");
+            Add("GirisSayisi", GirisSayisi);
+            Add("OrtIslemGunuBasinaGiris", OrtIslemGunuBasinaGiris, "F2");
+            Add("IslemIciMaxZararPuanOrt", IslemIciMaxZararPuanOrt, "F2");
+            Add("IslemIciMaxZararPuanP95", IslemIciMaxZararPuanP95, "F2");
+            Add("IslemIciMaxZararPuanEnKotu", IslemIciMaxZararPuanEnKotu, "F2");
+            Add("IslemIciMaxZararYuzdeOrt", IslemIciMaxZararYuzdeOrt, "F3");
+            Add("IslemIciMaxZararYuzdeP95", IslemIciMaxZararYuzdeP95, "F3");
+            Add("IslemIciMaxZararYuzdeEnKotu", IslemIciMaxZararYuzdeEnKotu, "F3");
+            Add("IslemIciZararYuzde1AsanSayisi", IslemIciZararYuzde1AsanSayisi);
+            Add("IslemIciZararYuzde2AsanSayisi", IslemIciZararYuzde2AsanSayisi);
+            Add("KomisyonBrutKarPayiYuzde", KomisyonBrutKarPayiYuzde, "F2");
 
             StatisticsMap[SEPARATOR + keyId++.ToString()] = "";
 
@@ -1333,6 +1553,12 @@ namespace AlgoTrade.Core.Trading.Statistics
             Add("OrtHaftalikIslemSayisi", OrtHaftalikIslemSayisi, "F2");
             Add("OrtGunlukIslemSayisi", OrtGunlukIslemSayisi, "F2");
             Add("OrtSaatlikIslemSayisi", OrtSaatlikIslemSayisi, "F2");
+            Add("IslemYapilanGunOrani", IslemYapilanGunOrani, "F2");
+            Add("EnUzunIslemsizGunSerisi", EnUzunIslemsizGunSerisi);
+            Add("OrtIslemGunuBasinaGiris", OrtIslemGunuBasinaGiris, "F2");
+            Add("IslemIciMaxZararYuzdeP95", IslemIciMaxZararYuzdeP95, "F3");
+            Add("IslemIciMaxZararYuzdeEnKotu", IslemIciMaxZararYuzdeEnKotu, "F3");
+            Add("KomisyonBrutKarPayiYuzde", KomisyonBrutKarPayiYuzde, "F2");
 
             StatisticsMapMinimal[SEPARATOR + keyId++.ToString()] = "";
 

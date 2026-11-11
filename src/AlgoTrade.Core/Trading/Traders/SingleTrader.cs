@@ -1611,6 +1611,12 @@ public class SingleTrader : MarketDataProvider, IDisposable
             this.lists.GetiriFiyatList[i] = this.lists.BakiyeFiyatList[i] - this.status.BakiyeFiyat;
             this.lists.BakiyePuanList[i] = this.status.BakiyePuan;
             this.lists.GetiriPuanList[i] = this.lists.BakiyePuanList[i] - this.status.BakiyePuan;
+            // Net (komisyon dahil) listeler de ilk barda baslangic bakiyesiyle baslar. Run() ilk
+            // barda (i < 1) ExecutePostOrderMethods -> CalculateBalance'a ulasmadan dondugu icin
+            // bunlar aksi halde 0 kaliyor ve CalculateMaxDD net DD'yi her kosuda %100 hesapliyordu.
+            this.lists.GetiriFiyatNetList[i] = 0.0;
+            this.lists.BakiyeFiyatNetList[i] = this.status.BakiyeFiyat;
+            this.lists.GetiriFiyatYuzdeNetList[i] = 0.0;
         }
         if (OptimizationEnabled)
         { 

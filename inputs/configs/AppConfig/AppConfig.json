@@ -51,10 +51,10 @@
   },
 
   "ReadData": {
-    "FilterMode": "All",
+    "FilterMode": "AfterDateTime",   // MA damar v4 ile ayni pencere. Eski deger: "All"
     "N1": 100000,
     "N2": 100000,
-    "Dt1": "2020.01.01 00:00:00",
+    "Dt1": "2021.01.01 00:00:00",    // Eski deger: "2020.01.01 00:00:00"
     "Dt2": "2025.12.31 23:59:59"
 	// FilterMode : All | LastN | FirstN | IndexRange | AfterDateTime | BeforeDateTime | DateTimeRange	
 	// N1 : LastN/FirstN → kaç bar | IndexRange → başlangıç index'i (0 tabanlı)
@@ -68,7 +68,9 @@
     "RunMode": "TradeOnly",
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
-      "Name": "SimpleMAStrategy",
+      // MA damar Faz 1 v4 en iyileri: v1 = Fast/Slow 30/140 tetik 3, v2 = Stack 50/120 tetik 3
+      // (bkz. docs/ma-damar-faz1-sonuclar.md). Eski ayar: "Name": "SimpleMAStrategy", "Version": "v1"
+      "Name": "Strategy002_MaDamar",
       "Version": "v1"
     },
     "Query": {
@@ -98,7 +100,7 @@
       "PasGecEnabled": false,
       "KarAlEnabled": false,
       "ZararKesEnabled": false,
-      "GunSonuPozKapatEnabled": false,
+      "GunSonuPozKapatEnabled": true,   // MA damar: gun ici (opt ile ayni). Eski deger: false
       "TimeFilteringEnabled": false,
       "StartDateTime": "2025.05.25 09:35:00",
       "StopDateTime": "2025.06.02 17:55:00",

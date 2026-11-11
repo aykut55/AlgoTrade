@@ -842,7 +842,15 @@ public class StatisticsExporter
             ("Avg Monthly Trades", "OrtAylikIslemSayisi"),
             ("Avg Weekly Trades", "OrtHaftalikIslemSayisi"),
             ("Avg Daily Trades", "OrtGunlukIslemSayisi"),
-            ("Avg Hourly Trades", "OrtSaatlikIslemSayisi")
+            ("Avg Hourly Trades", "OrtSaatlikIslemSayisi"),
+            ("Trading Days", "ToplamIslemGunuSayisi"),
+            ("Days With Entry", "IslemYapilanGunSayisi"),
+            ("Days Without Entry", "IslemsizGunSayisi"),
+            ("Longest No-Entry Streak (Days)", "EnUzunIslemsizGunSerisi"),
+            ("Longest No-Entry Streak Start", "EnUzunIslemsizGunSerisiBaslangic"),
+            ("Days With Entry %", "IslemYapilanGunOrani"),
+            ("Entries", "GirisSayisi"),
+            ("Avg Entries per Trading Day", "OrtIslemGunuBasinaGiris")
         );
 
         AddSection(sb, "BALANCE & RETURNS",
@@ -921,7 +929,8 @@ public class StatisticsExporter
             ("Commission Multiplier", "KomisyonCarpan"),
             ("Total Commission", "KomisyonFiyat"),
             ("Commission %", "KomisyonFiyatYuzde"),
-            ("Include Commission", "KomisyonuDahilEt")
+            ("Include Commission", "KomisyonuDahilEt"),
+            ("Commission / Gross Profit %", "KomisyonBrutKarPayiYuzde")
         );
 
         AddSection(sb, "PROFIT & LOSS",
@@ -946,10 +955,20 @@ public class StatisticsExporter
         AddSection(sb, "RISK METRICS",
             ("Max Drawdown", "GetiriMaxDD"),
             ("Max Drawdown Date", "GetiriMaxDDTarih"),
+            ("Max Drawdown (Net)", "GetiriMaxDDNet"),
+            ("Max Drawdown (Net) Date", "GetiriMaxDDNetTarih"),
             ("Max Loss", "GetiriMaxKayip"),
             ("Profit Factor", "ProfitFactor"),
             ("Profit Factor (Net)", "ProfitFactorNet"),
-            ("Profit Factor (System)", "ProfitFactorSistem")
+            ("Profit Factor (System)", "ProfitFactorSistem"),
+            ("Avg In-Trade Max Loss (Points)", "IslemIciMaxZararPuanOrt"),
+            ("P95 In-Trade Max Loss (Points)", "IslemIciMaxZararPuanP95"),
+            ("Worst In-Trade Loss (Points)", "IslemIciMaxZararPuanEnKotu"),
+            ("Avg In-Trade Max Loss %", "IslemIciMaxZararYuzdeOrt"),
+            ("P95 In-Trade Max Loss %", "IslemIciMaxZararYuzdeP95"),
+            ("Worst In-Trade Loss %", "IslemIciMaxZararYuzdeEnKotu"),
+            ("Trades With In-Trade Loss > 1%", "IslemIciZararYuzde1AsanSayisi"),
+            ("Trades With In-Trade Loss > 2%", "IslemIciZararYuzde2AsanSayisi")
         );
 
         AddSection(sb, "SCORE",
@@ -1073,7 +1092,15 @@ public class StatisticsExporter
             ("Avg Monthly Trades", "OrtAylikIslemSayisi"),
             ("Avg Weekly Trades", "OrtHaftalikIslemSayisi"),
             ("Avg Daily Trades", "OrtGunlukIslemSayisi"),
-            ("Avg Hourly Trades", "OrtSaatlikIslemSayisi")
+            ("Avg Hourly Trades", "OrtSaatlikIslemSayisi"),
+            ("Trading Days", "ToplamIslemGunuSayisi"),
+            ("Days With Entry", "IslemYapilanGunSayisi"),
+            ("Days Without Entry", "IslemsizGunSayisi"),
+            ("Longest No-Entry Streak (Days)", "EnUzunIslemsizGunSerisi"),
+            ("Longest No-Entry Streak Start", "EnUzunIslemsizGunSerisiBaslangic"),
+            ("Days With Entry %", "IslemYapilanGunOrani"),
+            ("Entries", "GirisSayisi"),
+            ("Avg Entries per Trading Day", "OrtIslemGunuBasinaGiris")
         }),
         ("BALANCE & RETURNS", new (string Label, string Key)[]
         {
@@ -1152,7 +1179,8 @@ public class StatisticsExporter
             ("Commission Multiplier", "KomisyonCarpan"),
             ("Total Commission", "KomisyonFiyat"),
             ("Commission %", "KomisyonFiyatYuzde"),
-            ("Include Commission", "KomisyonuDahilEt")
+            ("Include Commission", "KomisyonuDahilEt"),
+            ("Commission / Gross Profit %", "KomisyonBrutKarPayiYuzde")
         }),
         ("PROFIT & LOSS", new (string Label, string Key)[]
         {
@@ -1177,10 +1205,20 @@ public class StatisticsExporter
         {
             ("Max Drawdown", "GetiriMaxDD"),
             ("Max Drawdown Date", "GetiriMaxDDTarih"),
+            ("Max Drawdown (Net)", "GetiriMaxDDNet"),
+            ("Max Drawdown (Net) Date", "GetiriMaxDDNetTarih"),
             ("Max Loss", "GetiriMaxKayip"),
             ("Profit Factor", "ProfitFactor"),
             ("Profit Factor (Net)", "ProfitFactorNet"),
-            ("Profit Factor (System)", "ProfitFactorSistem")
+            ("Profit Factor (System)", "ProfitFactorSistem"),
+            ("Avg In-Trade Max Loss (Points)", "IslemIciMaxZararPuanOrt"),
+            ("P95 In-Trade Max Loss (Points)", "IslemIciMaxZararPuanP95"),
+            ("Worst In-Trade Loss (Points)", "IslemIciMaxZararPuanEnKotu"),
+            ("Avg In-Trade Max Loss %", "IslemIciMaxZararYuzdeOrt"),
+            ("P95 In-Trade Max Loss %", "IslemIciMaxZararYuzdeP95"),
+            ("Worst In-Trade Loss %", "IslemIciMaxZararYuzdeEnKotu"),
+            ("Trades With In-Trade Loss > 1%", "IslemIciZararYuzde1AsanSayisi"),
+            ("Trades With In-Trade Loss > 2%", "IslemIciZararYuzde2AsanSayisi")
         }),
         ("SCORE", new (string Label, string Key)[]
         {
@@ -1522,7 +1560,10 @@ public class StatisticsExporter
             ("OrtAylikIslemSayisi", "OrtAylikIslemSayisi"),
             ("OrtHaftalikIslemSayisi", "OrtHaftalikIslemSayisi"),
             ("OrtGunlukIslemSayisi", "OrtGunlukIslemSayisi"),
-            ("OrtSaatlikIslemSayisi", "OrtSaatlikIslemSayisi")
+            ("OrtSaatlikIslemSayisi", "OrtSaatlikIslemSayisi"),
+            ("EnUzunIslemsizGunSerisi", "EnUzunIslemsizGunSerisi"),
+            ("IslemYapilanGunOrani", "IslemYapilanGunOrani"),
+            ("OrtIslemGunuBasinaGiris", "OrtIslemGunuBasinaGiris")
         }),
         ("BALANCE & RETURNS", new (string Label, string Key)[]
         {
@@ -1577,7 +1618,8 @@ public class StatisticsExporter
             ("KomisyonCarpan", "KomisyonCarpan"),
             ("KomisyonFiyat2", "KomisyonFiyat2"),
             ("KomisyonFiyatYuzde", "KomisyonFiyatYuzde"),
-            ("KomisyonuDahilEt", "KomisyonuDahilEt")
+            ("KomisyonuDahilEt", "KomisyonuDahilEt"),
+            ("KomisyonBrutKarPayiYuzde", "KomisyonBrutKarPayiYuzde")
         }),
         ("PERFORMANCE & SCORE", new (string Label, string Key)[]
         {
@@ -1590,7 +1632,9 @@ public class StatisticsExporter
             ("ProfitFactorNet", "ProfitFactorNet"),
             ("ScoreFiyatNet", "ScoreFiyatNet"),
             ("ScoreFiyat", "ScoreFiyat"),
-            ("ScorePuan", "ScorePuan")
+            ("ScorePuan", "ScorePuan"),
+            ("IslemIciMaxZararYuzdeP95", "IslemIciMaxZararYuzdeP95"),
+            ("IslemIciMaxZararYuzdeEnKotu", "IslemIciMaxZararYuzdeEnKotu")
         }),
         ("ASSET & POSITION INFO", new (string Label, string Key)[]
         {
