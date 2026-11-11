@@ -24,6 +24,40 @@ zarar eşiği) bu frekansı 3-5 güne yayacak kadar sıkı kalibre edilmemeli �
 `EnUzunIslemsizGunSerisi` (+ başlangıç tarihi), `IslemYapilanGunOrani`, `GirisSayisi`, `OrtIslemGunuBasinaGiris`.
 "Giriş" = pozisyon açılışı ya da yön dönüşü (A/S). Gün sonu kapanışı (F) giriş sayılmaz.
 
+## Deneme protokolü (2026-11-11, her aile için aynı)
+
+> Amaç: Ailelerin sonuçları birbiriyle **doğrudan karşılaştırılabilsin.** Bir aile denenirken aşağıdaki sabitler
+> değiştirilmez. Bir sabit değişecekse önce protokol güncellenir, sonra bütün aileler yeniden koşulur.
+> Ana hedef: 1 kontratta tolere edilebilir zararla para kazanmak.
+
+**Sabitler**
+
+| | |
+|---|---|
+| Veri | VIP-X030-T 5 dk. Tasarım **tüm veride (2007+)**, sonuçlar ayrıca **2021+** için de raporlanır |
+| İşlem | **1 kontrat**, gerçek komisyon (bacak 20 TL), kayma 0 (kayma duyarlılığı D aşamasında) |
+| Saatler | **10:00-18:00** penceresi, 18:00 barında kapat, **gün sonu kapat**. İndikatörler tüm barlardan hesaplanır |
+| Çerçeve | Ortak damar iskeleti: yön kaynağı parametre, giriş modu (state / tetik), pencere, gün sonu, net TL kâr al |
+| Ölçütler | Net ve brüt: getiri, işlem günü başına ortalama, en kötü gün, net DD (TL), en uzun DD süresi, kârlı gün oranı, işlem içi zarar (%95, en kötü), günlük giriş, en uzun işlemsiz seri, komisyon payı |
+
+**Aşamalar (her aile)**
+
+| Aşama | Ne yapılır | Geçme koşulu |
+|---|---|---|
+| **A. Ham tarama** | Yön modları × periyot ızgarası × giriş modu (state, tetik). Kâr al yok | Brütü pozitif bölge var mı? |
+| **B. Bölge** | Isı haritası, komşu ortalaması. En iyi köşedeyse ızgara genişletilir, A tekrarlanır | Tek tepe değil, geniş bir bölge |
+| **C. Kâr al** | En iyi bölgede kâr al 0 / 500 / 1000 / 2000 / 4000 TL | Neti ve/veya DD'yi iyileştiriyor mu? |
+| **D. Doğrulama** | Yıl yıl sonuç, 2007-2020 ile 2021+ karşılaştırması, kayma 1 ve 2 puan | Dönemler arasında tutarlı |
+| **E. Seçenek tablosu** | Aday başına: net DD / en kötü gün / günlük ortalama net (net ve brüt) | Her gün işlem + komisyon kısıtı sağlanıyor |
+
+**Kayıt kuralı:** Her koşu sürüm ekli çıktıya yazılır (`{aile}_05_{sürüm}_opt*.csv`). Çalışma kaydına tek satırlık
+özet eklenir: aile, sürüm, aşama, ayarlar, en iyi sonuç, bölge sağlam mı, kısıtlar. Finale kalan aday
+`StrategyConfig.txt`'ye hazır ayar olarak girer.
+
+**Sıra:** 1) Trailing bantlar (SuperTrend, MOST, AlphaTrend, OTT, PMax) → 2) MACD / Momentum → 3) DI+/DI- →
+4) HHV/LLV → 5) Osilatörler (RSI, Stochastic) → 6) MA'nın protokolle yeniden koşulması (v1-v6 keşifti, protokole uymuyor).
+En sonda bütün ailelerin E tabloları yan yana konup seçim yapılır.
+
 ## Geçmiş deneyim (bu yol haritasının motivasyonu)
 Daha önce MA'larla çok denenmiş ama sonuç alınamamış. Sebep tam olarak şu: **sinyal/frekans
 tarafı zaten çözülmüştü** ("çok sinyal geliyor") — eksik olan hiç kurulamayan **filtre katmanıydı**
