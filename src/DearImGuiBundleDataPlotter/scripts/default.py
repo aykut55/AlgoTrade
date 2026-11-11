@@ -629,6 +629,38 @@ class App:
                 else:
                     pool.addItem(item.name, "Indicators", item, symbol=symbol)
 
+        # DENEME (2026-11-11, silinmek uzere): Heikin-Ashi'yi OHLC panelinin
+        # uzerine surukleyip gorsel olarak nasil durdugunu test etmek icin,
+        # gercek OHLC'den Python'da hesaplanip pool'a "Data" item'i olarak
+        # eklendi. Gercek strateji/indikator tarafinda C#'taki
+        # IndicatorManager.PriceAction.HeikinAshi() kullanilir, bu SADECE
+        # bu scriptin pool'una gorsel deneme icin eklenen ayri bir kopyadir.
+        haOpen, haHigh, haLow, haClose = self._computeHeikinAshi(
+            self.data.open, self.data.high, self.data.low, self.data.close)
+        haData = PanelData(900001, "Heikin Ashi", "candle", xs=self.data.xs)
+        haData.open, haData.high, haData.low, haData.close = haOpen, haHigh, haLow, haClose
+        haData.updateStats()
+        pool.addItem("Heikin Ashi", "Data", haData, symbol=symbol)
+
+    def _computeHeikinAshi(self, opens, highs, lows, closes):
+        n = len(closes)
+        haOpen = [0.0] * n
+        haHigh = [0.0] * n
+        haLow = [0.0] * n
+        haClose = [0.0] * n
+        if n == 0:
+            return haOpen, haHigh, haLow, haClose
+        haClose[0] = (opens[0] + highs[0] + lows[0] + closes[0]) / 4.0
+        haOpen[0] = (opens[0] + closes[0]) / 2.0
+        haHigh[0] = max(highs[0], haOpen[0], haClose[0])
+        haLow[0] = min(lows[0], haOpen[0], haClose[0])
+        for i in range(1, n):
+            haClose[i] = (opens[i] + highs[i] + lows[i] + closes[i]) / 4.0
+            haOpen[i] = (haOpen[i - 1] + haClose[i - 1]) / 2.0
+            haHigh[i] = max(highs[i], haOpen[i], haClose[i])
+            haLow[i] = min(lows[i], haOpen[i], haClose[i])
+        return haOpen, haHigh, haLow, haClose
+
     def stage3Draw(self):
         # Tek-adim tam cizim: panel kabuklarini olusturur ve datayi basar.
         # Bos plotlari once gosterip sonra data basmak istiyorsan bunu DEGIL,
