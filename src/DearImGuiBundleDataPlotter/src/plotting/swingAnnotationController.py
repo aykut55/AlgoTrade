@@ -292,6 +292,12 @@ class SwingAnnotationController:
                 "difference": difference,
                 "percent": difference / startClose * 100.0 if startClose else None,
             })
+            # Measure paneliyle ayni aralik istatistikleri (High/Low, Runup/DD,
+            # MFE/MAE, Efficiency...). Swing'de bar index = dizi konumu.
+            metrics.update(RangeMeasureTool.rangeStats(
+                getattr(self._data, "xs", None), self._data.high, self._data.low,
+                self._data.close, self._data.timestamps,
+                startIndex, endIndex, startClose, difference))
         return metrics
 
     def _copyMeasurement(self):

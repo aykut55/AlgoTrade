@@ -35,7 +35,11 @@ class RangeMeasureTool:
     CSV_HEADER = ["SavedAt", "Source", "Bundle", "Series",
                   "StartBar", "StartTime", "StartClose",
                   "EndBar", "EndTime", "EndClose",
-                  "Bars", "ElapsedSeconds", "Elapsed", "Difference", "ChangePercent"]
+                  "Bars", "ElapsedSeconds", "Elapsed", "Difference", "ChangePercent",
+                  "High", "HighBar", "HighTime", "Low", "LowBar", "LowTime",
+                  "Range", "RangePercent", "MaxRunup", "MaxRunupPercent",
+                  "MaxDrawdown", "MaxDrawdownPercent", "Mfe", "Mae",
+                  "Efficiency", "AvgPerBar"]
 
     def __init__(self, panelManager):
         self._pm = panelManager
@@ -236,7 +240,78 @@ class RangeMeasureTool:
             difference = endValue - startValue
             result["difference"] = difference
             result["percent"] = difference / startValue * 100.0 if startValue else None
+            startPos = self._positionOf(data, self.startIndex)
+            endPos = self._positionOf(data, self.endIndex)
+            if startPos is not None and endPos is not None:
+                isCandle = data.dataType == "candle"
+                closes = self._array(data, "close" if isCandle else "ys")
+                result.update(self.rangeStats(
+                    self._array(data, "xs"),
+                    self._array(data, "high") if isCandle else closes,
+                    self._array(data, "low") if isCandle else closes,
+                    closes, self._array(data, "timestamps"),
+                    startPos, endPos, startValue, difference))
         return result
+
+    @staticmethod
+    def rangeStats(xs, highs, lows, closes, timestamps, startPos, endPos,
+                   startValue, difference):
+        """A ile B arasindaki (iki uc dahil) tum barlara bakan aralik istatistikleri.
+        Pozisyonlar seri dizilerindeki konumlardir; A, B'den sonra secilmis olsa
+        da aralik kronolojik alinir. Referans fiyat A'nin Close'udur.
+        Veri eksikse bos dict dondurur (panel o satirlari gostermez)."""
+        try:
+            lo, hi = sorted((int(startPos), int(endPos)))
+            highArr = np.asarray(highs[lo:hi + 1], dtype=np.float64)
+            lowArr = np.asarray(lows[lo:hi + 1], dtype=np.float64)
+            closeArr = np.asarray(closes[lo:hi + 1], dtype=np.float64)
+        except (TypeError, ValueError, IndexError):
+            return {}
+        if len(highArr) == 0 or len(lowArr) != len(highArr) or len(closeArr) != len(highArr):
+            return {}
+        if np.isnan(highArr).all() or np.isnan(lowArr).all():
+            return {}
+
+        highOffset = int(np.nanargmax(highArr))
+        lowOffset = int(np.nanargmin(lowArr))
+        high = float(highArr[highOffset])
+        low = float(lowArr[lowOffset])
+
+        def barAt(offset):
+            pos = lo + offset
+            try:
+                return int(round(float(xs[pos]))) if xs is not None else pos
+            except (TypeError, ValueError, IndexError):
+                return pos
+
+        def timeAt(offset):
+            pos = lo + offset
+            if timestamps is None or pos >= len(timestamps):
+                return None
+            return timestamps[pos]
+
+        def pct(value):
+            return value / startValue * 100.0 if startValue else None
+
+        maxRunup = high - startValue
+        maxDrawdown = low - startValue
+        # Swing segmentindeki tanimla ayni: harekete gore en iyi/en kotu nokta.
+        if difference >= 0:
+            mfe, mae = high - startValue, low - startValue
+        else:
+            mfe, mae = startValue - low, startValue - high
+        path = float(np.nansum(np.abs(np.diff(closeArr)))) if len(closeArr) > 1 else 0.0
+        bars = hi - lo
+        return {
+            "high": high, "highIndex": barAt(highOffset), "highTime": timeAt(highOffset),
+            "low": low, "lowIndex": barAt(lowOffset), "lowTime": timeAt(lowOffset),
+            "range": high - low, "rangePercent": pct(high - low),
+            "maxRunup": maxRunup, "maxRunupPercent": pct(maxRunup),
+            "maxDrawdown": maxDrawdown, "maxDrawdownPercent": pct(maxDrawdown),
+            "mfe": mfe, "mae": mae,
+            "efficiency": abs(difference) / path if path else None,
+            "avgPerBar": difference / bars if bars else None,
+        }
 
     # ------------------------------------------------------ yardimcilar
     @staticmethod
@@ -337,6 +412,33 @@ class RangeMeasureTool:
         rows.append(("Time", RangeMeasureTool.formatDuration(metrics["elapsedSeconds"]), None))
         rows.append(("Difference", num(difference, "+.6g"), signColor))
         rows.append(("Change", "-" if percent is None else f"{percent:+.3f}%", signColor))
+
+        # Aralik istatistikleri (A..B arasindaki tum barlar). Swing Controls
+        # bunlari hesaplamadigi icin anahtarlar yoksa satirlar eklenmez.
+        if metrics.get("high") is None:
+            return rows
+
+        def withPct(value, percentValue, signed=False):
+            text = num(value, "+.6g" if signed else ".6g")
+            if percentValue is None:
+                return text
+            return f"{text} ({percentValue:+.3f}%)" if signed else f"{text} ({percentValue:.3f}%)"
+
+        green, red = (0.25, 0.9, 0.35, 1.0), (1.0, 0.35, 0.3, 1.0)
+        rows.append(("High", f"{num(metrics['high'])} | Bar {metrics['highIndex']} | "
+                             f"{RangeMeasureTool.formatTime(metrics['highTime'])}", None))
+        rows.append(("Low", f"{num(metrics['low'])} | Bar {metrics['lowIndex']} | "
+                            f"{RangeMeasureTool.formatTime(metrics['lowTime'])}", None))
+        rows.append(("Range", withPct(metrics["range"], metrics["rangePercent"]), None))
+        rows.append(("Max Runup", withPct(metrics["maxRunup"], metrics["maxRunupPercent"], True),
+                     green))
+        rows.append(("Max DD", withPct(metrics["maxDrawdown"], metrics["maxDrawdownPercent"], True),
+                     red))
+        rows.append(("MFE / MAE", f"{num(metrics['mfe'], '+.6g')} / {num(metrics['mae'], '+.6g')}",
+                     None))
+        efficiency = metrics.get("efficiency")
+        rows.append(("Efficiency", "-" if efficiency is None else f"{efficiency:.4f}", None))
+        rows.append(("Avg / Bar", num(metrics.get("avgPerBar"), "+.6g"), None))
         return rows
 
     @staticmethod
@@ -364,6 +466,16 @@ class RangeMeasureTool:
             metrics["bars"], "" if elapsed is None else int(elapsed),
             RangeMeasureTool.formatDuration(elapsed),
             num(metrics["difference"]), num(metrics["percent"], ".6f"),
+            # Aralik istatistikleri - Swing Controls'tan gelen kayitlarda bos kalir.
+            num(metrics.get("high")), metrics.get("highIndex", ""),
+            RangeMeasureTool.formatTime(metrics["highTime"]) if metrics.get("highTime") is not None else "",
+            num(metrics.get("low")), metrics.get("lowIndex", ""),
+            RangeMeasureTool.formatTime(metrics["lowTime"]) if metrics.get("lowTime") is not None else "",
+            num(metrics.get("range")), num(metrics.get("rangePercent"), ".6f"),
+            num(metrics.get("maxRunup")), num(metrics.get("maxRunupPercent"), ".6f"),
+            num(metrics.get("maxDrawdown")), num(metrics.get("maxDrawdownPercent"), ".6f"),
+            num(metrics.get("mfe")), num(metrics.get("mae")),
+            num(metrics.get("efficiency"), ".6f"), num(metrics.get("avgPerBar")),
         ]
 
     def saveMeasurement(self, metrics, source):
@@ -393,6 +505,14 @@ class RangeMeasureTool:
             with open(path, "a", encoding="utf-8", newline="\n") as stream:
                 stream.write(text)
             # Yeni/bos dosyada BOM + baslik satiri; sonrakilerde sadece satir.
+            # Eski (daha az sutunlu) basliga sahip bir dosya varsa ustune satir
+            # eklemek sutunlari kaydirir; onu kenara alip yeni dosya baslatilir.
+            if os.path.isfile(csvPath) and os.path.getsize(csvPath) > 0:
+                with open(csvPath, "r", encoding="utf-8-sig") as stream:
+                    existingHeader = stream.readline().rstrip("\r\n").split(";")
+                if existingHeader != self.CSV_HEADER:
+                    oldStamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    os.replace(csvPath, os.path.splitext(csvPath)[0] + f"_old_{oldStamp}.csv")
             isNew = not os.path.isfile(csvPath) or os.path.getsize(csvPath) == 0
             with open(csvPath, "a", encoding="utf-8-sig" if isNew else "utf-8",
                       newline="") as stream:
@@ -421,11 +541,77 @@ class RangeMeasureTool:
             imgui.table_next_row()
             imgui.table_next_column()
             imgui.text(label)
+            RangeMeasureTool._helpTooltip(label)
             imgui.table_next_column()
             if color is not None:
                 imgui.text_colored(color, f": {value}")
             else:
                 imgui.text(f": {value}")
+            RangeMeasureTool._helpTooltip(label)
+        imgui.end_table()
+        RangeMeasureTool._renderHelpSection(tableId, [label for label, _, _ in rows])
+
+    # Etiket aciklamalari: satirin uzerine gelince ipucu olarak, "Aciklamalar"
+    # bolumunde tablo olarak gosterilir. Varsayilan ImGui fontunda Turkce
+    # karakter (ı, ş, ğ...) olmadigi icin metinler ASCII yazildi.
+    METRIC_HELP = {
+        "Series": "Olcumun yapildigi seri (olcumun basladigi paneldeki mum serisi).",
+        "A": "Ilk secilen bar: bar numarasi, zamani ve Close degeri. "
+             "Tum yuzdelerin referansi A'nin Close'udur.",
+        "B": "Ikinci secilen bar: bar numarasi, zamani ve Close degeri.",
+        "Bars": "A ile B arasindaki bar sayisi.",
+        "Time": "A ile B arasinda gecen sure. Seans aralari ve hafta sonu "
+                "yuzunden bar sayisindan farkli olabilir.",
+        "Difference": "B'nin Close'u eksi A'nin Close'u (puan).",
+        "Change": "Difference'in A'nin Close'una gore yuzdesi.",
+        "High": "Araliktaki en yuksek High; hangi barda ve hangi zamanda oldugu.",
+        "Low": "Araliktaki en dusuk Low; hangi barda ve hangi zamanda oldugu.",
+        "Range": "High - Low, yani araliktaki toplam salinim (puan ve A'ya gore %).",
+        "Max Runup": "A'dan sonra fiyatin A'nin Close'unun en fazla ne kadar "
+                     "ustune ciktigi.",
+        "Max DD": "Max Drawdown: A'dan sonra fiyatin A'nin Close'unun en fazla "
+                  "ne kadar altina indigi.",
+        "MFE / MAE": "Hareket yonune gore en iyi (MFE) ve en kotu (MAE) nokta. "
+                     "Yukseliste MFE en yuksek nokta, duseste en dusuk nokta.",
+        "Efficiency": "|B - A| / bar bar Close degisimlerinin toplami. 1'e yakinsa "
+                      "duz bir hareket, 0'a yakinsa zikzakli bir hareket.",
+        "Avg / Bar": "Difference / bar sayisi, bar basina ortalama degisim.",
+    }
+
+    @staticmethod
+    def _helpTooltip(label):
+        """Son cizilen ogenin (etiket ya da deger) uzerine gelince aciklama."""
+        text = RangeMeasureTool.METRIC_HELP.get(label)
+        if not text or not imgui.is_item_hovered():
+            return
+        imgui.begin_tooltip()
+        imgui.push_text_wrap_pos(imgui.get_font_size() * 28.0)
+        imgui.text_colored((1.0, 0.85, 0.4, 1.0), label)
+        imgui.text_unformatted(text)
+        imgui.pop_text_wrap_pos()
+        imgui.end_tooltip()
+
+    @staticmethod
+    def _renderHelpSection(tableId, labels):
+        """Olcumun altinda varsayilan kapali 'Aciklamalar' bolumu: o an
+        gosterilen satirlarin aciklamalari iki kolonlu tablo olarak."""
+        if not imgui.collapsing_header(f"Aciklamalar{tableId}_help"):
+            return
+        flags = (imgui.TableFlags_.borders_inner_h.value |
+                 imgui.TableFlags_.sizing_stretch_prop.value)
+        if not imgui.begin_table(f"{tableId}_helpTable", 2, flags):
+            return
+        imgui.table_setup_column("Deger", imgui.TableColumnFlags_.width_fixed.value)
+        imgui.table_setup_column("Anlami", imgui.TableColumnFlags_.width_stretch.value)
+        for label in labels:
+            text = RangeMeasureTool.METRIC_HELP.get(label)
+            if not text:
+                continue
+            imgui.table_next_row()
+            imgui.table_next_column()
+            imgui.text(label)
+            imgui.table_next_column()
+            imgui.text_wrapped(text)
         imgui.end_table()
 
     # ---------------------------------------------------------- cizim UI
