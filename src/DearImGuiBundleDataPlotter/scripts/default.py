@@ -34,8 +34,14 @@ SHOW_SIGNAL_STEP_PANEL = True
 
 # Gun gecis cizgileri: her yeni gunun ilk barina, TUM panellerde dikey cizgi.
 # Sadece intraday veride anlamlidir; gunluk/haftalik veride otomatik atlanir.
-SHOW_DAY_SEPARATORS = True
-DAY_SEPARATOR_COLOR = (0.6, 0.6, 0.6, 0.35)   # RGBA 0..1
+SHOW_DAY_SEPARATORS = True            # normal plot ekranlari
+SHOW_DAY_SEPARATORS_IN_SWING = False  # Swing Annotation ekrani (view mode = swing_annotation)
+# Renk (RGBA 0..1, son deger opaklik). Denemek icin birini acip digerlerini kapat:
+# DAY_SEPARATOR_COLOR = (1.0, 0.0, 0.0, 0.6)    # kirmizi
+# DAY_SEPARATOR_COLOR = (1.0, 1.0, 0.0, 0.6)    # sari
+# DAY_SEPARATOR_COLOR = (0.0, 1.0, 0.0, 0.6)    # yesil
+# DAY_SEPARATOR_COLOR = (0.7, 0.3, 1.0, 0.6)    # purple
+DAY_SEPARATOR_COLOR = (0.0, 1.0, 1.0, 0.6)      # cyan
 DAY_SEPARATOR_WEIGHT = 1.0
 DAY_SEPARATOR_MAX_VISIBLE = 2000              # cok uzaktan bakarken cizme (kalabalik olmasin)
 
@@ -141,7 +147,8 @@ class App:
         self.stage3FillPanels()
         self.stage3FillPool()
         self.stage3DrawPanelDataOnly()
-        if SHOW_DAY_SEPARATORS:
+        isSwingView = self.view.get("mode") == "swing_annotation"
+        if (SHOW_DAY_SEPARATORS_IN_SWING if isSwingView else SHOW_DAY_SEPARATORS):
             self.addDaySeparators()
 
         # 8) Yan UI'lari ve top controls state'ini tazele.
