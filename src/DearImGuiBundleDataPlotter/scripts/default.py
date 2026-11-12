@@ -252,11 +252,6 @@ class App:
         if candle is None:
             return
 
-        # Icerik pan DISINDA da (A/B secimi, separator modu degisimi) degisir -
-        # tek seferlik/pan-tetiklemeli Y fit (Adjust All, diger paneller gibi)
-        # bunu yakalayamaz; surekli fit garantiye alir.
-        pm.setContinuousAutoFit(panel.id, "y", True)
-
         def updatePctChangePanel(pm, panelId, p):
             data = p.getData(dataId)
             if data is None:

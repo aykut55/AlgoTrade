@@ -747,15 +747,6 @@ class PanelManager:
         self._pendingAxisOverride.setdefault(panelId, {}).pop(axis, None)
         self._autoFitAxes.setdefault(panelId, {})[axis] = True
 
-    def setContinuousAutoFit(self, panelId, axis, enabled=True):
-        """Normal paneller TEK SEFERLIK/pan-tetiklemeli Y fit alir (adjustYAxis/
-        resetPanelView/Adjust All), icerikleri PANLAMA DISINDA degismez. Icerigi
-        baska olaylarla da (orn. Range Measure A/B secimi, separator modu) HER
-        FRAME degisen paneller (bkz. default.py addPctChangeUpdater) icin bu
-        tetikleyicilere guvenmek yetersiz kalir - bu metod onlar icin surekli
-        fit saglar."""
-        self._autoFitAxes.setdefault(panelId, {})[axis] = bool(enabled)
-
     def _applyAxisPadding(self, panelId, panel, xMarginRatio=0.02, yMarginRatio=0.08):
         xMin = xMax = yMin = yMax = None
         for d in panel.dataList:
