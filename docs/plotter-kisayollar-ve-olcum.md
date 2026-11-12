@@ -94,16 +94,22 @@ kapalı **Aciklamalar** bölümü açılınca bütün açıklamalar tablo halind
 
 Swing Controls'taki ölçüm de aynı değerleri gösterir ve kaydeder (hesap: `RangeMeasureTool.rangeStats`).
 
-## 4. Gün geçiş çizgileri
+## 4. Zaman geçiş çizgileri (separator)
 
-Her yeni günün ilk barına bütün panellerde dikey çizgi çizer. Ayarlar `scripts/default.py`'nin başında:
+Seçilen periyodun her yeni biriminin ilk barına TÜM panellerde dikey çizgi çizer
+(hour/day/week/month/year geçişleri — `cur.date()`/`isocalendar()`/`(year,month)`/`year`
+karşılaştırmasıyla bulunur). Ayarlar `scripts/default.py`'nin başında:
 
 | Ayar | Anlamı |
 |---|---|
-| `SHOW_DAY_SEPARATORS` | Normal plot ekranlarında aç / kapa |
-| `SHOW_DAY_SEPARATORS_IN_SWING` | Swing Annotation ekranında aç / kapa |
+| `SEPARATOR_MODE` | Normal plot ekranlarında: `none` / `hour` / `day` / `week` / `month` / `year` |
+| `SEPARATOR_MODE_IN_SWING` | Swing Annotation ekranında aynı seçenekler |
 | `DAY_SEPARATOR_COLOR` | Renk (RGBA 0..1). Kırmızı / sarı / yeşil / purple / cyan seçenekleri yorum satırında |
 | `DAY_SEPARATOR_WEIGHT` | Çizgi kalınlığı |
-| `DAY_SEPARATOR_MAX_VISIBLE` | Ekranda bundan fazla gün başı varsa çizilmez (çok uzaktan bakarken) |
+| `DAY_SEPARATOR_MAX_VISIBLE` | Ekranda bundan fazla geçiş varsa çizilmez (çok uzaktan bakarken) |
 
-Sadece intraday veride çizilir. Değişiklik, `default.py` tekrar çalışınca görünür.
+`hour`/`day` modları sadece intraday veride çizilir (günlük/haftalık barda otomatik atlanır);
+`week`/`month`/`year` her veri periyodunda çalışır. Çizgilerin kendisi `PanelManager`
+içinde TÜM panellerde (gelecekte eklenecek yeni paneller dahil) tek merkezden çizilir —
+script sadece periyot başlangıçlarını hesaplayıp `pm.setSeparatorInfo(...)`'a bildirir.
+Değişiklik, `default.py` tekrar çalışınca görünür.

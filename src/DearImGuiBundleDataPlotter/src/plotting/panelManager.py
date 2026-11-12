@@ -137,6 +137,10 @@ class PanelManager:
         self._prevHoverState = None  # ONCEKI TAMAMLANMIS frame'in hover'i - overlay karar/cizim pass'i bunu okur
         self._panelDrawHooks = {}  # {panelId: [callback(pm, panelId, panel), ...]} - TradeSignalRenderer gibi ek cizim katmanlari icin (bkz. addPanelDrawHook)
         self._rangeMeasureTool = None  # bkz. setRangeMeasureTool - A/B olcum cizgileri tum panellerde cizilir
+        self._separatorInfo = (None, None)  # (mode, starts) - bkz. setSeparatorInfo
+        self._separatorColor = (0.0, 1.0, 1.0, 0.6)
+        self._separatorWeight = 1.0
+        self._separatorMaxVisible = 2000
         self._tradeSignalRenderer = None  # bkz. setTradeSignalRenderer - candle cizim dongusu her frame bunun isColorBarsActive/renderInPlot'unu cagirir
         self._detachedPanelIds = set()
         self._detachedInitialSizePending = set()
@@ -203,6 +207,36 @@ class PanelManager:
 
     def getRangeMeasureTool(self):
         return self._rangeMeasureTool
+
+    def setSeparatorInfo(self, mode, starts, color=None, weight=1.0, maxVisible=2000):
+        """default.py addSeparators()/setSeparatorMode() tarafindan cagrilir: aktif
+        ayrac modunu (none/hour/day/week/month/year) ve bar-index baslangiclarini
+        saklar. Dikey cizgilerin KENDISI de buradan (render() icinde, TUM
+        panellerde) cizilir - mod degistirmek sadece bu state'i gunceller,
+        panel/hook yonetimi gerekmez."""
+        self._separatorInfo = (mode, starts)
+        self._separatorColor = color or (0.0, 1.0, 1.0, 0.6)
+        self._separatorWeight = weight
+        self._separatorMaxVisible = maxVisible
+
+    def getSeparatorInfo(self):
+        return self._separatorInfo
+
+    def _drawSeparatorsInline(self, panelId):
+        """render() icinde HER panel icin cagrilir (bkz. setSeparatorInfo).
+        Sadece gorunen X araligindaki baslangiclari tek plot_inf_lines
+        cagrisiyla basar - buyuk/intraday veride de yavaslatmaz."""
+        mode, starts = self._separatorInfo
+        if starts is None or len(starts) == 0:
+            return
+        limits = self._lastAxisLimits.get(panelId, {}).get("x")
+        if limits is None:
+            return
+        lo, hi = np.searchsorted(starts, [limits[0], limits[1]])
+        visible = starts[lo:hi]
+        if 0 < len(visible) <= self._separatorMaxVisible:
+            spec = implot.Spec(line_color=self._separatorColor, line_weight=self._separatorWeight)
+            implot.plot_inf_lines(f"##separators_{mode}", visible, spec)
 
     def isAnyPlotHovered(self):
         """Onceki tamamlanmis frame'de fare herhangi bir panelin plot alaninin
@@ -546,6 +580,11 @@ class PanelManager:
             xs, ys = slice_["xs"], slice_["ys"]
         else:
             xs, ys = d.xs, d.ys
+        if not xs or not ys:
+            # Bos dizi implot.plot_line'a gidince crash ediyordu (RuntimeError:
+            # "The array must be 1D and contiguous") - veri gelene kadar (orn.
+            # canli hesaplanan bir seri henuz bos) sessizce atla.
+            return
         spec = implot.Spec(line_color=self._colorTuple(d.color)) if d.color else implot.Spec()
         implot.plot_line(d.name, np.asarray(xs, dtype=np.float64), np.asarray(ys, dtype=np.float64), spec=spec)
 
@@ -707,6 +746,15 @@ class PanelManager:
     def _setAxisAutoFit(self, panelId, axis):
         self._pendingAxisOverride.setdefault(panelId, {}).pop(axis, None)
         self._autoFitAxes.setdefault(panelId, {})[axis] = True
+
+    def setContinuousAutoFit(self, panelId, axis, enabled=True):
+        """Normal paneller TEK SEFERLIK/pan-tetiklemeli Y fit alir (adjustYAxis/
+        resetPanelView/Adjust All), icerikleri PANLAMA DISINDA degismez. Icerigi
+        baska olaylarla da (orn. Range Measure A/B secimi, separator modu) HER
+        FRAME degisen paneller (bkz. default.py addPctChangeUpdater) icin bu
+        tetikleyicilere guvenmek yetersiz kalir - bu metod onlar icin surekli
+        fit saglar."""
+        self._autoFitAxes.setdefault(panelId, {})[axis] = bool(enabled)
 
     def _applyAxisPadding(self, panelId, panel, xMarginRatio=0.02, yMarginRatio=0.08):
         xMin = xMax = yMin = yMax = None
@@ -1805,6 +1853,8 @@ class PanelManager:
 
             for hook in self._panelDrawHooks.get(panelId, []):
                 hook(self, panelId, panel)
+
+            self._drawSeparatorsInline(panelId)
 
             measureTool = self._rangeMeasureTool
             if measureTool is not None:

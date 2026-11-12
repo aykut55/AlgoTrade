@@ -126,10 +126,27 @@ public sealed class OhlcAnnotationBundleConverter
                 {
                     id = "ohlc",
                     name = "OHLC",
-                    caption = "OHLC Dip/Tepe Etiketleme",
+                    caption = "OHLC Dip/Top Labeling",
                     height = 720,
                     ySyncId = 0,
                     series = BuildViewSeries(symbol, zigZagSeries)
+                },
+                // % Change: OHLC'nin hemen altında, normal plot ekranındaki
+                // "pctChange" paneliyle AYNI iskelet/kaynak ("windowpercent" -
+                // bkz. default.py stage3FillPanelsFromView + updatePctChangePanel).
+                new
+                {
+                    id = "pctChange",
+                    name = "% Change",
+                    caption = "% Change",
+                    height = 220,
+                    ySyncId = 1,
+                    series = new object[]
+                    {
+                        new { source = "windowpercent", name = "Change %", label = "Change %",
+                              color = new[] { 255, 255, 0, 255 } }
+                    },
+                    yLabel = "% Change"
                 }
             }
         };

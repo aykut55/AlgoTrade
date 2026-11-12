@@ -32,10 +32,13 @@ SHOW_TRADE_SIGNAL_LINES = True
 COLOR_BARS_BY_SIGNAL = True
 SHOW_SIGNAL_STEP_PANEL = True
 
-# Gun gecis cizgileri: her yeni gunun ilk barina, TUM panellerde dikey cizgi.
-# Sadece intraday veride anlamlidir; gunluk/haftalik veride otomatik atlanir.
-SHOW_DAY_SEPARATORS = True            # normal plot ekranlari
-SHOW_DAY_SEPARATORS_IN_SWING = False  # Swing Annotation ekrani (view mode = swing_annotation)
+# Zaman gecis cizgileri: secilen periyodun her yeni biriminin ilk barina,
+# TUM panellerde dikey cizgi. "none" | "hour" | "day" | "week" | "month" | "year".
+# Veri periyoduna gore uygun olani sec: 5dk/1dk gibi intraday veride "hour"/"day"
+# mantikli; gunluk veride "week"/"month"/"year" mantikli. Sadece intraday veride
+# anlamli olan "hour"/"day" modlari, gunluk/haftalik veride otomatik atlanir.
+SEPARATOR_MODE = "day"            # normal plot ekranlari
+SEPARATOR_MODE_IN_SWING = "none"  # Swing Annotation ekrani (view mode = swing_annotation)
 # Renk (RGBA 0..1, son deger opaklik). Denemek icin birini acip digerlerini kapat:
 # DAY_SEPARATOR_COLOR = (1.0, 0.0, 0.0, 0.6)    # kirmizi
 # DAY_SEPARATOR_COLOR = (1.0, 1.0, 0.0, 0.6)    # sari
@@ -44,6 +47,19 @@ SHOW_DAY_SEPARATORS_IN_SWING = False  # Swing Annotation ekrani (view mode = swi
 DAY_SEPARATOR_COLOR = (0.0, 1.0, 1.0, 0.6)      # cyan
 DAY_SEPARATOR_WEIGHT = 1.0
 DAY_SEPARATOR_MAX_VISIBLE = 2000              # cok uzaktan bakarken cizme (kalabalik olmasin)
+
+# SEPARATOR_MODE -> her bar'in zaman damgasini, bir onceki barla karsilastirmak
+# icin bir "birim anahtarina" indirgeyen fonksiyon. Anahtar degisince o bar bir
+# yeni periyodun ilk baridir (ayrac orada cizilir).
+SEPARATOR_KEY_FUNCS = {
+    "hour": lambda t: (t.year, t.month, t.day, t.hour),
+    "day": lambda t: (t.year, t.month, t.day),
+    "week": lambda t: t.isocalendar()[:2],
+    "month": lambda t: (t.year, t.month),
+    "year": lambda t: t.year,
+}
+# Sadece intraday veride anlamli olan moddar (gunluk/haftalik barda atlanir).
+SEPARATOR_INTRADAY_ONLY_MODES = {"hour", "day"}
 
 # Yalnizca DearImGuiBundleDataPlotter'a ozgu varsayilan seri renkleri.
 # View acikca bir renk verirse o renk her zaman onceliklidir.
@@ -100,6 +116,8 @@ class App:
         self.ohlcPanel = None
         self.signalPanel = None
         self.indicatorPanel = None
+        self.pctChangePanel = None
+        self.pctChangeDataId = None
         self.inputConfig = {}
         self.bundlePath = None
         self.viewPath = None
@@ -148,8 +166,10 @@ class App:
         self.stage3FillPool()
         self.stage3DrawPanelDataOnly()
         isSwingView = self.view.get("mode") == "swing_annotation"
-        if (SHOW_DAY_SEPARATORS_IN_SWING if isSwingView else SHOW_DAY_SEPARATORS):
-            self.addDaySeparators()
+        separatorMode = SEPARATOR_MODE_IN_SWING if isSwingView else SEPARATOR_MODE
+        self.addSeparators(separatorMode)
+        self.addPctChangeUpdater()
+        gm.measurePanel.setPctChangePanel(self.pctChangePanel)
 
         # 8) Yan UI'lari ve top controls state'ini tazele.
         gm.seedTopViewRangeInputs(len(self.data.xs) if self.data else 0)
@@ -172,19 +192,26 @@ class App:
         import create_test_bundle
         create_test_bundle.main()
 
-    def addDaySeparators(self):
-        """Gun gecislerine (bir onceki bardan farkli gune ait ilk bar) tum
-        panellerde dikey cizgi ekler. SHOW_DAY_SEPARATORS ile acilip kapanir.
+    def addSeparators(self, mode):
+        """Secilen periyodun (none/hour/day/week/month/year) gecislerine (bir
+        onceki bardan farkli birime ait ilk bar) TUM panellerde dikey cizgi
+        ekler. SEPARATOR_MODE / SEPARATOR_MODE_IN_SWING ile secilir.
 
-        Cizgiler panel.addVline yerine draw-hook ile cizilir: her frame sadece
-        gorunen X araligindaki gun baslari tek bir plot_inf_lines cagrisiyla
-        basilir, boylece yillarca intraday veride de yavaslatmaz. Hook'lar
-        pm.deleteAllPanels'te silindigi icin script her calistiginda tekrar
-        eklenir, ust uste binmez."""
-        if not self.data or not self.data.timestamps:
+        Cizgilerin kendisi PanelManager._drawSeparatorsInline icinde cizilir
+        (bkz. pm.setSeparatorInfo) - render() TUM panellerde her frame otomatik
+        cagirir, script burada sadece baslangiclari hesaplayip bildirir. "none"
+        ya da veri/mod uygun degilse mevcut cizgiler pm.setSeparatorInfo(mode, None)
+        ile temizlenir."""
+        if mode == "none" or not self.data or not self.data.timestamps:
+            pm.setSeparatorInfo(mode, None)
             return
-        if not bool(self.data.meta.get("intraday", True)):
-            print("  daySep : atlandi (intraday degil)")
+        keyFunc = SEPARATOR_KEY_FUNCS.get(mode)
+        if keyFunc is None:
+            pm.setSeparatorInfo(mode, None)
+            return
+        if mode in SEPARATOR_INTRADAY_ONLY_MODES and not bool(self.data.meta.get("intraday", True)):
+            print(f"  separator({mode}) : atlandi (intraday degil)")
+            pm.setSeparatorInfo(mode, None)
             return
 
         ts = self.data.timestamps
@@ -194,29 +221,161 @@ class App:
             prev, cur = ts[i - 1], ts[i]
             if not (hasattr(prev, "date") and hasattr(cur, "date")):
                 continue
-            if cur.date() != prev.date():
+            if keyFunc(cur) != keyFunc(prev):
                 starts.append(float(xs[i]))
-        # Neredeyse her bar yeni gunse (gunluk veri ama meta intraday=True) cizme.
+        # Neredeyse her bar yeni periyotsa (orn. gunluk veride "day" modu) cizme.
         if not starts or len(starts) > 0.5 * len(xs):
-            print(f"  daySep : atlandi ({len(starts)} gun gecisi)")
+            print(f"  separator({mode}) : atlandi ({len(starts)} gecis)")
+            pm.setSeparatorInfo(mode, None)
             return
 
-        dayStarts = np.asarray(starts, dtype=np.float64)
-        spec = implot.Spec(line_color=DAY_SEPARATOR_COLOR, line_weight=DAY_SEPARATOR_WEIGHT)
-
-        def drawDaySeparators(pm, panelId, panel):
-            limits = pm.getXAxisLimits(panelId)
-            if limits is None:
-                return
-            lo, hi = np.searchsorted(dayStarts, [limits[0], limits[1]])
-            visible = dayStarts[lo:hi]
-            if 0 < len(visible) <= DAY_SEPARATOR_MAX_VISIBLE:
-                implot.plot_inf_lines("##daySeparators", visible, spec)
-
-        for panelId in pm.getPanelOrder():
-            pm.addPanelDrawHook(panelId, drawDaySeparators)
-        print(f"  daySep : {len(starts)} gun gecisi")
+        periodStarts = np.asarray(starts, dtype=np.float64)
+        pm.setSeparatorInfo(mode, periodStarts, color=DAY_SEPARATOR_COLOR,
+                           weight=DAY_SEPARATOR_WEIGHT, maxVisible=DAY_SEPARATOR_MAX_VISIBLE)
+        print(f"  separator({mode}) : {len(starts)} gecis")
         print()
+
+    def addPctChangeUpdater(self):
+        """pctChange panelinin (bkz. stage3FillPanelsFromView 'windowpercent'
+        source'u) icerigini HER FRAME gunceller - Range Measure'da A/B
+        seciliyse A'ya gore (oncelikli), yoksa aktif separator moduna gore
+        (her segment kendi ilk barina sifirlanir, bkz. PanelManager.
+        getSeparatorInfo). Panelin KENDISI (checkbox/hover/datetime-tick/
+        X-sync) diger paneller gibi STATIK kuruldu (stage3FillPanelsFromView);
+        burada SADECE mevcut PanelData'nin icerigi (xs/ys/timestamps)
+        guncelleniyor - panel olusturma/silme, ozel X-sync YOK."""
+        panel = self.pctChangePanel
+        dataId = self.pctChangeDataId
+        if panel is None or dataId is None or self.ohlcPanel is None:
+            return
+        candle = next((d for d in self.ohlcPanel.dataList if d.dataType == "candle"), None)
+        if candle is None:
+            return
+
+        # Icerik pan DISINDA da (A/B secimi, separator modu degisimi) degisir -
+        # tek seferlik/pan-tetiklemeli Y fit (Adjust All, diger paneller gibi)
+        # bunu yakalayamaz; surekli fit garantiye alir.
+        pm.setContinuousAutoFit(panel.id, "y", True)
+
+        def updatePctChangePanel(pm, panelId, p):
+            data = p.getData(dataId)
+            if data is None:
+                return
+            xs = candle._fullXs if candle._fullXs is not None else None
+            closes = candle._fullClose if candle._fullClose is not None else None
+            timestamps = candle._fullTimestamps if candle._fullTimestamps else candle.timestamps
+            if xs is None or closes is None or len(xs) == 0:
+                self._clearPctChangeData(data)
+                return
+
+            # Swing modunda RangeMeasureTool suspend edilir (startIndex hep None) -
+            # bu durumda SwingAnnotationController'in kendi A/B'si (710001/710002)
+            # kaynak olur, o da yoksa separator moduna dusulur.
+            measureTool = gm.rangeMeasureTool
+            swingCtrl = gm.swingAnnotationController
+            startIndex = endIndex = None
+            if (measureTool is not None and measureTool.startIndex is not None
+                    and measureTool.endIndex is not None):
+                startIndex, endIndex = measureTool.startIndex, measureTool.endIndex
+            elif (swingCtrl is not None and swingCtrl._measureStartIndex is not None
+                    and swingCtrl._measureEndIndex is not None):
+                startIndex, endIndex = swingCtrl._measureStartIndex, swingCtrl._measureEndIndex
+
+            if startIndex is not None and endIndex is not None:
+                pct = self._pctChangeMeasureSegment(xs, closes, startIndex, endIndex)
+            else:
+                pct = self._pctChangeSeparatorSegments(pm, xs, closes)
+
+            if pct is None:
+                self._clearPctChangeData(data)
+                return
+            self._applyPctChangeData(data, xs, pct, timestamps, candle.isIntraday)
+
+        pm.addPanelDrawHook(panel.id, updatePctChangePanel)
+
+    @staticmethod
+    def _pctChangeMeasureSegment(arr, closeArr, startIndex, endIndex):
+        """A/B arasindaki (A'ya gore) % serisi - TAM veri uzunlugunda, A-B
+        DISI NaN. Hover/Index hizalamasi diger panellerle AYNI kalsin diye
+        kismi/windowed bir dizi DEGIL - _buildHoverLabel (panelManager.py)
+        hovered bar index'ini DOGRUDAN pozisyon olarak kullanir (src[idx]),
+        kisaltilmis bir dizi bu hizalamayi bozardi (bkz. kullanici bulgusu:
+        '% Change panelinde Change degeri fare ile degismiyor'). startIndex/
+        endIndex RangeMeasureTool'dan ya da SwingAnnotationController'in kendi
+        A/B'sinden (swing modunda RangeMeasureTool suspend edilir) gelebilir."""
+        lo, hi = sorted((startIndex, endIndex))
+        loPos = int(np.searchsorted(arr, lo))
+        hiPos = min(int(np.searchsorted(arr, hi)) + 1, len(arr))
+        if hiPos - loPos < 2:
+            return None
+        anchorPos = int(np.clip(np.searchsorted(arr, startIndex), 0, len(closeArr) - 1))
+        anchorClose = float(closeArr[anchorPos])
+        if not anchorClose:
+            return None
+        pct = np.full(len(arr), np.nan, dtype=np.float64)
+        pct[loPos:hiPos] = (closeArr[loPos:hiPos] - anchorClose) / anchorClose * 100.0
+        return pct
+
+    @staticmethod
+    def _pctChangeSeparatorSegments(pm, arr, closeArr):
+        """TUM veri boyunca, her separator segmentinin kendi ilk barina gore
+        sifirlanan % serisi - tamamen vektorize (buyuk veri setinde de hizli).
+        Hover hizalamasi icin TAM uzunlukta (bkz. _pctChangeMeasureSegment)."""
+        _, starts = pm.getSeparatorInfo()
+        if starts is None or len(starts) == 0:
+            return None
+
+        boundaryPositions = np.searchsorted(arr, starts)
+        boundaryPositions = np.unique(np.clip(boundaryPositions, 0, len(arr) - 1))
+        if len(boundaryPositions) == 0 or boundaryPositions[0] != 0:
+            boundaryPositions = np.insert(boundaryPositions, 0, 0)
+
+        positions = np.arange(len(arr))
+        segIdx = np.searchsorted(boundaryPositions, positions, side="right") - 1
+        segIdx = np.clip(segIdx, 0, len(boundaryPositions) - 1)
+        anchorCloses = closeArr[boundaryPositions[segIdx]]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            pct = np.where(anchorCloses != 0,
+                          (closeArr - anchorCloses) / anchorCloses * 100.0,
+                          np.nan)
+        return pct
+
+    @staticmethod
+    def _clearPctChangeData(data):
+        """Gecerli bir segment yokken cagrilir. Panel diger paneller gibi
+        SABIT/hep gorunur kalsin diye isVisible'a dokunulmaz - bos dizi
+        PanelManager._drawLineOrBarSeries icindeki genel guard tarafindan
+        sessizce atlanir (crash etmez, bkz. panelManager.py)."""
+        data.xs, data.ys, data.timestamps = [], [], []
+        data._fullXs, data._fullYs, data._fullTimestamps = None, None, []
+        data.fullCount, data.lodCount = 0, 0
+        data.dataCount, data.minY, data.maxY = 0, 0, 0
+
+    @staticmethod
+    def _applyPctChangeData(data, xs, pct, timestamps, isIntraday):
+        """xs/pct/timestamps TAM veri uzunlugunda (bkz. _pctChangeMeasureSegment/
+        _pctChangeSeparatorSegments) - hover'in src[idx] ile dogrudan pozisyon
+        olarak kullandigi global bar index'le hizali kalsin diye. Buyuk veri
+        setinde (fullCount > LOD_ACTIVATION_THRESHOLD) cizim zaten _fullXs/
+        _fullYs'ten LOD ile okunur, data.xs/data.ys (duz liste) hic okunmaz -
+        bu yuzden HER FRAME 500k+ elemanli .tolist() cevirisi YAPILMAZ
+        (performans). updateStats() de CAGRILMAZ - NaN icerdigi icin
+        min(self.ys)/max(self.ys) guvenilmez; minY/maxY np.nanmin/nanmax ile
+        hesaplanir."""
+        data.isIntraday = bool(isIntraday)
+        data._fullXs = xs
+        data._fullYs = np.ascontiguousarray(pct, dtype=np.float64)
+        data.fullCount = len(xs)
+        data.lodCount = data.fullCount
+        data.dataCount = data.fullCount
+        data._fullTimestamps = timestamps
+        data.timestamps = timestamps if timestamps is not None else []
+        finite = data._fullYs[np.isfinite(data._fullYs)]
+        if len(finite):
+            data.minY = float(np.min(finite))
+            data.maxY = float(np.max(finite))
+        else:
+            data.minY = data.maxY = 0.0
 
     def loadInputConfig(self):
         for configPath in INPUT_CONFIG_CANDIDATES:
@@ -448,6 +607,8 @@ class App:
         self.ohlcPanel = None
         self.signalPanel = None
         self.indicatorPanel = None
+        self.pctChangePanel = None
+        self.pctChangeDataId = None
 
         for panelSpec in view.get("panels", []):
             panel = self._createPanelFromSpec(panelSpec)
@@ -583,6 +744,20 @@ class App:
                     ys = getattr(self.data, source)
                     panel.addData(dataId, label or source.title(), "line", self.data.xs, ys,
                                   timestamps=self.data.timestamps, intraday=intraday, color=color)
+                    continue
+
+                if source == "windowpercent":
+                    # Statik array YOK - updatePctChangePanel() draw-hook'u her frame
+                    # bu PanelData'nin xs/ys/timestamps'ini yerinde guncelleyecek
+                    # (bkz. stage3FillPanels sonundaki addPctChangeUpdater cagrisi).
+                    # Panelin KENDISI diger paneller gibi SABIT/hep gorunur kuruluyor
+                    # (isVisible'a dokunulmaz) - bos baslangic dizisi crash etmesin
+                    # diye guard PanelManager._drawLineOrBarSeries icinde (bkz. orada).
+                    panel.addData(dataId, label or "Change %", "line", [], [],
+                                 timestamps=None, intraday=intraday, color=color)
+                    self.pctChangePanel = panel
+                    self.pctChangeDataId = dataId
+                    continue
 
             self._applyViewLevels(panel, panelSpec)
 

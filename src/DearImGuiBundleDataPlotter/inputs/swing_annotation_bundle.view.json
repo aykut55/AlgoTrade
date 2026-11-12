@@ -1,7 +1,7 @@
 {
   "mode": "swing_annotation",
   "session": {
-    "directory": "C:\\Projects\\AlgoTrade\\outputs\\annotations\\VIP'VIP-X030-T_5\\current",
+    "directory": "D:\\Aykut\\Projects\\AlgoTrade\\outputs\\annotations\\VIP'VIP-X030-T_5\\current",
     "symbol": "VIP'VIP-X030-T",
     "period": "5",
     "schemaVersion": 1
@@ -34,7 +34,7 @@
     {
       "id": "ohlc",
       "name": "OHLC",
-      "caption": "OHLC Dip/Tepe Etiketleme",
+      "caption": "OHLC Dip/Top Labeling",
       "height": 720,
       "ySyncId": 0,
       "series": [
@@ -117,6 +117,27 @@
           ]
         }
       ]
+    },
+    {
+      "id": "pctChange",
+      "name": "% Change",
+      "caption": "% Change",
+      "height": 220,
+      "ySyncId": 1,
+      "series": [
+        {
+          "source": "windowpercent",
+          "name": "Change %",
+          "label": "Change %",
+          "color": [
+            255,
+            255,
+            0,
+            255
+          ]
+        }
+      ],
+      "yLabel": "% Change"
     }
   ]
 }

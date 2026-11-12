@@ -474,6 +474,7 @@ class GuiManager:
         self.measurePanel.render()
         self.swingAnnotationController.render()
         self.rangeMeasureTool.handleKeyboard()
+        self.measurePanel.handleKeyboard()
         self._handlePlotKeyboard()
         if rangeNavigatorVisible and self._rangeNavigatorDetached:
             self._renderDetachedRangeNavigator()

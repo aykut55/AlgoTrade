@@ -315,6 +315,14 @@ public class TradeDataBundleConverter
             // hep dataId=0 varsayarak arıyor (bkz. Panel.setCandleData varsayılanı).
             Panel("ohlc", "OHLC", "OHLC", 380, 0,
                 new() { Series("ohlc", symbol ?? "OHLC", dataId: 0) }),
+            // % Change: OHLC'nin hemen altında, "PnL Price" panelinin AYNI iskeleti
+            // (eski adı Pnl2) - id/name/caption/ySyncId farklı. Seri kaynağı
+            // "windowpercent": statik bir indicator array'i DEĞİL, default.py'de
+            // Range Measure A/B / aktif separator'a göre HER FRAME yeniden
+            // hesaplanan canlı bir % serisi (bkz. default.py stage3FillPanelsFromView
+            // + updatePctChangePanel hook'u).
+            Panel("pctChange", "% Change", "% Change", 220, 7,
+                new() { Series("windowpercent", "Change %", "Change %", color: yellow) }, yLabel: "% Change"),
             Panel("signals", "Signals", "Signals (AL/SAT/FLAT)", 200, 1,
                 new() { Series("signalsteps", "Signal Step", "Signals", color: cyan) },
                 yLabel: "Signals", yFixedRange: new double[] { -2, 2 }),
@@ -330,9 +338,10 @@ public class TradeDataBundleConverter
 
         // multiple_data_plotter.py ile birebir aynı davranış:
         // Signals/PnL/PnL % → child overlay'leri HER ZAMAN eklenir (koşulsuz).
-        var signalsPanelSeries = panels[1]["series"] as List<Dictionary<string, object?>>;
-        var pnlPanelSeries = panels[2]["series"] as List<Dictionary<string, object?>>;
-        var pnlPctPanelSeries = panels[3]["series"] as List<Dictionary<string, object?>>;
+        // NOT: index'ler "pctChange" panels[1]'e eklendigi icin +1 kaydi.
+        var signalsPanelSeries = panels[2]["series"] as List<Dictionary<string, object?>>;
+        var pnlPanelSeries = panels[3]["series"] as List<Dictionary<string, object?>>;
+        var pnlPctPanelSeries = panels[4]["series"] as List<Dictionary<string, object?>>;
         foreach (var child in childOverlays)
         {
             signalsPanelSeries!.Add(Series("indicator", child.SignalName, $"{child.Label} Signal", color: child.Color));
@@ -344,8 +353,8 @@ public class TradeDataBundleConverter
         // (SHOW_CHILD_TRADERS_IN_NEW_PLOTTER) açıkken eklenir — multiple_data_plotter.py:ShowChildsData ile aynı.
         if (includeChildReturnOverlays)
         {
-            var returnPanelSeries = panels[4]["series"] as List<Dictionary<string, object?>>;
-            var returnPctPanelSeries = panels[5]["series"] as List<Dictionary<string, object?>>;
+            var returnPanelSeries = panels[5]["series"] as List<Dictionary<string, object?>>;
+            var returnPctPanelSeries = panels[6]["series"] as List<Dictionary<string, object?>>;
             foreach (var child in childOverlays)
             {
                 int[] dim = Dim(child.Color);

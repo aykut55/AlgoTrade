@@ -1,6 +1,6 @@
 {
-  "Operation": "SingleTrader",
+  "Operation": "SwingAnnotation",
   "ReadData": true,
   "RunMode": "TradeOnly",
-  "SavedAtUtc": "2026-11-11T19:30:54.5562901Z"
+  "SavedAtUtc": "2026-11-12T18:02:55.3181649Z"
 }
