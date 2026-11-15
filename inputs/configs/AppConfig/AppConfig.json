@@ -73,7 +73,7 @@
     },
     "Query": {
       "ConfigFile": "QueryConfig.txt",
-      "Name": "SimpleQuery1",
+      "Name": "SimpleQuery",
       "Version": "v1"
     },
     "EquityCurveFilter": {
@@ -265,7 +265,7 @@
         },
         "Query": {
           "ConfigFile": "QueryConfig.txt",
-          "Name": "SimpleQuery1",
+          "Name": "SimpleQuery",
           "Version": "v1"
         },
         "EquityCurveFilter": {
@@ -339,7 +339,7 @@
         },
         "Query": {
           "ConfigFile": "QueryConfig.txt",
-          "Name": "SimpleQuery1",
+          "Name": "SimpleQuery",
           "Version": "v1"
         },
         "EquityCurveFilter": {
@@ -1927,7 +1927,7 @@
     "SymbolList": [],
     "Query": {
       "ConfigFile": "QueryConfig.txt",
-      "Name": "SimpleQuery1",
+      "Name": "SimpleQuery",
       "Version": "v1"
     },
     "ReadData": {
@@ -1951,7 +1951,7 @@
     "Timeframes": ["05", "15"],
     "Query": {
       "ConfigFile": "QueryConfig.txt",
-      "Name": "SimpleQuery1",
+      "Name": "SimpleQuery",
       "Version": "v1"
     },
     "ReadData": {
@@ -1974,8 +1974,8 @@
     "Symbol": "VIP-X030-T",
     "Timeframes": ["05", "15"],
     "Queries": [
-      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
-      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v2" }
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v1" },
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v2" }
     ],
     "ReadData": {
       "FilterMode": "All",
@@ -2000,7 +2000,7 @@
     "Timeframes": ["05", "15"],
     "Query": {
       "ConfigFile": "QueryConfig.txt",
-      "Name": "SimpleQuery1",
+      "Name": "SimpleQuery",
       "Version": "v1"
     },
     "ReadData": {
@@ -2023,8 +2023,8 @@
     "AutoDiscover": true,
     "SymbolList": [],
     "Queries": [
-      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
-      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v2" }
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v1" },
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v2" }
     ],
     "ReadData": {
       "FilterMode": "All",
@@ -2048,8 +2048,8 @@
     "SymbolList": [],
     "Timeframes": ["05", "15"],
     "Queries": [
-      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
-      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v2" }
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v1" },
+      { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v2" }
     ],
     "ReadData": {
       "FilterMode": "All",

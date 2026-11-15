@@ -336,16 +336,16 @@ void ConfigureQueries()
 
     algoTrader.ClearQueryConfigs();
 
-    // Id=0 : SimpleQuery1
-    algoTrader.AddQueryConfig(0, "SimpleQuery1", new Dictionary<string, object>
+    // Id=0 : SimpleQuery
+    algoTrader.AddQueryConfig(0, "SimpleQuery", new Dictionary<string, object>
     {
         ["ma8Period"] = 8,
         ["ma200Period"] = 200,
         ["choice"] = 0
     });
 
-    // Id=1 : SimpleQuery1 (farklı parametrelerle)
-    algoTrader.AddQueryConfig(1, "SimpleQuery1", new Dictionary<string, object>
+    // Id=1 : SimpleQuery (farklı parametrelerle)
+    algoTrader.AddQueryConfig(1, "SimpleQuery", new Dictionary<string, object>
     {
         ["ma8Period"] = 5,
         ["ma200Period"] = 100,

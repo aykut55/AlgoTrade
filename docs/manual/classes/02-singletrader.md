@@ -953,7 +953,7 @@ Bu sınıfın `AppConfig.json`'daki gerçek karşılığı (`inputs/configs/AppC
     },
     "Query": {
       "ConfigFile": "QueryConfig.txt",
-      "Name": "SimpleQuery1",
+      "Name": "SimpleQuery",
       "Version": "v1"
     },
     "EquityCurveFilter": {

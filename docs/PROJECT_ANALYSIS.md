@@ -632,10 +632,9 @@ Bu ikinci mekanizma Console.Program.cs'de açıkça "TODO: demo/test, silinecek"
 `IQuery`/`BaseQuery` (`IStrategy`/`BaseStrategy` ile paralel tasarım) + `QueryConfigLoader`
 (`QueryConfig.txt`, pipe-ayraçlı) + `QueryRegistry` (reflection-based auto-discover + best-match
 constructor bulma, statik `Create()` factory desteği) + tek somut implementasyon
-**`SimpleQuery1`** (MA8/MA200 kesişimi + trader-state sorgusu). `AppConfig`'te
-`RunMode: TradeOnly|TradeAndQuery|QueryOnly` ayrımı var. Not: `QueryRegistry` boş isimde
-`"SimpleMAQuery"`e fallback yapıyor ama gerçek sınıf adı `SimpleQuery1` — bu fallback muhtemelen
-güncel değil.
+**`SimpleQuery`** (MA8/MA200 kesişimi + trader-state sorgusu). `AppConfig`'te
+`RunMode: TradeOnly|TradeAndQuery|QueryOnly` ayrımı var. `QueryRegistry` boş isimde
+`"SimpleQuery"` varsayılanına düşer.
 
 ---
 
@@ -678,7 +677,7 @@ durumu (detaylı TODO listesi migration-guide.md'ye eklendi):
 | 5.1c | Scripting — dosyadan dinamik yükleme | TAMAMLANDI (.csx + `#load`); GUI'den hazırlama YAPILMADI (WinForms iskelet) |
 | 5.2 | Optimization için scripting | KISMEN (config katmanı var, script entegrasyonu doğrulanmadı) |
 | 5.3 | MultiTrader için scripting | YAPILMADI |
-| 6 | Sorgu yapabilme | **KISMEN** (IQuery/BaseQuery/QueryRegistry iskeleti tam, tek örnek `SimpleQuery1`) |
+| 6 | Sorgu yapabilme | **KISMEN** (IQuery/BaseQuery/QueryRegistry iskeleti tam, tek örnek `SimpleQuery`) |
 | 7 | Performans hesaplaması | SingleTrader için TAMAMLANDI (`Statistics.PerformansRow`); MultiTrader için doğrulanmadı |
 | 8 | Toplu sembol taraması | **TAMAMLANDI** (2026-08-18) — tüm tarama matrisi (12 Scanner sınıfı, bkz. §2.10), Console `[10]`-`[21]`, bkz. [todo.md](todo.md) "Tarama Motorları" bölümü |
 | 9 | Sorgu + toplu sembol | **TAMAMLANDI** (2026-08-18) — `QuerySymbolScanner`, Console `[16]` |
@@ -710,5 +709,3 @@ doğrulanıp temizlenmeli veya bilinçli olarak dokümante edilmeli:
     hâlâ mevcut olup olmadığı ve Console'un kullandığı akışla ilişkisi doğrulanmalı.
 12. `Logging/LogSinks` enum'undaki `RichTextBox/TextBox/ListBox` değerlerine karşılık gelen sink
     sınıfları yazılmamış.
-13. `QueryRegistry`'nin boş-isim fallback'i (`"SimpleMAQuery"`) gerçek sınıf adıyla
-    (`SimpleQuery1`) uyuşmuyor.

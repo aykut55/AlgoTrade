@@ -457,7 +457,7 @@ Dictionary<string, object> queryParams;
 
 if (queryChoice == 0)
 {
-    queryName = "SimpleQuery1";
+    queryName = "SimpleQuery";
     queryParams = new Dictionary<string, object>
     {
         ["ma8Period"]   = 8,
@@ -467,7 +467,7 @@ if (queryChoice == 0)
 }
 else if (queryChoice == 1)
 {
-    queryName = "SimpleQuery1";
+    queryName = "SimpleQuery";
     queryParams = new Dictionary<string, object>
     {
         ["ma8Period"]   = 21,

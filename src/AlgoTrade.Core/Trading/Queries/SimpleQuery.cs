@@ -15,7 +15,7 @@ namespace AlgoTrade.Core.Trading.Queries
     /// [3] = CrossSignal (1 if MA8 > MA200, -1 otherwise)
     /// [4] = Distance% = (Close - MA200) / MA200 * 100
     /// </summary>
-    public class SimpleQuery1 : BaseQuery
+    public class SimpleQuery : BaseQuery
     {
         public override string Name => "Simple MA Query";
 
@@ -26,7 +26,7 @@ namespace AlgoTrade.Core.Trading.Queries
         private double[]? _ma200;
 
         // Parametresiz constructor (eski kullanımlar için)
-        public SimpleQuery1(int ma8Period = 8, int ma200Period = 200, int choice = 0)
+        public SimpleQuery(int ma8Period = 8, int ma200Period = 200, int choice = 0)
         {
             _ma8Period = ma8Period;
             _ma200Period = ma200Period;
@@ -38,7 +38,7 @@ namespace AlgoTrade.Core.Trading.Queries
         }
 
         // Parametreli constructor (yeni kullanım)
-        public SimpleQuery1(List<StockData> data, IndicatorManager indicators,
+        public SimpleQuery(List<StockData> data, IndicatorManager indicators,
                             int ma8Period = 8, int ma200Period = 200, int choice = 0)
         {
             _ma8Period = ma8Period;
@@ -63,7 +63,7 @@ namespace AlgoTrade.Core.Trading.Queries
             _ma8 = Indicators.MA.SMA(closes, _ma8Period);
             _ma200 = Indicators.MA.SMA(closes, _ma200Period);
 
-            //Log($"SimpleMAQuery initialized: MA8={_ma8Period}, MA200={_ma200Period}, Choice={_choice}");
+            //Log($"SimpleQuery initialized: MA8={_ma8Period}, MA200={_ma200Period}, Choice={_choice}");
         }
 
         public override List<object> OnExecute(int lastBarIndex)

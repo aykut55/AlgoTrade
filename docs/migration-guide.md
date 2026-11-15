@@ -312,7 +312,7 @@ Ayni sembol uzerinde birden fazla strateji calistirilir ve sonuclar topluca list
 
 - [ ] **Madde 6 (genisletme) — Sorgu Yapabilme: zengin sorgu tipleri**
       Alt yapi (IQuery/BaseQuery/QueryRegistry/QueryConfigLoader) TAMAM ve calisiyor, ama somut
-      sorgu ornegi sadece 1 tane: `SimpleQuery1` (MA8/MA200 kesisimi + trader-state). Roadmap'te
+      sorgu ornegi sadece 1 tane: `SimpleQuery` (MA8/MA200 kesisimi + trader-state). Roadmap'te
       tarif edilen "fiyat-indikator kesisimleri", "indikator-indikator kesisimleri" (genel
       amacli), "kullanici stratejisinden A/S/F bayraklari sorgusu" gibi zengin sorgu tipleri
       henuz yazilmadi.

@@ -55,7 +55,7 @@
         }
       },
       "Query": {
-        "QueryName": "SimpleQuery1",
+        "QueryName": "SimpleQuery",
         "Version": "v1",
         "DisplayName": "Default",
         "Parameters": {
@@ -100,7 +100,7 @@
         }
       },
       "Query": {
-        "QueryName": "SimpleQuery1",
+        "QueryName": "SimpleQuery",
         "Version": "v1",
         "DisplayName": "Default",
         "Parameters": {

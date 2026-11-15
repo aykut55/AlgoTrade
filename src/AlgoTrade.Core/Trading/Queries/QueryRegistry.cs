@@ -44,8 +44,8 @@ public sealed class QueryRegistry
         var resolvedQueryName = queryName;
         if (string.IsNullOrWhiteSpace(resolvedQueryName))
         {
-            resolvedQueryName = "SimpleMAQuery";
-            Log(logger, "Query name is null/empty. Falling back to SimpleMAQuery.");
+            resolvedQueryName = "SimpleQuery";
+            Log(logger, "Query name is null/empty. Falling back to SimpleQuery.");
         }
 
         if (!_queryTypes.TryGetValue(resolvedQueryName, out var queryType))

@@ -413,13 +413,13 @@ void ConfigureQuery()
 
     if (File.Exists(configPath))
     {
-        algoTrader.ConfigureQueryFromConfig(configPath, "SimpleQuery1", "v1-Default");
+        algoTrader.ConfigureQueryFromConfig(configPath, "SimpleQuery", "v1-Default");
         LogManager.LogRaw($"\nQuery loaded from config: {configPath}");
     }
     else
     {
         LogManager.LogRaw($"\nQuery config file not found: {configPath}");
-        algoTrader.ConfigureQuery("SimpleQuery1", new Dictionary<string, object>
+        algoTrader.ConfigureQuery("SimpleQuery", new Dictionary<string, object>
         {
             ["ma8Period"] = 8,
             ["ma200Period"] = 200,

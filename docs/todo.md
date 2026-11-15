@@ -787,7 +787,7 @@ kullanıcı kendisi yorumlar. `MultipleQuery` bu yüzden bir "consensus" sınıf
   - Senaryo 8 sınıflarında (N×M×sorgu/strateji büyüklüğü kritik) kullanıcıya önceden çalışma süresi tahmini gösterme
 
 **Madde 6 (zengin sorgu tipleri) — şimdilik gerek yok**: Sorgu tarama motorları tek somut sorgu
-türüyle (`SimpleQuery1`, v1/v2 parametre varyasyonu) uçtan uca doğrulandı — mimari (dinamik
+türüyle (`SimpleQuery`, v1/v2 parametre varyasyonu) uçtan uca doğrulandı — mimari (dinamik
 kolonlar, `MultipleQuery`, tüm 8 sınıf) çalıştığı için yeni bir sorgu türü (`IQuery` implementasyonu)
 eklendiğinde aynı tarama sınıfları üzerinden otomatik çalışır, ekstra iş gerekmez. Gerçek çeşitlilik
 (fiyat-indikatör kesişimi, indikatör-indikatör kesişimi vb.) ayrı, ileride istenirse ele alınacak.

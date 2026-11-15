@@ -414,8 +414,7 @@ tek şart doğru base class'tan türetmek.
   non-abstract tüm class'ları `TypeName → Type` (case-insensitive) kaydeder.
 - `GetStrategyNames()` / `GetQueryNames()` → `IReadOnlyCollection<string>`.
 - `CreateStrategy(data, indicators, logger, name?, parameters?)` / `CreateQuery(...)` — isim
-  boşsa varsayılana düşer (`"SimpleMAStrategy"`; Query tarafında `"SimpleMAQuery"` fallback'i
-  var ama gerçek sınıf adı `SimpleQuery1` — güncel değil, bkz. [PROJECT_ANALYSIS.md §5.8](../PROJECT_ANALYSIS.md#58-query-altyapısı)), isim
+  boşsa varsayılana düşer (strateji için `"SimpleMAStrategy"`, query için `"SimpleQuery"`); isim
   bulunamazsa `ArgumentException`. Önce statik `Create(...)` factory method aranır (şu an hiçbir
   strateji/sorgu bunu tanımlamıyor), yoksa en çok parametre eşleşen constructor seçilir.
 

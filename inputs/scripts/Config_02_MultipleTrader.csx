@@ -270,13 +270,13 @@ var strategyConfigs = new List<(int id, string name, Dictionary<string, object> 
 // =============================================================================
 var queryConfigs = new List<(int id, string name, Dictionary<string, object> parameters)>
 {
-    (0, "SimpleQuery1", new Dictionary<string, object>
+    (0, "SimpleQuery", new Dictionary<string, object>
     {
         ["ma8Period"] = 8,
         ["ma200Period"] = 200,
         ["choice"] = 0
     }),
-    (1, "SimpleQuery1", new Dictionary<string, object>
+    (1, "SimpleQuery", new Dictionary<string, object>
     {
         ["ma8Period"] = 5,
         ["ma200Period"] = 100,

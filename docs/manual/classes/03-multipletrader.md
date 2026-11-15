@@ -624,7 +624,7 @@ AppConfig Kaynağı](02-singletrader.md#appconfig-kaynağı--singletraderconfig)
       {
         "ChildId": 0,
         "Strategy": { "ConfigFile": "StrategyConfig.txt", "Name": "SimpleMostStrategy", "Version": "v1" },
-        "Query": { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery1", "Version": "v1" },
+        "Query": { "ConfigFile": "QueryConfig.txt", "Name": "SimpleQuery", "Version": "v1" },
         "EquityCurveFilter": { "ConfigFile": "EquityCurveFilterConfig.txt", "Name": "", "Version": "v1" },
         "Signals": { "...": "... (TraderSignalsConfig, 12 alan)" },
         "Save": { "...": "... (12 flag + 12 dosya adı)" },

@@ -282,14 +282,14 @@ algoTrader.AddStrategyConfig(22, "SimpleAlphaTrendStrategy", new Dictionary<stri
 // 4. Query listesi
 algoTrader.ClearQueryConfigs();
 
-algoTrader.AddQueryConfig(0, "SimpleQuery1", new Dictionary<string, object>
+algoTrader.AddQueryConfig(0, "SimpleQuery", new Dictionary<string, object>
 {
     ["ma8Period"]   = 8,
     ["ma200Period"] = 200,
     ["choice"]      = 0
 });
 
-algoTrader.AddQueryConfig(1, "SimpleQuery1", new Dictionary<string, object>
+algoTrader.AddQueryConfig(1, "SimpleQuery", new Dictionary<string, object>
 {
     ["ma8Period"]   = 5,
     ["ma200Period"] = 100,

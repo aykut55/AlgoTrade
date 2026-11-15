@@ -572,7 +572,7 @@ void ConfigureQuery(bool bShowConfigSelectionMenu = true)
     else
     {
         LogManager.LogRaw($"\nQuery config file not found: {configPath}");
-        algoTrader.ConfigureQuery("SimpleMaQuery", new Dictionary<string, object>
+        algoTrader.ConfigureQuery("SimpleQuery", new Dictionary<string, object>
         {
             ["ma8Period"]   = 8,
             ["ma200Period"] = 200,
@@ -694,9 +694,9 @@ void ConfigureQueries()
     {
         LogManager.LogRaw($"\nQuery config file not found: {configPath}");
         algoTrader.ClearQueryConfigs();
-        algoTrader.AddQueryConfig(0, "SimpleMaQuery", new Dictionary<string, object>
+        algoTrader.AddQueryConfig(0, "SimpleQuery", new Dictionary<string, object>
             { ["ma8Period"] = 8, ["ma200Period"] = 200, ["choice"] = 0 });
-        algoTrader.AddQueryConfig(1, "SimpleMaQuery", new Dictionary<string, object>
+        algoTrader.AddQueryConfig(1, "SimpleQuery", new Dictionary<string, object>
             { ["ma8Period"] = 5, ["ma200Period"] = 100, ["choice"] = 0 });
     }
 }
