@@ -23,7 +23,7 @@
       5000,
       10000
     ],
-    "totalBars": 562894
+    "totalBars": 564921
   },
   "rendering": {
     "maxCandlesWithoutAggregation": 10000,

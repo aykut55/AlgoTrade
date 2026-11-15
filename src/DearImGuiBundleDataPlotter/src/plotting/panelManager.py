@@ -299,11 +299,23 @@ class PanelManager:
         self.deletePanel(panelId)
 
     def getAllPanels(self):
-        return list(self._panels.values())
+        return list(self.iterateAllPanels())
 
     def iterateAllPanels(self):
-        for panel in self._panels.values():
-            yield panel
+        # Tum UI'lar grafikle ayni sirayi gormelidir. Sozluk eklenme sirasi,
+        # Up/Down ile degisen _panelOrder'i yansitmaz; bu nedenle Left Menu,
+        # Panel Manager ve Panel Manager 2 ortak olarak buradan sirali okur.
+        yielded = set()
+        for panelId in self._panelOrder:
+            panel = self._panels.get(panelId)
+            if panel is not None:
+                yielded.add(panelId)
+                yield panel
+
+        # Eski/harici kod _panels'e dogrudan bir panel eklemisse onu kaybetme.
+        for panelId, panel in self._panels.items():
+            if panelId not in yielded:
+                yield panel
 
     def deleteAllPanels(self):
         for panelId, panel in list(self._panels.items()):
@@ -342,19 +354,23 @@ class PanelManager:
 
     def swapPanelUp(self, panelId):
         if panelId not in self._panelOrder:
-            return
+            return False
         idx = self._panelOrder.index(panelId)
         if idx > 0:
             self._panelOrder[idx], self._panelOrder[idx - 1] = \
                 self._panelOrder[idx - 1], self._panelOrder[idx]
+            return True
+        return False
 
     def swapPanelDown(self, panelId):
         if panelId not in self._panelOrder:
-            return
+            return False
         idx = self._panelOrder.index(panelId)
         if idx < len(self._panelOrder) - 1:
             self._panelOrder[idx], self._panelOrder[idx + 1] = \
                 self._panelOrder[idx + 1], self._panelOrder[idx]
+            return True
+        return False
 
     def applyPanelOrder(self):
         """DPG'de dpg.move_item ile container icinde yeniden diziliyordu - implot'ta
@@ -1888,6 +1904,21 @@ class PanelManager:
 
     def _renderPanelHeader(self, panelId, panel, detached=False):
         """Stacked ve detached panellerin ortak baslik/kontrol satiri."""
+        orderIndex = self._panelOrder.index(panelId) if panelId in self._panelOrder else -1
+        canMoveUp = not detached and orderIndex > 0
+        canMoveDown = not detached and 0 <= orderIndex < len(self._panelOrder) - 1
+
+        imgui.begin_disabled(not canMoveUp)
+        if imgui.small_button(f"Up##panel_header_up_{panelId}"):
+            self.swapPanelUp(panelId)
+        imgui.end_disabled()
+        imgui.same_line()
+        imgui.begin_disabled(not canMoveDown)
+        if imgui.small_button(f"Down##panel_header_down_{panelId}"):
+            self.swapPanelDown(panelId)
+        imgui.end_disabled()
+        imgui.same_line()
+
         collapseLabel = "Expand" if getattr(panel, "_collapsed", False) else "Collapse"
         if imgui.small_button(f"{collapseLabel}##panel_header_collapse_{panelId}"):
             if getattr(panel, "_collapsed", False):
