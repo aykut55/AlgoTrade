@@ -12,6 +12,7 @@ using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Queries;
+using AlgoTrade.Core.Trading.ChartStudies;
 using AlgoTrade.Core.Trading.EquityCurve;
 using System;
 using System.Collections.Concurrent;
@@ -4508,6 +4509,100 @@ async Task handleSwingAnnotation()
     }
 }
 
+void handleChartStudy()
+{
+    if (stockDataReader is null || !stockDataReader.IsDataReady)
+    {
+        LogManager.LogError("[ChartStudy] Data not loaded — run [1] Read Data first or use [29].");
+        return;
+    }
+
+    try
+    {
+        var registry = new ChartStudyRegistry();
+        string[] names = registry.GetStudyNames().ToArray();
+        if (names.Length == 0)
+        {
+            LogManager.LogError("[ChartStudy] Kayıtlı çalışma bulunamadı.");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("  Chart Study seçin:");
+        for (int i = 0; i < names.Length; i++)
+        {
+            IChartStudy candidate = registry.Create(names[i]);
+            Console.WriteLine($"  [{i + 1}] {candidate.DisplayName}");
+        }
+        Console.WriteLine("  [ESC] İptal");
+        Console.WriteLine("  [ENTER / Timeout] Varsayılan: 1");
+        int studyMenuTimeout = appConfig.AppSettings.MenuTimeoutSeconds > 0
+            ? appConfig.AppSettings.MenuTimeoutSeconds
+            : 10;
+        string? input = ReadMenuInputWithTimeout(studyMenuTimeout, "1");
+        if (input is null) return;
+        if (string.IsNullOrWhiteSpace(input)) input = "1";
+        if (!int.TryParse(input, out int selection) || selection < 1 || selection > names.Length)
+        {
+            LogManager.LogRaw("[ChartStudy] Geçersiz seçim.", ConsoleColor.Yellow);
+            return;
+        }
+
+        IChartStudy study = registry.Create(names[selection - 1]);
+        string scriptsDir = Path.Combine(AppSettings.DearImGuiBundleDataPlotterDir, "scripts");
+        Directory.CreateDirectory(scriptsDir);
+        string scriptPath = Path.Combine(scriptsDir, study.ScriptFileName);
+        if (!File.Exists(scriptPath))
+        {
+            File.WriteAllText(scriptPath, study.BuildScript(), new UTF8Encoding(false));
+            LogManager.LogRaw($"[ChartStudy] Script oluşturuldu: {scriptPath}", ConsoleColor.Green);
+        }
+        else
+        {
+            LogManager.LogRaw($"[ChartStudy] Mevcut kullanıcı scripti korunuyor: {scriptPath}", ConsoleColor.DarkCyan);
+        }
+
+        IReadOnlyList<StockData> data = stockDataReader.GetData();
+        string symbol = stockMetaData?.GetValueOrDefault("GrafikSembol", "OHLC") ?? "OHLC";
+        string period = stockMetaData?.GetValueOrDefault("GrafikPeriyot", "N/A") ?? "N/A";
+        string outputDir = Path.Combine(AppSettings.DearImGuiBundleDataPlotterDir, "inputs");
+        var converter = new ChartStudyBundleConverter();
+        (string bundlePath, string viewPath) = converter.Convert(
+            data, outputDir, symbol, period, study.ScriptFileName, "chart_study");
+
+        dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+        dearImGuiBundleTestPlotter.SetLogger(logger);
+        if (!dearImGuiBundleTestPlotter.IsRunning)
+        {
+            dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
+            dearImGuiBundleTestPlotter.StartPlotter();
+        }
+        else
+        {
+            dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+        }
+        LogManager.LogRaw(
+            $"[ChartStudy] {study.DisplayName} açıldı. Script Panel'de değiştirip Run ile yeniden hesaplayabilirsiniz.",
+            ConsoleColor.Green);
+        LogManager.LogRaw(
+            "[ChartStudy] Plot penceresi açık. Ana menüye dönmek için plot penceresini kapatın.",
+            ConsoleColor.Cyan);
+
+        // Plot açıkken ana menüye dönülürse MenuTimeoutSeconds yeniden saymaya
+        // başlayıp varsayılan menü maddesini tetikleyebilir. ChartStudy etkileşimli
+        // bir çalışma alanı olduğu için pencere kapanana kadar burada bekle.
+        dearImGuiBundleTestPlotter.WaitForExit();
+        dearImGuiBundleTestPlotter.StopPlotter();
+        LogManager.LogRaw(
+            "[ChartStudy] Plot penceresi kapatıldı; ana menüye dönülüyor.",
+            ConsoleColor.Yellow);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"[ChartStudy] Açılamadı: {ex.Message}", ex);
+    }
+}
+
 void showMainMenu()
 {
     Console.WriteLine();
@@ -4568,6 +4663,11 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [26]  OHLC Swing Annotation                                     ║");
     Console.WriteLine("║    [27]  Read Data + OHLC Swing Annotation                         ║");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ Chart Study ════════════════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [28]  Chart Study                                               ║");
+    Console.WriteLine("║    [29]  Read Data + Chart Study                                   ║");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Fast Run ═══════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
@@ -4824,6 +4924,8 @@ async Task main()
             case "25": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleConfirmingMultipleTrader(); } break;
             case "26": await handleSwingAnnotation();                       break;
             case "27": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleSwingAnnotation(); } break;
+            case "28": handleChartStudy();                                  break;
+            case "29": if (handleReadData()) { startupSequenceIncludesReadData = true; handleChartStudy(); } break;
             case "f": await runLastStartupSequence();                       break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;

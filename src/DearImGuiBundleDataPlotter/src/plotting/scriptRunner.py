@@ -58,6 +58,7 @@ class ScriptRunner:
         self._nextExternalWindowId = 1
         self._pendingGeometry = None
         self._dockWindow = None
+        self._autoRunPending = False
 
     # ------------------------------------------------- mevcut (DEGISTIRILMEDI)
     def setGlobals(self, **kwargs):
@@ -97,6 +98,23 @@ class ScriptRunner:
                 self._onRunComplete()
             except Exception:
                 print(traceback.format_exc())
+
+    def openScriptFile(self, fileName, run=False):
+        """Scripts klasöründeki dosyayı ana editörde açar; istenirse hemen çalıştırır."""
+        path = os.path.abspath(os.path.join(self._scripts_dir, fileName))
+        scriptsRoot = os.path.abspath(self._scripts_dir)
+        if os.path.commonpath((path, scriptsRoot)) != scriptsRoot:
+            raise ValueError("Script scripts klasörü dışında olamaz")
+        if not os.path.isfile(path):
+            raise FileNotFoundError(path)
+        self._currentPath = path
+        self._editorText = self._readFile(path)
+        self._statusText = f"Opened: {os.path.basename(path)}"
+        self.setVisible(True)
+        if run:
+            # Manuel Run dugmesiyle TAM AYNI render baglaminda calismasi icin
+            # burada exec etme; Script Panel'in bir sonraki ciziminde tetikle.
+            self._autoRunPending = True
 
     # --------------------------------------------------------------- görünürlük
     def setVisible(self, visible: bool):
@@ -184,6 +202,9 @@ class ScriptRunner:
         self._renderExternalWindows()
 
     def _renderMainWindowContents(self):
+        if self._autoRunPending:
+            self._autoRunPending = False
+            self.runEditorText()
         imgui.text(f"File: {os.path.basename(self._currentPath)}")
         if imgui.button("Run"):
             self.runEditorText()

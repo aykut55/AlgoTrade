@@ -188,6 +188,17 @@ class App:
         print(f"  ind    : {len(self.data.indicatorNames) if self.data else 0}")
         print("  draw   : empty plot shells")
 
+        # ChartStudy view'u kendi canlı çalışma scriptini bundle tamamen
+        # yüklendikten sonra AYNI plotter instance'ında açıp çalıştırabilir.
+        # Böylece birden fazla plotter aynı runtime_commands klasörünü izlerken
+        # open_script komutunu yanlış pencerenin sahiplenmesi önlenir.
+        startupScript = self.view.get("startupScript") if isinstance(self.view, dict) else None
+        if startupScript:
+            scriptName = str(startupScript)
+            shouldRun = bool(self.view.get("runStartupScript", True))
+            gm.deferFrames(
+                2, lambda: gm.scriptPanel.openScriptFile(scriptName, run=shouldRun))
+
     def createTestBundle(self):
         import create_test_bundle
         create_test_bundle.main()

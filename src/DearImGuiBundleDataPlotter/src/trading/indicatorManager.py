@@ -49,3 +49,7 @@ class IndicatorManager:
         """Stochastic -> (%K, %D) (high/low/close uzerinde)."""
         return Indicators.stochastic(self.highs, self.lows, self.closes,
                                      kPeriod, dPeriod)
+
+    def momentum(self, period=10):
+        """Fiyat momentumu (close[i] - close[i-period])."""
+        return Indicators.momentum(self.closes, period)

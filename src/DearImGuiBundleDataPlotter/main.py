@@ -28,6 +28,12 @@ class App:
         self.configManager = ConfigManager()
         self.guiManager = GuiManager(self.configManager)
         self.guiManager.build()
+        # Script Panel default.py'yi editore yukler; ancak kendiliginden
+        # calistirmaz. Ilk gercek ImGui frame'i tamamlandiktan sonra bir kez
+        # calistirarak inputs/input.json'daki bundle/view'u acilista yukle.
+        # UI nesneleri hazir olmadan panel olusturulmasini da bu erteleme onler.
+        self.guiManager.deferFrames(
+            1, lambda: self.guiManager.scriptPanel.runScriptFile("default.py"))
 
     def gui(self):
         self.guiManager.render()

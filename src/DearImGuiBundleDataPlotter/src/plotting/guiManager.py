@@ -206,6 +206,7 @@ class GuiManager:
         self._rangeNavigatorDetached = False
         self._rangeNavigatorDetachedSizePending = False
         self._swingWorkspaceMode = False
+        self._deferredFrameCallbacks = []  # [{"remaining": int, "callback": callable}]
 
     def _loadTopPanelConfig(self):
         raw = self.configManager.get("topPanel") or {}
@@ -488,6 +489,7 @@ class GuiManager:
         self._updateAutoSyncY()
         self.interactionManager.onTick()
         self.runtimeCommandManager.processPendingCommands()
+        self._processDeferredFrameCallbacks()
 
     def sync(self):
         self.rangeSliderBar.sync()
@@ -501,10 +503,28 @@ class GuiManager:
         self.panelManager.deleteAllPanels()
 
     def deferFrames(self, frameCount, callback):
-        # Immediate-mode callbacks are safe to execute at the next render site;
-        # current callers only use this as a post-layout deferral.
+        """Callback'i belirtilen sayıda TAM render frame'i sonrasına erteler."""
         if callback:
-            callback()
+            self._deferredFrameCallbacks.append({
+                "remaining": max(1, int(frameCount)),
+                "callback": callback,
+            })
+
+    def _processDeferredFrameCallbacks(self):
+        if not self._deferredFrameCallbacks:
+            return
+        ready = []
+        waiting = []
+        for item in self._deferredFrameCallbacks:
+            item["remaining"] -= 1
+            (ready if item["remaining"] <= 0 else waiting).append(item)
+        self._deferredFrameCallbacks = waiting
+        for item in ready:
+            try:
+                item["callback"]()
+            except Exception:
+                import traceback
+                print(traceback.format_exc())
 
     def toggleScript(self):
         self.scriptPanel.setVisible(not self.scriptPanel.getVisible())

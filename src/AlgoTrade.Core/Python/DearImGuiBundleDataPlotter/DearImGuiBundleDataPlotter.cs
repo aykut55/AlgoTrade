@@ -263,6 +263,26 @@ public class DearImGuiBundleDataPlotter : IDisposable
     }
 
     /// <summary>
+    /// Plotter'ın scripts klasöründeki dosyayı Script Panel'de açar ve istenirse
+    /// hemen çalıştırır. Editördeki sonraki Run çağrıları aynı açık veri üzerinde
+    /// indikatörleri yeniden hesaplayabilir.
+    /// </summary>
+    public string OpenScript(string fileName, bool run = false)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+            throw new ArgumentException("Script dosya adı boş olamaz.", nameof(fileName));
+        if (Path.GetFileName(fileName) != fileName)
+            throw new ArgumentException("Script yalnızca scripts klasöründen açılabilir.", nameof(fileName));
+
+        return WriteCommand("open_script", new Dictionary<string, object?>
+        {
+            ["command"] = "open_script",
+            ["fileName"] = fileName,
+            ["run"] = run,
+        });
+    }
+
+    /// <summary>
     /// Son yüklenen bundle'daki hazır bir seriyi (indikatör/OHLCV/signalSteps)
     /// hedef panele ekletir ("add_series_from_bundle" komutu).
     /// </summary>

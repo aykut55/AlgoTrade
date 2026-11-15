@@ -26,6 +26,7 @@ class RuntimeCommandManager:
             "clear_all_panels": self._handleClearAllPanels,
             "reload_current": self._handleReloadCurrent,
             "add_series_from_bundle": self._handleAddSeriesFromBundle,
+            "open_script": self._handleOpenScript,
             "shutdown": self._handleShutdown,
         }
         os.makedirs(self._commandsDir, exist_ok=True)
@@ -194,6 +195,13 @@ class RuntimeCommandManager:
         panel.addData(int(dataId), label, "line", data.xs, ys,
                       timestamps=data.timestamps, intraday=intraday)
         pm.drawPanelData(panel.id)
+
+    def _handleOpenScript(self, command):
+        """Bir çalışma scriptini Script Panel'de açar ve isteğe bağlı çalıştırır."""
+        fileName = str(command.get("fileName") or "")
+        if not fileName:
+            raise ValueError("open_script: 'fileName' zorunlu")
+        self._gm.scriptPanel.openScriptFile(fileName, run=bool(command.get("run", False)))
 
     def _handleShutdown(self, command):
         """DearPyGuiDataPlotter uygulamasini nazikce kapatir. C#'in StopPlotter()

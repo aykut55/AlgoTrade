@@ -76,3 +76,13 @@ class Indicators:
             window = stochK[i - dPeriod + 1:i + 1]
             stochD[i] = sum(window) / dPeriod
         return stochK, stochD
+
+    @staticmethod
+    def momentum(data: list[float], period: int = 10) -> list[float]:
+        """Fiyat momentumu: close[i] - close[i-period]."""
+        if period <= 0 or len(data) <= period:
+            return []
+        result = [0.0] * len(data)
+        for i in range(period, len(data)):
+            result[i] = data[i] - data[i - period]
+        return result

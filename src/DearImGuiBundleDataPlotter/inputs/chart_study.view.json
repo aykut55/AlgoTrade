@@ -1,0 +1,208 @@
+{
+  "mode": "chart_study",
+  "startupScript": "chart_study_indicator_dashboard.py",
+  "runStartupScript": true,
+  "panels": [
+    {
+      "id": "ohlc",
+      "name": "OHLC + EMA",
+      "caption": "OHLC + EMA 5/8/13/21/50/100/200",
+      "height": 430,
+      "ySyncId": 0,
+      "series": [
+        {
+          "source": "ohlc",
+          "name": "VIP'VIP-X030-T",
+          "label": "VIP'VIP-X030-T",
+          "dataId": 0
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 5",
+          "label": "EMA 5",
+          "dataId": 1
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 8",
+          "label": "EMA 8",
+          "dataId": 2
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 13",
+          "label": "EMA 13",
+          "dataId": 3
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 21",
+          "label": "EMA 21",
+          "dataId": 4
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 50",
+          "label": "EMA 50",
+          "dataId": 5
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 100",
+          "label": "EMA 100",
+          "dataId": 6
+        },
+        {
+          "source": "indicator",
+          "name": "EMA 200",
+          "label": "EMA 200",
+          "dataId": 7
+        }
+      ]
+    },
+    {
+      "id": "macd",
+      "name": "MACD",
+      "caption": "MACD",
+      "height": 220,
+      "ySyncId": 1,
+      "yFixedRange": null,
+      "series": [
+        {
+          "source": "indicator",
+          "name": "MACD",
+          "label": "MACD",
+          "dataId": 1
+        },
+        {
+          "source": "indicator",
+          "name": "MACD Signal",
+          "label": "MACD Signal",
+          "dataId": 2
+        },
+        {
+          "source": "indicator",
+          "name": "MACD Histogram",
+          "label": "MACD Histogram",
+          "dataId": 3
+        }
+      ],
+      "levels": [
+        {
+          "orientation": "h",
+          "value": 0.0,
+          "label": "0"
+        }
+      ]
+    },
+    {
+      "id": "rsi",
+      "name": "RSI 7 / 14 / 21",
+      "caption": "RSI 7 / 14 / 21",
+      "height": 220,
+      "ySyncId": 2,
+      "yFixedRange": [
+        0.0,
+        100.0
+      ],
+      "series": [
+        {
+          "source": "indicator",
+          "name": "RSI 7",
+          "label": "RSI 7",
+          "dataId": 1
+        },
+        {
+          "source": "indicator",
+          "name": "RSI 14",
+          "label": "RSI 14",
+          "dataId": 2
+        },
+        {
+          "source": "indicator",
+          "name": "RSI 21",
+          "label": "RSI 21",
+          "dataId": 3
+        }
+      ],
+      "levels": [
+        {
+          "orientation": "h",
+          "value": 30.0,
+          "label": "30"
+        },
+        {
+          "orientation": "h",
+          "value": 70.0,
+          "label": "70"
+        }
+      ]
+    },
+    {
+      "id": "stochastic",
+      "name": "Stochastic",
+      "caption": "Stochastic",
+      "height": 220,
+      "ySyncId": 3,
+      "yFixedRange": [
+        0.0,
+        100.0
+      ],
+      "series": [
+        {
+          "source": "indicator",
+          "name": "Stochastic %K",
+          "label": "Stochastic %K",
+          "dataId": 1
+        },
+        {
+          "source": "indicator",
+          "name": "Stochastic %D",
+          "label": "Stochastic %D",
+          "dataId": 2
+        }
+      ],
+      "levels": [
+        {
+          "orientation": "h",
+          "value": 20.0,
+          "label": "20"
+        },
+        {
+          "orientation": "h",
+          "value": 80.0,
+          "label": "80"
+        }
+      ]
+    },
+    {
+      "id": "momentum",
+      "name": "Momentum",
+      "caption": "Momentum",
+      "height": 220,
+      "ySyncId": 4,
+      "yFixedRange": null,
+      "series": [
+        {
+          "source": "indicator",
+          "name": "Momentum 10",
+          "label": "Momentum 10",
+          "dataId": 1
+        },
+        {
+          "source": "indicator",
+          "name": "Momentum 20",
+          "label": "Momentum 20",
+          "dataId": 2
+        }
+      ],
+      "levels": [
+        {
+          "orientation": "h",
+          "value": 0.0,
+          "label": "0"
+        }
+      ]
+    }
+  ]
+}
