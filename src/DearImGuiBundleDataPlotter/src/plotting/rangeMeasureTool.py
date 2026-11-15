@@ -49,6 +49,9 @@ class RangeMeasureTool:
         self.enabled = False
         self.startIndex = None
         self.endIndex = None
+        self.previewEndIndex = None
+        self._markerAInput = -1
+        self._markerBInput = -1
         self.sourcePanelId = None
         self.status = "Measure modunu acip plot uzerinde A ve B barlarini secin."
         self._enabledListeners = []
@@ -66,6 +69,9 @@ class RangeMeasureTool:
         if enabled:
             self.startIndex = None
             self.endIndex = None
+            self.previewEndIndex = None
+            self._markerAInput = -1
+            self._markerBInput = -1
             self.sourcePanelId = None
             self.status = "Range measurement: click the first bar (A)."
             for callback in self._enabledListeners:
@@ -86,6 +92,9 @@ class RangeMeasureTool:
         self.enabled = False
         self.startIndex = None
         self.endIndex = None
+        self.previewEndIndex = None
+        self._markerAInput = -1
+        self._markerBInput = -1
         self.sourcePanelId = None
         self.status = "Range measurement cleared."
 
@@ -98,12 +107,21 @@ class RangeMeasureTool:
         if self.startIndex is None or self.endIndex is not None:
             self.startIndex = int(index)
             self.endIndex = None
+            self.previewEndIndex = None
+            self._markerAInput = int(index)
+            self._markerBInput = -1
             self.sourcePanelId = panelId
             self.status = f"Range A selected: bar={index}. Click the second bar (B)."
             return
         self.endIndex = int(index)
+        self.previewEndIndex = None
+        self._markerBInput = int(index)
         self.status = (f"Range selected: bar {self.startIndex} -> {index}. "
                        "Click again to start a new measurement.")
+
+    def getEffectiveEndIndex(self):
+        """Sabit B varsa onu, A secildikten sonra ise faredeki gecici B'yi dondurur."""
+        return self.endIndex if self.endIndex is not None else self.previewEndIndex
 
     def handleKeyboard(self):
         """M: modu ac/kapa, Esc: modu kapat (cizgiler korunur)."""
@@ -122,17 +140,69 @@ class RangeMeasureTool:
         if self.startIndex is not None:
             implot.drag_line_x(self.LINE_ID_A, float(self.startIndex), self.COLOR_A, 2,
                                implot.DragToolFlags_.no_inputs.value)
-        if self.endIndex is not None:
-            implot.drag_line_x(self.LINE_ID_B, float(self.endIndex), self.COLOR_B, 2,
+        effectiveEndIndex = self.getEffectiveEndIndex()
+        if effectiveEndIndex is not None:
+            implot.drag_line_x(self.LINE_ID_B, float(effectiveEndIndex), self.COLOR_B, 2,
                                implot.DragToolFlags_.no_inputs.value)
 
     def handlePlotClick(self, panelId, index, clicked):
-        if self.suspended or not self.enabled or not clicked or index < 0:
+        if self.suspended or not self.enabled or index < 0:
             return
         totalBars = self._totalBars()
         if totalBars and index >= totalBars:
             return
-        self.selectBar(index, panelId)
+        if clicked:
+            self.selectBar(index, panelId)
+        elif self.startIndex is not None and self.endIndex is None:
+            # Ilk tiklamadan sonra fareyi gecici B noktasi olarak kullan.
+            # PanelManager bu metodu plot hover halindeyken her frame cagirir.
+            self.previewEndIndex = int(index)
+            self._markerBInput = int(index)
+
+    def _validateMarkerInput(self, value, label):
+        index = int(value)
+        totalBars = self._totalBars()
+        if index < 0 or (totalBars and index >= totalBars):
+            upper = totalBars - 1 if totalBars else "?"
+            self.status = f"{label} bar numarasi gecersiz: {index} (0..{upper})."
+            return None
+        return index
+
+    def _setMarkerAFromInput(self):
+        index = self._validateMarkerInput(self._markerAInput, "Marker 1 / A")
+        if index is None:
+            return
+        self.startIndex = index
+        self.previewEndIndex = None
+        self.enabled = True
+        if self.endIndex is None:
+            self.status = f"Marker 1 / A ayarlandi: bar={index}. Marker 2 / B secin."
+        else:
+            self.status = (f"Marker 1 / A ayarlandi: bar={index}; "
+                           f"Marker 2 / B korundu: bar={self.endIndex}.")
+
+    def _setMarkerBFromInput(self):
+        if self.startIndex is None:
+            self.status = "Marker 2 / B'den once Marker 1 / A ayarlanmalidir."
+            return
+        index = self._validateMarkerInput(self._markerBInput, "Marker 2 / B")
+        if index is None:
+            return
+        self.endIndex = index
+        self.previewEndIndex = None
+        self.enabled = True
+        self.status = f"Marker 2 / B ayarlandi: bar={index}."
+
+    def _applyMarkerInputs(self):
+        startIndex = self._validateMarkerInput(self._markerAInput, "Marker 1 / A")
+        endIndex = self._validateMarkerInput(self._markerBInput, "Marker 2 / B")
+        if startIndex is None or endIndex is None:
+            return
+        self.startIndex = startIndex
+        self.endIndex = endIndex
+        self.previewEndIndex = None
+        self.enabled = True
+        self.status = f"Markerlar ayarlandi: bar {startIndex} -> {endIndex}."
 
     # ----------------------------------------------------------- veri
     @staticmethod
@@ -218,22 +288,24 @@ class RangeMeasureTool:
         if self.startIndex is None:
             return None
         data = data if data is not None else self.pickPriceData()
+        effectiveEndIndex = self.getEffectiveEndIndex()
         startValue = self._valueAt(data, self.startIndex) if data is not None else None
         startTime = self._timestampAt(data, self.startIndex) if data is not None else None
         result = {
             "seriesName": getattr(data, "name", "") if data is not None else "",
-            "startIndex": self.startIndex, "endIndex": self.endIndex,
+            "startIndex": self.startIndex, "endIndex": effectiveEndIndex,
+            "isPreview": self.endIndex is None and effectiveEndIndex is not None,
             "startValue": startValue, "startTime": startTime,
             "endValue": None, "endTime": None, "bars": None,
             "elapsedSeconds": None, "difference": None, "percent": None,
         }
-        if self.endIndex is None or data is None:
+        if effectiveEndIndex is None or data is None:
             return result
-        endValue = self._valueAt(data, self.endIndex)
-        endTime = self._timestampAt(data, self.endIndex)
+        endValue = self._valueAt(data, effectiveEndIndex)
+        endTime = self._timestampAt(data, effectiveEndIndex)
         result["endValue"] = endValue
         result["endTime"] = endTime
-        result["bars"] = abs(self.endIndex - self.startIndex)
+        result["bars"] = abs(effectiveEndIndex - self.startIndex)
         elapsed = self.elapsedSeconds(startTime, endTime)
         result["elapsedSeconds"] = abs(elapsed) if elapsed is not None else None
         if startValue is not None and endValue is not None:
@@ -241,7 +313,7 @@ class RangeMeasureTool:
             result["difference"] = difference
             result["percent"] = difference / startValue * 100.0 if startValue else None
             startPos = self._positionOf(data, self.startIndex)
-            endPos = self._positionOf(data, self.endIndex)
+            endPos = self._positionOf(data, effectiveEndIndex)
             if startPos is not None and endPos is not None:
                 isCandle = data.dataType == "candle"
                 closes = self._array(data, "close" if isCandle else "ys")
@@ -630,6 +702,22 @@ class RangeMeasureTool:
         if imgui.button("Clear Measure", (140, 0)):
             self.clear()
 
+        imgui.separator()
+        imgui.set_next_item_width(180.0)
+        _, self._markerAInput = imgui.input_int("Marker 1 / A Bar", self._markerAInput)
+        imgui.same_line()
+        if imgui.button("Set A", (80, 0)):
+            self._setMarkerAFromInput()
+
+        imgui.set_next_item_width(180.0)
+        _, self._markerBInput = imgui.input_int("Marker 2 / B Bar", self._markerBInput)
+        imgui.same_line()
+        if imgui.button("Set B", (80, 0)):
+            self._setMarkerBFromInput()
+        imgui.same_line()
+        if imgui.button("Apply Both", (110, 0)):
+            self._applyMarkerInputs()
+
         metrics = self.computeMetrics()
         imgui.same_line()
         imgui.begin_disabled(metrics is None)
@@ -638,7 +726,8 @@ class RangeMeasureTool:
             self.status = "Measurement copied to clipboard."
         imgui.end_disabled()
         imgui.same_line()
-        imgui.begin_disabled(metrics is None or metrics["endIndex"] is None)
+        imgui.begin_disabled(metrics is None or metrics["endIndex"] is None or
+                             metrics.get("isPreview", False))
         if imgui.button("Save Measure", (140, 0)):
             _, self.status = self.saveMeasurement(metrics, "Measure Panel")
         imgui.end_disabled()

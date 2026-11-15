@@ -280,9 +280,11 @@ class App:
             measureTool = gm.rangeMeasureTool
             swingCtrl = gm.swingAnnotationController
             startIndex = endIndex = None
+            measureEndIndex = (measureTool.getEffectiveEndIndex()
+                               if measureTool is not None else None)
             if (measureTool is not None and measureTool.startIndex is not None
-                    and measureTool.endIndex is not None):
-                startIndex, endIndex = measureTool.startIndex, measureTool.endIndex
+                    and measureEndIndex is not None):
+                startIndex, endIndex = measureTool.startIndex, measureEndIndex
             elif (swingCtrl is not None and swingCtrl._measureStartIndex is not None
                     and swingCtrl._measureEndIndex is not None):
                 startIndex, endIndex = swingCtrl._measureStartIndex, swingCtrl._measureEndIndex
