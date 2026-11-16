@@ -47,6 +47,14 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 
+// Plot ayarlari - AppConfig.json'daki AppSettings karsiligi (script AppConfig.json okumaz)
+// plotBackend          : 0 = DearPyGuiDataPlotter | 1 = DearImGuiBundleDataPlotter
+// pythonPlotterEnabled : 0 = eski pythonnet PythonPlotter kapali | 1 = acik
+// bundleReportsEnabled : true = bundle yanina .reports paketi (Report2 paneli icin)
+int  plotBackend          = 1;
+int  pythonPlotterEnabled = 0;
+bool bundleReportsEnabled = true;
+
 // =============================================================================
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
 // FilterMode: All, LastN, FirstN, IndexRange, AfterDateTime, BeforeDateTime, DateTimeRange

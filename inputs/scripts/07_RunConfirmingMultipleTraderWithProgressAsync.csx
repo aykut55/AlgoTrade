@@ -274,22 +274,21 @@ Log($"VirtualSignals (consensus) : Buy={virtualBuy} Sell={virtualSell} (toplam {
 Log($"Signals (konfirme)         : Buy={mainBuy} Sell={mainSell} (toplam {confirmingMultipleTrader.Signals.Count} bar)");
 
 // =============================================================================
-// 7. Plot (pythonnet + imgui_bundle - menudeki gibi eski tip, sadece mainTrader.PlotEnabled
-// kontrol ediliyor - runConfirmingMultipleTraderAlgoTrade() (Program.cs:1017-1028) ile ayni)
+// 7. Plot - menu [24] runConfirmingMultipleTraderAlgoTrade() ile ayni: mainTrader.PlotEnabled
+// kontrol edilir; PythonPlotter yalniz pythonPlotterEnabled == 1 iken, bundle
+// plotBackend'e gore (1 = DearImGuiBundleDataPlotter, 0 = DearPyGuiDataPlotter) acilir.
 // =============================================================================
+string? plotBundlePath = null;
 if (mainTrader.PlotEnabled)
 {
     Log("");
     Log("[Plot] mainTrader'in gercek/konfirme edilmis sinyalleri ciziliyor.");
-
-    if (algoTrader.SetupPython())
-        await algoTrader.PlotSingleTraderData(mainTrader);
-    else
-        Log("[HATA] Python setup failed. PlotSingleTraderData skipped.");
+    plotBundlePath = await PlotSingleTraderAsync(mainTrader, plotBackend, pythonPlotterEnabled, "ConfirmingMultipleTrader");
 }
 
 await writeTask;
 Log("[WriteTraderDataToFilesAsync] File writing confirmed complete. (mainTrader + ConfirmingMultipleTraderLists)");
+CreateBundleReports(plotBundlePath, "ConfirmingMultipleTrader", bundleReportsEnabled);
 
 // =============================================================================
 // 8. Temizle

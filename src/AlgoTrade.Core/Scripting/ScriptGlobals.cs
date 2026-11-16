@@ -1,8 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+using AlgoTrade.Core.Logging;
+using AlgoTrade.Core.Python;
+using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Indicators;
+using ImGuiBundlePlotter = AlgoTrade.Core.Python.DearImGuiBundleDataPlotter.DearImGuiBundleDataPlotter;
+using PyGuiPlotter = AlgoTrade.Core.Python.DearPyGuiDataPlotter.DearPyGuiDataPlotter;
 
 namespace AlgoTrade.Core.Scripting
 {
@@ -265,6 +272,117 @@ namespace AlgoTrade.Core.Scripting
             }
 
             Log("Setup complete");
+        }
+
+        #endregion
+
+        #region Plot (menu [5] ile ayni kurallar, ayarlar script Config dosyasindan)
+
+        /// <summary>
+        /// Host (Program.cs) tarafindan verilen, menu cizimleriyle paylasilan DearImGuiBundleDataPlotter.
+        /// null ise ilk cizimde script icin yeni bir ornek olusturulur.
+        /// </summary>
+        public ImGuiBundlePlotter? DearImGuiBundlePlotter { get; set; }
+
+        /// <summary>
+        /// Host tarafindan verilen, menu cizimleriyle paylasilan DearPyGuiDataPlotter (PlotBackend = 0).
+        /// </summary>
+        public PyGuiPlotter? DearPyGuiPlotter { get; set; }
+
+        /// <summary>
+        /// SingleTrader'i runSingleTraderAlgoTrade() (menu [5]) ile ayni kurallarla cizer.
+        /// Ayarlar script'in kendi Config dosyasindan gelir (AppConfig.json okunmaz):
+        /// pythonPlotterEnabled == 1 ise PythonPlotter da calisir; bundle plotBackend'e gore
+        /// DearImGuiBundleDataPlotter (1) veya DearPyGuiDataPlotter (0) ile acilir.
+        /// Pencere acik kalir, cagri bundle yuklenince doner. Uretilen bundle yolunu dondurur.
+        /// </summary>
+        public Task<string?> PlotSingleTraderAsync(SingleTrader trader, int plotBackend, int pythonPlotterEnabled,
+                                                   string label = "SingleTrader") =>
+            PlotCoreAsync(
+                () => algoTrader.PlotSingleTraderData(trader),
+                outDir => new TradeDataBundleConverter().ConvertSingleTrader(trader, outDir),
+                plotBackend, pythonPlotterEnabled, label);
+
+        /// <summary>
+        /// MultipleTrader'i runMultipleTraderAlgoTrade() (menu [6]) ile ayni kurallarla cizer.
+        /// </summary>
+        public Task<string?> PlotMultipleTraderAsync(MultipleTrader multipleTrader, int plotBackend, int pythonPlotterEnabled) =>
+            PlotCoreAsync(
+                () => algoTrader.PlotMultipleTraderData(multipleTrader),
+                outDir => new TradeDataBundleConverter().ConvertMultipleTrader(multipleTrader, outDir),
+                plotBackend, pythonPlotterEnabled, "MultipleTrader");
+
+        /// <summary>
+        /// enabled true ise bundle yanina rapor paketini olusturur (menu [5] BundleReportsEnabled ile ayni).
+        /// Istatistik dosyalari yazildiktan SONRA cagrilmalidir.
+        /// </summary>
+        public void CreateBundleReports(string? bundlePath, string traderType, bool enabled)
+        {
+            if (!enabled || string.IsNullOrEmpty(bundlePath)) return;
+            try
+            {
+                string indexPath = BundleReportPackager.Create(
+                    bundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, traderType);
+                Log($"[BundleReports] Rapor paketi olusturuldu: {indexPath}");
+            }
+            catch (Exception ex)
+            {
+                Log($"[HATA][BundleReports] {ex.Message}");
+            }
+        }
+
+        private async Task<string?> PlotCoreAsync(
+            Func<Task> pythonPlot,
+            Func<string, (string bundlePath, string viewPath)> convert,
+            int plotBackend,
+            int pythonPlotterEnabled,
+            string label)
+        {
+            var logger = LogManager.GetInstance();
+
+            if (pythonPlotterEnabled == 1)
+            {
+                if (algoTrader.SetupPython())
+                    await pythonPlot();
+                else
+                    Log("[HATA] Python setup failed. PythonPlotter skipped.");
+            }
+
+            bool useImGuiBundle = plotBackend == 1;
+            try
+            {
+                string bundleOutDir = Path.Combine(
+                    useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
+                    "inputs");
+                var (bundlePath, viewPath) = convert(bundleOutDir);
+
+                if (useImGuiBundle)
+                {
+                    var plotter = DearImGuiBundlePlotter ??= new ImGuiBundlePlotter();
+                    plotter.SetLogger(logger);
+                    if (!plotter.IsRunning)
+                        plotter.PrepareStartupBundle(bundlePath, viewPath);
+                    plotter.StartPlotter();
+                    string commandFileName = plotter.LoadBundle(bundlePath, viewPath);
+                    if (!await plotter.WaitForCommandProcessedAsync(commandFileName, TimeSpan.FromMinutes(2)))
+                        Log("[PlotBackend] Plot yukleme onayi zaman asimina ugradi.");
+                    Log($"[DearImGuiBundleDataPlotter] {label} datasi yuklendi: {bundlePath}");
+                }
+                else
+                {
+                    var plotter = DearPyGuiPlotter ??= new PyGuiPlotter();
+                    plotter.SetLogger(logger);
+                    plotter.StartPlotter();
+                    plotter.LoadBundle(bundlePath, viewPath);
+                    Log($"[DearPyGuiDataPlotter] {label} datasi yuklendi: {bundlePath}");
+                }
+                return bundlePath;
+            }
+            catch (Exception ex)
+            {
+                Log($"[HATA][PlotBackend] Converter/plotter hatasi: {ex.Message}");
+                return null;
+            }
         }
 
         #endregion

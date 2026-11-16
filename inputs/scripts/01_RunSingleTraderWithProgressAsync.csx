@@ -444,6 +444,7 @@ Log($"\nProcessed {totalBars} bars.");
 // =============================================================================
 var fileTasks = new List<Task>();
 var plotTasks = new List<Task>();
+Task<string?>? mainPlotTask = null;
 
 if (!IsCancellationRequested && !singleTrader.IsStopRequested && singleTrader.SaveStatisticsToFile)
 {
@@ -471,54 +472,40 @@ if (!IsCancellationRequested && !singleTrader.IsStopRequested && selectedRunMode
 
     algoTrader.RegisterLogger(LogManager.GetInstance());
 
-    if (algoTrader.SetupPython())
-        plotTasks.Add(algoTrader.PlotSingleTraderData(singleTrader));
-    else
-        Log("[HATA] Python setup failed. PlotSingleTraderData skipped.");
+    // Menu [5] ile ayni: PythonPlotter yalniz pythonPlotterEnabled == 1 iken,
+    // bundle plotBackend'e gore (1 = DearImGuiBundleDataPlotter, 0 = DearPyGuiDataPlotter).
+    // Pencere acik kalir; gorev bundle yuklenince tamamlanir.
+    mainPlotTask = PlotSingleTraderAsync(singleTrader, plotBackend, pythonPlotterEnabled);
+    plotTasks.Add(mainPlotTask);
 
     plotTasks.Add(Task.Run(() =>
     {
         try
         {
             var bundleConverter = new TradeDataBundleConverter();
-            string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
-            var (bundlePath, viewPath) = bundleConverter.ConvertSingleTrader(singleTrader, bundleOutDir);
 
-            // Ayni bundle'i outputs/logs'a da yaz (SingleTraderLists.csv/Statistics.txt ile ayni
-            // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
+            // Ayni bundle'i outputs/logs'a ve her plotter'in latest_bundle klasorune de yaz (menu [5] ile ayni).
             bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
-            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\SingleTraderBundle.npz'e de yazildi.");
-
-            // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
-            // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
             bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
             bundleConverter.ConvertSingleTrader(singleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
-            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
-
-            // Bu cagri kendi Task.Run thread'ini pencere kapanana kadar bloklar - ana akisi
-            // ya da diger background task'lari (istatistik yazma, eski plot) ETKILEMEZ,
-            // hepsi zaten paralel calisiyor.
-            var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
-            dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
-            dearPyGuiTestPlotter.StartPlotter();
-            dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockUntilClosed: true);
-            Log($"[DearPyGuiDataPlotter] SingleTrader datasi yuklendi: {bundlePath}");
+            Log($"[Bundle] Yardimci bundle'lar yazildi: {AppSettings.LogsDir}, {AppSettings.DearPyGuiPlotterBundleDir}, {AppSettings.PythonPlotterBundleDir}");
         }
         catch (Exception ex)
         {
-            Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
+            Log($"[HATA][Bundle] Converter hatasi: {ex.Message}");
         }
     }));
 }
 
-// Hepsi paralel baslatildi. Once sadece dosya yazimini bekle - plotlar hala acik olabilir,
-// bu yuzden bu mesaj plot pencereleri kapatilmadan gorunur.
+// Hepsi paralel baslatildi. Once dosya yazimini bekle.
 await Task.WhenAll(fileTasks);
 Log("\nTum dosyalar diske yazildi.");
 
-// Simdi plot pencerelerinin kapatilmasini bekle.
 await Task.WhenAll(plotTasks);
-Log("\nTum plot pencereleri kapatildi - bekleyen islem kalmadi.");
+// Rapor paketi istatistik dosyalari yazildiktan sonra (bundleReportsEnabled).
+if (mainPlotTask is not null)
+    CreateBundleReports(await mainPlotTask, "SingleTrader", bundleReportsEnabled);
+Log("\nPlot yuklendi - bekleyen islem kalmadi.");
 
 // =============================================================================
 // 12. Temizle

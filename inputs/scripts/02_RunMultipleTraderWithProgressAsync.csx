@@ -474,6 +474,7 @@ Log($"\nProcessed {totalBars} bars with {multipleTrader.Traders.Count} child tra
 // =============================================================================
 var fileTasks = new List<Task>();
 var plotTasks = new List<Task>();
+Task<string?>? mainPlotTask = null;
 
 if (!IsCancellationRequested && !multipleTrader.IsStopRequested)
 {
@@ -526,54 +527,40 @@ if (!IsCancellationRequested && !multipleTrader.IsStopRequested && selectedRunMo
 
     algoTrader.RegisterLogger(LogManager.GetInstance());
 
-    if (algoTrader.SetupPython())
-        plotTasks.Add(algoTrader.PlotMultipleTraderData(multipleTrader));
-    else
-        Log("[HATA] Python setup failed. PlotMultipleTraderData skipped.");
+    // Menu [6] ile ayni: PythonPlotter yalniz pythonPlotterEnabled == 1 iken,
+    // bundle plotBackend'e gore (1 = DearImGuiBundleDataPlotter, 0 = DearPyGuiDataPlotter).
+    // Pencere acik kalir; gorev bundle yuklenince tamamlanir.
+    mainPlotTask = PlotMultipleTraderAsync(multipleTrader, plotBackend, pythonPlotterEnabled);
+    plotTasks.Add(mainPlotTask);
 
     plotTasks.Add(Task.Run(() =>
     {
         try
         {
             var bundleConverter = new TradeDataBundleConverter();
-            string bundleOutDir = Path.Combine(AppSettings.DearPyGuiDataPlotterDir, "inputs");
-            var (bundlePath, viewPath) = bundleConverter.ConvertMultipleTrader(multipleTrader, bundleOutDir);
 
-            // Ayni bundle'i outputs/logs'a da yaz (MultipleTraderLists.csv/Statistics.txt ile ayni
-            // klasor) - gorunurluk icin, "normal" (DearPyGuiDataPlotter/inputs) konumun yaninda.
+            // Ayni bundle'i outputs/logs'a ve her plotter'in latest_bundle klasorune de yaz (menu [6] ile ayni).
             bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.LogsDir, fileBaseName: "MultipleTraderBundle");
-            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.LogsDir}\\MultipleTraderBundle.npz'e de yazildi.");
-
-            // Her plotter'in kendi AlgoTrade-native runtime klasoru (2026-08-26, ayri fiziksel
-            // kopyalar - bkz. docs/todo.md "Kalinti cift ROOT yapisi").
             bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.DearPyGuiPlotterBundleDir, fileBaseName: "latest_bundle");
             bundleConverter.ConvertMultipleTrader(multipleTrader, AppSettings.PythonPlotterBundleDir, fileBaseName: "latest_bundle");
-            Log($"[DearPyGuiDataPlotter] Bundle ayrica {AppSettings.DearPyGuiPlotterBundleDir} ve {AppSettings.PythonPlotterBundleDir}'e de yazildi.");
-
-            // Bu cagri kendi Task.Run thread'ini pencere kapanana kadar bloklar - ana akisi
-            // ya da diger background task'lari (dosya yazma, eski plot) ETKILEMEZ, hepsi
-            // zaten paralel calisiyor.
-            var dearPyGuiTestPlotter = new DearPyGuiDataPlotter();
-            dearPyGuiTestPlotter.SetLogger(LogManager.GetInstance());
-            dearPyGuiTestPlotter.StartPlotter();
-            dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath, blockUntilClosed: true);
-            Log($"[DearPyGuiDataPlotter] MultipleTrader datasi yuklendi: {bundlePath}");
+            Log($"[Bundle] Yardimci bundle'lar yazildi: {AppSettings.LogsDir}, {AppSettings.DearPyGuiPlotterBundleDir}, {AppSettings.PythonPlotterBundleDir}");
         }
         catch (Exception ex)
         {
-            Log($"[HATA][DearPyGuiDataPlotter] Converter hatasi: {ex.Message}");
+            Log($"[HATA][Bundle] Converter hatasi: {ex.Message}");
         }
     }));
 }
 
-// Hepsi paralel baslatildi. Once sadece dosya yazimini bekle - plotlar hala acik olabilir,
-// bu yuzden bu mesaj plot pencereleri kapatilmadan gorunur.
+// Hepsi paralel baslatildi. Once dosya yazimini bekle.
 await Task.WhenAll(fileTasks);
 Log("\nTum dosyalar diske yazildi.");
 
-// Simdi plot pencerelerinin kapatilmasini bekle.
 await Task.WhenAll(plotTasks);
-Log("\nTum plot pencereleri kapatildi - bekleyen islem kalmadi.");
+// Rapor paketi istatistik dosyalari yazildiktan sonra (bundleReportsEnabled).
+if (mainPlotTask is not null)
+    CreateBundleReports(await mainPlotTask, "MultipleTrader", bundleReportsEnabled);
+Log("\nPlot yuklendi - bekleyen islem kalmadi.");
 
 // =============================================================================
 // 10. Temizle

@@ -40,7 +40,15 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
+
+// Plot ayarlari - AppConfig.json'daki AppSettings karsiligi (script AppConfig.json okumaz)
+// plotBackend          : 0 = DearPyGuiDataPlotter | 1 = DearImGuiBundleDataPlotter
+// pythonPlotterEnabled : 0 = eski pythonnet PythonPlotter kapali | 1 = acik
+// bundleReportsEnabled : true = bundle yanina .reports paketi (Report2 paneli icin)
+int  plotBackend          = 1;
+int  pythonPlotterEnabled = 0;
+bool bundleReportsEnabled = true;
 TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
 
 // =============================================================================

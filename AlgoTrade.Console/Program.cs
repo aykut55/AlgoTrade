@@ -4333,6 +4333,11 @@ async Task runFullScript()
         (msg) => LogManager.LogRaw(msg),
         (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}"));
 
+    // Script cizimleri menu [5] ile ayni plotter penceresini kullansin (PlotBackend/PythonPlotterEnabled
+    // kurallari ScriptGlobals.PlotSingleTraderAsync/PlotMultipleTraderAsync icinde uygulanir).
+    globals.DearImGuiBundlePlotter = dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+    globals.DearPyGuiPlotter       = dearPyGuiTestPlotter       ??= new DearPyGuiDataPlotter();
+
     var result = await executeScriptWithCancellation(code, globals, sourceDir);
     printScriptResult(result);
 }
