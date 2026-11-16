@@ -337,7 +337,7 @@ class GuiManager:
         self.panelManagerWindow.setVisible(configuredVisible("panelManagerWindow", False))
         self.panelManagerWindow2.setVisible(configuredVisible("panelManagerWindow2", False))
         self.reportsWindow.setVisible(configuredVisible("reportsWindow", False))
-        self.report2Window.setVisible(configuredVisible("report2Window", False))
+        self.report2Window.setVisible(configuredVisible("report2Window", True))
         self.measurePanel.setVisible(configuredVisible("measurePanel", True))
         self.consolePanel.setVisible(configuredVisible("consolePanel", False))
         self.rangeMeasureTool.setSuspended(False)
