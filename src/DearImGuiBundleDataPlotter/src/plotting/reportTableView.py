@@ -177,7 +177,8 @@ class ReportTableView:
             imgui.table_setup_column(self.data.headers[index], imgui.TableColumnFlags_.width_fixed, 140)
         imgui.table_setup_scroll_freeze(1 if self.performance else 3, 1)
         imgui.table_headers_row()
-        pnl = self.data.headers.index("Kar/Zarar") if self.performance else None
+        coloredColumns = {i for i, name in enumerate(self.data.headers)
+                          if self.performance and name in ("Kar/Zarar", "Yön Bazlı Değişim %")}
         for rowIndex, row in enumerate(self.data.rows):
             imgui.table_next_row()
             imgui.push_id(rowIndex)
@@ -187,7 +188,7 @@ class ReportTableView:
                     clicked, _ = imgui.selectable(row[index], self._selected == row, imgui.SelectableFlags_.span_all_columns)
                     if clicked:
                         self._selected = row
-                elif index == pnl:
+                elif index in coloredColumns:
                     value = float(row[index])
                     color = (0.3, 0.85, 0.4, 1) if value > 0 else (1, 0.4, 0.4, 1) if value < 0 else (0.8, 0.8, 0.8, 1)
                     imgui.text_colored(color, row[index])

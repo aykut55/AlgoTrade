@@ -2001,6 +2001,7 @@ public class StatisticsExporter
             "KapanisTarihi" => row.KapanisTarihSaat.ToString("yyyy.MM.dd"),
             "KapanisSaati" => row.KapanisTarihSaat.ToString("HH:mm:ss"),
             "KapanisFiyati" => row.KapanisFiyati.ToString("F2"),
+            "YonBazliDegisimYuzde" => row.YonBazliDegisimYuzde.ToString("F2"),
             "KarZararPuan" => row.KarZararPuan.ToString("F2"),
             "BakiyePuan" => row.BakiyePuan.ToString("F2"),
             "GetiriPuan" => row.GetiriPuan.ToString("F2"),

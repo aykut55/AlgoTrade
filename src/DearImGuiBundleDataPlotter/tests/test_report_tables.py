@@ -55,6 +55,19 @@ class ReportTableTests(unittest.TestCase):
         offsets, _ = self.scan(("missing", "", "", "", ""))
         self.assertFalse(offsets)
 
+    def test_inserted_percentage_column_does_not_shift_pnl_filter(self):
+        self.path.write_text(
+            "No | Yon | Açılış Tarihi | Kapanış Fiyatı | Yön Bazlı Değişim % | Kar/Zarar\n"
+            "1 | A | 2026.01.01 | 102.00 | 2.00 | 20.00\n"
+            "2 | S | 2026.01.02 | 102.00 | -2.00 | -20.00\n", encoding="utf-8")
+        headers, start = readHeader(self.path)
+        self.assertEqual(headers.index("Yön Bazlı Değişim %"), headers.index("Kapanış Fiyatı") + 1)
+        offsets, count = scanReport(self.path, headers, start,
+                                   ("", "", "", "", "Zararli"), None, Event())
+        self.assertEqual(count, 2)
+        self.assertEqual(len(offsets), 1)
+        self.assertTrue(self.rows(offsets)[0].startswith("2 |"))
+
     def test_bounded_pages_and_reset(self):
         data = PagedReportData()
         data.pageSize = 2

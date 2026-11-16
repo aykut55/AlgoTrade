@@ -1239,6 +1239,7 @@
         "Kapanış Tarihi": true,
         "Kapanış Saati": true,
         "Kapanış Fiyatı": true,
+        "Yön Bazlı Değişim %": true,
         "Kar/Zarar": true,
         "Bakiye Puan": true,
         "Getiri Puan": true,
@@ -1246,7 +1247,7 @@
       }
     },
     "lists": {
-      "columnMode": "Fiyatlar",
+      "columnMode": "Sinyaller",
       "columns": {
         "BarNo": true,
         "Date": true,

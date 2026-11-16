@@ -5,7 +5,7 @@
     "MenuTimeoutSeconds": 5,
     "PlotBackend": 1,
     "PythonPlotterEnabled": 0,
-    "BundleReportsEnabled": false
+    "BundleReportsEnabled": true
 	// AutoRunMode: "" veya "None" = normal menü | "SingleTrader" | "MultipleTrader" | "SingleTraderOptimizer"
 	// MenuTimeoutSeconds: 0 = sayaç yok (bekler), >0 = geri sayım süresi
 	// PlotBackend: 0 = DearPyGuiDataPlotter | 1 = DearImGuiBundleDataPlotter

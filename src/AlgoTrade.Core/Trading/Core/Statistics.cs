@@ -319,6 +319,13 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double AcilisFiyati { get; set; }
             public DateTime KapanisTarihSaat { get; set; }
             public double KapanisFiyati { get; set; }
+            // Direction-adjusted entry-to-exit price change, independent of position size.
+            public double YonBazliDegisimYuzde => AcilisFiyati == 0.0 ? 0.0 : Yon switch
+            {
+                "A" => 100.0 * (KapanisFiyati - AcilisFiyati) / AcilisFiyati,
+                "S" => 100.0 * (AcilisFiyati - KapanisFiyati) / AcilisFiyati,
+                _ => 0.0
+            };
             public double KarZararPuan { get; set; }
             public double BakiyePuan { get; set; }
             public double GetiriPuan { get; set; }
