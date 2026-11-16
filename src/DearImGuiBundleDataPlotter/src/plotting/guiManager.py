@@ -21,6 +21,7 @@ from .leftMenuPanel import LeftMenuPanel
 from .panelManagerWindow import PanelManagerWindow
 from .panelManagerWindow2 import PanelManagerWindow2
 from .reportsWindow import ReportsWindow
+from .report2Window import Report2Window
 from .swingAnnotationController import SwingAnnotationController
 from .rangeMeasureTool import RangeMeasureTool
 from .measurePanel import MeasurePanel
@@ -118,6 +119,7 @@ class GuiManager:
         self.panelManagerWindow2 = PanelManagerWindow2()
         self.panelManagerWindow2.setPanelManager(self.panelManager)
         self.reportsWindow = ReportsWindow(self)
+        self.report2Window = Report2Window(self)
 
         self.menuBar = MenuBar()
         self.menuBar.set_callback(
@@ -131,6 +133,7 @@ class GuiManager:
             on_manage_panels=self.panelManagerWindow.toggle,
             on_manage_panels2=self.panelManagerWindow2.toggle,
             on_toggle_reports=self.reportsWindow.toggle,
+            on_toggle_report2=self.report2Window.toggle,
             on_toggle_measure=self.measurePanel.toggle,
             on_manage_data=self.dataManager.toggle,
             on_open_all=self.panelManager.showAllPanels,
@@ -334,6 +337,7 @@ class GuiManager:
         self.panelManagerWindow.setVisible(configuredVisible("panelManagerWindow", False))
         self.panelManagerWindow2.setVisible(configuredVisible("panelManagerWindow2", False))
         self.reportsWindow.setVisible(configuredVisible("reportsWindow", False))
+        self.report2Window.setVisible(configuredVisible("report2Window", False))
         self.measurePanel.setVisible(configuredVisible("measurePanel", True))
         self.consolePanel.setVisible(configuredVisible("consolePanel", False))
         self.rangeMeasureTool.setSuspended(False)
@@ -348,6 +352,7 @@ class GuiManager:
         self.panelManagerWindow.setVisible(False)
         self.panelManagerWindow2.setVisible(False)
         self.reportsWindow.setVisible(False)
+        self.report2Window.setVisible(False)
         self.measurePanel.setVisible(False)
         self.consolePanel.setVisible(False)
         # Swing Controls kendi olcumunu kullanir; ortak arac bu modda pasif.
@@ -472,6 +477,7 @@ class GuiManager:
         self.panelManagerWindow.render()
         self.panelManagerWindow2.render()
         self.reportsWindow.render()
+        self.report2Window.render()
         self.measurePanel.render()
         self.swingAnnotationController.render()
         self.rangeMeasureTool.handleKeyboard()
@@ -534,6 +540,7 @@ class GuiManager:
     def togglePanelManagerWindow(self): self.panelManagerWindow.toggle()
     def togglePanelManagerWindow2(self): self.panelManagerWindow2.toggle()
     def toggleReportsWindow(self): self.reportsWindow.toggle()
+    def toggleReport2Window(self): self.report2Window.toggle()
     def toggleMeasurePanel(self): self.measurePanel.toggle()
     def togglePoolPanel(self): self.poolPanel.toggle()
 
@@ -548,6 +555,7 @@ class GuiManager:
             "panel manager": self.panelManagerWindow.toggle,
             "panel manager 2": self.panelManagerWindow2.toggle,
             "reports": self.reportsWindow.toggle,
+            "report2": self.report2Window.toggle,
             "measure": self.measurePanel.toggle,
             "data manager": self.dataManager.toggle,
             "indicator": self.externalIndicatorWindowManager.openDefaultIndicatorWindow,

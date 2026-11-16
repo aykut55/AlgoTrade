@@ -90,6 +90,9 @@ class App:
         reportsWindow = hello_imgui.DockableWindow(
             "Reports", "RightDockSpace", self.guiManager.reportsWindow.renderDockContent,
             self.guiManager.reportsWindow.getVisible(), True)
+        report2Window = hello_imgui.DockableWindow(
+            "Report2", "RightDockSpace", self.guiManager.report2Window.renderDockContent,
+            self.guiManager.report2Window.getVisible(), True)
         measureWindow = hello_imgui.DockableWindow(
             "Measure", "RightDockSpace", self.guiManager.measurePanel.renderDockContent,
             self.guiManager.measurePanel.getVisible(), True)
@@ -102,6 +105,7 @@ class App:
         panelManagerWindow.remember_is_visible = False
         panelManagerWindow2.remember_is_visible = False
         reportsWindow.remember_is_visible = False
+        report2Window.remember_is_visible = False
         measureWindow.remember_is_visible = False
         swingControlsWindow.remember_is_visible = False
         consoleWindow = hello_imgui.DockableWindow(
@@ -112,7 +116,7 @@ class App:
             topSplit, leftSplit, rightSplit, swingSplit, consoleSplit]
         runnerParams.docking_params.dockable_windows = [
             topWindow, mainWindow, leftWindow, scriptWindow, dataManagerWindow,
-            poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow,
+            poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow, report2Window,
             measureWindow, swingControlsWindow, consoleWindow]
         runnerParams.docking_params.layout_condition = \
             hello_imgui.DockingLayoutCondition.application_start
@@ -137,6 +141,8 @@ class App:
         self.guiManager.panelManagerWindow.setDockWindow(actualPanelManagerWindow)
         self.guiManager.panelManagerWindow2.setDockWindow(actualPanelManagerWindow2)
         self.guiManager.reportsWindow.setDockWindow(actualReportsWindow)
+        self.guiManager.report2Window.setDockWindow(
+            runnerParams.docking_params.dockable_window_of_name("Report2"))
         self.guiManager.measurePanel.setDockWindow(actualMeasureWindow)
         self.guiManager.swingAnnotationController.setDockWindow(actualSwingControlsWindow)
         self.guiManager.consolePanel.setDockWindow(actualConsoleWindow)

@@ -8,6 +8,7 @@ class ReportsWindow:
     """Son yuklenen bundle'a ait trader raporlarini gosteren dock penceresi."""
 
     MAX_TEXT_BYTES = 4 * 1024 * 1024
+    WINDOW_TITLE = "Reports"
 
     def __init__(self, guiManager):
         self._gm = guiManager
@@ -147,7 +148,7 @@ class ReportsWindow:
         self._syncBundle()
         if self._dockWindow is not None or not self._visible:
             return
-        expanded, self._visible = imgui.begin("Reports", self._visible)
+        expanded, self._visible = imgui.begin(self.WINDOW_TITLE, self._visible)
         if expanded:
             self._renderContents()
         imgui.end()

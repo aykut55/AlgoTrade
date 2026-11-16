@@ -40,6 +40,7 @@ class MenuBar:
                     ("Panel Manager", "on_manage_panels"),
                     ("Panel Manager 2", "on_manage_panels2"),
                     ("Reports", "on_toggle_reports"),
+                    ("Report2", "on_toggle_report2"),
                     ("Measure", "on_toggle_measure"),
                     ("Data Manager", "on_manage_data"),
                 )

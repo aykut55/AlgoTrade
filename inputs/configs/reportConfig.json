@@ -1,0 +1,1307 @@
+{
+  "mode": "Custom",
+  "groups": [
+    {
+      "id": "Bakiye ve getiriler",
+      "title": "Bakiye ve getiriler",
+      "visible": true,
+      "items": [
+        {
+          "key": "IlkBakiyeFiyat",
+          "visible": true
+        },
+        {
+          "key": "IlkBakiyePuan",
+          "visible": true
+        },
+        {
+          "key": "BakiyeFiyat",
+          "visible": true
+        },
+        {
+          "key": "BakiyePuan",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyat",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuan",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatYuzde",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanYuzde",
+          "visible": true
+        },
+        {
+          "key": "BakiyeFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "BakiyePuanNet",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanNet",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatYuzdeNet",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanYuzdeNet",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatTipi",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Risk, drawdown ve performans",
+      "title": "Risk, drawdown ve performans",
+      "visible": true,
+      "items": [
+        {
+          "key": "IslemIciMaxZararPuanOrt",
+          "visible": true
+        },
+        {
+          "key": "IslemIciMaxZararPuanP95",
+          "visible": true
+        },
+        {
+          "key": "IslemIciMaxZararPuanEnKotu",
+          "visible": true
+        },
+        {
+          "key": "IslemIciMaxZararYuzdeOrt",
+          "visible": true
+        },
+        {
+          "key": "IslemIciMaxZararYuzdeP95",
+          "visible": true
+        },
+        {
+          "key": "IslemIciMaxZararYuzdeEnKotu",
+          "visible": true
+        },
+        {
+          "key": "EnKotuGunNet",
+          "visible": true
+        },
+        {
+          "key": "EnKotuGunNetTarih",
+          "visible": true
+        },
+        {
+          "key": "EnKotuGunBrut",
+          "visible": true
+        },
+        {
+          "key": "EnKotuGunBrutTarih",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDSuresiGunNet",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDSuresiIslemGunuNet",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDBaslangicNet",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDBitisNet",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDSuresiGunBrut",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDSuresiIslemGunuBrut",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDBaslangicBrut",
+          "visible": true
+        },
+        {
+          "key": "EnUzunDDBitisBrut",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxDDPuan",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxDDPuanTarih",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxKayipPuan",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxDD",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxDDTarih",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxKayip",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxDDNet",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxDDNetTarih",
+          "visible": true
+        },
+        {
+          "key": "GetiriMaxKayipNet",
+          "visible": true
+        },
+        {
+          "key": "ProfitFactorPuan",
+          "visible": true
+        },
+        {
+          "key": "ProfitFactor",
+          "visible": true
+        },
+        {
+          "key": "ProfitFactorNet",
+          "visible": true
+        },
+        {
+          "key": "ProfitFactorSistem",
+          "visible": true
+        },
+        {
+          "key": "ScoreFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "ScoreFiyat",
+          "visible": true
+        },
+        {
+          "key": "ScorePuan",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Kar ve zarar",
+      "title": "Kar ve zarar",
+      "visible": true,
+      "items": [
+        {
+          "key": "KarliGunOraniNet",
+          "visible": true
+        },
+        {
+          "key": "KarliGunOraniBrut",
+          "visible": true
+        },
+        {
+          "key": "KarZararFiyat",
+          "visible": true
+        },
+        {
+          "key": "KarZararFiyatYuzde",
+          "visible": true
+        },
+        {
+          "key": "KarZararPuan",
+          "visible": true
+        },
+        {
+          "key": "ToplamKarFiyat",
+          "visible": true
+        },
+        {
+          "key": "ToplamZararFiyat",
+          "visible": true
+        },
+        {
+          "key": "NetKarFiyat",
+          "visible": true
+        },
+        {
+          "key": "ToplamKarPuan",
+          "visible": true
+        },
+        {
+          "key": "ToplamZararPuan",
+          "visible": true
+        },
+        {
+          "key": "NetKarPuan",
+          "visible": true
+        },
+        {
+          "key": "MaxKarFiyat",
+          "visible": true
+        },
+        {
+          "key": "MaxZararFiyat",
+          "visible": true
+        },
+        {
+          "key": "MaxKarFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "MaxZararFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "MaxKarPuan",
+          "visible": true
+        },
+        {
+          "key": "MaxZararPuan",
+          "visible": true
+        },
+        {
+          "key": "MaxKarFiyatIndex",
+          "visible": true
+        },
+        {
+          "key": "MaxZararFiyatIndex",
+          "visible": true
+        },
+        {
+          "key": "MaxKarPuanIndex",
+          "visible": true
+        },
+        {
+          "key": "MaxZararPuanIndex",
+          "visible": true
+        },
+        {
+          "key": "KardaBarSayisi",
+          "visible": true
+        },
+        {
+          "key": "ZarardaBarSayisi",
+          "visible": true
+        },
+        {
+          "key": "KarliIslemOrani",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Islem sayilari ve sonuclari",
+      "title": "Islem sayilari ve sonuclari",
+      "visible": true,
+      "items": [
+        {
+          "key": "ToplamIslemGunuSayisi",
+          "visible": true
+        },
+        {
+          "key": "IslemsizGunSayisi",
+          "visible": true
+        },
+        {
+          "key": "GirisSayisi",
+          "visible": true
+        },
+        {
+          "key": "IslemIciZararYuzde1AsanSayisi",
+          "visible": true
+        },
+        {
+          "key": "IslemIciZararYuzde2AsanSayisi",
+          "visible": true
+        },
+        {
+          "key": "IslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "AlisSayisi",
+          "visible": true
+        },
+        {
+          "key": "SatisSayisi",
+          "visible": true
+        },
+        {
+          "key": "FlatSayisi",
+          "visible": true
+        },
+        {
+          "key": "PassSayisi",
+          "visible": true
+        },
+        {
+          "key": "KarAlSayisi",
+          "visible": true
+        },
+        {
+          "key": "ZararKesSayisi",
+          "visible": true
+        },
+        {
+          "key": "KazandiranIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "KaybettirenIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "NotrIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "KazandiranAlisSayisi",
+          "visible": true
+        },
+        {
+          "key": "KaybettirenAlisSayisi",
+          "visible": true
+        },
+        {
+          "key": "NotrAlisSayisi",
+          "visible": true
+        },
+        {
+          "key": "KazandiranSatisSayisi",
+          "visible": true
+        },
+        {
+          "key": "KaybettirenSatisSayisi",
+          "visible": true
+        },
+        {
+          "key": "NotrSatisSayisi",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Trader, sistem ve strateji",
+      "title": "Trader, sistem ve strateji",
+      "visible": true,
+      "items": [
+        {
+          "key": "TraderId",
+          "visible": true
+        },
+        {
+          "key": "TraderName",
+          "visible": true
+        },
+        {
+          "key": "SymbolName",
+          "visible": true
+        },
+        {
+          "key": "SymbolPeriod",
+          "visible": true
+        },
+        {
+          "key": "SystemId",
+          "visible": true
+        },
+        {
+          "key": "SystemName",
+          "visible": true
+        },
+        {
+          "key": "StrategyId",
+          "visible": true
+        },
+        {
+          "key": "StrategyName",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Calistirma bilgileri",
+      "title": "Calistirma bilgileri",
+      "visible": true,
+      "items": [
+        {
+          "key": "LastExecutionId",
+          "visible": true
+        },
+        {
+          "key": "LastExecutionTime",
+          "visible": true
+        },
+        {
+          "key": "LastExecutionTimeStart",
+          "visible": true
+        },
+        {
+          "key": "LastExecutionTimeStop",
+          "visible": true
+        },
+        {
+          "key": "LastExecutionTimeInMSec",
+          "visible": true
+        },
+        {
+          "key": "LastResetTime",
+          "visible": true
+        },
+        {
+          "key": "LastStatisticsCalculationTime",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Bar bilgileri",
+      "title": "Bar bilgileri",
+      "visible": true,
+      "items": [
+        {
+          "key": "ToplamBarSayisi",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarNumarasi",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarTarihSaati",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarTarihi",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarSaati",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarAcilisFiyati",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarYuksekFiyati",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarDusukFiyati",
+          "visible": true
+        },
+        {
+          "key": "SecilenBarKapanisFiyati",
+          "visible": true
+        },
+        {
+          "key": "IlkBarTarihSaati",
+          "visible": true
+        },
+        {
+          "key": "IlkBarTarihi",
+          "visible": true
+        },
+        {
+          "key": "IlkBarSaati",
+          "visible": true
+        },
+        {
+          "key": "SonBarTarihSaati",
+          "visible": true
+        },
+        {
+          "key": "SonBarTarihi",
+          "visible": true
+        },
+        {
+          "key": "SonBarSaati",
+          "visible": true
+        },
+        {
+          "key": "IlkBarIndex",
+          "visible": true
+        },
+        {
+          "key": "SonBarIndex",
+          "visible": true
+        },
+        {
+          "key": "SonBarAcilisFiyati",
+          "visible": true
+        },
+        {
+          "key": "SonBarYuksekFiyati",
+          "visible": true
+        },
+        {
+          "key": "SonBarDusukFiyati",
+          "visible": true
+        },
+        {
+          "key": "SonBarKapanisFiyati",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Zaman ve islem sikligi",
+      "title": "Zaman ve islem sikligi",
+      "visible": true,
+      "items": [
+        {
+          "key": "ToplamGecenSureAy",
+          "visible": true
+        },
+        {
+          "key": "ToplamGecenSureHafta",
+          "visible": true
+        },
+        {
+          "key": "ToplamGecenSureGun",
+          "visible": true
+        },
+        {
+          "key": "ToplamGecenSureSaat",
+          "visible": true
+        },
+        {
+          "key": "ToplamGecenSureDakika",
+          "visible": true
+        },
+        {
+          "key": "OrtAylikIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "OrtHaftalikIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "OrtGunlukIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "OrtSaatlikIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "IslemYapilanGunSayisi",
+          "visible": true
+        },
+        {
+          "key": "EnUzunIslemsizGunSerisi",
+          "visible": true
+        },
+        {
+          "key": "EnUzunIslemsizGunSerisiBaslangic",
+          "visible": true
+        },
+        {
+          "key": "IslemYapilanGunOrani",
+          "visible": true
+        },
+        {
+          "key": "OrtIslemGunuBasinaGiris",
+          "visible": true
+        },
+        {
+          "key": "IslemGunuBasinaNetGetiri",
+          "visible": true
+        },
+        {
+          "key": "IslemGunuBasinaBrutGetiri",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Komisyon",
+      "title": "Komisyon",
+      "visible": true,
+      "items": [
+        {
+          "key": "KomisyonBrutKarPayiYuzde",
+          "visible": true
+        },
+        {
+          "key": "KomisyonIslemSayisi",
+          "visible": true
+        },
+        {
+          "key": "KomisyonVarlikAdedSayisi",
+          "visible": true
+        },
+        {
+          "key": "KomisyonVarlikAdedSayisiMicro",
+          "visible": true
+        },
+        {
+          "key": "KomisyonCarpan",
+          "visible": true
+        },
+        {
+          "key": "KomisyonFiyat",
+          "visible": true
+        },
+        {
+          "key": "KomisyonFiyatYuzde",
+          "visible": true
+        },
+        {
+          "key": "KomisyonuDahilEt",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Bakiye minimum / maksimum",
+      "title": "Bakiye minimum / maksimum",
+      "visible": true,
+      "items": [
+        {
+          "key": "MinBakiyeFiyat",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyeFiyat",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyePuan",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyePuan",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyeFiyatYuzde",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyeFiyatYuzde",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyePuanYuzde",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyePuanYuzde",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyeFiyatIndex",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyeFiyatIndex",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyePuanIndex",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyePuanIndex",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyeFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyeFiyatNet",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyeFiyatNetIndex",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyeFiyatNetIndex",
+          "visible": true
+        },
+        {
+          "key": "MinBakiyeFiyatNetYuzde",
+          "visible": true
+        },
+        {
+          "key": "MaxBakiyeFiyatNetYuzde",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Komut sayilari",
+      "title": "Komut sayilari",
+      "visible": true,
+      "items": [
+        {
+          "key": "AlKomutSayisi",
+          "visible": true
+        },
+        {
+          "key": "SatKomutSayisi",
+          "visible": true
+        },
+        {
+          "key": "PasGecKomutSayisi",
+          "visible": true
+        },
+        {
+          "key": "KarAlKomutSayisi",
+          "visible": true
+        },
+        {
+          "key": "ZararKesKomutSayisi",
+          "visible": true
+        },
+        {
+          "key": "FlatOlKomutSayisi",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Sinyal ve emir durumu",
+      "title": "Sinyal ve emir durumu",
+      "visible": true,
+      "items": [
+        {
+          "key": "Sinyal",
+          "visible": true
+        },
+        {
+          "key": "SonYon",
+          "visible": true
+        },
+        {
+          "key": "PrevYon",
+          "visible": true
+        },
+        {
+          "key": "SonFiyat",
+          "visible": true
+        },
+        {
+          "key": "SonAFiyat",
+          "visible": true
+        },
+        {
+          "key": "SonSFiyat",
+          "visible": true
+        },
+        {
+          "key": "SonFFiyat",
+          "visible": true
+        },
+        {
+          "key": "SonPFiyat",
+          "visible": true
+        },
+        {
+          "key": "PrevFiyat",
+          "visible": true
+        },
+        {
+          "key": "SonBarNo",
+          "visible": true
+        },
+        {
+          "key": "SonABarNo",
+          "visible": true
+        },
+        {
+          "key": "SonSBarNo",
+          "visible": true
+        },
+        {
+          "key": "EmirKomut",
+          "visible": true
+        },
+        {
+          "key": "EmirStatus",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Varlik ve pozisyon",
+      "title": "Varlik ve pozisyon",
+      "visible": true,
+      "items": [
+        {
+          "key": "HisseSayisi",
+          "visible": true
+        },
+        {
+          "key": "KontratSayisi",
+          "visible": true
+        },
+        {
+          "key": "VarlikAdedCarpani",
+          "visible": true
+        },
+        {
+          "key": "VarlikAdedSayisi",
+          "visible": true
+        },
+        {
+          "key": "VarlikAdedSayisiMicro",
+          "visible": true
+        },
+        {
+          "key": "SonVarlikAdedSayisi",
+          "visible": true
+        },
+        {
+          "key": "SonVarlikAdedSayisiMicro",
+          "visible": true
+        },
+        {
+          "key": "KaymaMiktari",
+          "visible": true
+        },
+        {
+          "key": "KaymayiDahilEt",
+          "visible": true
+        },
+        {
+          "key": "MicroLotSizeEnabled",
+          "visible": true
+        },
+        {
+          "key": "PyramidingEnabled",
+          "visible": true
+        },
+        {
+          "key": "MaxPositionSizeEnabled",
+          "visible": true
+        },
+        {
+          "key": "MaxPositionSize",
+          "visible": true
+        },
+        {
+          "key": "MaxPositionSizeMicro",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Donemsel getiriler (puan)",
+      "title": "Donemsel getiriler (puan)",
+      "visible": true,
+      "items": [
+        {
+          "key": "GetiriPuanBuAy",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanAy1",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanAy2",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanAy3",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanAy4",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanAy5",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanBuHafta",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanHafta1",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanHafta2",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanHafta3",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanHafta4",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanHafta5",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanBuGun",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanGun1",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanGun2",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanGun3",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanGun4",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanGun5",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanBuSaat",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanSaat1",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanSaat2",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanSaat3",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanSaat4",
+          "visible": true
+        },
+        {
+          "key": "GetiriPuanSaat5",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Donemsel getiriler (fiyat)",
+      "title": "Donemsel getiriler (fiyat)",
+      "visible": true,
+      "items": [
+        {
+          "key": "GetiriFiyatBuAy",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatAy1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatAy2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatAy3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatAy4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatAy5",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatBuHafta",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatHafta1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatHafta2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatHafta3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatHafta4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatHafta5",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatBuGun",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatGun1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatGun2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatGun3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatGun4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatGun5",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatBuSaat",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatSaat1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatSaat2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatSaat3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatSaat4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatSaat5",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "id": "Donemsel getiriler (net fiyat)",
+      "title": "Donemsel getiriler (net fiyat)",
+      "visible": true,
+      "items": [
+        {
+          "key": "GetiriFiyatNetBuAy",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetAy1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetAy2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetAy3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetAy4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetAy5",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetBuHafta",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetHafta1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetHafta2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetHafta3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetHafta4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetHafta5",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetBuGun",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetGun1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetGun2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetGun3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetGun4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetGun5",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetBuSaat",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetSaat1",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetSaat2",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetSaat3",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetSaat4",
+          "visible": true
+        },
+        {
+          "key": "GetiriFiyatNetSaat5",
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "tables": {
+    "performance": {
+      "columnMode": "All",
+      "columns": {
+        "No": true,
+        "Yon": true,
+        "KontratSayisi": true,
+        "Açılış Tarihi": true,
+        "Açılış Saati": true,
+        "Açılış Fiyatı": true,
+        "Kapanış Tarihi": true,
+        "Kapanış Saati": true,
+        "Kapanış Fiyatı": true,
+        "Kar/Zarar": true,
+        "Bakiye Puan": true,
+        "Getiri Puan": true,
+        "Getiri %": true
+      }
+    },
+    "lists": {
+      "columnMode": "Fiyatlar",
+      "columns": {
+        "BarNo": true,
+        "Date": true,
+        "Time": true,
+        "Open": true,
+        "High": true,
+        "Low": true,
+        "Close": true,
+        "Volume": true,
+        "Size": true,
+        "Change": true,
+        "Change%": true,
+        "Yon": true,
+        "Seviye": true,
+        "Sinyal": true,
+        "KarZararPuan": true,
+        "KarZararPuanYuzde": true,
+        "BakiyePuan": true,
+        "GetiriPuan": true,
+        "GetiriPuanYuzde": true,
+        "BakiyePuanNet": true,
+        "GetiriPuanNet": true,
+        "GetiriPuanYuzdeNet": true,
+        "KarZararFiyat": true,
+        "KarZararFiyatYuzde": true,
+        "BakiyeFiyat": true,
+        "GetiriFiyat": true,
+        "GetiriFiyatYuzde": true,
+        "BakiyeFiyatNet": true,
+        "GetiriFiyatNet": true,
+        "GetiriFiyatYuzdeNet": true,
+        "IslemSayisi": true,
+        "AlisSayisi": true,
+        "SatisSayisi": true,
+        "FlatSayisi": true,
+        "PassSayisi": true,
+        "KontratSayisi": true,
+        "VarlikAdedSayisi": true,
+        "VarlikAdedSayisiMicro": true,
+        "SonVarlikAdedSayisi": true,
+        "SonVarlikAdedSayisiMicro": true,
+        "KomisyonVarlikAdedSayisi": true,
+        "KomisyonVarlikAdedSayisiMicro": true,
+        "KomisyonIslemSayisi": true,
+        "KomisyonFiyat": true,
+        "IsTradeEnabled": true,
+        "IsPozKapatEnabled": true,
+        "KarAl": true,
+        "ZararKes": true,
+        "IzleyenStop": true,
+        "KardaBarSayisi": true,
+        "ZarardaBarSayisi": true,
+        "EmirKomut": true,
+        "EmirStatus": true
+      }
+    }
+  }
+}
