@@ -109,6 +109,14 @@ inputs/python/dearPyGuiDataPlotter/latest_bundle.view.json
 inputs/python/pythonPlotter/latest_bundle.npz
 inputs/python/pythonPlotter/latest_bundle.view.json
 
+# ReplaySignalStrategy / AlgoTrade.ReplayRunner: Python<->C# sinyal replay
+# koprusunun calisma zamani ciktilari - kaynak kod degil, her "Run" ile
+# yeniden uretilir (bkz. scripts/replay_signal_filter.py, replay_bridge.py).
+src/DearImGuiBundleDataPlotter/inputs/replay_filtered_bundle*.npz*
+src/DearImGuiBundleDataPlotter/inputs/replay_filtered_bundle*.view.json
+src/DearImGuiBundleDataPlotter/inputs/replay_backups/
+inputs/replay_runner/
+
 # Offline Replay: samples/ commit'lenmiyor (GenerateReplaySampleBundles.csx cikisi, buyuk,
 # playlist.json'dan bagimsiz elle uretilen/kopyalanan ornek veri - kullanici karari,
 # 2026-08-26). playlist.json/input.json/combined.npz/combined.view.json COMMITLI kaliyor.
