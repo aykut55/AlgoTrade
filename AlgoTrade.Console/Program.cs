@@ -4327,19 +4327,34 @@ async Task runFullScript()
     if (string.IsNullOrEmpty(code)) return;
 
     var sourceDir = Path.GetDirectoryName(filePath);
-    var globals = new ScriptGlobals(
-        algoTrader!,
-        stockDataList ?? new List<StockData>(),
-        (msg) => LogManager.LogRaw(msg),
-        (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}"));
 
-    // Script cizimleri menu [5] ile ayni plotter penceresini kullansin (PlotBackend/PythonPlotterEnabled
-    // kurallari ScriptGlobals.PlotSingleTraderAsync/PlotMultipleTraderAsync icinde uygulanir).
-    globals.DearImGuiBundlePlotter = dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
-    globals.DearPyGuiPlotter       = dearPyGuiTestPlotter       ??= new DearPyGuiDataPlotter();
+    while (true)
+    {
+        var globals = new ScriptGlobals(
+            algoTrader!,
+            stockDataList ?? new List<StockData>(),
+            (msg) => LogManager.LogRaw(msg),
+            (key, val) => LogManager.LogRaw($"[RESULT] {key}: {val}"));
 
-    var result = await executeScriptWithCancellation(code, globals, sourceDir);
-    printScriptResult(result);
+        // Script cizimleri menu [5] ile ayni plotter penceresini kullansin (plot ayarlari
+        // script'in kendi Config dosyasindan ScriptGlobals.PlotSingleTraderAsync/PlotMultipleTraderAsync'e gelir).
+        globals.DearImGuiBundlePlotter = dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+        globals.DearPyGuiPlotter       = dearPyGuiTestPlotter       ??= new DearPyGuiDataPlotter();
+
+        var result = await executeScriptWithCancellation(code, globals, sourceDir);
+        printScriptResult(result);
+
+        // Menu [5] ile ayni: plot acik kalir; ENTER ana menu, R ayni script'i tekrar calistirir, ESC cikis.
+        Console.WriteLine();
+        Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu   [R] Run again   [ESC] Exit");
+        Console.WriteLine();
+        var postRunInput = ReadMenuInput();
+        if (postRunInput == null) { exitRequested = true; return; } // ESC → program çıkışı
+        if (!postRunInput.Equals("r", StringComparison.OrdinalIgnoreCase)) return; // ENTER/diğer → ana menü
+
+        // R → script dosyasi diskten yeniden okunur (aradaki config degisiklikleri de alinsin).
+        code = File.ReadAllText(filePath);
+    }
 }
 
 async Task runInteractiveScript()

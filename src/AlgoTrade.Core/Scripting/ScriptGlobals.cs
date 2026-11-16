@@ -294,7 +294,7 @@ namespace AlgoTrade.Core.Scripting
         /// Ayarlar script'in kendi Config dosyasindan gelir (AppConfig.json okunmaz):
         /// pythonPlotterEnabled == 1 ise PythonPlotter da calisir; bundle plotBackend'e gore
         /// DearImGuiBundleDataPlotter (1) veya DearPyGuiDataPlotter (0) ile acilir.
-        /// Pencere acik kalir, cagri bundle yuklenince doner. Uretilen bundle yolunu dondurur.
+        /// Pencere acik kalir, cagri bundle pencereye gonderilince doner. Uretilen bundle yolunu dondurur.
         /// </summary>
         public Task<string?> PlotSingleTraderAsync(SingleTrader trader, int plotBackend, int pythonPlotterEnabled,
                                                    string label = "SingleTrader") =>
@@ -361,12 +361,20 @@ namespace AlgoTrade.Core.Scripting
                     var plotter = DearImGuiBundlePlotter ??= new ImGuiBundlePlotter();
                     plotter.SetLogger(logger);
                     if (!plotter.IsRunning)
+                    {
+                        // Kapali plotter: bundle input.json'a yazilir, plotter acilista onu yukler.
+                        // Ayrica load_bundle gonderilmez - gonderilirse ayni bundle iki kez yuklenir.
                         plotter.PrepareStartupBundle(bundlePath, viewPath);
-                    plotter.StartPlotter();
-                    string commandFileName = plotter.LoadBundle(bundlePath, viewPath);
-                    if (!await plotter.WaitForCommandProcessedAsync(commandFileName, TimeSpan.FromMinutes(2)))
-                        Log("[PlotBackend] Plot yukleme onayi zaman asimina ugradi.");
-                    Log($"[DearImGuiBundleDataPlotter] {label} datasi yuklendi: {bundlePath}");
+                        plotter.StartPlotter();
+                    }
+                    else
+                    {
+                        // Acik plotter: yeni bundle load_bundle komutuyla ayni pencereye yuklenir.
+                        string commandFileName = plotter.LoadBundle(bundlePath, viewPath);
+                        if (!await plotter.WaitForCommandProcessedAsync(commandFileName, TimeSpan.FromMinutes(2)))
+                            Log("[PlotBackend] Plot yukleme onayi zaman asimina ugradi.");
+                    }
+                    Log($"[DearImGuiBundleDataPlotter] {label} datasi gonderildi: {bundlePath}");
                 }
                 else
                 {
