@@ -950,13 +950,21 @@ async Task runSingleTraderAlgoTrade()
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
                     if (!dearImGuiBundleTestPlotter.IsRunning)
+                    {
+                        // Kapali plotter: bundle input.json'a yazilir, plotter acilista onu yukler.
+                        // Ayrica load_bundle gonderilmez - gonderilirse ayni bundle iki kez yuklenir.
                         dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
-                    dearImGuiBundleTestPlotter.StartPlotter();
-                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
-                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
-                        commandFileName, TimeSpan.FromMinutes(2));
+                        dearImGuiBundleTestPlotter.StartPlotter();
+                    }
+                    else
+                    {
+                        // Acik plotter: yeni bundle load_bundle komutuyla ayni pencereye yuklenir.
+                        string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                        plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                            commandFileName, TimeSpan.FromMinutes(2));
+                    }
                     plotStarted = true;
-                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek SingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek SingleTrader datası gönderildi: {bundlePath}", ConsoleColor.Green);
                 }
                 else
                 {
@@ -1103,13 +1111,21 @@ async Task runMultipleTraderAlgoTrade()
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
                     if (!dearImGuiBundleTestPlotter.IsRunning)
+                    {
+                        // Kapali plotter: bundle input.json'a yazilir, plotter acilista onu yukler.
+                        // Ayrica load_bundle gonderilmez - gonderilirse ayni bundle iki kez yuklenir.
                         dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
-                    dearImGuiBundleTestPlotter.StartPlotter();
-                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
-                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
-                        commandFileName, TimeSpan.FromMinutes(2));
+                        dearImGuiBundleTestPlotter.StartPlotter();
+                    }
+                    else
+                    {
+                        // Acik plotter: yeni bundle load_bundle komutuyla ayni pencereye yuklenir.
+                        string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                        plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                            commandFileName, TimeSpan.FromMinutes(2));
+                    }
                     plotStarted = true;
-                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek MultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek MultipleTrader datası gönderildi: {bundlePath}", ConsoleColor.Green);
                 }
                 else
                 {
@@ -1263,13 +1279,21 @@ async Task runConfirmingSingleTraderAlgoTrade()
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
                     if (!dearImGuiBundleTestPlotter.IsRunning)
+                    {
+                        // Kapali plotter: bundle input.json'a yazilir, plotter acilista onu yukler.
+                        // Ayrica load_bundle gonderilmez - gonderilirse ayni bundle iki kez yuklenir.
                         dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
-                    dearImGuiBundleTestPlotter.StartPlotter();
-                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
-                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
-                        commandFileName, TimeSpan.FromMinutes(2));
+                        dearImGuiBundleTestPlotter.StartPlotter();
+                    }
+                    else
+                    {
+                        // Acik plotter: yeni bundle load_bundle komutuyla ayni pencereye yuklenir.
+                        string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                        plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                            commandFileName, TimeSpan.FromMinutes(2));
+                    }
                     plotStarted = true;
-                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek ConfirmingSingleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek ConfirmingSingleTrader datası gönderildi: {bundlePath}", ConsoleColor.Green);
                 }
                 else
                 {
@@ -1413,13 +1437,21 @@ async Task runConfirmingMultipleTraderAlgoTrade()
                     dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
                     dearImGuiBundleTestPlotter.SetLogger(logger);
                     if (!dearImGuiBundleTestPlotter.IsRunning)
+                    {
+                        // Kapali plotter: bundle input.json'a yazilir, plotter acilista onu yukler.
+                        // Ayrica load_bundle gonderilmez - gonderilirse ayni bundle iki kez yuklenir.
                         dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
-                    dearImGuiBundleTestPlotter.StartPlotter();
-                    string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
-                    plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
-                        commandFileName, TimeSpan.FromMinutes(2));
+                        dearImGuiBundleTestPlotter.StartPlotter();
+                    }
+                    else
+                    {
+                        // Acik plotter: yeni bundle load_bundle komutuyla ayni pencereye yuklenir.
+                        string commandFileName = dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                        plotReadyTask = dearImGuiBundleTestPlotter.WaitForCommandProcessedAsync(
+                            commandFileName, TimeSpan.FromMinutes(2));
+                    }
                     plotStarted = true;
-                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek ConfirmingMultipleTrader datası yüklendi: {bundlePath}", ConsoleColor.Green);
+                    LogManager.LogRaw($"[DearImGuiBundleDataPlotter] Gerçek ConfirmingMultipleTrader datası gönderildi: {bundlePath}", ConsoleColor.Green);
                 }
                 else
                 {

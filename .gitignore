@@ -115,3 +115,5 @@ inputs/python/pythonPlotter/latest_bundle.view.json
 inputs/python/offlineReplay/samples/
 # Deploy runtime log
 deploy.log
+
+aykut.md
