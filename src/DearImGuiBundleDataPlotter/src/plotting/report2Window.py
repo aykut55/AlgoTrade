@@ -143,7 +143,7 @@ class Report2Window(ReportsWindow):
     def _renderStatistics(self):
         if imgui.button("Refresh"):
             self._config.load()
-            self._loadIndex(self._lastBundlePath)
+            self._reloadIndex(self._lastBundlePath)
         imgui.same_line()
         if imgui.button("Copy"):
             imgui.set_clipboard_text(self._content)

@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 from imgui_bundle import imgui
 
@@ -15,6 +16,8 @@ class ReportsWindow:
         self._visible = False
         self._dockWindow = None
         self._lastBundlePath = None
+        self._indexStamp = None
+        self._lastIndexCheck = 0.0
         self._indexPath = None
         self._index = None
         self._files = []
@@ -44,12 +47,47 @@ class ReportsWindow:
     def hide(self):
         self.setVisible(False)
 
+    # Ayni bundle yolu her kosuda yeniden yaziliyor (latest_bundle) ve rapor paketi plottan SONRA
+    # olusturuluyor; bu yuzden yol degismese de indeks dosyasinin degisimi kontrol edilir.
+    INDEX_CHECK_INTERVAL_SEC = 0.5
+
+    @staticmethod
+    def _indexPathFor(bundlePath):
+        if not bundlePath:
+            return None
+        base, _ = os.path.splitext(os.path.abspath(bundlePath))
+        return base + ".reports.json"
+
+    @staticmethod
+    def _fileStamp(path):
+        if not path:   # henuz bundle yuklenmedi
+            return None
+        try:
+            st = os.stat(path)
+            return (st.st_mtime_ns, st.st_size)
+        except OSError:
+            return None
+
     def _syncBundle(self):
         bundlePath = getattr(self._gm, "currentBundlePath", None)
-        if bundlePath == self._lastBundlePath:
+        if bundlePath != self._lastBundlePath:
+            self._lastBundlePath = bundlePath
+            self._reloadIndex(bundlePath)
             return
-        self._lastBundlePath = bundlePath
+
+        now = time.monotonic()
+        if now - self._lastIndexCheck < self.INDEX_CHECK_INTERVAL_SEC:
+            return
+        self._lastIndexCheck = now
+        if self._fileStamp(self._indexPathFor(bundlePath)) != self._indexStamp:
+            self._reloadIndex(bundlePath)
+
+    def _reloadIndex(self, bundlePath):
+        self._lastIndexCheck = time.monotonic()
+        stamp = self._fileStamp(self._indexPathFor(bundlePath))
         self._loadIndex(bundlePath)
+        # Indeks yazilirken okunduysa (yarim JSON) damga saklanmaz, bir sonraki kontrolde yeniden denenir.
+        self._indexStamp = stamp if (self._index is not None or stamp is None) else None
 
     def _loadIndex(self, bundlePath):
         self._index = None
@@ -106,9 +144,7 @@ class ReportsWindow:
 
     def _renderContents(self):
         if imgui.button("Refresh"):
-            bundlePath = self._lastBundlePath
-            self._lastBundlePath = None
-            self._syncBundle()
+            self._reloadIndex(self._lastBundlePath)
         imgui.same_line()
         imgui.text(self._status)
 
