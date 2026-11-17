@@ -28,12 +28,15 @@ class App:
         self.configManager = ConfigManager()
         self.guiManager = GuiManager(self.configManager)
         self.guiManager.build()
-        # Script Panel default.py'yi editore yukler; ancak kendiliginden
-        # calistirmaz. Ilk gercek ImGui frame'i tamamlandiktan sonra bir kez
-        # calistirarak inputs/input.json'daki bundle/view'u acilista yukle.
-        # UI nesneleri hazir olmadan panel olusturulmasini da bu erteleme onler.
-        self.guiManager.deferFrames(
-            1, lambda: self.guiManager.scriptPanel.runScriptFile("default.py"))
+        # --empty: Console'daki "C# Bridge (Bos Plotter)" menusu bu bayrakla
+        # baslatir - inputs/input.json'daki (varsa ONCEKI oturumdan kalma)
+        # bundle/view'u acilista YUKLEMEZ, ekran bos acilir. Bayrak YOKSA
+        # davranis AYNEN eskisi gibi: Script Panel default.py'yi editore yukler
+        # ve ilk gercek ImGui frame'i tamamlandiktan sonra bir kez calistirarak
+        # inputs/input.json'daki bundle/view'u acilista yukler.
+        if "--empty" not in sys.argv:
+            self.guiManager.deferFrames(
+                1, lambda: self.guiManager.scriptPanel.runScriptFile("default.py"))
 
     def gui(self):
         self.guiManager.render()
@@ -96,6 +99,9 @@ class App:
         measureWindow = hello_imgui.DockableWindow(
             "Measure", "RightDockSpace", self.guiManager.measurePanel.renderDockContent,
             self.guiManager.measurePanel.getVisible(), True)
+        csharpBridgeWindow = hello_imgui.DockableWindow(
+            "C# Bridge", "RightDockSpace", self.guiManager.csharpBridgePanel.renderDockContent,
+            self.guiManager.csharpBridgePanel.getVisible(), True)
         swingControlsWindow = hello_imgui.DockableWindow(
             "Swing Controls", "SwingDockSpace",
             self.guiManager.swingAnnotationController.renderDockContent,
@@ -107,6 +113,7 @@ class App:
         reportsWindow.remember_is_visible = False
         report2Window.remember_is_visible = False
         measureWindow.remember_is_visible = False
+        csharpBridgeWindow.remember_is_visible = False
         swingControlsWindow.remember_is_visible = False
         consoleWindow = hello_imgui.DockableWindow(
             "Console Panel", "ConsoleDockSpace", self.guiManager.consolePanel.renderDockContent,
@@ -117,7 +124,7 @@ class App:
         runnerParams.docking_params.dockable_windows = [
             topWindow, mainWindow, leftWindow, scriptWindow, dataManagerWindow,
             poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow, report2Window,
-            measureWindow, swingControlsWindow, consoleWindow]
+            measureWindow, csharpBridgeWindow, swingControlsWindow, consoleWindow]
         runnerParams.docking_params.layout_condition = \
             hello_imgui.DockingLayoutCondition.application_start
 
@@ -133,6 +140,7 @@ class App:
         actualPanelManagerWindow2 = runnerParams.docking_params.dockable_window_of_name("Panel Manager 2")
         actualReportsWindow = runnerParams.docking_params.dockable_window_of_name("Reports")
         actualMeasureWindow = runnerParams.docking_params.dockable_window_of_name("Measure")
+        actualCSharpBridgeWindow = runnerParams.docking_params.dockable_window_of_name("C# Bridge")
         actualSwingControlsWindow = runnerParams.docking_params.dockable_window_of_name("Swing Controls")
         self.guiManager.leftMenuPanel.setDockWindow(actualLeftWindow)
         self.guiManager.scriptPanel.setDockWindow(actualScriptWindow)
@@ -144,6 +152,7 @@ class App:
         self.guiManager.report2Window.setDockWindow(
             runnerParams.docking_params.dockable_window_of_name("Report2"))
         self.guiManager.measurePanel.setDockWindow(actualMeasureWindow)
+        self.guiManager.csharpBridgePanel.setDockWindow(actualCSharpBridgeWindow)
         self.guiManager.swingAnnotationController.setDockWindow(actualSwingControlsWindow)
         self.guiManager.consolePanel.setDockWindow(actualConsoleWindow)
 

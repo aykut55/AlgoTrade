@@ -40,11 +40,14 @@ namespace AlgoTrade.Core.Scripting
                     "System.Linq",
                     "System.Threading.Tasks",
                     "AlgoTrade.Core",
+                    "AlgoTrade.Core.AppConfig",
+                    "AlgoTrade.Core.Timer",
                     "AlgoTrade.Core.Trading",
                     "AlgoTrade.Core.Trading.Core",
                     "AlgoTrade.Core.Trading.Strategies",
                     "AlgoTrade.Core.Trading.Strategy",
                     "AlgoTrade.Core.Trading.Indicators",
+                    "AlgoTrade.Core.Trading.Indicators.Base",
                     "AlgoTrade.Core.Trading.Queries",
                     "AlgoTrade.Core.Trading.Query",
                     "AlgoTrade.Core.StockDataReader",
@@ -122,7 +125,7 @@ namespace AlgoTrade.Core.Scripting
         /// Compile a script without executing it. Returns compilation errors if any.
         /// sourceDirectory: script dosyasının bulunduğu dizin (#load direktifleri için)
         /// </summary>
-        public ScriptExecutionResult CompileScript(string code, string? sourceDirectory = null)
+        public ScriptExecutionResult CompileScript(string code, string? sourceDirectory = null, Type? globalsType = null)
         {
             var result = new ScriptExecutionResult();
 
@@ -134,7 +137,7 @@ namespace AlgoTrade.Core.Scripting
                 _compiledScript = CSharpScript.Create<object>(
                     code,
                     _scriptOptions,
-                    globalsType: typeof(ScriptGlobals)
+                    globalsType: globalsType ?? typeof(ScriptGlobals)
                 );
 
                 var diagnostics = _compiledScript.Compile();
@@ -167,7 +170,7 @@ namespace AlgoTrade.Core.Scripting
         /// Run a previously compiled script. Call CompileScript() first.
         /// </summary>
         public async Task<ScriptExecutionResult> RunCompiledAsync(
-            ScriptGlobals globals,
+            object globals,
             CancellationToken cancellationToken = default)
         {
             var result = new ScriptExecutionResult();
@@ -215,11 +218,12 @@ namespace AlgoTrade.Core.Scripting
         /// </summary>
         public async Task<ScriptExecutionResult> ExecuteAsync(
             string code,
-            ScriptGlobals globals,
+            object globals,
             CancellationToken cancellationToken = default,
-            string? sourceDirectory = null)
+            string? sourceDirectory = null,
+            Type? globalsType = null)
         {
-            var compileResult = CompileScript(code, sourceDirectory);
+            var compileResult = CompileScript(code, sourceDirectory, globalsType ?? globals.GetType());
             if (!compileResult.Success)
                 return compileResult;
 

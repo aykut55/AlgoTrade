@@ -25,6 +25,7 @@ from .report2Window import Report2Window
 from .swingAnnotationController import SwingAnnotationController
 from .rangeMeasureTool import RangeMeasureTool
 from .measurePanel import MeasurePanel
+from .csharpBridgePanel import CSharpBridgePanel
 from ..trading.stockDataReader import StockDataReader, FilterMode
 from ..trading.indicatorManager import IndicatorManager
 from ..trading.indicators import Indicators
@@ -96,6 +97,8 @@ class GuiManager:
         self.panelManager.setTradeSignalRenderer(self.tsr)
         self.tradeSignalRenderer = self.tsr  # DPG orijinalindeki ikinci ad (guiManager.py'de de ikisi de var)
 
+        self.csharpBridgePanel = CSharpBridgePanel(self.panelManager, self.tsr)
+
         self.interactionManager = InteractionManager()
         self.panelManager.setInteractionManager(self.interactionManager)
         self.interactionManager.setPanelManager(self.panelManager)
@@ -136,6 +139,7 @@ class GuiManager:
             on_toggle_report2=self.report2Window.toggle,
             on_toggle_measure=self.measurePanel.toggle,
             on_manage_data=self.dataManager.toggle,
+            on_toggle_csharp_bridge=self.csharpBridgePanel.toggle,
             on_open_all=self.panelManager.showAllPanels,
             on_collapse_all=self.panelManager.collapseAllPanels,
             on_expand_all=self.panelManager.expandAllPanels,

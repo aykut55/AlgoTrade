@@ -43,6 +43,7 @@ class MenuBar:
                     ("Report2", "on_toggle_report2"),
                     ("Measure", "on_toggle_measure"),
                     ("Data Manager", "on_manage_data"),
+                    ("C# Bridge", "on_toggle_csharp_bridge"),
                 )
                 for label, callback in items:
                     if imgui.menu_item_simple(label):

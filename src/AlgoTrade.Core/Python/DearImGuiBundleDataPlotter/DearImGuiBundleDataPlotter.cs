@@ -78,7 +78,10 @@ public class DearImGuiBundleDataPlotter : IDisposable
     /// DearImGuiBundleDataPlotter'ı ayrı bir process olarak başlatır.
     /// Zaten çalışıyorsa hiçbir şey yapmaz.
     /// </summary>
-    public void StartPlotter()
+    /// <param name="emptyStart">true ise main.py'a "--empty" argümanı geçilir -
+    /// inputs/input.json'daki (varsa ÖNCEKİ oturumdan kalma) bundle/view açılışta
+    /// YÜKLENMEZ, ekran boş açılır (C# Bridge panelinden sıfırdan başlamak için).</param>
+    public void StartPlotter(bool emptyStart = false)
     {
         if (IsRunning) return;
 
@@ -88,10 +91,11 @@ public class DearImGuiBundleDataPlotter : IDisposable
         if (!File.Exists(MainScriptPath))
             throw new FileNotFoundException($"DearImGuiBundleDataPlotter main.py bulunamadı: {MainScriptPath}");
 
+        string arguments = $"\"{MainScriptPath}\"" + (emptyStart ? " --empty" : "");
         var psi = new ProcessStartInfo
         {
             FileName = PythonExePath,
-            Arguments = $"\"{MainScriptPath}\"",
+            Arguments = arguments,
             WorkingDirectory = ProjectDir,
             UseShellExecute = false,
         };

@@ -4721,6 +4721,10 @@ void showMainMenu()
     Console.WriteLine("║    [28]  Chart Study                                               ║");
     Console.WriteLine("║    [29]  Read Data + Chart Study                                   ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ C# Bridge (pythonnet) ══════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [30]  C# Bridge (Bos Plotter)                                   ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Fast Run ═══════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [F]   Fast Run - Son baslangic sekansini calistir               ║");
@@ -4845,6 +4849,36 @@ void handleDearImGuiBundlePlotterTest()
 
     plotter.StopPlotter();
     LogManager.LogRaw("[DearImGuiBundleDataPlotter] Process durduruldu.", ConsoleColor.Yellow);
+}
+
+void handleCSharpBridgePlotter()
+{
+    LogManager.LogRaw("");
+    LogManager.LogRaw("[C# Bridge] Bos plotter baslatiliyor (pythonnet - AlgoTrade.Core.dll dogrudan cagrilir)...", ConsoleColor.Cyan);
+
+    using var plotter = new DearImGuiBundleDataPlotter();
+    plotter.SetLogger(logger);
+
+    try
+    {
+        // emptyStart=true: inputs/input.json'daki (varsa onceki oturumdan kalma)
+        // bundle acilista YUKLENMEZ - ekran bos acilir, "C# Bridge" paneli
+        // (Read Data/Signal/Filter/Plot/Calculate/Write To Disk) hazir bekler.
+        plotter.StartPlotter(emptyStart: true);
+        LogManager.LogRaw($"[C# Bridge] Baslatildi. IsRunning={plotter.IsRunning}", ConsoleColor.Green);
+    }
+    catch (Exception ex)
+    {
+        LogManager.LogError($"[C# Bridge] Baslatma hatasi: {ex.Message}");
+        return;
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("  [ENTER] Plotter'i kapat ve ana menuye don");
+    ReadMenuInput();
+
+    plotter.StopPlotter();
+    LogManager.LogRaw("[C# Bridge] Process durduruldu.", ConsoleColor.Yellow);
 }
 
 // =============================================================================
@@ -4978,6 +5012,7 @@ async Task main()
             case "27": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleSwingAnnotation(); } break;
             case "28": handleChartStudy();                                  break;
             case "29": if (handleReadData()) { startupSequenceIncludesReadData = true; handleChartStudy(); } break;
+            case "30": handleCSharpBridgePlotter();                         break;
             case "f": await runLastStartupSequence();                       break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
