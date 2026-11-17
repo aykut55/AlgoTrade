@@ -41,10 +41,11 @@ void OnApplyUserFlags(SingleTrader trader)
     trader.signals.KarAlEnabled                = true;
     trader.signals.ZararKesEnabled             = false;   // TP-only: strateji stopLoss uretir ama gate sifirlar
     trader.signals.GunSonuPozKapatEnabled      = false;
-    trader.signals.TimeFilteringEnabled        = false;
+    trader.signals.TimeFilteringEnabled        = true;    // onceki: false
     trader.signals.EquityCurveFilteringEnabled = false;
 
-    var dateTimes       = new string[] { "2025.05.25 09:00:00", "2025.06.02 17:55:00" };
+    // TimeFilteringEnabled=true iken sadece SAAT kismi kullanilir (filterMode=1, her gun 10:00 <= saat < 18:00).
+    var dateTimes       = new string[] { "2025.05.25 10:00:00", "2025.06.02 18:00:00" };   // onceki: 09:00:00 / 17:55:00
     trader.StartDateTimeStr = dateTimes[0];
     trader.StopDateTimeStr  = dateTimes[1];
 

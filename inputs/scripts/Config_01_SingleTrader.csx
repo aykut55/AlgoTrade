@@ -121,7 +121,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 1;
+int strategyChoice = 25; // onceki: 1 (SimpleMAStrategy)
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -441,6 +441,24 @@ else if (strategyChoice == 24)
         ["stopLossExitModeIndex"]   = 0,
         ["flatModeIndex"]           = 0,
         ["skipModeIndex"]           = 0
+    };
+}
+else if (strategyChoice == 25)
+{
+    // AL: close > ma1 > ma2 > ma3 > ma4, SAT: tersi. Kar al/zarar kes/pencere disaridan.
+    strategyName = "Strategy004_MAStrategy";
+    strategyParams = new Dictionary<string, object>
+    {
+        ["ma1Period"]      = 5,     // onceki: 21
+        ["ma2Period"]      = 8,     // onceki: 50
+        ["ma3Period"]      = 13,    // onceki: 100
+        ["ma4Period"]      = 21,    // onceki: 200
+        ["maMethod"]       = "EMA",
+        ["priceSource"]    = "Close",
+        // Filtreler (0 = kapali)
+        ["confirmBars"]    = 0,     // dizilim ust uste N bar surmeli (orn. 3, 6, 12)
+        ["minCloseMa1Pct"] = 0.0,   // |close - ma1| / ma1 >= %X (orn. 0.1, 0.2)
+        ["minSpreadPct"]   = 0.0    // |ma1 - ma4| / ma4 >= %X (orn. 0.3, 0.5, 1.0) - onceki: 1.0 (21/50/100/200 ile)
     };
 }
 else
