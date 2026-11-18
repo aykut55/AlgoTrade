@@ -14,11 +14,8 @@ import os
 import sys
 from datetime import datetime
 
-# AlgoTrade (orijinal repo) AlgoTrade.Console build ciktisi - AlgoTrade.Core.dll
-# ve tum bagimliliklari (Roslyn dahil) burada hazir. Makine/surucu degisirse
-# BIN_DIR guncellenmeli (bkz. docs - ayni not AlgoTrade projesindeki benzer
-# yerlerde de var).
-BIN_DIR = r"D:\Aykut\Projects\AlgoTrade\AlgoTrade.Console\bin\Debug\net8.0"
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+BIN_DIR = os.path.join(REPO_DIR, "AlgoTrade.Console", "bin", "Debug", "net8.0")
 RUNTIME_CONFIG = os.path.join(BIN_DIR, "AlgoTrade.Console.runtimeconfig.json")
 
 _loaded = False
