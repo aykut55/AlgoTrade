@@ -37,15 +37,14 @@ void OnApplyUserFlags(SingleTrader trader)
     trader.signals.AlEnabled                   = true;
     trader.signals.SatEnabled                  = true;
     trader.signals.FlatOlEnabled               = true;
-    trader.signals.PasGecEnabled               = true;
-    trader.signals.KarAlEnabled                = true;
-    trader.signals.ZararKesEnabled             = false;   // TP-only: strateji stopLoss uretir ama gate sifirlar
+    trader.signals.PasGecEnabled               = false;
+    trader.signals.KarAlEnabled                = false;
+    trader.signals.ZararKesEnabled             = false;
     trader.signals.GunSonuPozKapatEnabled      = false;
-    trader.signals.TimeFilteringEnabled        = true;    // onceki: false
+    trader.signals.TimeFilteringEnabled        = false;
     trader.signals.EquityCurveFilteringEnabled = false;
 
-    // TimeFilteringEnabled=true iken sadece SAAT kismi kullanilir (filterMode=1, her gun 10:00 <= saat < 18:00).
-    var dateTimes       = new string[] { "2025.05.25 10:00:00", "2025.06.02 18:00:00" };   // onceki: 09:00:00 / 17:55:00
+    var dateTimes       = new string[] { "2025.05.25 09:35:00", "2025.06.02 17:55:00" };
     trader.StartDateTimeStr = dateTimes[0];
     trader.StopDateTimeStr  = dateTimes[1];
 
@@ -95,6 +94,8 @@ void OnApplyUserFlags2(SingleTrader trader)
     trader.MinimalListsCsvFileName             = "SingleTraderListsMinimal.csv";
     trader.FullStatsTxtFormattedFileName       = "SingleTraderStatisticsFormatted.txt";
     trader.MinimalStatsTxtFormattedFileName    = "SingleTraderStatisticsMinimalFormatted.txt";
+    trader.GridStatsTxtFileName                = "SingleTraderStatisticsGrid.txt";
+    trader.MinimalGridStatsTxtFileName         = "SingleTraderStatisticsMinimalGrid.txt";
     trader.PerformansTxtFileName               = "SingleTraderPerformans.txt";
     trader.PerformansCsvFileName               = "SingleTraderPerformans.csv";
 

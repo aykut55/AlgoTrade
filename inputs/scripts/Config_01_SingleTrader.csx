@@ -49,7 +49,7 @@ string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 int  plotBackend          = 1;
 int  pythonPlotterEnabled = 0;
 bool bundleReportsEnabled = true;
-TraderRunMode selectedRunMode = TraderRunMode.TradeAndQuery;
+TraderRunMode selectedRunMode = TraderRunMode.TradeOnly;
 
 // =============================================================================
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
@@ -121,7 +121,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 25; // onceki: 1 (SimpleMAStrategy)
+int strategyChoice = 1;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -144,10 +144,10 @@ else if (strategyChoice == 1)
     strategyName = "SimpleMAStrategy";
     strategyParams = new Dictionary<string, object>
     {
-        ["fastPeriod"]              = 8,
-        ["slowPeriod"]              = 21,
-        ["fastMaMethod"]            = "EMA",
-        ["slowMaMethod"]            = "EMA",
+        ["fastPeriod"]              = 10,
+        ["slowPeriod"]              = 20,
+        ["fastMaMethod"]            = "SIMPLE",
+        ["slowMaMethod"]            = "SIMPLE",
         ["priceSource"]             = "Close",
         ["buySignalModeIndex"]      = 0,
         ["sellSignalModeIndex"]     = 0,
@@ -539,6 +539,6 @@ bool saveStatisticsToFile = true;
 // AppConfig.json'daki SingleTrader.Export bolumunun karsiligi (SingleTrader.cs:2662-2675).
 // exportEnabled=false ise devre disi (varsayilan, AppConfig'de de Export bolumu yoksa boyle).
 // =============================================================================
-bool exportEnabled = false;
+bool exportEnabled = true;
 string exportConfigFile = "StatisticsExporterConfig.json";
 string exportVersion = "v1";
