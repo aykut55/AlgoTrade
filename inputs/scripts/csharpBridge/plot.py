@@ -6,12 +6,12 @@
 #                   returnPct/returnPctNet/balance/balanceNet/commission/signalStep
 #
 # Panel seti AlgoTrade (orijinal repo) TradeDataBundleConverter.BuildAndWriteView
-# ile AYNI (src/panels.jpg referans layout - pctChange/child-overlay HARIC,
-# onlar bu basit koprude yok): OHLC, Signals, PnL, PnL %, Return+Net Return,
-# Return %+Net Return % - traderSeries VARSA hepsi kurulur; YOKSA (Calculate
-# henuz calistirilmadi) sadece OHLC+Signals (primitif) gosterilir.
+# ile ayni % Change hesabini kullanir. PnL ve Return panelleri Calculate
+# tamamlandiktan sonra eklenir.
 
 import numpy as np
+
+from src.plotting.pctChangePanel import attachPctChangeUpdater
 
 CYAN = (60, 200, 255, 255)
 YELLOW = (255, 255, 0, 255)
@@ -34,6 +34,12 @@ ohlcPanel.setCandleData(
 # indicatorNames/indicatorValues) - dataId=0 candle oldugu icin 1'den baslar.
 for idx, (name, values) in enumerate(bridge.signalIndicators, start=1):
     ohlcPanel.addData(idx, name, "line", xs, values, timestamps=bridge.timestamps, intraday=True)
+
+pctChangePanel = pm.createPanel("% Change", "% Change")
+pctChangePanel.setHeight(220)
+pctChangePanel.setYLabel("% Change")
+pm.addPanel(pctChangePanel)
+pctChangePanel.addData(1, "Change %", "line", [], [], intraday=True, color=YELLOW)
 
 ts = bridge.traderSeries
 
@@ -123,3 +129,5 @@ for i in range(1, len(bridge.timestamps)):
 if _dayStarts:
     pm.setSeparatorInfo("day", np.asarray(_dayStarts, dtype=np.float64),
                         color=(0.0, 1.0, 1.0, 0.6), weight=1.0, maxVisible=2000)
+
+attachPctChangeUpdater(pm, pctChangePanel, 1, ohlcPanel)

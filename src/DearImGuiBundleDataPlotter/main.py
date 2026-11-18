@@ -34,7 +34,9 @@ class App:
         # davranis AYNEN eskisi gibi: Script Panel default.py'yi editore yukler
         # ve ilk gercek ImGui frame'i tamamlandiktan sonra bir kez calistirarak
         # inputs/input.json'daki bundle/view'u acilista yukler.
-        if "--empty" not in sys.argv:
+        if "--empty" in sys.argv:
+            self.guiManager.report2Window.setVisible(True)
+        else:
             self.guiManager.deferFrames(
                 1, lambda: self.guiManager.scriptPanel.runScriptFile("default.py"))
 

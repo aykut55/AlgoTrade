@@ -28,6 +28,22 @@ class PoolDataManager:
         self._items.clear()
         self._keys.clear()
 
+    def replaceFromPanels(self, panels, symbol):
+        self.clear()
+        seen = set()
+        for panel in panels:
+            for item in panel.iterateAllData():
+                key = (item.name, item.dataType)
+                if key in seen:
+                    continue
+                seen.add(key)
+                if item.dataType == "candle":
+                    self.addItem("OHLC", "Data", item, symbol=symbol)
+                elif item.name == "Signal Step":
+                    self.addItem(item.name, "Signals", item, symbol=symbol)
+                else:
+                    self.addItem(item.name, "Indicators", item, symbol=symbol)
+
     def getAllItems(self):
         return list(self._items.values())
 

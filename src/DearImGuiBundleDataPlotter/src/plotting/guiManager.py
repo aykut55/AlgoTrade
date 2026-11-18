@@ -97,8 +97,6 @@ class GuiManager:
         self.panelManager.setTradeSignalRenderer(self.tsr)
         self.tradeSignalRenderer = self.tsr  # DPG orijinalindeki ikinci ad (guiManager.py'de de ikisi de var)
 
-        self.csharpBridgePanel = CSharpBridgePanel(self.panelManager, self.tsr)
-
         self.interactionManager = InteractionManager()
         self.panelManager.setInteractionManager(self.interactionManager)
         self.interactionManager.setPanelManager(self.panelManager)
@@ -109,6 +107,8 @@ class GuiManager:
         self.poolDataManager = PoolDataManager()
         self.poolPanel = PoolPanel()
         self.poolPanel.setPoolDataManager(self.poolDataManager)
+        self.csharpBridgePanel = CSharpBridgePanel(
+            self.panelManager, self.tsr, self.poolDataManager, self.poolPanel)
         self.panelManager.setPoolDropHandler(self._onPoolItemDroppedOnPanel)
 
         self.externalIndicatorWindowManager = ExternalIndicatorWindowManager(self.panelManager)

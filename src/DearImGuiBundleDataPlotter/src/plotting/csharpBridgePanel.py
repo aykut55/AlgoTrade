@@ -3,6 +3,7 @@ import threading
 import time
 import traceback
 import types
+from pathlib import Path
 
 from imgui_bundle import imgui
 
@@ -28,6 +29,20 @@ WRITE_TO_DISK_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "writeToDisk.csx")
 BUNDLE_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "createBundle.csx")
 RUN_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "run.csx")
 
+SINGLE_TRADER_OUTPUT_NAMES = frozenset(name.casefold() for name in (
+    "SingleTraderStatistics.txt", "SingleTraderStatistics.csv",
+    "SingleTraderStatisticsMinimal.txt", "SingleTraderStatisticsMinimal.csv",
+    "SingleTraderStatisticsFormatted.txt", "SingleTraderStatisticsMinimalFormatted.txt",
+    "SingleTraderStatisticsFormattedMinimal.txt",
+    "SingleTraderStatisticsGrid.txt", "SingleTraderStatisticsMinimalGrid.txt",
+    "StatisticsGrid.txt", "StatisticsMinimalGrid.txt",
+    "SingleTraderLists.txt", "SingleTraderLists.csv",
+    "SingleTraderListsMinimal.txt", "SingleTraderListsMinimal.csv",
+    "SingleTraderPerformans.txt", "SingleTraderPerformans.csv",
+    "SingleTraderBundle.npz", "SingleTraderBundle.view.json", "SingleTraderBundle.reports.json",
+))
+
+
 DEFAULT_CSV_PATH = r"C:\data\csvFiles\VIP\05\VIP-X030-T.csv"
 
 
@@ -44,17 +59,34 @@ class CSharpBridgePanel:
     Panel/TradeSignalRenderer altyapisini kullanir, default.py'nin de kullandigi
     ayni siniflar)."""
 
-    def __init__(self, panelManager, tradeSignalRenderer):
+    def __init__(self, panelManager, tradeSignalRenderer, poolDataManager=None, poolPanel=None):
         self._pm = panelManager
         self._tsr = tradeSignalRenderer
+        self._poolDataManager = poolDataManager
+        self._poolPanel = poolPanel
         self._visible = True
         self._dockWindow = None
 
         self._filePath = DEFAULT_CSV_PATH
+        self._lastN = 0  # 0 = Tumu (FilterMode.All)
+        self._resetSessionData()
+        self._clearStatus()
+
+        self._ohlcPanel = None
+        self._signalPanel = None
+
+        self._writeThread = None  # Rapor ve bundle yazimi GUI render dongusunu bloklamasin
+
+        self._writeSucceeded = False
+        self._runSteps = None
+        self._runWaitingForWrite = False
+        self._outputFilesToDelete = ()
+
+        _ensureDefaultScriptsExist()
+
+    def _resetSessionData(self):
         self._symbolName = ""
         self._symbolPeriod = ""
-        self._lastN = 0  # 0 = Tumu (FilterMode.All)
-        self._statusText = ""
 
         self._netData = None
         self._rawSignals = None    # Signal asamasindan (ham)
@@ -65,18 +97,74 @@ class CSharpBridgePanel:
 
         self._algoTrader = None
         self._bundleIndicators = ()
+        self.reportBundlePath = None
         self._replaySummary = None
 
-        self._ohlcPanel = None
-        self._signalPanel = None
+    def _clearStatus(self):
+        self._statusText = ""
+        self._shownSummaries = set()
 
-        self._writeThread = None  # Rapor ve bundle yazimi GUI render dongusunu bloklamasin
+    def _clearSession(self):
+        self._onClearPlot()
+        if self._poolDataManager is not None:
+            self._poolDataManager.clear()
+            self._poolPanel.refresh()
+        self._resetSessionData()
+        self._clearStatus()
 
-        self._writeSucceeded = False
-        self._runSteps = None
-        self._runWaitingForWrite = False
+    def _prepareOutputDeletion(self):
+        try:
+            logs = Path(csharpBridge.get_logs_dir()).resolve()
+            self._outputFilesToDelete = tuple(
+                path for path in sorted(logs.iterdir())
+                if path.name.casefold() in SINGLE_TRADER_OUTPUT_NAMES
+                and path.is_file() and not path.is_symlink()
+            ) if logs.is_dir() else ()
+        except Exception as exc:
+            self._setStatus(f"Delete Output Files HATA: {exc}")
+            return
+        if not self._outputFilesToDelete:
+            self._setStatus("No SingleTrader output files found.")
+            return
+        imgui.open_popup("Delete Output Files?")
 
-        _ensureDefaultScriptsExist()
+    def _renderOutputDeletion(self):
+        opened, _ = imgui.begin_popup_modal("Delete Output Files?", True)
+        if not opened:
+            return
+        imgui.text_wrapped("Permanently delete these files from outputs/logs?")
+        for path in self._outputFilesToDelete:
+            imgui.bullet_text(path.name)
+        if imgui.button("Delete Files"):
+            self._deleteOutputFiles()
+            imgui.close_current_popup()
+        imgui.same_line()
+        if imgui.button("Cancel"):
+            self._outputFilesToDelete = ()
+            imgui.close_current_popup()
+        imgui.end_popup()
+
+    def _deleteOutputFiles(self):
+        if self._isWriting() or self._runSteps is not None:
+            self._setStatus("Wait for the current run to finish before deleting files.")
+            return
+        deleted = 0
+        errors = []
+        for path in self._outputFilesToDelete:
+            try:
+                if path.is_symlink():
+                    continue
+                path.unlink()
+                deleted += 1
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                errors.append(f"{path.name}: {exc.strerror or exc}")
+        self._outputFilesToDelete = ()
+        status = f"Deleted {deleted} output file(s)."
+        if errors:
+            status += "\nCould not delete:\n" + "\n".join(errors)
+        self._setStatus(status)
 
     # --------------------------------------------------------- visibility
     def setDockWindow(self, dockWindow):
@@ -106,6 +194,20 @@ class CSharpBridgePanel:
 
     def _renderSingleTraderPage(self):
         running = self._runSteps is not None
+        imgui.text("0) Clear Status")
+        imgui.begin_disabled(running or self._isWriting())
+        if imgui.button("Clear Status"):
+            self._clearStatus()
+        imgui.same_line()
+        if imgui.button("Clear Session"):
+            self._clearSession()
+        imgui.same_line()
+        if imgui.button("Delete Output Files"):
+            self._prepareOutputDeletion()
+        imgui.end_disabled()
+        self._renderOutputDeletion()
+        imgui.separator()
+
         imgui.begin_disabled(running)
         imgui.text("1) Read Data")
         imgui.text_disabled(READ_DATA_SCRIPT_PATH)
@@ -211,21 +313,21 @@ class CSharpBridgePanel:
             imgui.text_wrapped(self._statusText)
 
     def _dataStatusLabel(self):
-        if self._netData is None:
-            return "(veri yok)"
+        if "data" not in self._shownSummaries or self._netData is None:
+            return ""
         return f"{self._netData.Count} bar"
 
     def _rawSignalStatusLabel(self):
-        if self._rawSignals is None:
-            return "(sinyal yok)"
+        if "signal" not in self._shownSummaries or self._rawSignals is None:
+            return ""
         al = sum(1 for s in self._rawSignals if s == 1)
         sat = sum(1 for s in self._rawSignals if s == -1)
         pasgec = sum(1 for s in self._rawSignals if s == 6)
         return f"AL={al} SAT={sat}" + (f" PasGec={pasgec}" if pasgec else "")
 
     def _signalStatusLabel(self):
-        if self._signals is None:
-            return "(filtrelenmedi)"
+        if "filter" not in self._shownSummaries or self._signals is None:
+            return ""
         al = sum(1 for s in self._signals if s == 1)
         sat = sum(1 for s in self._signals if s == -1)
         karAl = sum(1 for s in self._signals if s == 3)
@@ -241,8 +343,8 @@ class CSharpBridgePanel:
         return f"AL={al} SAT={sat}{extra}"
 
     def _replaySummaryLabel(self):
-        if self._replaySummary is None:
-            return "(hesaplanmadi)"
+        if "calculate" not in self._shownSummaries or self._replaySummary is None:
+            return ""
         s = self._replaySummary
         return (f"Islem={s['tradeCount']} (K={s['winCount']}/Z={s['lossCount']}) "
                 f"PnL={s['pnl']:.2f} Bakiye={s['startBalance']:.0f}->{s['endBalance']:.0f}")
@@ -329,6 +431,7 @@ class CSharpBridgePanel:
             self._timingWindow = None
             self._signalIndicators = []
             summarySuffix = f"\n{metaSummary}" if metaSummary else ""
+            self._shownSummaries.add("data")
             self._setStatus(f"Read Data OK ({elapsed:.2f}s): {self._dataStatusLabel()}{summarySuffix}")
             return True
         except Exception as exc:
@@ -359,6 +462,7 @@ class CSharpBridgePanel:
             self._exitRule = None
             self._timingWindow = None
             self._signalIndicators = indicators
+            self._shownSummaries.add("signal")
             self._setStatus(f"Run Signal OK ({elapsed:.2f}s): {self._rawSignalStatusLabel()}")
             return True
         except Exception as exc:
@@ -392,6 +496,7 @@ class CSharpBridgePanel:
             self._signals = signals
             self._exitRule = exitRule
             self._timingWindow = timingWindow
+            self._shownSummaries.add("filter")
             self._setStatus(f"Run Filter OK ({elapsed:.2f}s): {self._signalStatusLabel()}")
             return True
         except Exception as exc:
@@ -440,6 +545,9 @@ class CSharpBridgePanel:
                 "bridge": bridge,
             }
             exec(compile(code, PLOT_SCRIPT_PATH, "exec"), namespace)
+            if self._poolDataManager is not None:
+                self._poolDataManager.replaceFromPanels(self._pm.iterateAllPanels(), self._symbolName)
+                self._poolPanel.refresh()
             self._setStatus(f"Plot OK ({time.time() - t0:.2f}s).")
             return True
         except Exception as exc:
@@ -474,6 +582,7 @@ class CSharpBridgePanel:
             self._algoTrader = algoTrader
             self._bundleIndicators = tuple(self._signalIndicators)
             self._replaySummary = csharpBridge.get_replay_summary(algoTrader)
+            self._shownSummaries.add("calculate")
             self._setStatus(f"Calculate OK ({elapsed:.2f}s): {self._replaySummaryLabel()}")
             return True
         except Exception as exc:
@@ -542,6 +651,7 @@ class CSharpBridgePanel:
                 if not ok:
                     self._setStatus(f"Bundle HATA: {error}")
                     return
+                self.reportBundlePath = paths[0]
                 elapsed = time.perf_counter() - started
                 self._setStatus(f"Bundle OK ({elapsed:.2f}s):\n" + "\n".join(paths))
                 self._writeSucceeded = True

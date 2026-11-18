@@ -70,6 +70,9 @@ class ReportsWindow:
 
     def _syncBundle(self):
         bundlePath = getattr(self._gm, "currentBundlePath", None)
+        if not bundlePath:
+            bridge = getattr(self._gm, "csharpBridgePanel", None)
+            bundlePath = getattr(bridge, "reportBundlePath", None)
         if bundlePath != self._lastBundlePath:
             self._lastBundlePath = bundlePath
             self._reloadIndex(bundlePath)

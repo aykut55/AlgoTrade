@@ -8,6 +8,8 @@ from datetime import datetime
 import numpy as np
 from imgui_bundle import implot
 
+from src.plotting.pctChangePanel import attachPctChangeUpdater
+
 # Stage2 binary import config. C# tarafindan ayni alanlari tasiyan .npz bundle
 # uretildiginde Python tarafi sadece bunu okuyup cizer.
 SCRIPT_DIR = getattr(gm.scriptPanel, "_scripts_dir", os.path.join(os.getcwd(), "DearImGuiBundleDataPlotter", "scripts"))
@@ -168,7 +170,8 @@ class App:
         isSwingView = self.view.get("mode") == "swing_annotation"
         separatorMode = SEPARATOR_MODE_IN_SWING if isSwingView else SEPARATOR_MODE
         self.addSeparators(separatorMode)
-        self.addPctChangeUpdater()
+        attachPctChangeUpdater(pm, self.pctChangePanel, self.pctChangeDataId, self.ohlcPanel,
+                               gm.swingAnnotationController)
         gm.measurePanel.setPctChangePanel(self.pctChangePanel)
 
         # 8) Yan UI'lari ve top controls state'ini tazele.
@@ -245,145 +248,6 @@ class App:
                            weight=DAY_SEPARATOR_WEIGHT, maxVisible=DAY_SEPARATOR_MAX_VISIBLE)
         print(f"  separator({mode}) : {len(starts)} gecis")
         print()
-
-    def addPctChangeUpdater(self):
-        """pctChange panelinin (bkz. stage3FillPanelsFromView 'windowpercent'
-        source'u) icerigini HER FRAME gunceller - Range Measure'da A/B
-        seciliyse A'ya gore (oncelikli), yoksa aktif separator moduna gore
-        (her segment kendi ilk barina sifirlanir, bkz. PanelManager.
-        getSeparatorInfo). Panelin KENDISI (checkbox/hover/datetime-tick/
-        X-sync) diger paneller gibi STATIK kuruldu (stage3FillPanelsFromView);
-        burada SADECE mevcut PanelData'nin icerigi (xs/ys/timestamps)
-        guncelleniyor - panel olusturma/silme, ozel X-sync YOK."""
-        panel = self.pctChangePanel
-        dataId = self.pctChangeDataId
-        if panel is None or dataId is None or self.ohlcPanel is None:
-            return
-        candle = next((d for d in self.ohlcPanel.dataList if d.dataType == "candle"), None)
-        if candle is None:
-            return
-
-        def updatePctChangePanel(pm, panelId, p):
-            data = p.getData(dataId)
-            if data is None:
-                return
-            xs = candle._fullXs if candle._fullXs is not None else None
-            closes = candle._fullClose if candle._fullClose is not None else None
-            timestamps = candle._fullTimestamps if candle._fullTimestamps else candle.timestamps
-            if xs is None or closes is None or len(xs) == 0:
-                self._clearPctChangeData(data)
-                return
-
-            # Swing modunda RangeMeasureTool suspend edilir (startIndex hep None) -
-            # bu durumda SwingAnnotationController'in kendi A/B'si (710001/710002)
-            # kaynak olur, o da yoksa separator moduna dusulur.
-            measureTool = gm.rangeMeasureTool
-            swingCtrl = gm.swingAnnotationController
-            startIndex = endIndex = None
-            measureEndIndex = (measureTool.getEffectiveEndIndex()
-                               if measureTool is not None else None)
-            if (measureTool is not None and measureTool.startIndex is not None
-                    and measureEndIndex is not None):
-                startIndex, endIndex = measureTool.startIndex, measureEndIndex
-            elif (swingCtrl is not None and swingCtrl._measureStartIndex is not None
-                    and swingCtrl._measureEndIndex is not None):
-                startIndex, endIndex = swingCtrl._measureStartIndex, swingCtrl._measureEndIndex
-
-            if startIndex is not None and endIndex is not None:
-                pct = self._pctChangeMeasureSegment(xs, closes, startIndex, endIndex)
-            else:
-                pct = self._pctChangeSeparatorSegments(pm, xs, closes)
-
-            if pct is None:
-                self._clearPctChangeData(data)
-                return
-            self._applyPctChangeData(data, xs, pct, timestamps, candle.isIntraday)
-
-        pm.addPanelDrawHook(panel.id, updatePctChangePanel)
-
-    @staticmethod
-    def _pctChangeMeasureSegment(arr, closeArr, startIndex, endIndex):
-        """A/B arasindaki (A'ya gore) % serisi - TAM veri uzunlugunda, A-B
-        DISI NaN. Hover/Index hizalamasi diger panellerle AYNI kalsin diye
-        kismi/windowed bir dizi DEGIL - _buildHoverLabel (panelManager.py)
-        hovered bar index'ini DOGRUDAN pozisyon olarak kullanir (src[idx]),
-        kisaltilmis bir dizi bu hizalamayi bozardi (bkz. kullanici bulgusu:
-        '% Change panelinde Change degeri fare ile degismiyor'). startIndex/
-        endIndex RangeMeasureTool'dan ya da SwingAnnotationController'in kendi
-        A/B'sinden (swing modunda RangeMeasureTool suspend edilir) gelebilir."""
-        lo, hi = sorted((startIndex, endIndex))
-        loPos = int(np.searchsorted(arr, lo))
-        hiPos = min(int(np.searchsorted(arr, hi)) + 1, len(arr))
-        if hiPos - loPos < 2:
-            return None
-        anchorPos = int(np.clip(np.searchsorted(arr, startIndex), 0, len(closeArr) - 1))
-        anchorClose = float(closeArr[anchorPos])
-        if not anchorClose:
-            return None
-        pct = np.full(len(arr), np.nan, dtype=np.float64)
-        pct[loPos:hiPos] = (closeArr[loPos:hiPos] - anchorClose) / anchorClose * 100.0
-        return pct
-
-    @staticmethod
-    def _pctChangeSeparatorSegments(pm, arr, closeArr):
-        """TUM veri boyunca, her separator segmentinin kendi ilk barina gore
-        sifirlanan % serisi - tamamen vektorize (buyuk veri setinde de hizli).
-        Hover hizalamasi icin TAM uzunlukta (bkz. _pctChangeMeasureSegment)."""
-        _, starts = pm.getSeparatorInfo()
-        if starts is None or len(starts) == 0:
-            return None
-
-        boundaryPositions = np.searchsorted(arr, starts)
-        boundaryPositions = np.unique(np.clip(boundaryPositions, 0, len(arr) - 1))
-        if len(boundaryPositions) == 0 or boundaryPositions[0] != 0:
-            boundaryPositions = np.insert(boundaryPositions, 0, 0)
-
-        positions = np.arange(len(arr))
-        segIdx = np.searchsorted(boundaryPositions, positions, side="right") - 1
-        segIdx = np.clip(segIdx, 0, len(boundaryPositions) - 1)
-        anchorCloses = closeArr[boundaryPositions[segIdx]]
-        with np.errstate(divide="ignore", invalid="ignore"):
-            pct = np.where(anchorCloses != 0,
-                          (closeArr - anchorCloses) / anchorCloses * 100.0,
-                          np.nan)
-        return pct
-
-    @staticmethod
-    def _clearPctChangeData(data):
-        """Gecerli bir segment yokken cagrilir. Panel diger paneller gibi
-        SABIT/hep gorunur kalsin diye isVisible'a dokunulmaz - bos dizi
-        PanelManager._drawLineOrBarSeries icindeki genel guard tarafindan
-        sessizce atlanir (crash etmez, bkz. panelManager.py)."""
-        data.xs, data.ys, data.timestamps = [], [], []
-        data._fullXs, data._fullYs, data._fullTimestamps = None, None, []
-        data.fullCount, data.lodCount = 0, 0
-        data.dataCount, data.minY, data.maxY = 0, 0, 0
-
-    @staticmethod
-    def _applyPctChangeData(data, xs, pct, timestamps, isIntraday):
-        """xs/pct/timestamps TAM veri uzunlugunda (bkz. _pctChangeMeasureSegment/
-        _pctChangeSeparatorSegments) - hover'in src[idx] ile dogrudan pozisyon
-        olarak kullandigi global bar index'le hizali kalsin diye. Buyuk veri
-        setinde (fullCount > LOD_ACTIVATION_THRESHOLD) cizim zaten _fullXs/
-        _fullYs'ten LOD ile okunur, data.xs/data.ys (duz liste) hic okunmaz -
-        bu yuzden HER FRAME 500k+ elemanli .tolist() cevirisi YAPILMAZ
-        (performans). updateStats() de CAGRILMAZ - NaN icerdigi icin
-        min(self.ys)/max(self.ys) guvenilmez; minY/maxY np.nanmin/nanmax ile
-        hesaplanir."""
-        data.isIntraday = bool(isIntraday)
-        data._fullXs = xs
-        data._fullYs = np.ascontiguousarray(pct, dtype=np.float64)
-        data.fullCount = len(xs)
-        data.lodCount = data.fullCount
-        data.dataCount = data.fullCount
-        data._fullTimestamps = timestamps
-        data.timestamps = timestamps if timestamps is not None else []
-        finite = data._fullYs[np.isfinite(data._fullYs)]
-        if len(finite):
-            data.minY = float(np.min(finite))
-            data.maxY = float(np.max(finite))
-        else:
-            data.minY = data.maxY = 0.0
 
     def loadInputConfig(self):
         for configPath in INPUT_CONFIG_CANDIDATES:
@@ -757,7 +621,7 @@ class App:
                 if source == "windowpercent":
                     # Statik array YOK - updatePctChangePanel() draw-hook'u her frame
                     # bu PanelData'nin xs/ys/timestamps'ini yerinde guncelleyecek
-                    # (bkz. stage3FillPanels sonundaki addPctChangeUpdater cagrisi).
+                    # (bkz. attachPctChangeUpdater cagrisi).
                     # Panelin KENDISI diger paneller gibi SABIT/hep gorunur kuruluyor
                     # (isVisible'a dokunulmaz) - bos baslangic dizisi crash etmesin
                     # diye guard PanelManager._drawLineOrBarSeries icinde (bkz. orada).
@@ -796,21 +660,8 @@ class App:
                 panel.addVline(x, color=color, thickness=thickness, label=label)
 
     def stage3FillPool(self):
-        pool.clear()
         symbol = self.data.meta.get("symbol", "")
-        seen = set()
-        for panel in pm.iterateAllPanels():
-            for item in panel.iterateAllData():
-                key = (item.name, item.dataType)
-                if key in seen:
-                    continue
-                seen.add(key)
-                if item.dataType == "candle":
-                    pool.addItem("OHLC", "Data", item, symbol=symbol)
-                elif item.name == "Signal Step":
-                    pool.addItem(item.name, "Signals", item, symbol=symbol)
-                else:
-                    pool.addItem(item.name, "Indicators", item, symbol=symbol)
+        pool.replaceFromPanels(pm.iterateAllPanels(), symbol)
 
         # DENEME (2026-11-11, silinmek uzere): Heikin-Ashi'yi OHLC panelinin
         # uzerine surukleyip gorsel olarak nasil durdugunu test etmek icin,

@@ -38,6 +38,36 @@ public static class BundleReportPackager
         CopyReports(logsDir, reportsDir, entries);
         CopyConfigs(configsDir, reportsDir, entries);
 
+        WriteIndex(indexPath, bundlePath, traderType, entries);
+        return indexPath;
+    }
+
+    public static string IndexExistingReports(string bundlePath, string traderType)
+    {
+        string bundleDir = Path.GetDirectoryName(Path.GetFullPath(bundlePath))!;
+        string indexPath = Path.ChangeExtension(bundlePath, ".reports.json");
+        var entries = new List<BundleReportEntry>();
+        foreach (string pattern in ReportPatterns)
+        {
+            foreach (string source in Directory.EnumerateFiles(bundleDir, pattern))
+            {
+                entries.Add(new BundleReportEntry
+                {
+                    Name = Path.GetFileNameWithoutExtension(source),
+                    Type = Classify(source),
+                    Format = Path.GetExtension(source).TrimStart('.').ToLowerInvariant(),
+                    Path = Path.GetFileName(source)
+                });
+            }
+        }
+
+        WriteIndex(indexPath, bundlePath, traderType, entries);
+        return indexPath;
+    }
+
+    private static void WriteIndex(string indexPath, string bundlePath, string traderType,
+                                   List<BundleReportEntry> entries)
+    {
         var index = new BundleReportIndex
         {
             Bundle = Path.GetFileName(bundlePath),
@@ -49,7 +79,6 @@ public static class BundleReportPackager
         {
             WriteIndented = true
         }));
-        return indexPath;
     }
 
     private static void CopyReports(string sourceDir, string reportsDir,
