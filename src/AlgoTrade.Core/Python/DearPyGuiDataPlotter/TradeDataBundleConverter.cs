@@ -8,6 +8,7 @@
 using AlgoTrade.Core.Trading;
 using AlgoTrade.Core.Trading.Core;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 
@@ -30,7 +31,7 @@ public class TradeDataBundleConverter
     public (string bundlePath, string viewPath) ConvertSingleTrader(SingleTrader trader,
         string outputDir, string fileBaseName = "latest_bundle")
         => ConvertCore(trader, outputDir, fileBaseName, childTraders: new List<SingleTrader>(),
-            includeChildReturnOverlays: false);
+            includeChildReturnOverlays: false, includeRunMetrics: true);
 
     /// <summary>
     /// MultipleTrader'ın mainTrader'ını (bkz. <see cref="MultipleTrader.GetMainTrader"/>)
@@ -66,11 +67,12 @@ public class TradeDataBundleConverter
     public (string bundlePath, string viewPath) ConvertSingleTrader(SingleTrader trader,
         string outputDir, string fileBaseName, IReadOnlyDictionary<string, double[]> strategyIndicators)
         => ConvertCore(trader, outputDir, fileBaseName, new List<SingleTrader>(),
-            includeChildReturnOverlays: false, strategyIndicatorOverride: strategyIndicators);
+            includeChildReturnOverlays: false, includeRunMetrics: true, strategyIndicatorOverride: strategyIndicators);
 
     private static (string bundlePath, string viewPath) ConvertCore(SingleTrader trader,
         string outputDir, string fileBaseName, List<SingleTrader> childTraders,
-        bool includeChildReturnOverlays, IReadOnlyDictionary<string, double[]>? strategyIndicatorOverride = null)
+        bool includeChildReturnOverlays, bool includeRunMetrics = false,
+        IReadOnlyDictionary<string, double[]>? strategyIndicatorOverride = null)
     {
         if (trader == null)
             throw new ArgumentNullException(nameof(trader));
@@ -171,6 +173,18 @@ public class TradeDataBundleConverter
             ["intraday"] = true,
         };
 
+        if (includeRunMetrics && trader.statistics is { } stats)
+        {
+            meta["run_metrics"] = new Dictionary<string, object?>
+            {
+                ["GetiriFiyat"] = stats.GetiriFiyat,
+                ["GetiriFiyatNet"] = stats.GetiriFiyatNet,
+                ["KomisyonFiyat"] = stats.KomisyonFiyat,
+                ["ProfitFactor"] = double.IsFinite(stats.ProfitFactor) ? stats.ProfitFactor : null,
+                ["IslemSayisi"] = stats.IslemSayisi,
+            };
+        }
+
         var writer = new NpzWriter();
         writer.AddFloatArray("open", opens);
         writer.AddFloatArray("high", highs);
@@ -198,7 +212,7 @@ public class TradeDataBundleConverter
         writer.Save(bundlePath);
 
         string viewPath = BuildAndWriteView(outputDir, fileBaseName, trader.SymbolName, strategyIndicatorNames,
-            childOverlays, includeChildReturnOverlays);
+            childOverlays, includeChildReturnOverlays, includeRunMetrics);
         return (bundlePath, viewPath);
     }
 
@@ -274,7 +288,7 @@ public class TradeDataBundleConverter
     /// </summary>
     private static string BuildAndWriteView(string outputDir, string fileBaseName, string? symbol,
         List<string> strategyIndicatorNames, List<ChildOverlaySeries> childOverlays,
-        bool includeChildReturnOverlays)
+        bool includeChildReturnOverlays, bool includeMetricGrid)
     {
         static Dictionary<string, object?> Series(string source, string? name = null, string? label = null,
             int? dataId = null, int[]? color = null)
@@ -378,6 +392,19 @@ public class TradeDataBundleConverter
         }
 
         var view = new Dictionary<string, object?> { ["panels"] = panels };
+        if (includeMetricGrid)
+        {
+            string metricGridPath = Path.Combine(AppSettings.ConfigsDir, "OhlcMetricCells.json");
+            try
+            {
+                if (File.Exists(metricGridPath))
+                    view["ohlcMetricGrid"] = JObject.Parse(File.ReadAllText(metricGridPath));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+            {
+                Console.WriteLine($"OHLC metric grid: {ex.Message}");
+            }
+        }
         string viewPath = Path.Combine(outputDir, fileBaseName + ".view.json");
         File.WriteAllText(viewPath, JsonConvert.SerializeObject(view, Formatting.Indented));
         return viewPath;

@@ -11,6 +11,7 @@
 
 import numpy as np
 
+from src.plotting.metricGrid import attachConfiguredMetricGrid
 from src.plotting.pctChangePanel import attachPctChangeUpdater
 
 CYAN = (60, 200, 255, 255)
@@ -34,6 +35,10 @@ ohlcPanel.setCandleData(
 # indicatorNames/indicatorValues) - dataId=0 candle oldugu icin 1'den baslar.
 for idx, (name, values) in enumerate(bridge.signalIndicators, start=1):
     ohlcPanel.addData(idx, name, "line", xs, values, timestamps=bridge.timestamps, intraday=True)
+
+# OHLC metric layout: inputs/configs/OhlcMetricCells.json
+stats = bridge.trader.SingleTrader.statistics if bridge.trader is not None else None
+attachConfiguredMetricGrid(pm, ohlcPanel, lambda key: getattr(stats, key, None))
 
 pctChangePanel = pm.createPanel("% Change", "% Change")
 pctChangePanel.setHeight(220)

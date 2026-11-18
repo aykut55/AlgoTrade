@@ -8,6 +8,7 @@ from datetime import datetime
 import numpy as np
 from imgui_bundle import implot
 
+from src.plotting.metricGrid import attachConfiguredMetricGrid
 from src.plotting.pctChangePanel import attachPctChangeUpdater
 
 # Stage2 binary import config. C# tarafindan ayni alanlari tasiyan .npz bundle
@@ -167,6 +168,8 @@ class App:
         self.stage3FillPanels()
         self.stage3FillPool()
         self.stage3DrawPanelDataOnly()
+        metrics = self.data.meta.get("run_metrics") or {}
+        attachConfiguredMetricGrid(pm, self.ohlcPanel, metrics.get, self.view.get("ohlcMetricGrid"))
         isSwingView = self.view.get("mode") == "swing_annotation"
         separatorMode = SEPARATOR_MODE_IN_SWING if isSwingView else SEPARATOR_MODE
         self.addSeparators(separatorMode)

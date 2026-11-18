@@ -1,0 +1,46 @@
+{
+  "inline": true,
+  "cells": [
+    {
+      "row": 1,
+      "column": 1,
+      "label": "Brüt Getiri",
+      "metric": "GetiriFiyat",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [255, 255, 255, 255]
+    },
+    {
+      "row": 1,
+      "column": 2,
+      "label": "Net Getiri",
+      "metric": "GetiriFiyatNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [74, 222, 128, 255],
+      "negativeValueColor": [248, 113, 113, 255]
+    },
+    {
+      "row": 1,
+      "column": 3,
+      "label": "Komisyon",
+      "metric": "KomisyonFiyat",
+      "format": ".2f",
+      "valueColor": [251, 191, 36, 255]
+    },
+    {
+      "row": 2,
+      "column": 1,
+      "label": "Profit Factor",
+      "metric": "ProfitFactor",
+      "format": ".2f"
+    },
+    {
+      "row": 2,
+      "column": 2,
+      "label": "İşlem Sayısı",
+      "metric": "IslemSayisi",
+      "format": "d"
+    }
+  ]
+}
