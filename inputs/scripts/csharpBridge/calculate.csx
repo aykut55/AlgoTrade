@@ -4,6 +4,10 @@
 //
 // AlgoTrade.ReplayRunner/Program.cs ile AYNI mantik - sinyal dizisini GERCEK
 // SingleTrader motoruna (ReplaySignalStrategy uzerinden) besler.
+// false: AppConfig.json | true: asagidaki manuel islem parametreleri.
+
+bool useManualTradeParams = false;
+
 var signals = SignalCodes.Select(c => (TradeSignals)c).ToArray();
 
 var logger = LogManager.GetInstance();
@@ -39,6 +43,17 @@ if (TimingWindow is { } timingWindow)
 
 AppConfigApplier.ApplySingleTrader(algoTrader, appConfig.SingleTrader, AppSettings.ConfigsDir);
 
+if (useManualTradeParams)
+{
+    var tradeParams = new InitialTradeParams()
+        .SetBakiyeParams(ilkBakiye: 100_000.0)
+        .SetKontratParamsViopEndex(kontratSayisi: 1.0, varlikAdedCarpani: 10.0)
+        .SetKomisyonParams(komisyonCarpan: 20.0)
+        .SetKaymaParams(kaymaMiktari: 0.0);
+
+    algoTrader.SetSingleTraderTradeParams(tradeParams);
+}
+
 var strategyParams = new Dictionary<string, object> { ["signals"] = signals };
 if (ExitRule != null)
     strategyParams["exitRule"] = ExitRule;
@@ -51,3 +66,34 @@ algoTrader.Initialize();
 await algoTrader.RunSingleTraderWithProgressAsync();
 
 return algoTrader;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// TradeParams gibi bir ayar grubu olarak düşünürsek, AppConfig.json içindeki SingleTrader bölümünde şunlar var:
+
+// | Ayar | Neyi belirler? |
+// |---|---|
+// | TradeParams | Piyasa tipi, başlangıç bakiyesi, kontrat/lot/hisse adedi, komisyon, kayma ve pozisyona ekleme |
+// | Signals | AL, SAT, FlatOl, Pas Geç, Kâr Al ve Zarar Kes izinleri, gün sonu kapatma, zaman penceresi ve başlangıç barı |
+// | Strategy | Strateji adı, profil sürümü ve parametre dosyası |
+// | Query | Sorgu adı, profil sürümü ve parametre dosyası |
+// | EquityCurveFilter | Özsermaye eğrisi filtresinin profili |
+// | Plot | Grafik açma ayarı |
+// | Save | Hangi raporların yazılacağı ve dosya adları |
+// | Export | Dışa aktarımın açık olup olmadığı, sütun ayar dosyası ve sürümü |
+// | Optimization | Optimizasyon bayrağı |
+// | RunMode | Yalnız işlem, işlem ve sorgu veya yalnız sorgu |
