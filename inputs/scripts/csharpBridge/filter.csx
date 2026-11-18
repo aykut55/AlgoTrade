@@ -63,6 +63,9 @@ Func<SingleTrader, int, TradeSignals>? ApplyTakeProfitStopLoss(bool takeProfitEn
 
     if (stopLossEnabled && stopLossChoice != 99 && (stopLossChoice < 0 || stopLossChoice > 5))
         throw new ArgumentOutOfRangeException(nameof(stopLossChoice));
+	
+	// Kendi custom koşulu kullanmak icin :
+	// return (trader, barIndex) => IndikatorCikisKurali(trader, barIndex);
 
     return (trader, barIndex) =>
     {
