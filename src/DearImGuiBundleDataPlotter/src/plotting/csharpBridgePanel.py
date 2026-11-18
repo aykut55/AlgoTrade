@@ -25,19 +25,21 @@ FILTER_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "filter.csx")
 PLOT_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "plot.py")
 CALCULATE_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "calculate.csx")
 WRITE_TO_DISK_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "writeToDisk.csx")
+BUNDLE_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "createBundle.csx")
+RUN_SCRIPT_PATH = os.path.join(SCRIPTS_DIR, "run.csx")
 
 DEFAULT_CSV_PATH = r"C:\data\csvFiles\VIP\05\VIP-X030-T.csv"
 
 
 class CSharpBridgePanel:
-    """6 asama (Read Data / Signal / Filter / Plot / Calculate / Write To Disk),
+    """Read Data / Signal / Filter / Calculate / Plot / Write To Disk / Bundle asamalari,
     her biri inputs/scripts/csharpBridge/ altinda AYRI bir dosya - "Open" butonu
     dosyayi Windows'un varsayilan editoruyle (Notepad++ dahil) acar, kullanici
     duzenler+kaydeder, ilgili "calistir" butonu GUNCEL dosya icerigini diskten
     okuyup calistirir.
 
     pythonnet uzerinden AlgoTrade (orijinal repo) C# kodunu dogrudan cagirir
-    (Read Data/Signal/Filter/Calculate/Write To Disk icin Roslyn) - dosya/bundle
+    (Read Data/Signal/Filter/Calculate/Write To Disk/Bundle icin Roslyn) - dosya/bundle
     round-trip'i yok. Plot asamasi Python'dur (bu plotter'in GERCEK PanelManager/
     Panel/TradeSignalRenderer altyapisini kullanir, default.py'nin de kullandigi
     ayni siniflar)."""
@@ -63,7 +65,11 @@ class CSharpBridgePanel:
         self._ohlcPanel = None
         self._signalPanel = None
 
-        self._writeThread = None  # Write To Disk arka planda - GUI render dongusunu bloklamasin
+        self._writeThread = None  # Rapor ve bundle yazimi GUI render dongusunu bloklamasin
+
+        self._writeSucceeded = False
+        self._runSteps = None
+        self._runWaitingForWrite = False
 
         _ensureDefaultScriptsExist()
 
@@ -85,6 +91,9 @@ class CSharpBridgePanel:
 
     # -------------------------------------------------------------- render
     def renderDockContent(self):
+        self._advanceRun()
+        running = self._runSteps is not None
+        imgui.begin_disabled(running)
         imgui.text("1) Read Data")
         imgui.text_disabled(READ_DATA_SCRIPT_PATH)
         imgui.set_next_item_width(-80)
@@ -157,6 +166,36 @@ class CSharpBridgePanel:
         elif imgui.button("Write To Disk"):
             self._onWriteReplayToDisk()
 
+        imgui.separator()
+        imgui.text("7) Bundle")
+        imgui.text_disabled(BUNDLE_SCRIPT_PATH)
+        if imgui.button("Open##openBundle"):
+            _openInEditor(BUNDLE_SCRIPT_PATH)
+        imgui.same_line()
+        imgui.begin_disabled(writing)
+        createBundle = imgui.button("Create Bundle Files")
+        imgui.end_disabled()
+        if createBundle:
+            self._onCreateBundle()
+
+        imgui.end_disabled()
+
+        imgui.dummy(imgui.ImVec2(0, 24))
+        imgui.separator()
+        imgui.spacing()
+        imgui.text("8) Run All")
+        imgui.text_disabled(RUN_SCRIPT_PATH)
+        if imgui.button("Open##openRun"):
+            _openInEditor(RUN_SCRIPT_PATH)
+        imgui.same_line()
+        imgui.begin_disabled(running or self._isWriting())
+        if imgui.button("Run All"):
+            self._startRun(fromSignal=False)
+        imgui.same_line()
+        if imgui.button("Run from Signal"):
+            self._startRun(fromSignal=True)
+        imgui.end_disabled()
+
         if self._statusText:
             imgui.separator()
             imgui.text_wrapped(self._statusText)
@@ -207,6 +246,60 @@ class CSharpBridgePanel:
         self._statusText = text
         print(f"[{time.strftime('%H:%M:%S')}] [C# Bridge] {text}")
 
+    def _isWriting(self):
+        return self._writeThread is not None and self._writeThread.is_alive()
+
+    def _startRun(self, fromSignal):
+        if fromSignal and self._netData is None:
+            self._setStatus("Once Read Data calistirin.")
+            return
+
+        actions = {
+            "Read Data": self._onReadData,
+            "Signal": self._onRunSignal,
+            "Filter": self._onRunFilter,
+            "Calculate": self._onCalculateReplay,
+            "Plot": self._onRunPlot,
+            "Write To Disk": self._onWriteReplayToDisk,
+            "Create Bundle Files": self._onCreateBundle,
+        }
+        try:
+            steps = csharpBridge.read_run_steps(RUN_SCRIPT_PATH)
+            if fromSignal:
+                start = next((i for i, (name, _) in enumerate(steps) if name == "Signal"), None)
+                if start is None:
+                    raise ValueError("run.csx does not define the Signal step.")
+                steps = steps[start:]
+            enabledSteps = [(name, actions[name]) for name, enabled in steps if enabled]
+            if not enabledSteps:
+                raise ValueError("run.csx does not have any enabled steps for this run.")
+            self._runSteps = iter(enabledSteps)
+        except Exception as exc:
+            self._runSteps = None
+            self._setStatus(f"Run HATA (run.csx): {exc}")
+            return
+        self._setStatus("Run baslatildi.")
+
+    def _advanceRun(self):
+        if self._runSteps is None or self._isWriting():
+            return
+        if self._runWaitingForWrite:
+            self._runWaitingForWrite = False
+            if not self._writeSucceeded:
+                self._runSteps = None
+                return
+        step = next(self._runSteps, None)
+        if step is None:
+            self._runSteps = None
+            self._setStatus("Run OK. " + self._statusText)
+            return
+
+        name, action = step
+        if not action():
+            self._runSteps = None
+        elif name in ("Write To Disk", "Create Bundle Files"):
+            self._runWaitingForWrite = True
+
     def _onReadData(self):
         self._setStatus("Okunuyor...")
         t0 = time.time()
@@ -224,6 +317,7 @@ class CSharpBridgePanel:
             self._signalIndicators = []
             summarySuffix = f"\n{metaSummary}" if metaSummary else ""
             self._setStatus(f"Read Data OK ({elapsed:.2f}s): {self._dataStatusLabel()}{summarySuffix}")
+            return True
         except Exception as exc:
             self._netData = None
             self._setStatus(f"Read Data HATA ({time.time() - t0:.2f}s): {exc}")
@@ -249,6 +343,7 @@ class CSharpBridgePanel:
             self._signals = None
             self._signalIndicators = indicators
             self._setStatus(f"Run Signal OK ({elapsed:.2f}s): {self._rawSignalStatusLabel()}")
+            return True
         except Exception as exc:
             self._rawSignals = None
             self._signals = None
@@ -275,6 +370,7 @@ class CSharpBridgePanel:
                 return
             self._signals = signals
             self._setStatus(f"Run Filter OK ({elapsed:.2f}s): {self._signalStatusLabel()}")
+            return True
         except Exception as exc:
             self._signals = None
             self._setStatus(f"Filter HATA ({time.time() - t0:.2f}s): {exc}")
@@ -321,6 +417,7 @@ class CSharpBridgePanel:
             }
             exec(compile(code, PLOT_SCRIPT_PATH, "exec"), namespace)
             self._setStatus(f"Plot OK ({time.time() - t0:.2f}s).")
+            return True
         except Exception as exc:
             self._setStatus(f"Plot HATA ({time.time() - t0:.2f}s): {exc}")
             print(traceback.format_exc())
@@ -354,6 +451,7 @@ class CSharpBridgePanel:
             self._algoTrader = algoTrader
             self._replaySummary = csharpBridge.get_replay_summary(algoTrader)
             self._setStatus(f"Calculate OK ({elapsed:.2f}s): {self._replaySummaryLabel()}")
+            return True
         except Exception as exc:
             self._algoTrader = None
             self._replaySummary = None
@@ -371,6 +469,7 @@ class CSharpBridgePanel:
         self._setStatus("Diske yaziliyor (arka planda)...")
         t0 = time.time()
         algoTrader = self._algoTrader  # thread'e sabit referans (calisirken degismesin)
+        self._writeSucceeded = False
 
         def onProgress(event, payload, total):
             if event == "start":
@@ -389,6 +488,7 @@ class CSharpBridgePanel:
                     return
                 self._setStatus(
                     f"Write To Disk OK ({elapsed:.2f}s): {len(written)} dosya -> {csharpBridge.get_logs_dir()}")
+                self._writeSucceeded = True
             except Exception as exc:
                 self._setStatus(f"Write To Disk HATA ({time.time() - t0:.2f}s): {exc}")
                 print(traceback.format_exc())
@@ -398,6 +498,34 @@ class CSharpBridgePanel:
         # kendisi thread calisirken devre disi (bkz. renderDockContent "yaziliyor" kontrolu).
         self._writeThread = threading.Thread(target=worker, daemon=True)
         self._writeThread.start()
+        return True
+
+    def _onCreateBundle(self):
+        algoTrader = self._algoTrader
+        if algoTrader is None:
+            self._setStatus("Once Calculate calistirin.")
+            return
+
+        self._setStatus("Bundle dosyalari olusturuluyor...")
+        self._writeSucceeded = False
+        started = time.perf_counter()
+
+        def worker():
+            try:
+                ok, paths, error = csharpBridge.create_bundle_from_file(BUNDLE_SCRIPT_PATH, algoTrader)
+                if not ok:
+                    self._setStatus(f"Bundle HATA: {error}")
+                    return
+                elapsed = time.perf_counter() - started
+                self._setStatus(f"Bundle OK ({elapsed:.2f}s):\n" + "\n".join(paths))
+                self._writeSucceeded = True
+            except Exception as exc:
+                self._setStatus(f"Bundle HATA: {exc}")
+                print(traceback.format_exc())
+
+        self._writeThread = threading.Thread(target=worker, daemon=True)
+        self._writeThread.start()
+        return True
 
 
 def _openInEditor(path):

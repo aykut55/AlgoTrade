@@ -220,6 +220,26 @@ def run_replay_from_file(path, net_data, signals, symbol_name="", symbol_period=
     return run_csharp_file(path, globals_)
 
 
+def read_run_steps(path):
+    _ensure_loaded()
+    ok, steps, error = run_csharp_file(path, _DotNetSystem.Object())
+    if not ok:
+        raise RuntimeError(error)
+    run_steps = [(str(step.Item1), int(step.Item2)) for step in steps]
+    for name, enabled in run_steps:
+        if enabled not in (0, 1):
+            raise ValueError(f"{name}: Enabled must be 0 or 1.")
+    return run_steps
+
+
+def create_bundle_from_file(path, algo_trader):
+    _ensure_loaded()
+    ok, result, error = run_csharp_file(path, _WriteToDiskScriptGlobals(algo_trader))
+    if not ok:
+        return False, [], error
+    return True, [str(file_path) for file_path in result], None
+
+
 def write_to_disk_from_file(path, algo_trader, progress_callback=None):
     """scripts_bridge/diskeYaz.csx dosyasini (WriteToDiskScriptGlobals: Trader)
     calistirir; oncesinde/sonrasinda SingleTrader'in dosya-adi property'lerinden

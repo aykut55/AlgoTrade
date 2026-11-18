@@ -9,8 +9,8 @@
 //   indicatorValues: object[] (her eleman bir double[], indicatorNames ile AYNI sirada)
 // Not: pozisyon/filtre mantigi BURADA DEGIL - bkz. filter.csx (ayri asama).
 var close = Indicators.Trend.ResolvePriceSource(PriceSource.Close);
-var fast = Indicators.MA.Calculate(close, MAMethod.EMA, 8);
-var slow = Indicators.MA.Calculate(close, MAMethod.EMA, 21);
+var fast = Indicators.MA.Calculate(close, MAMethod.SIMPLE, 10);
+var slow = Indicators.MA.Calculate(close, MAMethod.SIMPLE, 20);
 
 var signals = new int[close.Length];
 for (int i = 1; i < close.Length; i++)
@@ -20,7 +20,7 @@ for (int i = 1; i < close.Length; i++)
     else if (fast[i - 1] >= slow[i - 1] && fast[i] < slow[i]) signals[i] = -1; // SAT
 }
 
-var indicatorNames = new[] { "EMA Fast (8)", "EMA Slow (21)" };
+var indicatorNames = new[] { "SMA Fast (10)", "SMA Slow (20)" };
 var indicatorValues = new object[] { fast, slow };
 
 return new object[] { signals, indicatorNames, indicatorValues };

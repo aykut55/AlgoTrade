@@ -219,7 +219,7 @@ int[] ApplyEquityCurveFilter(int[] signals, bool enabled, bool isPercent,
 // ============================================================================
 int[] signals = (int[])RawSignals.Clone();
 
-signals = ApplyPositionFilter(signals, enabled: true, minChangePct: 1.0);
+signals = ApplyPositionFilter(signals, enabled: false, minChangePct: 1.0);
 signals = ApplyTakeProfitStopLoss(signals, enabled: false, takeProfitPct: 2.0, stopLossPct: 1.0);
 signals = ApplyManualPositionClose(signals, enabled: false, closeAtBars: new HashSet<int>());
 signals = ApplyEndOfDayClose(signals, enabled: false);
