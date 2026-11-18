@@ -1,6 +1,6 @@
 // Filter asamasi - globals: Data (List<StockData>), RawSignals (int[], Signal
 // asamasindan - 1=AL, -1=SAT, 0=yok)
-// return: object[] { filtrelenmis int[], Calculate icin opsiyonel cikis kurali }
+// return: object[] { filtrelenmis int[], opsiyonel cikis kurali, opsiyonel tarih penceresi }
 // Kodlar: 0=yok, 1=AL(Buy), -1=SAT(Sell), 3=KarAl(TakeProfit), 4=ZararKes(StopLoss),
 //         5=FlatOl, 6=PasGec(Skip)
 //
@@ -192,25 +192,27 @@ int[] ApplyEndOfDayClose(int[] signals, bool enabled)
 }
 
 // ============================================================================
-// 5) Zaman Penceresi - pencere disinda YENI AL/SAT girisi engellenir
-//    (SingleTrader.cs Oncelik 3 - gercekte HARD BLOCK: pencere disinda TUM
-//    sinyaller None olur; burada SADECE yeni giris engellenir, mevcut
-//    FlatOl/KarAl/ZararKes kodlarina DOKUNULMAZ - cagirma sirasi (4'ten
-//    SONRA) bu farki zararsiz kilar, bkz. Ana akis yorumu)
+// 5) Zaman Penceresi - Calculate uygular, pencere disinda acik pozisyonu kapatir.
 // ============================================================================
-int[] ApplyTimeWindow(int[] signals, bool enabled, TimeSpan windowStart, TimeSpan windowEnd)
+ReplayTimingWindow? ApplyTimeWindow(bool enabled, TimeSpan windowStart, TimeSpan windowEnd)
 {
-    if (!enabled) return signals;
-    var result = (int[])signals.Clone();
+    if (!enabled) return null;
+    if (windowStart < TimeSpan.Zero || windowStart >= TimeSpan.FromDays(1))
+        throw new ArgumentOutOfRangeException(nameof(windowStart));
+    if (windowEnd <= windowStart || windowEnd >= TimeSpan.FromDays(1))
+        throw new ArgumentOutOfRangeException(nameof(windowEnd));
 
-    for (int i = 0; i < result.Length; i++)
-    {
-        if (result[i] != BuySignal && result[i] != SellSignal) continue;
-        var timeOfDay = Data[i].DateTime.TimeOfDay;
-        bool inWindow = timeOfDay >= windowStart && timeOfDay < windowEnd;
-        if (!inWindow) result[i] = NoSignal;
-    }
-    return result;
+    var date = DateTime.UnixEpoch;
+    return new ReplayTimingWindow(1, date.Add(windowStart), date.Add(windowEnd));
+}
+
+ReplayTimingWindow? ApplyDayWindow(bool enabled, DateTime startDay, DateTime endDayExclusive)
+{
+    if (!enabled) return null;
+    if (endDayExclusive.Date <= startDay.Date)
+        throw new ArgumentOutOfRangeException(nameof(endDayExclusive));
+
+    return new ReplayTimingWindow(2, startDay.Date, endDayExclusive.Date);
 }
 
 // ============================================================================
@@ -298,10 +300,17 @@ signals = ApplyManualPositionClose(signals, enabled: false, closeAtBars: new Has
 
 signals = ApplyEndOfDayClose(signals, enabled: false);
 
-signals = ApplyTimeWindow(signals, enabled: false, windowStart: TimeSpan.FromHours(10), windowEnd: TimeSpan.FromHours(18));
+var timeWindow = ApplyTimeWindow(enabled: false, windowStart: TimeSpan.FromHours(10), windowEnd: TimeSpan.FromHours(18));
 
 signals = ApplyWarmup(signals, enabled: false, startBarIndex: 0);
 
 signals = ApplyEquityCurveFilter(signals, enabled: false, isPercent: true, profitThreshold: 0.05, lossThreshold: -0.05, trigger: "Both");
 
-return new object?[] { signals, exitRule };
+var dayWindow = ApplyDayWindow(enabled: false,
+    startDay: new DateTime(2026, 10, 1),
+    endDayExclusive: new DateTime(2026, 10, 24));
+
+if (timeWindow != null && dayWindow != null)
+    throw new InvalidOperationException("Enable only one timing window in filter.csx.");
+
+return new object?[] { signals, exitRule, timeWindow ?? dayWindow };

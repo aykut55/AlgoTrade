@@ -27,6 +27,16 @@ algoTrader.SymbolName = SymbolName;
 
 algoTrader.SymbolPeriod = SymbolPeriod;
 
+if (TimingWindow is { } timingWindow)
+{
+    var timing = appConfig.SingleTrader.Signals;
+    timing.TimeFilteringEnabled = true;
+    timing.TimeFilterMode = timingWindow.Mode;
+    const string format = "yyyy.MM.dd HH:mm:ss";
+    timing.StartDateTime = timingWindow.Start.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
+    timing.StopDateTime = timingWindow.EndExclusive.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
+}
+
 AppConfigApplier.ApplySingleTrader(algoTrader, appConfig.SingleTrader, AppSettings.ConfigsDir);
 
 var strategyParams = new Dictionary<string, object> { ["signals"] = signals };

@@ -5,6 +5,8 @@ using AlgoTrade.Core.Trading.Core;
 
 namespace AlgoTrade.Core.Scripting
 {
+    public sealed record ReplayTimingWindow(int Mode, DateTime Start, DateTime EndExclusive);
+
     /// <summary>
     /// pythonnet koprusunden (AlgoTrade2 plotter) gelen AL/SAT sinyal dizisini
     /// GERCEK SingleTrader execution motoruna (ReplaySignalStrategy uzerinden)
@@ -21,6 +23,7 @@ namespace AlgoTrade.Core.Scripting
         public string SymbolName { get; }
         public string SymbolPeriod { get; }
         public Func<SingleTrader, int, TradeSignals>? ExitRule { get; }
+        public ReplayTimingWindow? TimingWindow { get; }
 
         public ReplaySimulationGlobals(List<StockData> data, int[] signalCodes, string symbolName, string symbolPeriod)
             : this(data, signalCodes, symbolName, symbolPeriod, null)
@@ -29,12 +32,19 @@ namespace AlgoTrade.Core.Scripting
 
         public ReplaySimulationGlobals(List<StockData> data, int[] signalCodes, string symbolName, string symbolPeriod,
             Func<SingleTrader, int, TradeSignals>? exitRule)
+            : this(data, signalCodes, symbolName, symbolPeriod, exitRule, null)
+        {
+        }
+
+        public ReplaySimulationGlobals(List<StockData> data, int[] signalCodes, string symbolName, string symbolPeriod,
+            Func<SingleTrader, int, TradeSignals>? exitRule, ReplayTimingWindow? timingWindow)
         {
             Data = data;
             SignalCodes = signalCodes;
             SymbolName = symbolName;
             SymbolPeriod = symbolPeriod;
             ExitRule = exitRule;
+            TimingWindow = timingWindow;
         }
     }
 }

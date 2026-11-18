@@ -1085,6 +1085,7 @@ public class AlgoTrader : MarketDataProvider, IDisposable
             trader.signals.TradeStartBarIndex        = s.TradeStartBarIndex;
             trader.signals.EquityCurveFilteringEnabled = false; // asıl değer ECF config'den gelir
 
+            trader.TimeFilterMode = s.TimeFilterMode;
             trader.StartDateTimeStr = s.StartDateTime;
             trader.StopDateTimeStr  = s.StopDateTime;
 
@@ -3184,13 +3185,14 @@ public class OptimizationParameterRangeEntry
 /// <summary>OnApplyUserFlags (traderId==0 / SingleTrader) ayarlarının AppConfig karşılığı.</summary>
 public class SingleTraderSignalsConfig
 {
-    public bool   AlEnabled              { get; set; } = true;
-    public bool   SatEnabled             { get; set; } = true;
-    public bool   FlatOlEnabled          { get; set; } = true;
-    public bool   PasGecEnabled          { get; set; } = true;
-    public bool   KarAlEnabled           { get; set; } = true;
-    public bool   ZararKesEnabled        { get; set; } = true;
-    public bool   GunSonuPozKapatEnabled { get; set; } = false;
+    public int    TimeFilterMode             { get; set; } = 1;
+    public bool   AlEnabled                  { get; set; } = true;
+    public bool   SatEnabled                 { get; set; } = true;
+    public bool   FlatOlEnabled              { get; set; } = true;
+    public bool   PasGecEnabled              { get; set; } = true;
+    public bool   KarAlEnabled               { get; set; } = true;
+    public bool   ZararKesEnabled            { get; set; } = true;
+    public bool   GunSonuPozKapatEnabled     { get; set; } = false;
     public bool   TimeFilteringEnabled       { get; set; } = false;
     public string StartDateTime              { get; set; } = "2025.05.25 09:35:00";
     public string StopDateTime               { get; set; } = "2025.06.02 17:55:00";

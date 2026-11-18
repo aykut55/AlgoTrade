@@ -69,6 +69,7 @@ public static class AppConfigApplier
             ZararKesEnabled        = cfg.Signals.ZararKesEnabled,
             GunSonuPozKapatEnabled = cfg.Signals.GunSonuPozKapatEnabled,
             TimeFilteringEnabled      = cfg.Signals.TimeFilteringEnabled,
+            TimeFilterMode            = cfg.Signals.TimeFilterMode,
             StartDateTime             = cfg.Signals.StartDateTime,
             StopDateTime              = cfg.Signals.StopDateTime,
             TradeStartBarIndexEnabled = cfg.Signals.TradeStartBarIndexEnabled,

@@ -165,6 +165,7 @@ public class SingleTrader : MarketDataProvider, IDisposable
 
     #region TimeFilterProperties
     // Time Filter Properties
+    public int TimeFilterMode { get; set; } = 1;
     public string StartDateTimeStr { get; set; }
     public string StopDateTimeStr { get; set; }
     public string StartDateStr { get; set; }
@@ -2278,12 +2279,11 @@ public class SingleTrader : MarketDataProvider, IDisposable
         bool useTimeFiltering = this.signals.TimeFilteringEnabled;
         if (useTimeFiltering)
         {
-            int filterMode = 1;
             bool isTradeEnabled = false;
             bool isPozKapatEnabled = false;
             int checkResult = 0;
 
-            CheckOrderTimeEligibility(i, filterMode, ref isTradeEnabled, ref isPozKapatEnabled, ref checkResult);
+            CheckOrderTimeEligibility(i, TimeFilterMode, ref isTradeEnabled, ref isPozKapatEnabled, ref checkResult);
 
             this.signals.IsTimingFiltersTradeEnabled = isTradeEnabled;
             this.signals.IsPozKapatEnabled = isPozKapatEnabled;
