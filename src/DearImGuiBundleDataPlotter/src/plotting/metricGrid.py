@@ -8,10 +8,7 @@ from imgui_bundle import imgui, implot
 CONFIG_PATH = Path(__file__).resolve().parents[4] / "inputs" / "configs" / "OhlcMetricCells.json"
 
 
-def attachConfiguredMetricGrid(pm, panel, getMetric, bundleConfig=None):
-    if panel is None:
-        return
-
+def attachConfiguredMetricGrid(pm, defaultPanel, getMetric, bundleConfig=None):
     config = bundleConfig
     try:
         config = json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))
@@ -23,7 +20,8 @@ def attachConfiguredMetricGrid(pm, panel, getMetric, bundleConfig=None):
         return
 
     try:
-        cells = []
+        cellsByPanel = {}
+        missingPanels = set()
         for entry in config["cells"]:
             value = entry["value"] if "value" in entry else getMetric(entry["metric"])
             if value is None:
@@ -36,10 +34,22 @@ def attachConfiguredMetricGrid(pm, panel, getMetric, bundleConfig=None):
                 if key in cell and (not isinstance(cell[key], list) or len(cell[key]) != 4 or
                                     not all(isinstance(channel, int) and 0 <= channel <= 255 for channel in cell[key])):
                     raise ValueError(f"{key} must contain four integers between 0 and 255.")
-            cells.append(cell)
+            panelId = entry.get("panelId", config.get("panelId"))
+            if panelId is not None and not isinstance(panelId, (int, str)):
+                raise ValueError("panelId must be a numeric ID or a panel name.")
+            panel = defaultPanel if panelId is None else pm.findPanel(panelId)
+            if panel is None:
+                missingPanels.add(panelId)
+                continue
+            cellsByPanel.setdefault(panel.id, []).append(cell)
 
-        attachMetricGrid(pm, panel, cells, inline=config.get("inline", True),
-                         cellWidth=config.get("cellWidth"))
+        for panelId, cells in cellsByPanel.items():
+            attachMetricGrid(pm, pm.getPanel(panelId), cells, inline=config.get("inline", True),
+                             cellWidth=config.get("cellWidth"))
+
+        for panelId in missingPanels:
+            if panelId is not None:
+                print(f"OHLC metric grid: panel {panelId!r} was not found.")
     except (OSError, TypeError, KeyError, ValueError, AttributeError) as exc:
         print(f"OHLC metric grid: {CONFIG_PATH.name}: {exc}")
 

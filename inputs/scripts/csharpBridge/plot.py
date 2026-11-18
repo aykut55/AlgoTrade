@@ -36,10 +36,6 @@ ohlcPanel.setCandleData(
 for idx, (name, values) in enumerate(bridge.signalIndicators, start=1):
     ohlcPanel.addData(idx, name, "line", xs, values, timestamps=bridge.timestamps, intraday=True)
 
-# OHLC metric layout: inputs/configs/OhlcMetricCells.json
-stats = bridge.trader.SingleTrader.statistics if bridge.trader is not None else None
-attachConfiguredMetricGrid(pm, ohlcPanel, lambda key: getattr(stats, key, None))
-
 pctChangePanel = pm.createPanel("% Change", "% Change")
 pctChangePanel.setHeight(220)
 pctChangePanel.setYLabel("% Change")
@@ -136,3 +132,7 @@ if _dayStarts:
                         color=(0.0, 1.0, 1.0, 0.6), weight=1.0, maxVisible=2000)
 
 attachPctChangeUpdater(pm, pctChangePanel, 1, ohlcPanel)
+
+# Metric layout and target panels: inputs/configs/OhlcMetricCells.json
+stats = bridge.trader.SingleTrader.statistics if bridge.trader is not None else None
+attachConfiguredMetricGrid(pm, ohlcPanel, lambda key: getattr(stats, key, None))
