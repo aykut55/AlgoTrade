@@ -59,6 +59,7 @@ class CSharpBridgePanel:
         self._netData = None
         self._rawSignals = None    # Signal asamasindan (ham)
         self._signals = None       # Filter asamasindan (Plot/Calculate bunu kullanir)
+        self._exitRule = None
         self._signalIndicators = []  # Signal asamasindan - OHLC uzerine cizilecek MA/indikator serileri
 
         self._algoTrader = None
@@ -323,6 +324,7 @@ class CSharpBridgePanel:
             self._symbolName, self._symbolPeriod = symbolName, symbolPeriod
             self._rawSignals = None
             self._signals = None
+            self._exitRule = None
             self._signalIndicators = []
             summarySuffix = f"\n{metaSummary}" if metaSummary else ""
             self._setStatus(f"Read Data OK ({elapsed:.2f}s): {self._dataStatusLabel()}{summarySuffix}")
@@ -345,17 +347,20 @@ class CSharpBridgePanel:
             if not ok:
                 self._rawSignals = None
                 self._signals = None
+                self._exitRule = None
                 self._signalIndicators = []
                 self._setStatus(f"Signal HATA ({elapsed:.2f}s):\n{error}")
                 return
             self._rawSignals = signals
             self._signals = None
+            self._exitRule = None
             self._signalIndicators = indicators
             self._setStatus(f"Run Signal OK ({elapsed:.2f}s): {self._rawSignalStatusLabel()}")
             return True
         except Exception as exc:
             self._rawSignals = None
             self._signals = None
+            self._exitRule = None
             self._signalIndicators = []
             self._setStatus(f"Signal HATA ({time.time() - t0:.2f}s): {exc}")
             print(traceback.format_exc())
@@ -370,18 +375,21 @@ class CSharpBridgePanel:
         self._setStatus("Filter calistiriliyor...")
         t0 = time.time()
         try:
-            ok, signals, error = csharpBridge.run_filter_script_from_file(
+            ok, signals, exitRule, error = csharpBridge.run_filter_script_from_file(
                 FILTER_SCRIPT_PATH, self._netData, self._rawSignals)
             elapsed = time.time() - t0
             if not ok:
                 self._signals = None
+                self._exitRule = None
                 self._setStatus(f"Filter HATA ({elapsed:.2f}s):\n{error}")
                 return
             self._signals = signals
+            self._exitRule = exitRule
             self._setStatus(f"Run Filter OK ({elapsed:.2f}s): {self._signalStatusLabel()}")
             return True
         except Exception as exc:
             self._signals = None
+            self._exitRule = None
             self._setStatus(f"Filter HATA ({time.time() - t0:.2f}s): {exc}")
             print(traceback.format_exc())
 
@@ -448,7 +456,7 @@ class CSharpBridgePanel:
         t0 = time.time()
         try:
             ok, algoTrader, error = csharpBridge.run_replay_from_file(
-                CALCULATE_SCRIPT_PATH, self._netData, signals, self._symbolName, self._symbolPeriod)
+                CALCULATE_SCRIPT_PATH, self._netData, signals, self._symbolName, self._symbolPeriod, self._exitRule)
             elapsed = time.time() - t0
             if not ok:
                 self._algoTrader = None

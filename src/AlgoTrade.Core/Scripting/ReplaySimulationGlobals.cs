@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using AlgoTrade.Core.Trading;
+using AlgoTrade.Core.Trading.Core;
 
 namespace AlgoTrade.Core.Scripting
 {
@@ -18,13 +20,21 @@ namespace AlgoTrade.Core.Scripting
 
         public string SymbolName { get; }
         public string SymbolPeriod { get; }
+        public Func<SingleTrader, int, TradeSignals>? ExitRule { get; }
 
         public ReplaySimulationGlobals(List<StockData> data, int[] signalCodes, string symbolName, string symbolPeriod)
+            : this(data, signalCodes, symbolName, symbolPeriod, null)
+        {
+        }
+
+        public ReplaySimulationGlobals(List<StockData> data, int[] signalCodes, string symbolName, string symbolPeriod,
+            Func<SingleTrader, int, TradeSignals>? exitRule)
         {
             Data = data;
             SignalCodes = signalCodes;
             SymbolName = symbolName;
             SymbolPeriod = symbolPeriod;
+            ExitRule = exitRule;
         }
     }
 }

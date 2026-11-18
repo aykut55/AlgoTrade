@@ -27,18 +27,25 @@ namespace AlgoTrade.Core.Trading.Strategies.ReplayStrategies
         public override string Name => "Replay Signal Strategy";
 
         private readonly TradeSignals[] signals;
+        private readonly Func<SingleTrader, int, TradeSignals>? exitRule;
 
         public ReplaySignalStrategy(List<StockData> data, IndicatorManager indicators, TradeSignals[] signals)
+            : this(data, indicators, signals, null)
+        {
+        }
+
+        public ReplaySignalStrategy(List<StockData> data, IndicatorManager indicators, TradeSignals[] signals,
+            Func<SingleTrader, int, TradeSignals>? exitRule)
         {
             if (signals is null)
                 throw new ArgumentNullException(nameof(signals));
 
             this.signals = signals;
+            this.exitRule = exitRule;
 
             Parameters["SignalCount"] = signals.Length;
 
-            // Bu strateji saat/tarih penceresi, kar-al/zarar-kes gibi kendi mantigini
-            // uretmez - hepsi disaridan gelen dizide zaten karara baglanmis olmali.
+            // The optional exit rule is supplied by the caller.
             takeProfitExitModeEnabled = false;
             stopLossExitModeEnabled   = false;
             flatModeEnabled           = false;
@@ -71,12 +78,22 @@ namespace AlgoTrade.Core.Trading.Strategies.ReplayStrategies
             // Sinyal gate'i - diger stratejilerle AYNI kural (bkz. SimpleMAStrategy):
             // Trader.signals.*Enabled ACIKCA false ise disaridan gelen sinyal de
             // sessizce elenir, ust kademedeki enable/disable davranisindan replay de ayrik kalmasin.
-            if (signal == TradeSignals.Buy        && Trader?.signals?.AlEnabled       == false) return TradeSignals.None;
-            if (signal == TradeSignals.Sell       && Trader?.signals?.SatEnabled      == false) return TradeSignals.None;
+            if (signal == TradeSignals.Buy        && Trader?.signals?.AlEnabled       == false) signal = TradeSignals.None;
+            if (signal == TradeSignals.Sell       && Trader?.signals?.SatEnabled      == false) signal = TradeSignals.None;
             if (signal == TradeSignals.TakeProfit && Trader?.signals?.KarAlEnabled    == false) return TradeSignals.None;
             if (signal == TradeSignals.StopLoss   && Trader?.signals?.ZararKesEnabled == false) return TradeSignals.None;
             if (signal == TradeSignals.Flat       && Trader?.signals?.FlatOlEnabled   == false) return TradeSignals.None;
             if (signal == TradeSignals.Skip       && Trader?.signals?.PasGecEnabled   == false) return TradeSignals.None;
+
+            if (exitRule != null && Trader != null &&
+                (signal == TradeSignals.None || signal == TradeSignals.Buy || signal == TradeSignals.Sell))
+            {
+                TradeSignals exit = exitRule(Trader, currentIndex);
+                if (exit == TradeSignals.TakeProfit && Trader.signals.KarAlEnabled)
+                    return exit;
+                if (exit == TradeSignals.StopLoss && Trader.signals.ZararKesEnabled)
+                    return exit;
+            }
 
             return signal;
         }

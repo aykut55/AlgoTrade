@@ -1,6 +1,6 @@
 // Filter asamasi - globals: Data (List<StockData>), RawSignals (int[], Signal
 // asamasindan - 1=AL, -1=SAT, 0=yok)
-// return: int[] (filtrelenmis sinyal dizisi, Data.Count uzunlugunda)
+// return: object[] { filtrelenmis int[], Calculate icin opsiyonel cikis kurali }
 // Kodlar: 0=yok, 1=AL(Buy), -1=SAT(Sell), 3=KarAl(TakeProfit), 4=ZararKes(StopLoss),
 //         5=FlatOl, 6=PasGec(Skip)
 //
@@ -52,26 +52,87 @@ int[] ApplyPositionFilter(int[] signals, bool enabled, double minChangePct)
 //    kendi skip>flat>TP>SL>buy>sell zinciri - ResolveFilterDecisions'IN
 //    DISINDA, ondan ONCE karar verilir).
 // ============================================================================
-int[] ApplyTakeProfitStopLoss(int[] signals, bool enabled, double takeProfitPct, double stopLossPct)
-{
-    if (!enabled) return signals;
-    var result = (int[])signals.Clone();
 
-    int position = 0;        // 0 = flat, 1 = long, -1 = short
-    double entryPrice = 0.0;
-    for (int i = 0; i < result.Length; i++)
+// Build a rule here; Calculate evaluates it against the active SingleTrader.
+Func<SingleTrader, int, TradeSignals>? ApplyTakeProfitStopLoss(bool takeProfitEnabled, int takeProfitChoice, bool stopLossEnabled, int stopLossChoice)
+{
+    if (!takeProfitEnabled && !stopLossEnabled) return null;
+
+    if (takeProfitEnabled && takeProfitChoice != 99 && (takeProfitChoice < 0 || takeProfitChoice > 5))
+        throw new ArgumentOutOfRangeException(nameof(takeProfitChoice));
+
+    if (stopLossEnabled && stopLossChoice != 99 && (stopLossChoice < 0 || stopLossChoice > 5))
+        throw new ArgumentOutOfRangeException(nameof(stopLossChoice));
+
+    return (trader, barIndex) =>
     {
-        if (result[i] == BuySignal) { position = 1; entryPrice = close[i]; }
-        else if (result[i] == SellSignal) { position = -1; entryPrice = close[i]; }
-        else if (result[i] == TakeProfitSignal || result[i] == StopLossSignal || result[i] == FlatSignal) { position = 0; }
-        else if (position != 0)
+        var exits = trader.karAlZararKes;
+        if (takeProfitEnabled && trader.signals.KarAlEnabled)
         {
-            double changePct = (close[i] - entryPrice) / entryPrice * 100.0 * position;
-            if (changePct >= takeProfitPct) { result[i] = TakeProfitSignal; position = 0; }       // KarAl
-            else if (changePct <= -stopLossPct) { result[i] = StopLossSignal; position = 0; }   // ZararKes
+            int takeProfit;
+            switch (takeProfitChoice)
+            {
+                case 0:
+                    takeProfit = exits.SonFiyataGoreKarAlSeviyeHesaplaSeviyeli(barIndex, 5, 50, 1000);
+                    break;
+                case 1:
+                    takeProfit = exits.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(barIndex, 2, 10, 0.01);
+                    break;
+                case 2:
+                    takeProfit = exits.SonFiyataGoreKarAlSeviyeHesapla(barIndex, 2000.0);
+                    break;
+                case 3:
+                    takeProfit = exits.SonFiyataGoreKarAlYuzdeHesapla(barIndex, 2.0);
+                    break;
+                case 4:
+                    takeProfit = exits.KarZararFiyatSeviyesindenKarAlHesapla(barIndex, 1000.0);
+                    break;
+                case 5:
+                    takeProfit = exits.KarZararYuzdesindenKarAlHesapla(barIndex, 3.0);
+                    break;
+                default:
+                    takeProfit = 0;
+                    break;
+            }
+
+            if (takeProfit != 0)
+				return TradeSignals.TakeProfit;
         }
-    }
-    return result;
+
+        if (stopLossEnabled && trader.signals.ZararKesEnabled)
+        {
+            int stopLoss;
+            switch (stopLossChoice)
+            {
+                case 0:
+                    stopLoss = exits.SonFiyataGoreZararKesSeviyeHesaplaSeviyeli(barIndex, -1, -10, 1000);
+                    break;
+                case 1:
+                    stopLoss = exits.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(barIndex, -2, -10, 0.01);
+                    break;
+                case 2:
+                    stopLoss = exits.SonFiyataGoreZararKesSeviyeHesapla(barIndex, -1000.0);
+                    break;
+                case 3:
+                    stopLoss = exits.SonFiyataGoreZararKesYuzdeHesapla(barIndex, -1.0);
+                    break;
+                case 4:
+                    stopLoss = exits.KarZararFiyatSeviyesindenZararKesHesapla(barIndex, -500.0);
+                    break;
+                case 5:
+                    stopLoss = exits.KarZararYuzdesindenZararKesHesapla(barIndex, -2.0);
+                    break;
+                default:
+                    stopLoss = 0;
+                    break;
+            }
+
+            if (stopLoss != 0)
+				return TradeSignals.StopLoss;
+        }
+
+        return TradeSignals.None;
+    };
 }
 
 // ============================================================================
@@ -228,7 +289,7 @@ int[] signals = (int[])RawSignals.Clone();
 
 signals = ApplyPositionFilter(signals, enabled: false, minChangePct: 1.0);
 
-signals = ApplyTakeProfitStopLoss(signals, enabled: false, takeProfitPct: 2.0, stopLossPct: 1.0);
+var exitRule = ApplyTakeProfitStopLoss(takeProfitEnabled: false, takeProfitChoice: 99, stopLossEnabled: false, stopLossChoice: 99);
 
 signals = ApplyManualPositionClose(signals, enabled: false, closeAtBars: new HashSet<int>());
 
@@ -240,4 +301,4 @@ signals = ApplyWarmup(signals, enabled: false, startBarIndex: 0);
 
 signals = ApplyEquityCurveFilter(signals, enabled: false, isPercent: true, profitThreshold: 0.05, lossThreshold: -0.05, trigger: "Both");
 
-return signals;
+return new object?[] { signals, exitRule };

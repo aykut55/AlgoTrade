@@ -29,7 +29,10 @@ algoTrader.SymbolPeriod = SymbolPeriod;
 
 AppConfigApplier.ApplySingleTrader(algoTrader, appConfig.SingleTrader, AppSettings.ConfigsDir);
 
-algoTrader.ConfigureStrategy("ReplaySignalStrategy", new Dictionary<string, object> { ["signals"] = signals });
+var strategyParams = new Dictionary<string, object> { ["signals"] = signals };
+if (ExitRule != null)
+    strategyParams["exitRule"] = ExitRule;
+algoTrader.ConfigureStrategy("ReplaySignalStrategy", strategyParams);
 
 algoTrader.SingleTraderRunMode = TraderRunMode.TradeOnly;
 

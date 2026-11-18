@@ -194,26 +194,29 @@ def run_signal_script_from_file(path, net_data):
 
 def run_filter_script_from_file(path, net_data, raw_signals):
     """inputs/scripts/csharpBridge/filter.csx dosyasini (FilterScriptGlobals:
-    Data, RawSignals) calistirir. Donus: (success, filtered_signals_list_or_None, error)."""
+    Data, RawSignals) calistirir. Donus: (success, filtered_signals, exit_rule, error)."""
     _ensure_loaded()
     net_raw_signals = _DotNetSystem.Array[int]([int(s) for s in raw_signals])
     globals_ = _FilterScriptGlobals(net_data, net_raw_signals)
     ok, ret, err = run_csharp_file(path, globals_)
     if not ok:
-        return False, None, err
+        return False, None, None, err
     if ret is None:
-        return False, None, "Script bir deger dondurmedi (return signals; eksik olabilir)."
+        return False, None, None, "Script bir deger dondurmedi (return signals; eksik olabilir)."
+    exit_rule = None
+    if isinstance(ret, _DotNetSystem.Array) and ret.Length == 2 and isinstance(ret[0], _DotNetSystem.Array):
+        ret, exit_rule = ret[0], ret[1]
     try:
         signals = list(ret)
     except TypeError:
-        return False, None, "Script'in dondurdugu deger bir dizi degil (int[] donmeli)."
+        return False, None, None, "Script'in dondurdugu deger bir dizi degil (int[] donmeli)."
     if len(signals) != net_data.Count:
-        return False, None, (
+        return False, None, None, (
             f"Sinyal dizisi uzunlugu veriyle uyusmuyor: {len(signals)} != {net_data.Count}")
-    return True, [int(s) for s in signals], None
+    return True, [int(s) for s in signals], exit_rule, None
 
 
-def run_replay_from_file(path, net_data, signals, symbol_name="", symbol_period=""):
+def run_replay_from_file(path, net_data, signals, symbol_name="", symbol_period="", exit_rule=None):
     """scripts_bridge/hesapla.csx dosyasini (ReplaySimulationGlobals: Data,
     SignalCodes, SymbolName, SymbolPeriod) calistirir. Donus: (success, algoTrader, error)."""
     _ensure_loaded()
@@ -223,7 +226,8 @@ def run_replay_from_file(path, net_data, signals, symbol_name="", symbol_period=
     # bunlari dogrudan uretebilir - bkz. filter.csx Kar Al/Zarar Kes/Flat bolumleri).
     raw_codes = [_SIGNAL_CODE_TO_TRADESIGNAL.get(s, s) for s in signals]
     net_signal_codes = _DotNetSystem.Array[int](raw_codes)
-    globals_ = _ReplaySimulationGlobals(net_data, net_signal_codes, symbol_name or "", symbol_period or "")
+    args = (net_data, net_signal_codes, symbol_name or "", symbol_period or "")
+    globals_ = _ReplaySimulationGlobals(*args) if exit_rule is None else _ReplaySimulationGlobals(*args, exit_rule)
     return run_csharp_file(path, globals_)
 
 
