@@ -63,9 +63,14 @@ public class TradeDataBundleConverter
             multipleTrader.Traders, includeChildReturnOverlays);
     }
 
+    public (string bundlePath, string viewPath) ConvertSingleTrader(SingleTrader trader,
+        string outputDir, string fileBaseName, IReadOnlyDictionary<string, double[]> strategyIndicators)
+        => ConvertCore(trader, outputDir, fileBaseName, new List<SingleTrader>(),
+            includeChildReturnOverlays: false, strategyIndicatorOverride: strategyIndicators);
+
     private static (string bundlePath, string viewPath) ConvertCore(SingleTrader trader,
         string outputDir, string fileBaseName, List<SingleTrader> childTraders,
-        bool includeChildReturnOverlays)
+        bool includeChildReturnOverlays, IReadOnlyDictionary<string, double[]>? strategyIndicatorOverride = null)
     {
         if (trader == null)
             throw new ArgumentNullException(nameof(trader));
@@ -107,7 +112,7 @@ public class TradeDataBundleConverter
         AddSeries("Net Balance", lists.BakiyeFiyatNetList);
 
         var strategyIndicatorNames = new List<string>();
-        var strategyIndicators = trader.Strategy?.GetPlotIndicators();
+        var strategyIndicators = strategyIndicatorOverride ?? trader.Strategy?.GetPlotIndicators();
         if (strategyIndicators != null)
         {
             foreach (var (indicatorName, values) in strategyIndicators)

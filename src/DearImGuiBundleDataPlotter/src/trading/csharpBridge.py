@@ -109,31 +109,38 @@ def read_data_from_file(path, csv_path, last_n=0):
     """inputs/scripts/csharpBridge/readData.csx dosyasini (ReadDataScriptGlobals:
     FilePath, LastN) calistirir.
 
-    Beklenen return: object[] { data, metaSummary } - data: List<StockData>,
-    metaSummary: string (Record Time/Chart Symbol/Period/Bar Count/Start-End
-    Date/Format - 01_RunSingleTraderWithProgressAsync.csx'teki OnReadMetaData
-    ciktisiyla AYNI alanlar). Geriye donuk uyumluluk: script sadece data
-    dondururse de calisir, metaSummary "" olur.
+    Script object[] { data, metaSummary, symbolName, symbolPeriod } dondurur.
+    Eski iki elemanli sonuc ve dogrudan List<StockData> da desteklenir.
 
-    Donus: (success, netData, metaSummary, error)."""
+    Donus: (success, netData, metaSummary, symbolName, symbolPeriod, error)."""
     _ensure_loaded()
     globals_ = _ReadDataScriptGlobals(csv_path, int(last_n))
     ok, ret, err = run_csharp_file(path, globals_)
     if not ok:
-        return False, None, "", err
+        return False, None, "", "", "", err
     if ret is None:
-        return False, None, "", "Script bir deger dondurmedi."
+        return False, None, "", "", "", "Script bir deger dondurmedi."
 
     metaSummary = ""
+    symbolName = os.path.splitext(os.path.basename(csv_path))[0]
+    symbolPeriod = ""
     netData = ret
-    try:
-        items = list(ret)
-        if len(items) == 2 and hasattr(items[0], "Count"):
-            netData, metaSummary = items[0], str(items[1])
-    except TypeError:
-        pass  # ret dogrudan List<StockData> - eski format
+    if isinstance(ret, _DotNetSystem.Array) and ret.Length in (2, 4) and hasattr(ret[0], "Count"):
+        netData, metaSummary = ret[0], str(ret[1])
+        if ret.Length == 4:
+            symbolName, symbolPeriod = str(ret[2]), str(ret[3])
 
-    return True, netData, metaSummary, None
+    return True, netData, metaSummary, symbolName, symbolPeriod, None
+
+
+def _to_bridge_signal_codes(signals):
+    element_type = signals.GetType().GetElementType() if hasattr(signals, "GetType") else None
+    codes = [int(signal) for signal in signals]
+    if element_type is not None and element_type.FullName == "AlgoTrade.Core.Trading.Core.TradeSignals":
+        from AlgoTrade.Core.Trading.Core import TradeSignals
+        sell_code = int(TradeSignals.Sell)
+        return [-1 if code == sell_code else code for code in codes]
+    return codes
 
 
 def run_signal_script_from_file(path, net_data):
@@ -144,7 +151,7 @@ def run_signal_script_from_file(path, net_data):
     signals int[] (Data.Count), indicatorNames string[], indicatorValues her
     elemani bir double[] olan dizi (OHLC panelinde cizilecek AL/SAT'i ureten
     MA/indikator serileri - orn. EMA Fast/EMA Slow). Geriye donuk uyumluluk:
-    script duz bir int[] dondururse de calisir, indicators bos liste olur.
+    script TradeSignals[] veya eski int[] dondururse de calisir, indicators bos liste olur.
 
     Donus: (success, signals_list_or_None, indicators, error) - indicators:
     [(name, values_list), ...]."""
@@ -175,7 +182,7 @@ def run_signal_script_from_file(path, net_data):
             indicators = []
 
     try:
-        signals = [int(s) for s in signalsRaw]
+        signals = _to_bridge_signal_codes(signalsRaw)
     except TypeError:
         return False, None, [], "Script'in dondurdugu sinyal degeri bir dizi degil (int[] donmeli)."
 
@@ -232,9 +239,19 @@ def read_run_steps(path):
     return run_steps
 
 
-def create_bundle_from_file(path, algo_trader):
+def create_bundle_from_file(path, algo_trader, signal_indicators=()):
     _ensure_loaded()
-    ok, result, error = run_csharp_file(path, _WriteToDiskScriptGlobals(algo_trader))
+    globals_ = _WriteToDiskScriptGlobals(algo_trader)
+    if signal_indicators:
+        from System.Collections.Generic import Dictionary
+
+        double_array = _DotNetSystem.Array[_DotNetSystem.Double]
+        indicators = Dictionary[_DotNetSystem.String, double_array]()
+        for name, values in signal_indicators:
+            indicators[name] = double_array(values)
+        globals_ = _WriteToDiskScriptGlobals(algo_trader, indicators)
+
+    ok, result, error = run_csharp_file(path, globals_)
     if not ok:
         return False, [], error
     return True, [str(file_path) for file_path in result], None
@@ -314,8 +331,8 @@ def read_data(file_path, last_n=0):
 def run_signal_script(code, net_data):
     """C# script'i (Data: List<StockData> globaline karsi) calistirir.
 
-    Script 'return' ile int[] (uzunluk = net_data.Count; 1=AL, -1=SAT, 0=yok)
-    dondurmelidir. Donus: (success, signals_list_or_None, error_message_or_None).
+    Script TradeSignals[] veya eski int[] (1=AL, -1=SAT, 0=yok)
+    dondurmelidir. Dizi uzunlugu net_data.Count olmalidir. Donus: (success, signals_list_or_None, error_message_or_None).
     """
     _ensure_loaded()
 
@@ -333,7 +350,7 @@ def run_signal_script(code, net_data):
         return False, None, "Script bir deger dondurmedi (return signals; eksik olabilir)."
 
     try:
-        signals = list(result.ReturnValue)
+        signals = _to_bridge_signal_codes(result.ReturnValue)
     except TypeError:
         return False, None, "Script'in dondurdugu deger bir dizi degil (int[] donmeli)."
 
@@ -341,7 +358,7 @@ def run_signal_script(code, net_data):
         return False, None, (
             f"Sinyal dizisi uzunlugu veriyle uyusmuyor: {len(signals)} != {net_data.Count}")
 
-    return True, [int(s) for s in signals], None
+    return True, signals, None
 
 
 _BULK_EXTRACT_SCRIPT = """

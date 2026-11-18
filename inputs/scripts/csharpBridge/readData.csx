@@ -1,5 +1,5 @@
 // Read Data asamasi - globals: FilePath (string), LastN (int, 0 = Tumu)
-// return: object[] { data, metaSummary }
+// return: object[] { data, metaSummary, symbolName, symbolPeriod }
 //   data        : List<StockData>
 //   metaSummary : string (Record Time/Chart Symbol/Period/Bar Count/Start-End Date/Format)
 
@@ -145,7 +145,7 @@ object[] ReadData(string filePath, StockDataReader.FilterMode filterMode, int n1
     if (data.Count == 0)
         throw new Exception("Data bos.");
 
-    return new object[] { data, metaSummary };
+    return new object[] { data, metaSummary, Field("GrafikSembol"), Field("GrafikPeriyot") };
 }
 
 return readSettingsSource switch

@@ -8,6 +8,13 @@
 // sirayla cagrilir (asagidaki "Ana akis" bolumu). Her metod ONCEKI metodun
 // ciktisini (signals) girdi alir, kendi kopyasini yapar, dondurur.
 
+const int NoSignal = (int)TradeSignals.None;
+const int BuySignal = (int)TradeSignals.Buy;
+const int SellSignal = -1; // Bridge SAT kodu.
+const int TakeProfitSignal = (int)TradeSignals.TakeProfit;
+const int StopLossSignal = (int)TradeSignals.StopLoss;
+const int FlatSignal = (int)TradeSignals.Flat;
+
 double[] close = Data.Select(d => d.Close).ToArray();
 
 // ============================================================================
@@ -21,19 +28,19 @@ int[] ApplyPositionFilter(int[] signals, bool enabled, double minChangePct)
 
     var sigIndices = new List<int>();
     for (int i = 0; i < result.Length; i++)
-        if (result[i] == 1 || result[i] == -1) sigIndices.Add(i);
+        if (result[i] == BuySignal || result[i] == SellSignal) sigIndices.Add(i);
 
     for (int k = 1; k < sigIndices.Count; k++)
     {
         int prevIdx = sigIndices[k - 1];
         int curIdx = sigIndices[k];
-        if (result[prevIdx] == 0) continue; // onceki adimda zaten silindiyse atla
+        if (result[prevIdx] == NoSignal) continue; // onceki adimda zaten silindiyse atla
 
         double changePct = Math.Abs(close[curIdx] - close[prevIdx]) / close[prevIdx] * 100.0;
         if (changePct < minChangePct)
         {
-            result[prevIdx] = 0;  // o pozisyonun acilis sinyalini sil
-            result[curIdx] = 0;   // kapanis sinyalini de sil
+            result[prevIdx] = NoSignal;  // o pozisyonun acilis sinyalini sil
+            result[curIdx] = NoSignal;   // kapanis sinyalini de sil
         }
     }
     return result;
@@ -54,14 +61,14 @@ int[] ApplyTakeProfitStopLoss(int[] signals, bool enabled, double takeProfitPct,
     double entryPrice = 0.0;
     for (int i = 0; i < result.Length; i++)
     {
-        if (result[i] == 1) { position = 1; entryPrice = close[i]; }
-        else if (result[i] == -1) { position = -1; entryPrice = close[i]; }
-        else if (result[i] == 3 || result[i] == 4 || result[i] == 5) { position = 0; }
+        if (result[i] == BuySignal) { position = 1; entryPrice = close[i]; }
+        else if (result[i] == SellSignal) { position = -1; entryPrice = close[i]; }
+        else if (result[i] == TakeProfitSignal || result[i] == StopLossSignal || result[i] == FlatSignal) { position = 0; }
         else if (position != 0)
         {
             double changePct = (close[i] - entryPrice) / entryPrice * 100.0 * position;
-            if (changePct >= takeProfitPct) { result[i] = 3; position = 0; }       // KarAl
-            else if (changePct <= -stopLossPct) { result[i] = 4; position = 0; }   // ZararKes
+            if (changePct >= takeProfitPct) { result[i] = TakeProfitSignal; position = 0; }       // KarAl
+            else if (changePct <= -stopLossPct) { result[i] = StopLossSignal; position = 0; }   // ZararKes
         }
     }
     return result;
@@ -79,13 +86,13 @@ int[] ApplyManualPositionClose(int[] signals, bool enabled, HashSet<int> closeAt
     int position = 0;
     for (int i = 0; i < result.Length; i++)
     {
-        if (result[i] == 1) position = 1;
-        else if (result[i] == -1) position = -1;
-        else if (result[i] == 3 || result[i] == 4 || result[i] == 5) position = 0;
+        if (result[i] == BuySignal) position = 1;
+        else if (result[i] == SellSignal) position = -1;
+        else if (result[i] == TakeProfitSignal || result[i] == StopLossSignal || result[i] == FlatSignal) position = 0;
 
         if (closeAtBars.Contains(i) && position != 0)
         {
-            result[i] = 5; // FlatOl
+            result[i] = FlatSignal; // FlatOl
             position = 0;
         }
     }
@@ -105,15 +112,15 @@ int[] ApplyEndOfDayClose(int[] signals, bool enabled)
     int position = 0; // 0 = flat, 1 = long, -1 = short
     for (int i = 0; i < result.Length; i++)
     {
-        if (result[i] == 1) position = 1;
-        else if (result[i] == -1) position = -1;
-        else if (result[i] == 3 || result[i] == 4 || result[i] == 5) position = 0;
+        if (result[i] == BuySignal) position = 1;
+        else if (result[i] == SellSignal) position = -1;
+        else if (result[i] == TakeProfitSignal || result[i] == StopLossSignal || result[i] == FlatSignal) position = 0;
 
         bool isLastBarOfDay = (i == result.Length - 1) ||
             Data[i + 1].DateTime.Date != Data[i].DateTime.Date;
-        if (position != 0 && isLastBarOfDay && result[i] == 0)
+        if (position != 0 && isLastBarOfDay && result[i] == NoSignal)
         {
-            result[i] = 5; // FlatOl
+            result[i] = FlatSignal; // FlatOl
             position = 0;
         }
     }
@@ -134,10 +141,10 @@ int[] ApplyTimeWindow(int[] signals, bool enabled, TimeSpan windowStart, TimeSpa
 
     for (int i = 0; i < result.Length; i++)
     {
-        if (result[i] != 1 && result[i] != -1) continue;
+        if (result[i] != BuySignal && result[i] != SellSignal) continue;
         var timeOfDay = Data[i].DateTime.TimeOfDay;
         bool inWindow = timeOfDay >= windowStart && timeOfDay < windowEnd;
-        if (!inWindow) result[i] = 0;
+        if (!inWindow) result[i] = NoSignal;
     }
     return result;
 }
@@ -151,7 +158,7 @@ int[] ApplyWarmup(int[] signals, bool enabled, int startBarIndex)
     if (!enabled) return signals;
     var result = (int[])signals.Clone();
     for (int i = 0; i < result.Length && i < startBarIndex; i++)
-        result[i] = 0;
+        result[i] = NoSignal;
     return result;
 }
 
@@ -174,12 +181,12 @@ int[] ApplyEquityCurveFilter(int[] signals, bool enabled, bool isPercent,
 
     for (int i = 0; i < result.Length; i++)
     {
-        if (result[i] == 1 || result[i] == -1)
+        if (result[i] == BuySignal || result[i] == SellSignal)
         {
-            int newPosition = result[i] == 1 ? 1 : -1;
+            int newPosition = result[i] == BuySignal ? 1 : -1;
             if (!confirmed && position != 0 && newPosition != position)
             {
-                result[i] = 0; // onceki pozisyon henuz onaylanmadi - yon degisimini blokla
+                result[i] = NoSignal; // onceki pozisyon henuz onaylanmadi - yon degisimini blokla
                 continue;
             }
             position = newPosition;
@@ -187,7 +194,7 @@ int[] ApplyEquityCurveFilter(int[] signals, bool enabled, bool isPercent,
             confirmed = false;
             continue;
         }
-        if (result[i] == 3 || result[i] == 4 || result[i] == 5)
+        if (result[i] == TakeProfitSignal || result[i] == StopLossSignal || result[i] == FlatSignal)
         {
             position = 0;
             confirmed = false;
@@ -220,11 +227,17 @@ int[] ApplyEquityCurveFilter(int[] signals, bool enabled, bool isPercent,
 int[] signals = (int[])RawSignals.Clone();
 
 signals = ApplyPositionFilter(signals, enabled: false, minChangePct: 1.0);
+
 signals = ApplyTakeProfitStopLoss(signals, enabled: false, takeProfitPct: 2.0, stopLossPct: 1.0);
+
 signals = ApplyManualPositionClose(signals, enabled: false, closeAtBars: new HashSet<int>());
+
 signals = ApplyEndOfDayClose(signals, enabled: false);
+
 signals = ApplyTimeWindow(signals, enabled: false, windowStart: TimeSpan.FromHours(10), windowEnd: TimeSpan.FromHours(18));
+
 signals = ApplyWarmup(signals, enabled: false, startBarIndex: 0);
+
 signals = ApplyEquityCurveFilter(signals, enabled: false, isPercent: true, profitThreshold: 0.05, lossThreshold: -0.05, trigger: "Both");
 
 return signals;

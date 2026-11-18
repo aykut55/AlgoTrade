@@ -51,6 +51,8 @@ class CSharpBridgePanel:
         self._dockWindow = None
 
         self._filePath = DEFAULT_CSV_PATH
+        self._symbolName = ""
+        self._symbolPeriod = ""
         self._lastN = 0  # 0 = Tumu (FilterMode.All)
         self._statusText = ""
 
@@ -60,6 +62,7 @@ class CSharpBridgePanel:
         self._signalIndicators = []  # Signal asamasindan - OHLC uzerine cizilecek MA/indikator serileri
 
         self._algoTrader = None
+        self._bundleIndicators = ()
         self._replaySummary = None
 
         self._ohlcPanel = None
@@ -92,15 +95,20 @@ class CSharpBridgePanel:
     # -------------------------------------------------------------- render
     def renderDockContent(self):
         self._advanceRun()
+        if imgui.begin_tab_bar("csharp_bridge_tabs"):
+            opened, _ = imgui.begin_tab_item("SingleTrader")
+            if opened:
+                self._renderSingleTraderPage()
+                imgui.end_tab_item()
+            imgui.end_tab_bar()
+
+    def _renderSingleTraderPage(self):
         running = self._runSteps is not None
         imgui.begin_disabled(running)
         imgui.text("1) Read Data")
         imgui.text_disabled(READ_DATA_SCRIPT_PATH)
-        imgui.set_next_item_width(-80)
+        imgui.set_next_item_width(-1)
         _, self._filePath = imgui.input_text("##csvPath", self._filePath)
-        imgui.same_line()
-        imgui.set_next_item_width(70)
-        _, self._lastN = imgui.input_int("Bar (0=Tumu)##lastN", self._lastN, 0)
         if imgui.button("Open##openReadData"):
             _openInEditor(READ_DATA_SCRIPT_PATH)
         imgui.same_line()
@@ -291,7 +299,7 @@ class CSharpBridgePanel:
         step = next(self._runSteps, None)
         if step is None:
             self._runSteps = None
-            self._setStatus("Run OK. " + self._statusText)
+            self._setStatus("Run OK.")
             return
 
         name, action = step
@@ -304,7 +312,7 @@ class CSharpBridgePanel:
         self._setStatus("Okunuyor...")
         t0 = time.time()
         try:
-            ok, netData, metaSummary, error = csharpBridge.read_data_from_file(
+            ok, netData, metaSummary, symbolName, symbolPeriod, error = csharpBridge.read_data_from_file(
                 READ_DATA_SCRIPT_PATH, self._filePath, self._lastN)
             elapsed = time.time() - t0
             if not ok:
@@ -312,6 +320,7 @@ class CSharpBridgePanel:
                 self._setStatus(f"Read Data HATA ({elapsed:.2f}s):\n{error}")
                 return
             self._netData = netData
+            self._symbolName, self._symbolPeriod = symbolName, symbolPeriod
             self._rawSignals = None
             self._signals = None
             self._signalIndicators = []
@@ -395,7 +404,6 @@ class CSharpBridgePanel:
         t0 = time.time()
         try:
             opens, highs, lows, closes, volumes, sizes, timestamps = csharpBridge.to_ohlc_lists(self._netData)
-            symbol = os.path.splitext(os.path.basename(self._filePath))[0]
             # Calculate asamasi calistirilmissa (self._algoTrader dolu) PnL/Return
             # serilerini de cikar - Plot script'i bunlari gorup zengin panel seti
             # (PnL/PnL%/Return/Return%) kurabilir; yoksa None (Plot script primitif
@@ -404,7 +412,7 @@ class CSharpBridgePanel:
             bridge = types.SimpleNamespace(
                 opens=opens, highs=highs, lows=lows, closes=closes,
                 volumes=volumes, sizes=sizes, timestamps=timestamps,
-                signals=signals[:len(closes)], symbol=symbol, period="",
+                signals=signals[:len(closes)], symbol=self._symbolName, period=self._symbolPeriod,
                 trader=self._algoTrader, traderSeries=traderSeries,
                 signalIndicators=self._signalIndicators)
 
@@ -439,9 +447,8 @@ class CSharpBridgePanel:
         self._setStatus("Gercek simulasyon calistiriliyor (ReplaySignalStrategy)...")
         t0 = time.time()
         try:
-            symbol = os.path.splitext(os.path.basename(self._filePath))[0]
             ok, algoTrader, error = csharpBridge.run_replay_from_file(
-                CALCULATE_SCRIPT_PATH, self._netData, signals, symbol, "")
+                CALCULATE_SCRIPT_PATH, self._netData, signals, self._symbolName, self._symbolPeriod)
             elapsed = time.time() - t0
             if not ok:
                 self._algoTrader = None
@@ -449,6 +456,7 @@ class CSharpBridgePanel:
                 self._setStatus(f"Calculate HATA ({elapsed:.2f}s):\n{error}")
                 return
             self._algoTrader = algoTrader
+            self._bundleIndicators = tuple(self._signalIndicators)
             self._replaySummary = csharpBridge.get_replay_summary(algoTrader)
             self._setStatus(f"Calculate OK ({elapsed:.2f}s): {self._replaySummaryLabel()}")
             return True
@@ -506,13 +514,15 @@ class CSharpBridgePanel:
             self._setStatus("Once Calculate calistirin.")
             return
 
+        signalIndicators = self._bundleIndicators
         self._setStatus("Bundle dosyalari olusturuluyor...")
         self._writeSucceeded = False
         started = time.perf_counter()
 
         def worker():
             try:
-                ok, paths, error = csharpBridge.create_bundle_from_file(BUNDLE_SCRIPT_PATH, algoTrader)
+                ok, paths, error = csharpBridge.create_bundle_from_file(
+                    BUNDLE_SCRIPT_PATH, algoTrader, signalIndicators)
                 if not ok:
                     self._setStatus(f"Bundle HATA: {error}")
                     return

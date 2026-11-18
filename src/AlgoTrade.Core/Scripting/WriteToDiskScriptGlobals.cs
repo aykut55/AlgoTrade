@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using AlgoTrade.Core.Trading;
 
 namespace AlgoTrade.Core.Scripting
@@ -11,10 +12,17 @@ namespace AlgoTrade.Core.Scripting
     public class WriteToDiskScriptGlobals
     {
         public AlgoTrader Trader { get; }
+        public IReadOnlyDictionary<string, double[]>? StrategyIndicators { get; }
 
         public WriteToDiskScriptGlobals(AlgoTrader trader)
+            : this(trader, null)
+        {
+        }
+
+        public WriteToDiskScriptGlobals(AlgoTrader trader, IReadOnlyDictionary<string, double[]>? strategyIndicators)
         {
             Trader = trader;
+            StrategyIndicators = strategyIndicators;
         }
     }
 }

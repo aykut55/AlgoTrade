@@ -2,6 +2,9 @@
 using AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 
 var converter = new TradeDataBundleConverter();
-var (bundlePath, viewPath) = converter.ConvertSingleTrader(
-    Trader.SingleTrader, AppSettings.LogsDir, fileBaseName: "SingleTraderBundle");
+
+var (bundlePath, viewPath) = StrategyIndicators is null
+    ? converter.ConvertSingleTrader(Trader.SingleTrader, AppSettings.LogsDir, "SingleTraderBundle")
+    : converter.ConvertSingleTrader(Trader.SingleTrader, AppSettings.LogsDir, "SingleTraderBundle", StrategyIndicators);
+
 return new[] { bundlePath, viewPath };

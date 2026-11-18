@@ -77,7 +77,6 @@ class App:
         scriptWindow = hello_imgui.DockableWindow(
             "Script Panel", "RightDockSpace", self.guiManager.scriptPanel.renderDockContent,
             self.guiManager.scriptPanel.getVisible(), True)
-        scriptWindow.focus_window_at_next_frame = True
         dataManagerWindow = hello_imgui.DockableWindow(
             "Data Manager", "RightDockSpace", self.guiManager.dataManager.renderDockContent,
             self.guiManager.dataManager.getVisible(), True)
@@ -102,6 +101,9 @@ class App:
         csharpBridgeWindow = hello_imgui.DockableWindow(
             "C# Bridge", "RightDockSpace", self.guiManager.csharpBridgePanel.renderDockContent,
             self.guiManager.csharpBridgePanel.getVisible(), True)
+        csharpBridgeStart = "--empty" in sys.argv
+        scriptWindow.focus_window_at_next_frame = not csharpBridgeStart
+        csharpBridgeWindow.focus_window_at_next_frame = csharpBridgeStart
         swingControlsWindow = hello_imgui.DockableWindow(
             "Swing Controls", "SwingDockSpace",
             self.guiManager.swingAnnotationController.renderDockContent,
@@ -122,9 +124,9 @@ class App:
         runnerParams.docking_params.docking_splits = [
             topSplit, leftSplit, rightSplit, swingSplit, consoleSplit]
         runnerParams.docking_params.dockable_windows = [
-            topWindow, mainWindow, leftWindow, scriptWindow, dataManagerWindow,
+            topWindow, mainWindow, leftWindow, csharpBridgeWindow, scriptWindow, dataManagerWindow,
             poolWindow, panelManagerWindow, panelManagerWindow2, reportsWindow, report2Window,
-            measureWindow, csharpBridgeWindow, swingControlsWindow, consoleWindow]
+            measureWindow, swingControlsWindow, consoleWindow]
         runnerParams.docking_params.layout_condition = \
             hello_imgui.DockingLayoutCondition.application_start
 
