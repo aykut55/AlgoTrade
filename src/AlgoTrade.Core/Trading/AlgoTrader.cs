@@ -2866,6 +2866,21 @@ public class AlgoTrader : MarketDataProvider, IDisposable
 
             // Kombinasyonlari uret
             singleTraderOptimizer.GenerateParameterCombinations();
+
+            Log("");
+            Log("Sutun aciklamalari:");
+            Log("  Net Score           : Net Return % / MaxDD (risk-ayarli skor; CSV/TXT siralamasi bu degil, Net Return % kullanir)");
+            Log("  Net Return %        : Net getiri % (komisyon dahil) - ana metrik");
+            Log("  Gross Return %      : Brut getiri % (komisyon haric)");
+            Log("  Score Return %      : Puan bazli getiri % (TL degil, index puani cinsinden)");
+            Log("  Trades              : Toplam islem sayisi");
+            Log("  Win%                : Karli islem orani %");
+            Log("  PFNet               : Net Profit Factor = toplam net kar / toplam net zarar (komisyon dahil)");
+            Log("  GetiriMaxDD(Net) %  : Maksimum drawdown % - NET (komisyon dahil equity curve, gercek risk)");
+            Log("  GetiriMaxDD(Brut) % : Maksimum drawdown % - BRUT (komisyonsuz equity curve, referans)");
+            Log("  Comm Count          : Komisyon kesilen islem sayisi (genelde Trades ile ayni)");
+            Log("  Commission          : Toplam odenen komisyon (TL)");
+            Log("  ExecTime(ms)        : Bu kombinasyonun calisma suresi (ms)");
             Log("");
             Log($"Total combinations: {singleTraderOptimizer.AllCombinations.Count}");
 

@@ -782,12 +782,12 @@
   "SingleTraderOptimizer": {
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
-      "Name": "SimpleMAStrategy",
+      "Name": "SimpleSuperTrendStrategy",
       "Version": "v1"
     },
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
-      "Name": "SimpleMAStrategy",
+      "Name": "SimpleSuperTrendStrategy",
       "Version": "v1"
     },
     "Range": {
@@ -812,7 +812,7 @@
     "Signals": {
       "AlEnabled": true,
       "SatEnabled": true,
-      "FlatOlEnabled": true,
+      "FlatOlEnabled": false,
       "PasGecEnabled": false,
       "KarAlEnabled": false,
       "ZararKesEnabled": false,

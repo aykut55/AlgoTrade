@@ -63,7 +63,8 @@ public class OptimizationResult
     public double WinRate         => TryGetD("WinRate");
     public double ProfitFactor    => TryGetD("ProfitFactor");
     public double ProfitFactorNet => TryGetD("ProfitFactorNet");
-    public double MaxDrawdown     => TryGetD("MaxDrawdown");
+    public double MaxDrawdown     => TryGetD("GetiriMaxDDYuzde(Brut)");
+    public double MaxDrawdownNet  => TryGetD("GetiriMaxDDYuzde(Net)");
     public double ScoreFiyatNet   => TryGetD("ScoreFiyatNet");
     public double ScoreFiyat      => TryGetD("ScoreFiyat");
     public double ScorePuan       => TryGetD("ScorePuan");
@@ -622,8 +623,6 @@ public class SingleTraderOptimizer : IDisposable
         if (writeHeader)
         {
             sw.WriteLine($"OPTIMIZATION RESULTS - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
-            if (Data.Count > 0)
-                sw.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
             sw.WriteLine("".PadRight(1360, '='));
 
             var headerParts = new List<string>();
@@ -776,6 +775,12 @@ public class SingleTraderOptimizer : IDisposable
         using var sw = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8);
 
         // Header
+        if (Data.Count > 0)
+        {
+            double toplamGun = (Data[^1].DateTime - Data[0].DateTime).TotalDays;
+            sw.WriteLine($"# BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss} | {(toplamGun / 365.25).ToString("F1", CultureInfo.InvariantCulture)} Yil | {toplamGun:F0} Gun");
+        }
+
         var first = sorted[0].Result;
         var headerParts = new List<string> { "CombNo" };
         foreach (var key in first.Parameters.Keys) headerParts.Add(key);
@@ -808,7 +813,10 @@ public class SingleTraderOptimizer : IDisposable
 
         sw.WriteLine($"OPTIMIZATION RESULTS (sorted by {sortField}) - {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         if (Data.Count > 0)
-            sw.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
+        {
+            double toplamGun = (Data[^1].DateTime - Data[0].DateTime).TotalDays;
+            sw.WriteLine($"BarSayisi: {Data.Count}  |  {Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {Data[^1].DateTime:yyyy.MM.dd HH:mm:ss} | {(toplamGun / 365.25).ToString("F1", CultureInfo.InvariantCulture)} Yil | {toplamGun:F0} Gun");
+        }
         sw.WriteLine("".PadRight(1360, '='));
 
         var headerParts = new List<string> { "CombNo".PadLeft(8) };

@@ -282,15 +282,15 @@
           {"field": "MaxKarPuanIndex",                "header": "MaxKarPuanIndex",                "width": 15, "enabled": true},
           {"field": "MaxZararPuanIndex",              "header": "MaxZararPuanIndex",              "width": 17, "enabled": true},
 
-          {"field": "GetiriMaxDDPuan",                "header": "GetiriMaxDDPuan",                "width": 15, "enabled": true},
+          {"field": "GetiriMaxDDPuan",                "header": "GetiriMaxDDPuanYuzde",           "width": 20, "enabled": true},
           {"field": "GetiriMaxDDPuanTarih",           "header": "GetiriMaxDDPuanTarih",           "width": 20, "enabled": true},
           {"field": "GetiriMaxKayipPuan",             "header": "GetiriMaxKayipPuan",             "width": 18, "enabled": true},
 
-          {"field": "GetiriMaxDD",                    "header": "GetiriMaxDD",                    "width": 12, "enabled": true},
+          {"field": "GetiriMaxDD",                    "header": "GetiriMaxDDYuzde(Brut)",         "width": 22, "enabled": true},
           {"field": "GetiriMaxDDTarih",               "header": "GetiriMaxDDTarih",               "width": 20, "enabled": true},
           {"field": "GetiriMaxKayip",                 "header": "GetiriMaxKayip",                 "width": 14, "enabled": true},
 
-          {"field": "GetiriMaxDDNet",                 "header": "GetiriMaxDDNet",                 "width": 15, "enabled": true},
+          {"field": "GetiriMaxDDNet",                 "header": "GetiriMaxDDYuzde(Net)",          "width": 21, "enabled": true},
           {"field": "GetiriMaxDDNetTarih",            "header": "GetiriMaxDDNetTarih",            "width": 20, "enabled": true},
           {"field": "GetiriMaxKayipNet",              "header": "GetiriMaxKayipNet",              "width": 17, "enabled": true},
 
@@ -607,15 +607,15 @@
         {"field": "MaxKarPuanIndex",                "header": "MaxKarPuanIndex",                "width": 15, "enabled": true},
         {"field": "MaxZararPuanIndex",              "header": "MaxZararPuanIndex",              "width": 17, "enabled": true},
 
-        {"field": "GetiriMaxDDPuan",                "header": "GetiriMaxDDPuan",                "width": 15, "enabled": true},
+        {"field": "GetiriMaxDDPuan",                "header": "GetiriMaxDDPuanYuzde",           "width": 20, "enabled": true},
         {"field": "GetiriMaxDDPuanTarih",           "header": "GetiriMaxDDPuanTarih",           "width": 20, "enabled": true},
         {"field": "GetiriMaxKayipPuan",             "header": "GetiriMaxKayipPuan",             "width": 18, "enabled": true},
 
-        {"field": "GetiriMaxDD",                    "header": "GetiriMaxDD",                    "width": 12, "enabled": true},
+        {"field": "GetiriMaxDD",                    "header": "GetiriMaxDDYuzde(Brut)",         "width": 22, "enabled": true},
         {"field": "GetiriMaxDDTarih",               "header": "GetiriMaxDDTarih",               "width": 20, "enabled": true},
         {"field": "GetiriMaxKayip",                 "header": "GetiriMaxKayip",                 "width": 14, "enabled": true},
 
-        {"field": "GetiriMaxDDNet",                 "header": "GetiriMaxDDNet",                 "width": 15, "enabled": true},
+        {"field": "GetiriMaxDDNet",                 "header": "GetiriMaxDDYuzde(Net)",          "width": 21, "enabled": true},
         {"field": "GetiriMaxDDNetTarih",            "header": "GetiriMaxDDNetTarih",            "width": 20, "enabled": true},
         {"field": "GetiriMaxKayipNet",              "header": "GetiriMaxKayipNet",              "width": 17, "enabled": true},
 
@@ -807,7 +807,8 @@
 
         {"field": "NetProfit",                      "header": "NetProfit",                      "width": 12, "enabled": false},
         {"field": "WinRate",                        "header": "WinRate",                        "width": 10, "enabled": false},
-        {"field": "MaxDrawdown",                    "header": "MaxDrawdown",                    "width": 12, "enabled": false},
+        {"field": "GetiriMaxDDYuzde(Brut)",          "header": "GetiriMaxDDYuzde(Brut)",         "width": 22, "enabled": false},
+        {"field": "GetiriMaxDDYuzde(Net)",           "header": "GetiriMaxDDYuzde(Net)",          "width": 21, "enabled": false},
 
         {"field": "LastExecutionTimeInMSec",        "header": "ExecTime(ms)",                   "width": 12, "enabled": true}
       ]

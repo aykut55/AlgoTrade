@@ -1,50 +1,35 @@
 {
   "Strategy": {
-    "StrategyName": "SimpleMAStrategy",
+    "StrategyName": "SimpleSuperTrendStrategy",
     "Version": "v1",
     "DisplayName": "Default",
     "Parameters": {
-      "fastPeriod": 10,
-      "slowPeriod": 20,
-      "fastMaMethod": "SIMPLE",
-      "slowMaMethod": "SIMPLE",
+      "period": 10,
+      "multiplier": 3,
       "priceSource": "Close",
       "signalModeIndex": 0
     }
   },
   "Optimization": {
-    "StrategyName": "SimpleMAStrategy",
+    "StrategyName": "SimpleSuperTrendStrategy",
     "Version": "v1",
     "DisplayName": "Opt",
     "ParameterRanges": [
       {
-        "Name": "fastMaMethod",
-        "Min": 0,
-        "Max": 2,
-        "Step": 1
-      },
-      {
-        "Name": "slowMaMethod",
-        "Min": 0,
-        "Max": 2,
-        "Step": 1
-      },
-      {
-        "Name": "fastPeriod",
+        "Name": "period",
         "Min": 5,
-        "Max": 20,
-        "Step": 5
+        "Max": 50,
+        "Step": 1
       },
       {
-        "Name": "slowPeriod",
-        "Min": 20,
-        "Max": 60,
-        "Step": 10
+        "Name": "multiplier",
+        "Min": 0.5,
+        "Max": 5,
+        "Step": 0.25
       }
     ],
     "FixedParameters": {
-      "priceSource": "Close",
-      "signalModeIndex": 0
+      "priceSource": "Close"
     }
   },
   "Range": {
@@ -71,9 +56,10 @@
     "PyramidingEnabled": false
   },
   "Signals": {
+    "TimeFilterMode": 1,
     "AlEnabled": true,
     "SatEnabled": true,
-    "FlatOlEnabled": true,
+    "FlatOlEnabled": false,
     "PasGecEnabled": false,
     "KarAlEnabled": false,
     "ZararKesEnabled": false,

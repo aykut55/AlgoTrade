@@ -33,6 +33,7 @@
     "PyramidingEnabled": false
   },
   "Signals": {
+    "TimeFilterMode": 2,
     "AlEnabled": true,
     "SatEnabled": true,
     "FlatOlEnabled": true,
@@ -41,8 +42,8 @@
     "ZararKesEnabled": false,
     "GunSonuPozKapatEnabled": false,
     "TimeFilteringEnabled": false,
-    "StartDateTime": "2025.05.25 09:35:00",
-    "StopDateTime": "2025.06.02 17:55:00",
+    "StartDateTime": "2026.10.01 00:00:00",
+    "StopDateTime": "2026.10.24 00:00:00",
     "TradeStartBarIndexEnabled": false,
     "TradeStartBarIndex": 0
   },

@@ -2383,7 +2383,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{KomisyonFiyat,10:F2} | " +
                        $"{ProfitFactor,8:F2} | " +
                        $"{ProfitFactorNet,8:F2} | " +
-                       $"{GetiriMaxDD,10:F2} | " +
+                       $"{GetiriMaxDDNet,17:F2} | " +
+                       $"{GetiriMaxDD,18:F2} | " +
                        $"{KarliIslemOrani,10:F2}";
             }
 
@@ -2408,7 +2409,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{"Komisyon",10} | " +
                        $"{"ProfitF",8} | " +
                        $"{"ProfitFNet",8} | " +
-                       $"{"MaxDD%",10} | " +
+                       $"{"GetiriMaxDD(Net)%",17} | " +
+                       $"{"GetiriMaxDD(Brut)%",18} | " +
                        $"{"KarliOran",10}";
             }
 
@@ -2443,7 +2445,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             OptimizationResultsMap["WinRate"]                  = KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture);
             OptimizationResultsMap["ProfitFactor"]             = ProfitFactor.ToString("F2", CultureInfo.InvariantCulture);
             OptimizationResultsMap["ProfitFactorNet"]          = ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture);
-            OptimizationResultsMap["MaxDrawdown"]              = GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["GetiriMaxDDYuzde(Brut)"]   = GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture);
+            OptimizationResultsMap["GetiriMaxDDYuzde(Net)"]    = GetiriMaxDDNet.ToString("F2", CultureInfo.InvariantCulture);
 
             // Bakiye
             OptimizationResultsMap["IlkBakiyeFiyat"]           = IlkBakiyeFiyat.ToString("F2", CultureInfo.InvariantCulture);
@@ -2494,7 +2497,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {"Trades".PadLeft(6)}");
             sb.Append($" | {"Win%".PadLeft(7)}");
             sb.Append($" | {"PFNet".PadLeft(7)}");
-            sb.Append($" | {"MaxDD".PadLeft(9)}");
+            sb.Append($" | {"GetiriMaxDD(Net) %".PadLeft(18)}");
+            sb.Append($" | {"GetiriMaxDD(Brut) %".PadLeft(19)}");
             sb.Append($" | {"Comm Count".PadLeft(10)}");
             sb.Append($" | {"Commission".PadLeft(10)}");
             sb.Append($" | {"ExecTime(ms)".PadLeft(12)}");
@@ -2524,7 +2528,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             sb.Append($" | {IslemSayisi.ToString().PadLeft(6)}");
             sb.Append($" | {KarliIslemOrani.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
             sb.Append($" | {ProfitFactorNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(7)}");
-            sb.Append($" | {GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture).PadLeft(9)}");
+            sb.Append($" | {GetiriMaxDDNet.ToString("F2", CultureInfo.InvariantCulture).PadLeft(18)}");
+            sb.Append($" | {GetiriMaxDD.ToString("F2", CultureInfo.InvariantCulture).PadLeft(19)}");
             sb.Append($" | {KomisyonIslemSayisi.ToString().PadLeft(10)}");
             sb.Append($" | {KomisyonFiyat.ToString("F2", CultureInfo.InvariantCulture).PadLeft(10)}");
             sb.Append($" | {LastExecutionTimeInMSec.ToString().PadLeft(12)}");
@@ -2910,8 +2915,11 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double ProfitFactorNet;
             public double KarliIslemOrani;
             public double GetiriMaxDD;
+            public double GetiriMaxDDNet;
             public double GetiriMaxKayip;
+            public double GetiriMaxKayipNet;
             public string GetiriMaxDDTarih;
+            public string GetiriMaxDDNetTarih;
             public double ScoreFiyatNet;
             public double ScoreFiyat;
             public double ScorePuan;
@@ -2941,7 +2949,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        "BakiyeFiyatNet;GetiriFiyatNet;GetiriFiyatYuzdeNet;" +
                        "MinBakiyeFiyat;MaxBakiyeFiyat;MinBakiyeFiyatYuzde;MaxBakiyeFiyatYuzde;MinBakiyePuanYuzde;MaxBakiyePuanYuzde;" +
                        "MinBakiyeFiyatNet;MaxBakiyeFiyatNet;MinBakiyeFiyatNetYuzde;MaxBakiyeFiyatNetYuzde;" +
-                       "ProfitFactor;ProfitFactorPuan;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;ScoreFiyatNet;ScoreFiyat;ScorePuan;" +
+                       "ProfitFactor;ProfitFactorPuan;ProfitFactorNet;KarliIslemOrani;GetiriMaxDD;GetiriMaxKayip;GetiriMaxDDTarih;GetiriMaxDDNet;GetiriMaxKayipNet;GetiriMaxDDNetTarih;ScoreFiyatNet;ScoreFiyat;ScorePuan;" +
                        "VarlikAdedSayisi;VarlikAdedSayisiMicro;SonVarlikAdedSayisi;SonVarlikAdedSayisiMicro;KomisyonCarpan;" +
                        "MicroLotSizeEnabled;PyramidingEnabled;MaxPositionSizeEnabled";
             }
@@ -2961,7 +2969,7 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{BakiyeFiyatNet:F2};{GetiriFiyatNet:F2};{GetiriFiyatYuzdeNet:F2};" +
                        $"{MinBakiyeFiyat:F2};{MaxBakiyeFiyat:F2};{MinBakiyeFiyatYuzde:F2};{MaxBakiyeFiyatYuzde:F2};{MinBakiyePuanYuzde:F2};{MaxBakiyePuanYuzde:F2};" +
                        $"{MinBakiyeFiyatNet:F2};{MaxBakiyeFiyatNet:F2};{MinBakiyeFiyatNetYuzde:F2};{MaxBakiyeFiyatNetYuzde:F2};" +
-                       $"{ProfitFactor:F2};{ProfitFactorPuan:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};{ScoreFiyatNet:F2};{ScoreFiyat:F2};{ScorePuan:F2};" +
+                       $"{ProfitFactor:F2};{ProfitFactorPuan:F2};{ProfitFactorNet:F2};{KarliIslemOrani:F2};{GetiriMaxDD:F2};{GetiriMaxKayip:F2};{GetiriMaxDDTarih};{GetiriMaxDDNet:F2};{GetiriMaxKayipNet:F2};{GetiriMaxDDNetTarih};{ScoreFiyatNet:F2};{ScoreFiyat:F2};{ScorePuan:F2};" +
                        $"{VarlikAdedSayisi:F2};{VarlikAdedSayisiMicro:F4};{SonVarlikAdedSayisi:F2};{SonVarlikAdedSayisiMicro:F4};{KomisyonCarpan:F4};" +
                        $"{MicroLotSizeEnabled};{PyramidingEnabled};{MaxPositionSizeEnabled}";
             }
@@ -2987,7 +2995,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{KomisyonFiyat,10:F2} | " +
                        $"{ProfitFactor,8:F2} | " +
                        $"{ProfitFactorNet,8:F2} | " +
-                       $"{GetiriMaxDD,10:F2} | " +
+                       $"{GetiriMaxDDNet,17:F2} | " +
+                       $"{GetiriMaxDD,18:F2} | " +
                        $"{KarliIslemOrani,10:F2} | " +
                        $"{ScoreFiyatNet,10:F2} | " +
                        $"{ScoreFiyat,10:F2} | " +
@@ -3015,7 +3024,8 @@ namespace AlgoTrade.Core.Trading.Statistics
                        $"{"Komisyon",10} | " +
                        $"{"ProfitF",8} | " +
                        $"{"ProfitFNet",8} | " +
-                       $"{"MaxDD%",10} | " +
+                       $"{"GetiriMaxDD(Net)%",17} | " +
+                       $"{"GetiriMaxDD(Brut)%",18} | " +
                        $"{"KarliOran",10} | " +
                        $"{"ScoreNet",10} | " +
                        $"{"ScoreFiyat",10} | " +
@@ -3104,8 +3114,11 @@ namespace AlgoTrade.Core.Trading.Statistics
                 ProfitFactorNet = ProfitFactorNet,
                 KarliIslemOrani = KarliIslemOrani,
                 GetiriMaxDD = GetiriMaxDD,
+                GetiriMaxDDNet = GetiriMaxDDNet,
                 GetiriMaxKayip = GetiriMaxKayip,
+                GetiriMaxKayipNet = GetiriMaxKayipNet,
                 GetiriMaxDDTarih = GetiriMaxDDTarih ?? "...",
+                GetiriMaxDDNetTarih = GetiriMaxDDNetTarih ?? "...",
                 ScoreFiyatNet = ScoreFiyatNet,
                 ScoreFiyat = ScoreFiyat,
                 ScorePuan = ScorePuan,
