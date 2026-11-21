@@ -1,16 +1,13 @@
 {
   "RunMode": "TradeOnly",
   "Strategy": {
-    "StrategyName": "SimpleMAStrategy",
+    "StrategyName": "SimpleSuperTrendStrategy",
     "Version": "v1",
     "DisplayName": "Default",
     "Parameters": {
-      "fastPeriod": 10,
-      "slowPeriod": 20,
-      "fastMaMethod": "SIMPLE",
-      "slowMaMethod": "SIMPLE",
-      "priceSource": "Close",
-      "signalModeIndex": 0
+      "period": 10,
+      "multiplier": 3,
+      "priceSource": "Close"
     }
   },
   "EquityCurveFilter": {
@@ -37,9 +34,9 @@
     "AlEnabled": true,
     "SatEnabled": true,
     "FlatOlEnabled": true,
-    "PasGecEnabled": false,
-    "KarAlEnabled": false,
-    "ZararKesEnabled": false,
+    "PasGecEnabled": true,
+    "KarAlEnabled": true,
+    "ZararKesEnabled": true,
     "GunSonuPozKapatEnabled": false,
     "TimeFilteringEnabled": false,
     "StartDateTime": "2026.10.01 00:00:00",

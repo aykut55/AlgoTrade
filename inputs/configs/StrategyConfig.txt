@@ -9,8 +9,14 @@ SimpleRSIStrategy|v1|Default|period:int:14|oversold:double:30|overbought:double:
 SimpleRSIStrategy|v2|MidlineCross|period:int:14|oversold:double:30|overbought:double:70|priceSource:string:Close|signalModeIndex:int:1
 SimpleOTTStrategy|v1|Default|period:int:2|percent:double:1.4|ottMaMethod:string:VIDYA|priceSource:string:Close|signalModeIndex:int:0
 SimpleOTTStrategy|v2|MaCross|period:int:2|percent:double:1.4|ottMaMethod:string:VIDYA|priceSource:string:Close|signalModeIndex:int:1
-SimpleSuperTrendStrategy|v1|Default|period:int:10|multiplier:double:3.0|priceSource:string:Close|signalModeIndex:int:0
-SimpleSuperTrendStrategy|v2|DirectionFlip|period:int:10|multiplier:double:3.0|priceSource:string:Close|signalModeIndex:int:1
+SimpleSuperTrendStrategy|v1|Default|period:int:10|multiplier:double:3.0|priceSource:string:Close
+SimpleSuperTrendStrategy|v2|KarAl|period:int:10|multiplier:double:3.0|priceSource:string:Close|takeProfitExitModeIndex:int:4|karAlFiyatSeviyesi:double:5500
+SimpleSuperTrendStrategy|v3|ZararKes|period:int:10|multiplier:double:3.0|priceSource:string:Close|stopLossExitModeIndex:int:4|zararKesFiyatSeviyesi:double:-5500
+SimpleSuperTrendStrategy|v4|KarAlZararKes|period:int:10|multiplier:double:3.0|priceSource:string:Close|takeProfitExitModeIndex:int:4|karAlFiyatSeviyesi:double:5500|stopLossExitModeIndex:int:4|zararKesFiyatSeviyesi:double:-5500
+SimpleSuperTrendStrategy|v5|KarAlYuzde|period:int:10|multiplier:double:3.0|priceSource:string:Close|takeProfitExitModeIndex:int:5|karAlYuzdesi:double:3.0
+SimpleSuperTrendStrategy|v6|ZararKesYuzde|period:int:10|multiplier:double:3.0|priceSource:string:Close|stopLossExitModeIndex:int:5|zararKesYuzdesi:double:-2.0
+SimpleSuperTrendStrategy|v7|KarAlZararKesYuzde|period:int:10|multiplier:double:3.0|priceSource:string:Close|takeProfitExitModeIndex:int:5|karAlYuzdesi:double:3.0|stopLossExitModeIndex:int:5|zararKesYuzdesi:double:-2.0
+SimpleSuperTrendStrategy|v100|DirectionFlip|period:int:10|multiplier:double:3.0|priceSource:string:Close|buySignalModeIndex:int:1|sellSignalModeIndex:int:1
 SimpleParabolicSARStrategy|v1|Default|step:double:0.02|max:double:0.2|priceSource:string:Close|signalModeIndex:int:0
 SimpleParabolicSARStrategy|v2|TrendFlip|step:double:0.02|max:double:0.2|priceSource:string:Close|signalModeIndex:int:1
 SimpleADXStrategy|v1|Default|period:int:14|adxThreshold:double:25|signalModeIndex:int:0

@@ -1,6 +1,6 @@
 {
-  "Operation": "SingleTraderOptimizer",
+  "Operation": "SingleTrader",
   "ReadData": true,
   "RunMode": "TradeOnly",
-  "SavedAtUtc": "2026-11-21T15:39:47.2538985Z"
+  "SavedAtUtc": "2026-11-21T16:52:17.084599Z"
 }
