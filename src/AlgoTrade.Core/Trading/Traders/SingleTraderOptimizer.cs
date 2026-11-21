@@ -331,6 +331,12 @@ public class SingleTraderOptimizer : IDisposable
                 break;
             }
 
+            // Konsol scrollback cok buyudukce terminal yavaslayabiliyor - [C] ile ekrani temizle
+            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.C)
+            {
+                Console.Clear();
+            }
+
             currentCombination++;
 
             // PartialOpt: skip combinations outside [From-To] range
