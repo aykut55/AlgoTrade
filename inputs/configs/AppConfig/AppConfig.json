@@ -783,7 +783,7 @@
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
       "Name": "SimpleSuperTrendStrategy",
-      "Version": "v3"
+      "Version": "v1"
     },
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
@@ -832,7 +832,7 @@
       "TxtFileName": "singleTraderOptLog.txt",
       "StatisticsExporterConfigFile": "StatisticsExporterConfig.json",
       "AppendEnabled": true,
-      "FileFlushIntervalMs": -1
+      "FileFlushIntervalMs": 2000
     },
     "Export": {
       "ExportEnabled": true,
