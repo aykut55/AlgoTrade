@@ -812,14 +812,15 @@
     "Signals": {
       "AlEnabled": true,
       "SatEnabled": true,
-      "FlatOlEnabled": false,
-      "PasGecEnabled": false,
+      "FlatOlEnabled": true,
+      "PasGecEnabled": true,
       "KarAlEnabled": true,
       "ZararKesEnabled": true,
-      "GunSonuPozKapatEnabled": true,
+      "GunSonuPozKapatEnabled": false,
       "TimeFilteringEnabled": false,
-      "StartDateTime": "2025.05.25 09:35:00",
-      "StopDateTime": "2025.06.02 17:55:00",
+      "TimeFilterMode": 2,
+      "StartDateTime": "2026.10.01 00:00:00",
+      "StopDateTime": "2026.10.24 00:00:00",
       "TradeStartBarIndexEnabled": false,
       "TradeStartBarIndex": 0
     },
@@ -2067,4 +2068,11 @@
       "TxtFileName": "MultiQuerySymbolTimeframeScanResults.txt"
     }
   }
+
+  // TODO (kullanıcı talebi): Diğer stratejiler (SimpleMostStrategy, SimpleMAStrategy, ...) de
+  // SimpleSuperTrendStrategy'deki gibi hazırlanacak - takeProfitExitModeIndex/stopLossExitModeIndex
+  // default'u -1'e çekilecek. O zamana kadar bu dosyadaki diğer Signals node'larında (MultipleTrader
+  // MainTrader/ChildTraders, ConfirmingSingleTrader/ConfirmingMultipleTrader, Scanner'lar)
+  // KarAlEnabled/ZararKesEnabled "hep true" yapılmayacak, yoksa mode-0 yanlışlıkla aktifleşebilir.
+  // Şimdilik sadece SingleTrader ve SingleTraderOptimizer'daki Signals node'ları bu pattern'i kullanıyor.
 }
