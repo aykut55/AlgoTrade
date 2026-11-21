@@ -135,6 +135,11 @@ public class SingleTraderOptimizer : IDisposable
     public string SortedCsvFilePath2 { get; set; } = "";
     public string SortedTxtFilePath2 { get; set; } = "";
 
+    // Üçüncü sıralı çıktı (ör. ScoreFiyatNet — getiri/MaxDD oranına göre) — boş bırakılırsa üretilmez
+    public string SortField3 { get; set; } = "";
+    public string SortedCsvFilePath3 { get; set; } = "";
+    public string SortedTxtFilePath3 { get; set; } = "";
+
     // Optimization log file settings
     /// <summary>-1: her kombinasyonda yaz. >=0: ms cinsinden aralıkta yaz (bellekte biriktirir).</summary>
     public int FileFlushIntervalMs { get; set; } = -1;
@@ -739,6 +744,10 @@ public class SingleTraderOptimizer : IDisposable
         // İkinci sıralı çıktı (ör. GetiriFiyatYuzde — komisyon=0 kabul edilen brüt getiri) — opsiyonel
         if (!string.IsNullOrEmpty(SortField2))
             WriteSortedFilesFor(SortField2, SortedCsvFilePath2, SortedTxtFilePath2);
+
+        // Üçüncü sıralı çıktı (ör. ScoreFiyatNet — getiri/MaxDD oranı) — opsiyonel
+        if (!string.IsNullOrEmpty(SortField3))
+            WriteSortedFilesFor(SortField3, SortedCsvFilePath3, SortedTxtFilePath3);
     }
 
     private void WriteSortedFilesFor(string sortField, string csvPath, string txtPath)

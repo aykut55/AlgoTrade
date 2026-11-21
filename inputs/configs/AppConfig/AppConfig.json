@@ -68,7 +68,7 @@
     "RunMode": "TradeOnly",
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
-      "Name": "SimpleMAStrategy",
+      "Name": "SimpleSuperTrendStrategy",
       "Version": "v1"
     },
     "Query": {
@@ -783,7 +783,7 @@
     "Optimization": {
       "ConfigFile": "OptimizationConfig.txt",
       "Name": "SimpleSuperTrendStrategy",
-      "Version": "v1"
+      "Version": "v3"
     },
     "Strategy": {
       "ConfigFile": "StrategyConfig.txt",
@@ -814,9 +814,9 @@
       "SatEnabled": true,
       "FlatOlEnabled": false,
       "PasGecEnabled": false,
-      "KarAlEnabled": false,
-      "ZararKesEnabled": false,
-      "GunSonuPozKapatEnabled": false,
+      "KarAlEnabled": true,
+      "ZararKesEnabled": true,
+      "GunSonuPozKapatEnabled": true,
       "TimeFilteringEnabled": false,
       "StartDateTime": "2025.05.25 09:35:00",
       "StopDateTime": "2025.06.02 17:55:00",
@@ -844,7 +844,10 @@
       "SortedTxtFileName": "singleTraderOptLog_sorted.txt",
       "SortField2": "GetiriFiyat",
       "SortedCsvFileName2": "singleTraderOptLog_sorted_brut.csv",
-      "SortedTxtFileName2": "singleTraderOptLog_sorted_brut.txt"
+      "SortedTxtFileName2": "singleTraderOptLog_sorted_brut.txt",
+      "SortField3": "ScoreFiyatNet",
+      "SortedCsvFileName3": "singleTraderOptLog_sorted_scoreFiyatNet.csv",
+      "SortedTxtFileName3": "singleTraderOptLog_sorted_scoreFiyatNet.txt"
     },
     "SingleTrader": {
       "Plot": {

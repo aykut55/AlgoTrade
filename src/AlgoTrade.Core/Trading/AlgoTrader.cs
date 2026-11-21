@@ -2850,6 +2850,10 @@ public class AlgoTrader : MarketDataProvider, IDisposable
                 singleTraderOptimizer.SortField2         = sr.SortField2;
                 singleTraderOptimizer.SortedCsvFilePath2 = !string.IsNullOrEmpty(sr.SortedCsvFileName2) ? Path.Combine(AppSettings.OptLogsDir, sr.SortedCsvFileName2) : "";
                 singleTraderOptimizer.SortedTxtFilePath2 = !string.IsNullOrEmpty(sr.SortedTxtFileName2) ? Path.Combine(AppSettings.OptLogsDir, sr.SortedTxtFileName2) : "";
+
+                singleTraderOptimizer.SortField3         = sr.SortField3;
+                singleTraderOptimizer.SortedCsvFilePath3 = !string.IsNullOrEmpty(sr.SortedCsvFileName3) ? Path.Combine(AppSettings.OptLogsDir, sr.SortedCsvFileName3) : "";
+                singleTraderOptimizer.SortedTxtFilePath3 = !string.IsNullOrEmpty(sr.SortedTxtFileName3) ? Path.Combine(AppSettings.OptLogsDir, sr.SortedTxtFileName3) : "";
             }
 
             // Signals config (her test trader'ına uygulanır)
@@ -3380,6 +3384,11 @@ public class SingleTraderOptSortOutputConfig
     public string SortField2         { get; set; } = "GetiriFiyat";
     public string SortedCsvFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.csv";
     public string SortedTxtFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.txt";
+
+    // Üçüncü sıralı çıktı (ör. ScoreFiyatNet — getiri/MaxDD oranı). Boş bırakılırsa üretilmez.
+    public string SortField3         { get; set; } = "ScoreFiyatNet";
+    public string SortedCsvFileName3 { get; set; } = "singleTraderOptLog_sorted_scoreFiyatNet.csv";
+    public string SortedTxtFileName3 { get; set; } = "singleTraderOptLog_sorted_scoreFiyatNet.txt";
 }
 
 /// <summary>

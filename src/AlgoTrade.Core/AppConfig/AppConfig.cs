@@ -567,6 +567,11 @@ public class SingleTraderOptSortConfig
     public string SortField2         { get; set; } = "GetiriFiyat";
     public string SortedCsvFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.csv";
     public string SortedTxtFileName2 { get; set; } = "singleTraderOptLog_sorted_brut.txt";
+
+    // Üçüncü sıralı çıktı (ör. ScoreFiyatNet — getiri/MaxDD oranı). Boş bırakılırsa üretilmez.
+    public string SortField3         { get; set; } = "ScoreFiyatNet";
+    public string SortedCsvFileName3 { get; set; } = "singleTraderOptLog_sorted_scoreFiyatNet.csv";
+    public string SortedTxtFileName3 { get; set; } = "singleTraderOptLog_sorted_scoreFiyatNet.txt";
 }
 
 /// <summary>Best trader (optimizasyon sonucu) için ayarlar.</summary>

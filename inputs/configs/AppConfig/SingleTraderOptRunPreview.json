@@ -12,7 +12,7 @@
   },
   "Optimization": {
     "StrategyName": "SimpleSuperTrendStrategy",
-    "Version": "v1",
+    "Version": "v2",
     "DisplayName": "Opt",
     "ParameterRanges": [
       {
@@ -26,10 +26,17 @@
         "Min": 0.5,
         "Max": 5,
         "Step": 0.25
+      },
+      {
+        "Name": "karAlFiyatSeviyesi",
+        "Min": 500,
+        "Max": 15000,
+        "Step": 500
       }
     ],
     "FixedParameters": {
-      "priceSource": "Close"
+      "priceSource": "Close",
+      "takeProfitExitModeIndex": 4
     }
   },
   "Range": {
@@ -61,7 +68,7 @@
     "SatEnabled": true,
     "FlatOlEnabled": false,
     "PasGecEnabled": false,
-    "KarAlEnabled": false,
+    "KarAlEnabled": true,
     "ZararKesEnabled": false,
     "GunSonuPozKapatEnabled": false,
     "TimeFilteringEnabled": false,
@@ -86,7 +93,10 @@
     "SortedTxtFileName": "singleTraderOptLog_sorted.txt",
     "SortField2": "GetiriFiyat",
     "SortedCsvFileName2": "singleTraderOptLog_sorted_brut.csv",
-    "SortedTxtFileName2": "singleTraderOptLog_sorted_brut.txt"
+    "SortedTxtFileName2": "singleTraderOptLog_sorted_brut.txt",
+    "SortField3": "ScoreFiyatNet",
+    "SortedCsvFileName3": "singleTraderOptLog_sorted_scoreFiyatNet.csv",
+    "SortedTxtFileName3": "singleTraderOptLog_sorted_scoreFiyatNet.txt"
   },
   "SingleTrader": {
     "Plot": {

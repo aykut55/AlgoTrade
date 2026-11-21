@@ -64,6 +64,10 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int period;
         private readonly double multiplier;
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
 
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
@@ -78,7 +82,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private double[]? source;   // priceSource'un çözülmüş hali - OnInit'te bir kez, OnStep bundan okur
         private double[]? superTrend;
-        private int[]?     direction;
+        private int[]?    direction;
 
         // runContextResolved/timeframeMinutes/isOptimizationRun/isOneMinute.../ResolveRunContext() artik
         // BaseStrategy'de (protected) - burada tekrar tanimlanmaz.
@@ -86,10 +90,15 @@ namespace AlgoTrade.Core.Trading.Strategies
         // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleSuperTrendStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 10, double multiplier = 3.0, PriceSource priceSource = PriceSource.Close,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0, double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1, int ruleModeIndex = -1)
         {
             this.period                  = period;
             this.multiplier              = multiplier;
+            this.karAlFiyatSeviyesi      = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi   = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi            = karAlYuzdesi;
+            this.zararKesYuzdesi         = zararKesYuzdesi;
             this.priceSource             = priceSource;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
@@ -115,30 +124,34 @@ namespace AlgoTrade.Core.Trading.Strategies
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled   = true;
 
-            Parameters["Period"]                  = period;
-            Parameters["Multiplier"]              = multiplier;
-            Parameters["PriceSource"]             = priceSource;
-            Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
-            Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
-            Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
-            Parameters["StopLossExitModeIndex"]   = stopLossExitModeIndex;
-            Parameters["FlatModeIndex"]           = flatModeIndex;
-            Parameters["SkipModeIndex"]           = skipModeIndex;
-            Parameters["RuleModeIndex"]           = ruleModeIndex;
-            Parameters["StartTime"]               = startTime;
-            Parameters["StopTime"]                = stopTime;
-            Parameters["StartDay"]                = startDay;
-            Parameters["StopDay"]                 = stopDay;
-            Parameters["IsTimeEnabled"]           = isTimeEnabled;
-            Parameters["IsDayEnabled"]            = isDayEnabled;
-            Parameters["TriggerTime"]             = triggerTime;
-            Parameters["IsTriggerTimeEnabled"]    = isTriggerTimeEnabled;
-            Parameters["BuyModeEnabled"]          = buyModeEnabled;
-            Parameters["SellModeEnabled"]         = sellModeEnabled;
-            Parameters["TakeProfitExitModeEnabled"]   = takeProfitExitModeEnabled;
-            Parameters["StopLossExitModeEnabled"]     = stopLossExitModeEnabled;
-            Parameters["FlatModeEnabled"]         = flatModeEnabled;
-            Parameters["SkipModeEnabled"]         = skipModeEnabled;
+            Parameters["Period"]                    = period;
+            Parameters["Multiplier"]                = multiplier;
+            Parameters["KarAlFiyatSeviyesi"]        = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]     = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]              = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]           = zararKesYuzdesi;
+            Parameters["PriceSource"]               = priceSource;
+            Parameters["BuySignalModeIndex"]        = buySignalModeIndex;
+            Parameters["SellSignalModeIndex"]       = sellSignalModeIndex;
+            Parameters["TakeProfitExitModeIndex"]   = takeProfitExitModeIndex;
+            Parameters["StopLossExitModeIndex"]     = stopLossExitModeIndex;
+            Parameters["FlatModeIndex"]             = flatModeIndex;
+            Parameters["SkipModeIndex"]             = skipModeIndex;
+            Parameters["RuleModeIndex"]             = ruleModeIndex;
+            Parameters["StartTime"]                 = startTime;
+            Parameters["StopTime"]                  = stopTime;
+            Parameters["StartDay"]                  = startDay;
+            Parameters["StopDay"]                   = stopDay;
+            Parameters["IsTimeEnabled"]             = isTimeEnabled;
+            Parameters["IsDayEnabled"]              = isDayEnabled;
+            Parameters["TriggerTime"]               = triggerTime;
+            Parameters["IsTriggerTimeEnabled"]      = isTriggerTimeEnabled;
+            Parameters["BuyModeEnabled"]            = buyModeEnabled;
+            Parameters["SellModeEnabled"]           = sellModeEnabled;
+            Parameters["TakeProfitExitModeEnabled"] = takeProfitExitModeEnabled;
+            Parameters["StopLossExitModeEnabled"]   = stopLossExitModeEnabled;
+            Parameters["FlatModeEnabled"]           = flatModeEnabled;
+            Parameters["SkipModeEnabled"]           = skipModeEnabled;
 
             // Initialize base strategy
             Initialize(data, indicators);
@@ -436,12 +449,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -470,12 +483,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
             // ************************************************************************************************************************
