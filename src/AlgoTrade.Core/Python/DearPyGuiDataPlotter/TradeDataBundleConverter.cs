@@ -179,9 +179,25 @@ public class TradeDataBundleConverter
             {
                 ["GetiriFiyat"] = stats.GetiriFiyat,
                 ["GetiriFiyatNet"] = stats.GetiriFiyatNet,
+                ["GetiriFiyatYuzde"] = stats.GetiriFiyatYuzde,
+                ["GetiriFiyatYuzdeNet"] = stats.GetiriFiyatYuzdeNet,
                 ["KomisyonFiyat"] = stats.KomisyonFiyat,
+                ["KomisyonBrutKarPayiYuzde"] = stats.KomisyonBrutKarPayiYuzde,
+                ["MinBakiyeFiyat"] = stats.MinBakiyeFiyat,
+                ["MaxBakiyeFiyat"] = stats.MaxBakiyeFiyat,
+                ["MinBakiyeFiyatNet"] = stats.MinBakiyeFiyatNet,
+                ["MaxBakiyeFiyatNet"] = stats.MaxBakiyeFiyatNet,
                 ["ProfitFactor"] = double.IsFinite(stats.ProfitFactor) ? stats.ProfitFactor : null,
                 ["IslemSayisi"] = stats.IslemSayisi,
+                ["KarliIslemOrani"] = stats.KarliIslemOrani,
+                ["GetiriMaxDD"] = stats.GetiriMaxDD,
+                ["GetiriMaxDDNet"] = stats.GetiriMaxDDNet,
+                ["ProfitFactorNet"] = double.IsFinite(stats.ProfitFactorNet) ? stats.ProfitFactorNet : null,
+                ["ScoreFiyatNet"] = double.IsFinite(stats.ScoreFiyatNet) ? stats.ScoreFiyatNet : null,
+                ["ScoreFiyat"] = double.IsFinite(stats.ScoreFiyat) ? stats.ScoreFiyat : null,
+                ["KazandiranIslemSayisi"] = stats.KazandiranIslemSayisi,
+                ["KaybettirenIslemSayisi"] = stats.KaybettirenIslemSayisi,
+                ["NotrIslemSayisi"] = stats.NotrIslemSayisi,
             };
         }
 

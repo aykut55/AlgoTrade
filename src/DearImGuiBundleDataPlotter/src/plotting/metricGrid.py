@@ -82,6 +82,7 @@ def attachMetricGrid(pm, panel, cells, *, inline=False, cellWidth=None):
         return
 
     columnCount = max(column for _, column in placed)
+    fontScale = 0.95    # bir tık kucuk - metin olcumu/cizimi birlikte bu faktorle kuculuyor
 
     def drawMetricGrid(_pm, _panelId, _panel):
         pos, size = implot.get_plot_pos(), implot.get_plot_size()
@@ -90,12 +91,15 @@ def attachMetricGrid(pm, panel, cells, *, inline=False, cellWidth=None):
         if availableWidth <= 0:
             return
 
+        font = imgui.get_font()
+        fontSize = imgui.get_font_size() * fontScale
+
         columnWidths = {}
         measured = {}
         for (row, column), (label, value, labelColor, valueColor, backgroundColor, width) in placed.items():
             labelText = f"{label} : " if inline else label
-            labelWidth = imgui.calc_text_size(labelText).x
-            valueWidth = imgui.calc_text_size(value).x
+            labelWidth = imgui.calc_text_size(labelText).x * fontScale
+            valueWidth = imgui.calc_text_size(value).x * fontScale
             textWidth = labelWidth + valueWidth if inline else max(labelWidth, valueWidth)
             width = width if width is not None else textWidth + 2 * padding
             columnWidths[column] = max(columnWidths.get(column, 0), width)
@@ -110,7 +114,7 @@ def attachMetricGrid(pm, panel, cells, *, inline=False, cellWidth=None):
             columnStarts.append(x)
             x += width * scale + gap
 
-        textHeight = imgui.get_text_line_height()
+        textHeight = imgui.get_text_line_height() * fontScale
         height = textHeight * (1 if inline else 2) + 10
         top = pos.y + margin
         draw = implot.get_plot_draw_list()
@@ -128,12 +132,12 @@ def attachMetricGrid(pm, panel, cells, *, inline=False, cellWidth=None):
                     labelX, labelY = x + padding, y + 5
                     labelTint = imgui.color_convert_float4_to_u32(tuple(channel / 255 for channel in labelColor))
                     valueTint = imgui.color_convert_float4_to_u32(tuple(channel / 255 for channel in valueColor))
-                    draw.add_text((labelX, labelY), labelTint, labelText)
+                    draw.add_text(font, fontSize, (labelX, labelY), labelTint, labelText)
                     if inline:
                         valuePos = (labelX + labelWidth, labelY)
                     else:
                         valuePos = (labelX, labelY + textHeight)
-                    draw.add_text(valuePos, valueTint, value)
+                    draw.add_text(font, fontSize, valuePos, valueTint, value)
                 finally:
                     draw.pop_clip_rect()
         finally:

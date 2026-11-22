@@ -24,24 +24,163 @@
     {
       "row": 1,
       "column": 3,
-      "label": "Komisyon",
-      "metric": "KomisyonFiyat",
+      "label": "Brüt Getiri %",
+      "metric": "GetiriFiyatYuzde",
       "format": ".2f",
-      "valueColor": [251, 191, 36, 255]
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [255, 255, 255, 255]
+    },
+    {
+      "row": 1,
+      "column": 4,
+      "label": "Net Getiri %",
+      "metric": "GetiriFiyatYuzdeNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [74, 222, 128, 255],
+      "negativeValueColor": [248, 113, 113, 255]
     },
     {
       "row": 2,
       "column": 1,
-      "label": "Profit Factor",
-      "metric": "ProfitFactor",
-      "format": ".2f"
+      "label": "Komisyon",
+      "metric": "KomisyonFiyat",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [251, 191, 36, 255]
+    },
+    {
+      "row": 2,
+      "column": 5,
+      "label": "Komisyon / Brüt Kâr %",
+      "metric": "KomisyonBrutKarPayiYuzde",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [251, 191, 36, 255]
     },
     {
       "row": 2,
       "column": 2,
+      "label": "Win Rate %",
+      "metric": "KarliIslemOrani",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 2,
+      "column": 3,
+      "label": "Profit Factor",
+      "metric": "ProfitFactor",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 2,
+      "column": 4,
+      "label": "Profit Factor Net",
+      "metric": "ProfitFactorNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 3,
+      "column": 1,
+      "label": "MaxDD (Brüt) %",
+      "metric": "GetiriMaxDD",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [251, 191, 36, 255]
+    },
+    {
+      "row": 3,
+      "column": 2,
+      "label": "MaxDD (Net) %",
+      "metric": "GetiriMaxDDNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [251, 191, 36, 255]
+    },
+    {
+      "row": 3,
+      "column": 3,
+      "label": "Score (Brüt)",
+      "metric": "ScoreFiyat",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 3,
+      "column": 4,
+      "label": "Score (Net)",
+      "metric": "ScoreFiyatNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 4,
+      "column": 1,
       "label": "İşlem Sayısı",
       "metric": "IslemSayisi",
-      "format": "d"
+      "format": "d",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 4,
+      "column": 2,
+      "label": "Kazandıran İşlem",
+      "metric": "KazandiranIslemSayisi",
+      "format": "d",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [74, 222, 128, 255]
+    },
+    {
+      "row": 4,
+      "column": 3,
+      "label": "Kaybettiren İşlem",
+      "metric": "KaybettirenIslemSayisi",
+      "format": "d",
+      "labelColor": [147, 197, 253, 255],
+      "valueColor": [248, 113, 113, 255]
+    },
+    {
+      "row": 4,
+      "column": 4,
+      "label": "Nötr İşlem",
+      "metric": "NotrIslemSayisi",
+      "format": "d",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 5,
+      "column": 1,
+      "label": "Min Balance (Brüt)",
+      "metric": "MinBakiyeFiyat",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 5,
+      "column": 2,
+      "label": "Max Balance (Brüt)",
+      "metric": "MaxBakiyeFiyat",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 5,
+      "column": 3,
+      "label": "Min Balance (Net)",
+      "metric": "MinBakiyeFiyatNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
+    },
+    {
+      "row": 5,
+      "column": 4,
+      "label": "Max Balance (Net)",
+      "metric": "MaxBakiyeFiyatNet",
+      "format": ".2f",
+      "labelColor": [147, 197, 253, 255]
     }
   ]
 }
