@@ -56,8 +56,19 @@ CustomConsensusExample.csx'e eklerken kaç child olacağını ve pedagojik amaç
   bar), 4=band/uzaklık filtresi, 5=breakout+retest, 6=confirmation bars, 7=slope+state combo.
 - **`exitModeIndex` (0-5)**: `Trader.karAlZararKes` üzerinden — kod MOST'takiyle BİREBİR AYNI,
   değişmez: 0=Seviye/seviyeli, 1=Yüzde/seviyeli, 2=Seviye/tek, 3=Yüzde/tek, 4=Anlık fiyat
-  seviyesi, 5=Anlık yüzde. Her mod `Trader.flags?.XEnabled == true` korumalı.
-- **`flatModeIndex`/`skipModeIndex`/`ruleModeIndex`**: placeholder, hep 0, okunmuyor.
+  seviyesi, 5=Anlık yüzde. Her mod `Trader.flags?.XEnabled == true` korumalı. Mod 4/5'in sabit
+  (hardcoded) hedef değerleri ctor parametresi olmalı: `karAlFiyatSeviyesi`/`zararKesFiyatSeviyesi`/
+  `karAlYuzdesi`/`zararKesYuzdesi` (2026-11'de SuperTrend/MA'ya eklendi, bkz. aşağıdaki
+  "Değişiklik Taşıma" bölümü).
+- **`takeProfitExitModeIndex`/`stopLossExitModeIndex`/`flatModeIndex`/`skipModeIndex`/
+  `ruleModeIndex` default'u `-1`, `0` DEĞİL** (2026-11'de düzeltildi) — `0` gerçek/aktif bir mod
+  olduğu için default bırakılırsa, `Signals.KarAlEnabled`/`ZararKesEnabled` yanlışlıkla `true` iken
+  istenmeyen bir mod sessizce devreye girer. `-1` hiçbir dispatch dalıyla eşleşmediği için güvenli
+  "kapalı" sentinel'i. (`buySignalModeIndex`/`sellSignalModeIndex` bu kuralın DIŞINDA — `0` onlar
+  için gerçek/istenen varsayılan davranış, landmine değil, `0` kalmalı.)
+- **`takeProfitExitModeEnabled`/`stopLossExitModeEnabled`/`flatModeEnabled`/`skipModeEnabled`**:
+  ctor içinde AÇIKÇA `true` set edilmeli (BaseStrategy default'u zaten `true`, ama örtük bırakmak
+  yerine açıkça yazmak tutarlılık için şart — bkz. SuperTrend/MA).
 - **`priceSource`**: indikatör mantıksal olarak tek bir fiyat serisine MA/hesap uyguluyorsa hem
   indikatöre hem OnStep'in `source`'una bağlanır. İndikatör yapısal olarak OHLC'ye bağımlıysa
   (ATR/True Range, SAR, ADX/DI gibi) İNDİKATÖRÜ DEĞİŞTİRME — sadece OnStep `source`'unu besler
@@ -103,6 +114,62 @@ CustomConsensusExample.csx'e eklerken kaç child olacağını ve pedagojik amaç
    eşit sayıda geçmeli (sample-bundle listeleri hariç — orada asimetri normal olabilir, önceden
    var olup olmadığını kontrol ederek yorumla).
 10. Kısa özet ver. Memory'e (varsa) bir node ekle.
+
+## Değişiklik Taşıma / Parite Kontrol Listesi
+
+> Bu bölüm **yeni strateji yazmak** için değil — **bir stratejide (örn. SuperTrend) yapılan bir
+> değişikliği/düzeltmeyi başka bir stratejiye (örn. MA) veya hepsine taşırken** kullanılır.
+> Kullanıcı "bunu diğerlerine de uygula" dediğinde bu listeyi sırayla kontrol et, mekanik kopyala-
+> yapıştır yapma — her madde için referans dosyanın (şu an referans: `SimpleMAStrategy.cs`) o
+> maddedeki hâlini örnek al, hedef dosyayı ona göre düzelt, farkı kullanıcıya özetle.
+
+1. **Using'ler**: hedef dosyada referans dosyada olmayan, görünüşte ilgisiz/kullanılmayan using
+   var mı (örn. görsel/3. parti kütüphane using'i, strateji mantığıyla ilgisiz)? Varsa işaretle,
+   silmeden önce sor.
+2. **Field deklarasyon sırası**: field'ların sırası ctor imza sırasıyla AYNI olmalı (örn.
+   `[indikatöre-özgü parametreler] → priceSource → karAl/zararKes grubu → [diğerleri]`). Sadece
+   ctor body'sini düzeltip field deklarasyonunu unutmak kolay — ikisini birlikte kontrol et.
+3. **Ctor imza sırası**: `[indikatöre-özgü parametreler], priceSource, karAlFiyatSeviyesi,
+   zararKesFiyatSeviyesi, karAlYuzdesi, zararKesYuzdesi, buySignalModeIndex, sellSignalModeIndex,
+   takeProfitExitModeIndex, stopLossExitModeIndex, flatModeIndex, skipModeIndex, ruleModeIndex`.
+4. **Ctor body atama sırası**: `this.X = X;` satırları imza sırasıyla birebir aynı sırada olmalı.
+5. **`Parameters[...]` dict sırası**: aynı şekilde imza sırasıyla birebir aynı.
+6. **Enabled flag'leri** (`takeProfitExitModeEnabled`/`stopLossExitModeEnabled`/`flatModeEnabled`/
+   `skipModeEnabled`): ctor'da açıkça `true` mu set ediliyor? (Bir strateji bilerek farklıysa —
+   örn. sadece buy/sell — bu kasıtlı olmalı ve yorumla belirtilmeli, sessizce unutulmuş olmamalı.)
+7. **ModeIndex default'ları**: exit/flat/skip/rule default'u `-1` mi (yoksa unutulup `0`'da mı
+   kalmış)? `buySignalModeIndex`/`sellSignalModeIndex` `0`'da mı kaldı (onlar `-1` OLMAMALI)?
+8. **karAl/zararKes parametreleri**: mode 4/5 dallarında hardcoded sayı (`1000.0`, `-500.0`,
+   `3.0`, `-2.0` gibi) kaldı mı, yoksa hepsi ctor parametresine mi bağlandı?
+9. **`OnInit()` try/catch**: `NotImplementedException` için try/catch + 2 satır `LogWarning`
+   (ikinci satır doğru indikatör dosya yolunu göstermeli) + catch içinde tüm ilgili diziler
+   (field tipine uygun, örn. `int[]` olan `direction` gibi alanlar `double[]` yapılmamalı) boş
+   array ile dolduruluyor mu?
+10. **`OnStep()` iskeleti** — şu sıra korunmalı: 6 bool deklarasyonu → `ResolveRunContext` →
+    zaman/tarih pencere değişkenleri → erken-return guard'ları → "Geçerli ve önceki değerler"
+    bloğu → `isOneMinute`/.../`isSonYonA/S/F` placeholder bloğu (AÇIKLAYICI YORUMLARIYLA birlikte,
+    yorumsuz bırakılmasın) → buy/sell dispatch → takeProfit/stopLoss dispatch (mode 0-5) →
+    flat/skip placeholder → **SİNYAL GATE'İ yorumu + `Trader?.signals?.X==false` satırları** →
+    zaman/tarih gate'i → **"Sinyal önceliklendirmesi" banner'ı + "Not: 6 sinyal de..." açıklaması
+    (bu banner GATE'DEN SONRA, asıl `if(skip){...}` zincirinden HEMEN ÖNCE olmalı — gate'ten önce
+    DEĞİL, bu kolay kayan bir hata)** → öncelik zinciri (Skip>Flat>TP>SL>Buy>Sell>None).
+11. **Trailing accessor'lar**: `IsValidParameterCombination()` (strateji-özgü mantık varsa XML
+    doc comment'i olmalı), `GetX()`/property getter'lar, `GetPlotIndicators()` — doc-comment
+    stili ve varlık/yokluk tutarlı mı.
+12. **`StrategyConfig.txt`/`OptimizationConfig.txt` v1-v7(+preset) şeması**: koddaki karAl/
+    zararKes parametreleştirmesi yapıldıktan sonra, iki config dosyasında da strateji için AYNI
+    versiyon numaralandırması/DisplayName'leri kurulmalı: `v1=Default` (sadece al/sat),
+    `v2=KarAl`, `v3=ZararKes`, `v4=KarAlZararKes`, `v5=KarAlYuzde`, `v6=ZararKesYuzde`,
+    `v7=KarAlZararKesYuzde` (+ varsa `v100` gibi strateji-özgü preset/varyantlar, karAl/zararKes
+    numaralandırmasının DIŞINDA, ayrı bir blok olarak). `StrategyConfig.txt`'te tek sabit değer
+    (`karAlFiyatSeviyesi:double:5500` gibi), `OptimizationConfig.txt`'te range (`karAlFiyatSeviyesi:
+    500:15000:500` gibi) — iki dosyada da `fixed:takeProfitExitModeIndex:int:4/5` ve
+    `fixed:stopLossExitModeIndex:int:4/5` eşlik etmeli. Kalıntı `signalModeIndex` alanı (hedef
+    stratejide gerçek karşılığı yoksa, bkz. madde 7) bu satırlardan temizlenmeli.
+
+Bu kontrolü yaptıktan sonra bulduğun farkları (hangi madde, hangi dosyada, ne farklı) kullanıcıya
+listele, sonra hangisini düzelteceğini sor — otomatik "hepsini düzelt" yapma, kullanıcı bazılarının
+kasıtlı olabileceğini (örn. MA'nın exit'leri default kapalı tasarımı gibi) bilir, sen bilemezsin.
 
 ## Kısıtlar
 

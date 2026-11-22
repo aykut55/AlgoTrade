@@ -97,8 +97,10 @@ var strategiesToRun = new List<(string Name, Dictionary<string, object> Params)>
     ("SimpleADXStrategy", new Dictionary<string, object>()),
     ("SimpleATRStrategy", new Dictionary<string, object>()),
     ("SimpleStochasticStrategy", new Dictionary<string, object>()),
-    ("SimpleSuperTrendStrategy", new Dictionary<string, object>()),
-    ("SimpleMAStrategy", new Dictionary<string, object>()),
+    // takeProfitExitModeIndex/stopLossExitModeIndex default'u -1'e (kapali) cekildi (2026-11) - eski
+    // davranisi (mode 0, asagidaki KarAlEnabled/ZararKesEnabled=true ile aktifti) korumak icin acikca 0 verildi.
+    ("SimpleSuperTrendStrategy", new Dictionary<string, object> { { "takeProfitExitModeIndex", 0 }, { "stopLossExitModeIndex", 0 } }),
+    ("SimpleMAStrategy", new Dictionary<string, object> { { "takeProfitExitModeIndex", 0 }, { "stopLossExitModeIndex", 0 } }),
     ("SimpleParabolicSARStrategy", new Dictionary<string, object>()),
     ("SimpleOTTStrategy", new Dictionary<string, object>()),
     ("SimpleDIStrategy", new Dictionary<string, object>()),
