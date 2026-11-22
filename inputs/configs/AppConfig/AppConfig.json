@@ -426,7 +426,7 @@
     "SignalTrader": {
       "Strategy": {
         "ConfigFile": "StrategyConfig.txt",
-        "Name": "SimpleMostStrategy",
+        "Name": "SimpleSuperTrendStrategy",
         "Version": "v1"
       },
       "Signals": {

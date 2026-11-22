@@ -90,8 +90,8 @@ if (data.Count == 0)
 // =============================================================================
 var strategiesToRun = new List<(string Name, Dictionary<string, object> Params)>
 {
-    (strategyName, strategyParams),                                  // Config_01'deki (SimpleMostStrategy)
-    ("SimpleRSIStrategy", new Dictionary<string, object>()),
+    (strategyName, strategyParams),                                  // Config_01'deki (SimpleMostStrategy) - takeProfitExitModeIndex/stopLossExitModeIndex default -1'e cekildi (2026-11); eski mode-0 davranisini korumak icin strategyParams'ta ayarlanmadiysa bu run icin karAl/zararKes devre dışı kalır.
+    ("SimpleRSIStrategy", new Dictionary<string, object> { { "takeProfitExitModeIndex", 0 }, { "stopLossExitModeIndex", 0 } }),
     ("SimpleMACDStrategy", new Dictionary<string, object>()),
     ("SimpleBollingerStrategy", new Dictionary<string, object>()),
     ("SimpleADXStrategy", new Dictionary<string, object>()),

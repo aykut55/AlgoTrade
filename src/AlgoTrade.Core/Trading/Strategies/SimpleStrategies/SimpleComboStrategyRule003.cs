@@ -46,6 +46,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int macdSignalPeriod;
         private readonly int superTrendPeriod;
         private readonly double superTrendMultiplier;
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
 
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/
         // flatModeIndex/skipModeIndex artik BaseStrategy'de tanimli (protected, readonly degil) -
@@ -62,13 +66,19 @@ namespace AlgoTrade.Core.Trading.Strategies
         public SimpleComboStrategyRule003(List<StockData> data, IndicatorManager indicators,
             int macdFastPeriod = 12, int macdSlowPeriod = 26, int macdSignalPeriod = 9,
             int superTrendPeriod = 10, double superTrendMultiplier = 3.0,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1)
         {
             this.macdFastPeriod          = macdFastPeriod;
             this.macdSlowPeriod          = macdSlowPeriod;
             this.macdSignalPeriod        = macdSignalPeriod;
             this.superTrendPeriod        = superTrendPeriod;
             this.superTrendMultiplier    = superTrendMultiplier;
+            this.karAlFiyatSeviyesi       = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi    = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi             = karAlYuzdesi;
+            this.zararKesYuzdesi          = zararKesYuzdesi;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
             this.takeProfitExitModeIndex = takeProfitExitModeIndex;
@@ -87,11 +97,20 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
+
             Parameters["MacdFastPeriod"]           = macdFastPeriod;
             Parameters["MacdSlowPeriod"]           = macdSlowPeriod;
             Parameters["MacdSignalPeriod"]         = macdSignalPeriod;
             Parameters["SuperTrendPeriod"]         = superTrendPeriod;
             Parameters["SuperTrendMultiplier"]     = superTrendMultiplier;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]             = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]          = zararKesYuzdesi;
             Parameters["BuySignalModeIndex"]       = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]      = sellSignalModeIndex;
             Parameters["TakeProfitExitModeIndex"]  = takeProfitExitModeIndex;
@@ -115,11 +134,22 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             close = Indicators.GetClosePrices();
 
-            var macdResult = Indicators.Momentum.MACD(close, macdFastPeriod, macdSlowPeriod, macdSignalPeriod);
-            macd       = macdResult.MACD;
-            macdSignal = macdResult.Signal;
+            try
+            {
+                var macdResult = Indicators.Momentum.MACD(close, macdFastPeriod, macdSlowPeriod, macdSignalPeriod);
+                macd       = macdResult.MACD;
+                macdSignal = macdResult.Signal;
 
-            superTrend = Indicators.Trend.SuperTrend(superTrendPeriod, superTrendMultiplier).SuperTrend;
+                superTrend = Indicators.Trend.SuperTrend(superTrendPeriod, superTrendMultiplier).SuperTrend;
+            }
+            catch (NotImplementedException)
+            {
+                LogWarning("MACD/SuperTrend indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/Momentum/MomentumIndicators.cs and Trend/TrendIndicators.cs — implementation may be missing/broken.");
+                macd = new double[barCount];
+                macdSignal = new double[barCount];
+                superTrend = new double[barCount];
+            }
         }
 
         // MACD sinyal cizgisini kesiyor + SuperTrend fiyatin altinda/ustunde - SEVIYE kosulu,
@@ -230,12 +260,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -264,12 +294,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
             // ************************************************************************************************************************

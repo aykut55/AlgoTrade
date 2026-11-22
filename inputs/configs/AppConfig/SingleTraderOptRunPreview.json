@@ -6,14 +6,13 @@
     "Parameters": {
       "period": 10,
       "multiplier": 3,
-      "priceSource": "Close",
-      "signalModeIndex": 0
+      "priceSource": "Close"
     }
   },
   "Optimization": {
     "StrategyName": "SimpleSuperTrendStrategy",
-    "Version": "v2",
-    "DisplayName": "Opt",
+    "Version": "v1",
+    "DisplayName": "Default",
     "ParameterRanges": [
       {
         "Name": "period",
@@ -26,17 +25,10 @@
         "Min": 0.5,
         "Max": 5,
         "Step": 0.25
-      },
-      {
-        "Name": "karAlFiyatSeviyesi",
-        "Min": 500,
-        "Max": 15000,
-        "Step": 500
       }
     ],
     "FixedParameters": {
-      "priceSource": "Close",
-      "takeProfitExitModeIndex": 4
+      "priceSource": "Close"
     }
   },
   "Range": {
@@ -63,17 +55,17 @@
     "PyramidingEnabled": false
   },
   "Signals": {
-    "TimeFilterMode": 1,
+    "TimeFilterMode": 2,
     "AlEnabled": true,
     "SatEnabled": true,
-    "FlatOlEnabled": false,
-    "PasGecEnabled": false,
+    "FlatOlEnabled": true,
+    "PasGecEnabled": true,
     "KarAlEnabled": true,
-    "ZararKesEnabled": false,
+    "ZararKesEnabled": true,
     "GunSonuPozKapatEnabled": false,
     "TimeFilteringEnabled": false,
-    "StartDateTime": "2025.05.25 09:35:00",
-    "StopDateTime": "2025.06.02 17:55:00",
+    "StartDateTime": "2026.10.01 00:00:00",
+    "StopDateTime": "2026.10.24 00:00:00",
     "TradeStartBarIndexEnabled": false,
     "TradeStartBarIndex": 0
   },
@@ -85,7 +77,7 @@
     "TxtFileName": "singleTraderOptLog.txt",
     "StatisticsExporterConfigFile": "StatisticsExporterConfig.json",
     "AppendEnabled": true,
-    "FileFlushIntervalMs": -1
+    "FileFlushIntervalMs": 2000
   },
   "Sort": {
     "SortField": "GetiriFiyatNet",

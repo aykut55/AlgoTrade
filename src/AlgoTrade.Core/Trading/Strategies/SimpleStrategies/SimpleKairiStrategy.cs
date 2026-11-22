@@ -54,6 +54,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int period;
         private readonly double positiveThreshold;
         private readonly double negativeThreshold;
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
 
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
@@ -73,11 +77,17 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleKairiStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 20, double positiveThreshold = 5, double negativeThreshold = -5, PriceSource priceSource = PriceSource.Close,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1, int ruleModeIndex = -1)
         {
             this.period                  = period;
             this.positiveThreshold       = positiveThreshold;
             this.negativeThreshold       = negativeThreshold;
+            this.karAlFiyatSeviyesi       = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi    = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi             = karAlYuzdesi;
+            this.zararKesYuzdesi          = zararKesYuzdesi;
             this.priceSource             = priceSource;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
@@ -102,10 +112,16 @@ namespace AlgoTrade.Core.Trading.Strategies
             // varsayilani zaten true, davranis degismesin diye burada acikca da true birakiliyor.
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
 
             Parameters["Period"]                  = period;
             Parameters["PositiveThreshold"]       = positiveThreshold;
             Parameters["NegativeThreshold"]       = negativeThreshold;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]             = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]          = zararKesYuzdesi;
             Parameters["PriceSource"]             = priceSource;
             Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
@@ -141,22 +157,32 @@ namespace AlgoTrade.Core.Trading.Strategies
             // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
             source = Indicators.Trend.ResolvePriceSource(priceSource);
 
-            ma = Indicators.MA.SMA(source, period);
-            kairi = new double[barCount];
-            for (int i = 0; i < barCount; i++)
+            try
             {
-                kairi[i] = (double.IsNaN(ma[i]) || ma[i] == 0) ? double.NaN : ((source[i] - ma[i]) / ma[i]) * 100;
+                ma = Indicators.MA.SMA(source, period);
+                kairi = new double[barCount];
+                for (int i = 0; i < barCount; i++)
+                {
+                    kairi[i] = (double.IsNaN(ma[i]) || ma[i] == 0) ? double.NaN : ((source[i] - ma[i]) / ma[i]) * 100;
+                }
+
+                bool allSeriesLengthsMatch = true;
+                allSeriesLengthsMatch &= kairi.Length  == barCount;
+                allSeriesLengthsMatch &= ma.Length     == barCount;
+                allSeriesLengthsMatch &= source.Length == barCount;
+
+                if (!allSeriesLengthsMatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): kairi={kairi.Length}, ma={ma.Length}, source={source.Length}");
+                }
             }
-
-            bool allSeriesLengthsMatch = true;
-            allSeriesLengthsMatch &= kairi.Length  == barCount;
-            allSeriesLengthsMatch &= ma.Length     == barCount;
-            allSeriesLengthsMatch &= source.Length == barCount;
-
-            if (!allSeriesLengthsMatch)
+            catch (NotImplementedException)
             {
-                throw new InvalidOperationException(
-                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): kairi={kairi.Length}, ma={ma.Length}, source={source.Length}");
+                LogWarning("SMA indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/MovingAverages/MovingAverageCalculator.cs — SMA() implementation may be missing/broken.");
+                ma = new double[barCount];
+                kairi = new double[barCount];
             }
         }
 
@@ -382,11 +408,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (takeProfitExitModeIndex == 4)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -410,11 +436,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (stopLossExitModeIndex == 4)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
 
@@ -463,6 +489,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
             if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
 
+            // Sinyal önceliklendirmesi - Not: 6 sinyal de yukaridaki gate blogunda Trader.signals.*Enabled
+            // ile filtrelendi, flag'i kapali olan sinyal buraya hep false gelir, zincir bir sonraki
+            // gecerli sinyale duser.
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
             else if (takeProfit) return TradeSignals.TakeProfit;

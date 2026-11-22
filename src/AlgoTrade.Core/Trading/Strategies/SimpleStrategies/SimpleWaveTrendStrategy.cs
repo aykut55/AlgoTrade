@@ -32,6 +32,11 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly double oversoldLevel1;
         private readonly double oversoldLevel2;
 
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
+
         private double[]? wt1;
         private double[]? wt2;
         private double[]? histogram;
@@ -46,14 +51,18 @@ namespace AlgoTrade.Core.Trading.Strategies
             double overboughtLevel2 = 53.0,
             double oversoldLevel1 = -60.0,
             double oversoldLevel2 = -53.0,
+            double karAlFiyatSeviyesi = 1000.0,
+            double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0,
+            double zararKesYuzdesi = -2.0,
             int signalModeIndex = 0,
             int buySignalModeIndex = -1,
             int sellSignalModeIndex = -1,
-            int takeProfitExitModeIndex = 0,
-            int stopLossExitModeIndex = 0,
-            int flatModeIndex = 0,
-            int skipModeIndex = 0,
-            int ruleModeIndex = 0)
+            int takeProfitExitModeIndex = -1,
+            int stopLossExitModeIndex = -1,
+            int flatModeIndex = -1,
+            int skipModeIndex = -1,
+            int ruleModeIndex = -1)
         {
             this.channelLength = channelLength;
             this.averageLength = averageLength;
@@ -62,6 +71,10 @@ namespace AlgoTrade.Core.Trading.Strategies
             this.overboughtLevel2 = overboughtLevel2;
             this.oversoldLevel1 = oversoldLevel1;
             this.oversoldLevel2 = oversoldLevel2;
+            this.karAlFiyatSeviyesi = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi = karAlYuzdesi;
+            this.zararKesYuzdesi = zararKesYuzdesi;
             this.buySignalModeIndex = buySignalModeIndex >= 0 ? buySignalModeIndex : signalModeIndex;
             this.sellSignalModeIndex = sellSignalModeIndex >= 0 ? sellSignalModeIndex : signalModeIndex;
             this.takeProfitExitModeIndex = takeProfitExitModeIndex;
@@ -80,6 +93,8 @@ namespace AlgoTrade.Core.Trading.Strategies
             isTriggerTimeEnabled = false;
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled = true;
+            flatModeEnabled = true;
+            skipModeEnabled = true;
 
             Parameters["ChannelLength"] = channelLength;
             Parameters["AverageLength"] = averageLength;
@@ -88,6 +103,10 @@ namespace AlgoTrade.Core.Trading.Strategies
             Parameters["OverboughtLevel2"] = overboughtLevel2;
             Parameters["OversoldLevel1"] = oversoldLevel1;
             Parameters["OversoldLevel2"] = oversoldLevel2;
+            Parameters["KarAlFiyatSeviyesi"] = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"] = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"] = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"] = zararKesYuzdesi;
             Parameters["SignalModeIndex"] = signalModeIndex;
             Parameters["BuySignalModeIndex"] = this.buySignalModeIndex;
             Parameters["SellSignalModeIndex"] = this.sellSignalModeIndex;
@@ -104,17 +123,31 @@ namespace AlgoTrade.Core.Trading.Strategies
         {
             if (!IsInitialized) return;
 
-            var result = Indicators.Momentum.WaveTrend(
-                channelLength, averageLength, signalLength,
-                overboughtLevel1, overboughtLevel2, oversoldLevel1, oversoldLevel2);
+            try
+            {
+                var result = Indicators.Momentum.WaveTrend(
+                    channelLength, averageLength, signalLength,
+                    overboughtLevel1, overboughtLevel2, oversoldLevel1, oversoldLevel2);
 
-            wt1 = result.WT1;
-            wt2 = result.WT2;
-            histogram = result.Histogram;
+                wt1 = result.WT1;
+                wt2 = result.WT2;
+                histogram = result.Histogram;
 
-            if (wt1.Length != barCount || wt2.Length != barCount || histogram.Length != barCount)
-                throw new InvalidOperationException(
-                    $"WaveTrend seri uzunlukları uyuşmuyor (barCount={barCount}): WT1={wt1.Length}, WT2={wt2.Length}, Histogram={histogram.Length}");
+                if (wt1.Length != barCount || wt2.Length != barCount || histogram.Length != barCount)
+                    throw new InvalidOperationException(
+                        $"WaveTrend seri uzunlukları uyuşmuyor (barCount={barCount}): WT1={wt1.Length}, WT2={wt2.Length}, Histogram={histogram.Length}");
+            }
+            catch (NotImplementedException)
+            {
+                // WaveTrend implement edilmiş durumda, bu blok normalde tetiklenmez -
+                // savunma amaçlı bırakıldı, indikatör ileride kaldırılır/bozulursa sessizce crash yerine uyarı verir.
+                LogWarning("WaveTrend indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/Momentum/MomentumIndicators.cs — WaveTrend() implementation may be missing/broken.");
+
+                wt1 = new double[barCount];
+                wt2 = new double[barCount];
+                histogram = new double[barCount];
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -174,8 +207,8 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (takeProfitExitModeIndex == 1) takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesaplaSeviyeli(currentIndex, 2, 10, 0.01) != 0;
                 else if (takeProfitExitModeIndex == 2) takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlSeviyeHesapla(currentIndex, 2000.0) != 0;
                 else if (takeProfitExitModeIndex == 3) takeProfit = Trader.karAlZararKes.SonFiyataGoreKarAlYuzdeHesapla(currentIndex, 2.0) != 0;
-                else if (takeProfitExitModeIndex == 4) takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
-                else if (takeProfitExitModeIndex == 5) takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                else if (takeProfitExitModeIndex == 4) takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
+                else if (takeProfitExitModeIndex == 5) takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
             }
 
             if (stopLossExitModeEnabled && Trader != null)
@@ -184,8 +217,8 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (stopLossExitModeIndex == 1) stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesaplaSeviyeli(currentIndex, -2, -10, 0.01) != 0;
                 else if (stopLossExitModeIndex == 2) stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesSeviyeHesapla(currentIndex, -1000.0) != 0;
                 else if (stopLossExitModeIndex == 3) stopLoss = Trader.karAlZararKes.SonFiyataGoreZararKesYuzdeHesapla(currentIndex, -1.0) != 0;
-                else if (stopLossExitModeIndex == 4) stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
-                else if (stopLossExitModeIndex == 5) stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                else if (stopLossExitModeIndex == 4) stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
+                else if (stopLossExitModeIndex == 5) stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
             }
 
             if (flatModeEnabled && flatModeIndex == 0) flat = false;

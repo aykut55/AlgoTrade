@@ -1,34 +1,42 @@
 // Signal asamasi - globals: Data (List<StockData>), Indicators (IndicatorManager)
+// Varsayilan sinyal kaynagi Menu [5] ile tutarlidir:
+// StrategyConfig.txt -> SimpleSuperTrendStrategy | v1 | Default
+// period=10, multiplier=3.0, priceSource=Close, buy/sell mode=0, TP/SL kapali.
+//
 // return: object[] { signals, indicatorNames, indicatorValues }
-//   signals        : TradeSignals[] (Data.Count uzunlugunda).
-//                    Strateji Buy, Sell veya Flat uretebilir. Kural yoksa None kalir.
-//                    Bu SMA sablonu yalniz Buy ve Sell icin kural tanimlar.
-//                    TakeProfit, StopLoss ve Skip filter.csx icinde degerlendirilir.
+//   signals        : TradeSignals[] (Data.Count uzunlugunda)
 //   indicatorNames : string[] (OHLC panelinde cizilecek indikator adlari)
-//   indicatorValues: object[] (her eleman bir double[], indicatorNames ile AYNI sirada)
-// Not: pozisyon/filtre mantigi BURADA DEGIL - bkz. filter.csx (ayri asama).
+//   indicatorValues: object[] (indicatorNames ile ayni sirada double[] dizileri)
+//
+// Pozisyon ve ek filtre mantigi burada degildir; bkz. filter.csx.
 
-using static AlgoTrade.Core.Trading.Utils.Utils;
+const int period = 10;
+const double multiplier = 3.0;
 
 var close = Indicators.Trend.ResolvePriceSource(PriceSource.Close);
-var fast = Indicators.MA.Calculate(close, MAMethod.SIMPLE, 10);
-var slow = Indicators.MA.Calculate(close, MAMethod.SIMPLE, 20);
+var superTrendResult = Indicators.Trend.SuperTrend(period, multiplier);
+var superTrend = superTrendResult.SuperTrend;
 
-var itemsCount = close.Length;
-var signals = new TradeSignals[itemsCount];
+if (superTrend.Length != close.Length)
+    throw new InvalidOperationException(
+        $"SuperTrend seri uzunlugu veriyle uyusmuyor: {superTrend.Length} != {close.Length}");
 
-for (int i = 1; i < itemsCount; i++)
+var signals = new TradeSignals[close.Length];
+
+// SimpleSuperTrendStrategy v1'in buySignalModeIndex=0 / sellSignalModeIndex=0
+// kuraliyla birebir ayni fiyat-SuperTrend kesisimleri.
+for (int i = period; i < close.Length; i++)
 {
-    if (double.IsNaN(fast[i]) || double.IsNaN(slow[i]) || double.IsNaN(fast[i - 1]) || double.IsNaN(slow[i - 1]))
-        continue;
+    bool crossesAbove = close[i - 1] <= superTrend[i - 1] && close[i] > superTrend[i];
+    bool crossesBelow = close[i - 1] >= superTrend[i - 1] && close[i] < superTrend[i];
 
-    if (YukarıKesti(i, fast, slow))
+    if (crossesAbove)
         signals[i] = TradeSignals.Buy;
-    else if (AsagiKesti(i, fast, slow))
+    else if (crossesBelow)
         signals[i] = TradeSignals.Sell;
 }
 
-var indicatorNames = new[] { "Fast MA (10)", "Slow MA (20)" };
-var indicatorValues = new object[] { fast, slow };
+var indicatorNames = new[] { "SuperTrend (10, 3.0)" };
+var indicatorValues = new object[] { superTrend };
 
 return new object[] { signals, indicatorNames, indicatorValues };

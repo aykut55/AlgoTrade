@@ -56,6 +56,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly int atrPeriod;
         private readonly double multiplier;
         private readonly int maPeriod;
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
 
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/
         // skipModeIndex/ruleModeIndex artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri
@@ -76,11 +80,17 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimplePMaxStrategy(List<StockData> data, IndicatorManager indicators,
             int atrPeriod = 10, double multiplier = 3.0, int maPeriod = 10, MAMethod pmaxMaMethod = MAMethod.EMA,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1, int ruleModeIndex = -1)
         {
             this.atrPeriod               = atrPeriod;
             this.multiplier              = multiplier;
             this.maPeriod                = maPeriod;
+            this.karAlFiyatSeviyesi       = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi    = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi             = karAlYuzdesi;
+            this.zararKesYuzdesi          = zararKesYuzdesi;
             this.pmaxMaMethod            = pmaxMaMethod;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
@@ -105,10 +115,16 @@ namespace AlgoTrade.Core.Trading.Strategies
             // kosulsuz (1==1) acikti, burada ayni davranisi ACIKCA true atayarak koruyoruz.
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
 
             Parameters["AtrPeriod"]               = atrPeriod;
             Parameters["Multiplier"]              = multiplier;
             Parameters["MaPeriod"]                = maPeriod;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]             = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]          = zararKesYuzdesi;
             Parameters["PmaxMaMethod"]            = pmaxMaMethod;
             Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
@@ -142,19 +158,30 @@ namespace AlgoTrade.Core.Trading.Strategies
 
             // barCount/openPrices/.../epochTimes BaseStrategy.LoadCommonSeries() tarafindan bu
             // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
-            var pmaxResult = Indicators.Trend.PMax(atrPeriod, multiplier, maPeriod, pmaxMaMethod);
-            pmax      = pmaxResult.PMax;
-            pmaxMA    = pmaxResult.PMaxMA;
-            direction = pmaxResult.Direction;
-
-            bool allSeriesLengthsMatch = true;
-            allSeriesLengthsMatch &= pmax.Length      == barCount;
-            allSeriesLengthsMatch &= direction.Length == barCount;
-
-            if (!allSeriesLengthsMatch)
+            try
             {
-                throw new InvalidOperationException(
-                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): pmax={pmax.Length}, direction={direction.Length}");
+                var pmaxResult = Indicators.Trend.PMax(atrPeriod, multiplier, maPeriod, pmaxMaMethod);
+                pmax      = pmaxResult.PMax;
+                pmaxMA    = pmaxResult.PMaxMA;
+                direction = pmaxResult.Direction;
+
+                bool allSeriesLengthsMatch = true;
+                allSeriesLengthsMatch &= pmax.Length      == barCount;
+                allSeriesLengthsMatch &= direction.Length == barCount;
+
+                if (!allSeriesLengthsMatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): pmax={pmax.Length}, direction={direction.Length}");
+                }
+            }
+            catch (NotImplementedException)
+            {
+                LogWarning("PMax indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/Trend/TrendIndicators.cs — PMax() implementation may be missing/broken.");
+                pmax = new double[barCount];
+                pmaxMA = new double[barCount];
+                direction = new int[barCount];
             }
         }
 
@@ -390,11 +417,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (takeProfitExitModeIndex == 4)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -418,11 +445,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (stopLossExitModeIndex == 4)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
 
@@ -464,6 +491,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
             if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
 
+            // Sinyal önceliklendirmesi - Not: 6 sinyal de yukaridaki gate blogunda Trader.signals.*Enabled
+            // ile filtrelendi, flag'i kapali olan sinyal buraya hep false gelir, zincir bir sonraki
+            // gecerli sinyale duser.
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
             else if (takeProfit) return TradeSignals.TakeProfit;

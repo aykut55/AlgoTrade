@@ -63,13 +63,18 @@ namespace AlgoTrade.Core.Trading.Strategies
         private readonly double oversold;
         private readonly double overbought;
 
+        // RSI hesabı - parametreli ctor'dan gelir; verilmezse Close (klasik RSI ile birebir aynı).
+        private readonly PriceSource priceSource = PriceSource.Close;
+
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
+
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/
         // skipModeIndex/ruleModeIndex artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri
         // asagida constructor'da parametre olarak atanir. Dispatch mantigi (OnStep'teki if/else zincirleri)
         // stratejiye ozgu, burada kalir.
-
-        // RSI hesabı - parametreli ctor'dan gelir; verilmezse Close (klasik RSI ile birebir aynı).
-        private readonly PriceSource priceSource = PriceSource.Close;
 
         // startTime/stopTime/startDay/stopDay/isTimeEnabled/isDayEnabled/triggerTime/isTriggerTimeEnabled
         // artik BaseStrategy'de tanimli (protected, readonly degil) - degerleri asagida constructor'da atanir.
@@ -83,12 +88,17 @@ namespace AlgoTrade.Core.Trading.Strategies
         // Parametreli constructor (data/indicators gerekli — parametresiz ctor kaldırıldı, hiç kullanılmıyordu)
         public SimpleRSIStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 14, double oversold = 30, double overbought = 70, PriceSource priceSource = PriceSource.Close,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0, double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1, int ruleModeIndex = -1)
         {
             this.period                  = period;
             this.oversold                = oversold;
             this.overbought              = overbought;
             this.priceSource             = priceSource;
+            this.karAlFiyatSeviyesi      = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi   = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi            = karAlYuzdesi;
+            this.zararKesYuzdesi         = zararKesYuzdesi;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
             this.takeProfitExitModeIndex = takeProfitExitModeIndex;
@@ -112,11 +122,17 @@ namespace AlgoTrade.Core.Trading.Strategies
             // kosulsuz (1==1) acikti, burada ayni davranisi ACIKCA true atayarak koruyoruz.
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
 
             Parameters["Period"]                  = period;
             Parameters["Oversold"]                = oversold;
             Parameters["Overbought"]              = overbought;
             Parameters["PriceSource"]             = priceSource;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]            = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]         = zararKesYuzdesi;
             Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
             Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
@@ -148,26 +164,39 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            // barCount/openPrices/.../epochTimes BaseStrategy.LoadCommonSeries() tarafindan bu
-            // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
-            source = Indicators.Trend.ResolvePriceSource(priceSource);
-
-            // RSI'ı hesapla (priceSource ile parametrik)
-            rsi = Indicators.Momentum.RSI(source, period).Values;
-
-            // rsi/source OnStep'te barCount ile ayni index'te okunuyor - uzunluklari uyusmazsa
-            // (or. indikator filtrelenmis/kirpilmis dondurdu) IndexOutOfRange yerine burada net hata ver
-            bool allSeriesLengthsMatch = true;
-            allSeriesLengthsMatch &= rsi.Length    == barCount;
-            allSeriesLengthsMatch &= source.Length == barCount;
-
-            if (!allSeriesLengthsMatch)
+            try
             {
-                throw new InvalidOperationException(
-                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): rsi={rsi.Length}, source={source.Length}");
-            }
+                // barCount/openPrices/.../epochTimes BaseStrategy.LoadCommonSeries() tarafindan bu
+                // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
+                source = Indicators.Trend.ResolvePriceSource(priceSource);
 
-            //Log($"SimpleRSIStrategy initialized: Period={period}, Oversold={oversold}, Overbought={overbought}, BuySignalModeIndex={buySignalModeIndex}, SellSignalModeIndex={sellSignalModeIndex}");
+                // RSI'ı hesapla (priceSource ile parametrik)
+                rsi = Indicators.Momentum.RSI(source, period).Values;
+
+                // rsi/source OnStep'te barCount ile ayni index'te okunuyor - uzunluklari uyusmazsa
+                // (or. indikator filtrelenmis/kirpilmis dondurdu) IndexOutOfRange yerine burada net hata ver
+                bool allSeriesLengthsMatch = true;
+                allSeriesLengthsMatch &= rsi.Length    == barCount;
+                allSeriesLengthsMatch &= source.Length == barCount;
+
+                if (!allSeriesLengthsMatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): rsi={rsi.Length}, source={source.Length}");
+                }
+
+                //Log($"SimpleRSIStrategy initialized: Period={period}, Oversold={oversold}, Overbought={overbought}, BuySignalModeIndex={buySignalModeIndex}, SellSignalModeIndex={sellSignalModeIndex}");
+            }
+            catch (NotImplementedException)
+            {
+                // RSI implement edilmiş durumda, bu blok normalde tetiklenmez -
+                // savunma amaçlı bırakıldı, indikatör ileride kaldırılır/bozulursa sessizce crash yerine uyarı verir.
+                LogWarning("RSI indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/Momentum/MomentumIndicators.cs — RSI() implementation may be missing/broken.");
+
+                rsi    = new double[barCount];
+                source = new double[barCount];
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -432,12 +461,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -466,12 +495,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
             // ************************************************************************************************************************
@@ -496,13 +525,6 @@ namespace AlgoTrade.Core.Trading.Strategies
             }
             // ************************************************************************************************************************
 
-            // ************************************************************************************************************************
-            // ************************************************************************************************************************
-            // ************************************************************************************************************************
-            // Sinyal önceliklendirmesi
-            // ************************************************************************************************************************
-            // ************************************************************************************************************************
-            // ************************************************************************************************************************
             // ------------------------------------------------------------------------------------------------------------------
             // SINYAL GATE'I - nihai önceliklendirmeden hemen ÖNCE.
             // Yukarıda 6 sinyal (buy/sell/takeProfit/stopLoss/flat/skip) strateji tarafından hiçbir trader
@@ -537,7 +559,17 @@ namespace AlgoTrade.Core.Trading.Strategies
             // kosulsuz calisir. isTimeEnabled/isDayEnabled false ise ilgili pencere hep "icinde" sayilir.
             if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
             if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
+            // ************************************************************************************************************************
 
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // Sinyal önceliklendirmesi
+            // Not: 6 sinyal de yukaridaki gate blogunda Trader.signals.*Enabled ile filtrelendi -
+            // flag'i kapali olan sinyal buraya hep false gelir, zincir bir sonraki gecerli sinyale duser.
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
+            // ************************************************************************************************************************
             if (skip)
             {
                 return TradeSignals.Skip;

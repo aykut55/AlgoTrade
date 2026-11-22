@@ -204,6 +204,10 @@ algoTrader.SetSingleTraderOptSortOutputConfig(new SingleTraderOptSortOutputConfi
     SortField2         = sortField2,
     SortedCsvFileName2 = sortedCsvFileName2,
     SortedTxtFileName2 = sortedTxtFileName2,
+
+    SortField3         = sortField3,
+    SortedCsvFileName3 = sortedCsvFileName3,
+    SortedTxtFileName3 = sortedTxtFileName3,
 });
 
 // =============================================================================

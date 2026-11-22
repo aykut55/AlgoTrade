@@ -165,6 +165,11 @@ string sortField2 = "GetiriFiyat";
 string sortedCsvFileName2 = "singleTraderOptLog_sorted_brut.csv";
 string sortedTxtFileName2 = "singleTraderOptLog_sorted_brut.txt";
 
+// Ucuncu sirali cikti: net getiri / MaxDD skoruna gore en iyi-sonuc siralamasi.
+string sortField3 = "ScoreFiyatNet";
+string sortedCsvFileName3 = "singleTraderOptLog_sorted_scoreFiyatNet.csv";
+string sortedTxtFileName3 = "singleTraderOptLog_sorted_scoreFiyatNet.txt";
+
 // =============================================================================
 // Optimization Strategy Configuration
 // optChoice ile hangi strateji + hangi parametre range'lerinin taranacagi secilir - her deneme
@@ -198,7 +203,9 @@ if (optChoice == 0)
         // priceSource enum - taranmadığı için string sabit (registry Enum.Parse, case-insensitive).
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 1)
@@ -240,7 +247,9 @@ else if (optChoice == 2)
     fixedParams = new Dictionary<string, object>
     {
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 3)
@@ -260,7 +269,9 @@ else if (optChoice == 3)
         // seviye (0) yerine kesisim (1): MA siralamasi uzun bar araliklarinda sabit kaldigi icin
         // seviye modu her barda ayni yonde sinyal tekrarlayip asiri islem/komisyona yol aciyordu.
         ["buySignalModeIndex"] = 1,
-        ["sellSignalModeIndex"] = 1
+        ["sellSignalModeIndex"] = 1,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 4)
@@ -279,7 +290,9 @@ else if (optChoice == 4)
     {
         // ayni gerekce (bkz. optChoice==3): seviye yerine kesisim
         ["buySignalModeIndex"] = 1,
-        ["sellSignalModeIndex"] = 1
+        ["sellSignalModeIndex"] = 1,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 5)
@@ -298,7 +311,9 @@ else if (optChoice == 5)
         ["macdSignalPeriod"]     = 9,
         ["superTrendMultiplier"] = 3.0,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 6)
@@ -316,7 +331,9 @@ else if (optChoice == 6)
     {
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 7)
@@ -335,7 +352,9 @@ else if (optChoice == 7)
     {
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 8)
@@ -352,7 +371,9 @@ else if (optChoice == 8)
     {
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 9)
@@ -369,7 +390,9 @@ else if (optChoice == 9)
     {
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 10)
@@ -384,7 +407,9 @@ else if (optChoice == 10)
     fixedParams = new Dictionary<string, object>
     {
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 11)
@@ -398,7 +423,9 @@ else if (optChoice == 11)
     fixedParams = new Dictionary<string, object>
     {
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 12)
@@ -415,7 +442,9 @@ else if (optChoice == 12)
         ["signalPeriod"]    = 9,
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 13)
@@ -431,7 +460,9 @@ else if (optChoice == 13)
     {
         ["centerLine"]      = 50,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 14)
@@ -447,7 +478,9 @@ else if (optChoice == 14)
     {
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 15)
@@ -464,7 +497,9 @@ else if (optChoice == 15)
         ["maPeriod"]        = 20,
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 16)
@@ -480,7 +515,9 @@ else if (optChoice == 16)
         ["positiveThreshold"] = 0.1,
         ["negativeThreshold"] = -0.1,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 17)
@@ -496,7 +533,9 @@ else if (optChoice == 17)
         ["oversold"]        = 20,
         ["overbought"]      = 80,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 18)
@@ -513,7 +552,9 @@ else if (optChoice == 18)
         ["negativeThreshold"] = -5,
         ["priceSource"]       = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 19)
@@ -530,7 +571,9 @@ else if (optChoice == 19)
         ["negativeThreshold"] = 0,
         ["priceSource"]       = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 20)
@@ -565,7 +608,9 @@ else if (optChoice == 21)
         ["threshold"]       = 80,
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 22)
@@ -581,7 +626,9 @@ else if (optChoice == 22)
         ["kijunPeriod"]     = 26,
         ["senkouPeriod"]    = 52,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 23)
@@ -596,7 +643,9 @@ else if (optChoice == 23)
     fixedParams = new Dictionary<string, object>
     {
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 24)
@@ -613,7 +662,9 @@ else if (optChoice == 24)
         ["maPeriod"]        = 10,
         ["pmaxMaMethod"]    = "EMA",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 25)
@@ -628,7 +679,9 @@ else if (optChoice == 25)
     {
         ["priceSource"]     = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 26)
@@ -645,7 +698,9 @@ else if (optChoice == 26)
         ["momentumPeriod"]  = 14,
         ["useMFI"]          = true,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (optChoice == 27)

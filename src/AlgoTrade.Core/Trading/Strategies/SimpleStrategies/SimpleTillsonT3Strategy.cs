@@ -51,6 +51,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         // tarafindan Initialize() icinde OnInit()'ten once doldurulur, burada tekrar tanimlanmaz.
 
         private readonly int period;
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
 
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
@@ -69,9 +73,15 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleTillsonT3Strategy(List<StockData> data, IndicatorManager indicators,
             int period = 5, PriceSource priceSource = PriceSource.Close,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1, int ruleModeIndex = -1)
         {
             this.period                  = period;
+            this.karAlFiyatSeviyesi       = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi    = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi             = karAlYuzdesi;
+            this.zararKesYuzdesi          = zararKesYuzdesi;
             this.priceSource             = priceSource;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
@@ -96,8 +106,14 @@ namespace AlgoTrade.Core.Trading.Strategies
             // BaseStrategy varsayilani zaten true, burada aciklik icin ayrica true set edilir.
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
 
             Parameters["Period"]                  = period;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]             = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]          = zararKesYuzdesi;
             Parameters["PriceSource"]             = priceSource;
             Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
@@ -133,16 +149,25 @@ namespace AlgoTrade.Core.Trading.Strategies
             // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
             source = Indicators.Trend.ResolvePriceSource(priceSource);
 
-            t3 = Indicators.MA.T3(source, period);
-
-            bool allSeriesLengthsMatch = true;
-            allSeriesLengthsMatch &= t3.Length      == barCount;
-            allSeriesLengthsMatch &= source.Length  == barCount;
-
-            if (!allSeriesLengthsMatch)
+            try
             {
-                throw new InvalidOperationException(
-                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): t3={t3.Length}, source={source.Length}");
+                t3 = Indicators.MA.T3(source, period);
+
+                bool allSeriesLengthsMatch = true;
+                allSeriesLengthsMatch &= t3.Length      == barCount;
+                allSeriesLengthsMatch &= source.Length  == barCount;
+
+                if (!allSeriesLengthsMatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): t3={t3.Length}, source={source.Length}");
+                }
+            }
+            catch (NotImplementedException)
+            {
+                LogWarning("T3 indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/MovingAverages/MovingAverageCalculator.cs — T3() implementation may be missing/broken.");
+                t3 = new double[barCount];
             }
         }
 
@@ -384,11 +409,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (takeProfitExitModeIndex == 4)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -412,11 +437,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (stopLossExitModeIndex == 4)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
 
@@ -458,6 +483,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
             if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
 
+            // Sinyal önceliklendirmesi - Not: 6 sinyal de yukaridaki gate blogunda Trader.signals.*Enabled
+            // ile filtrelendi, flag'i kapali olan sinyal buraya hep false gelir, zincir bir sonraki
+            // gecerli sinyale duser.
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
             else if (takeProfit) return TradeSignals.TakeProfit;

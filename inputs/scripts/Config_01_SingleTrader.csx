@@ -121,7 +121,7 @@ bool addHeadTailInfo = false;
 // sayilir; o parametre kendi varsayilan degerine duser. Yani yanlis key yazarsan calisir ama
 // sessizce yanlis calisir - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int strategyChoice = 1;
+int strategyChoice = 5;
 
 string strategyName;
 Dictionary<string, object> strategyParams;
@@ -136,7 +136,9 @@ if (strategyChoice == 0)
         ["mostMaMethod"] = "EMA",
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 1)
@@ -164,7 +166,9 @@ else if (strategyChoice == 2)
     {
         ["ruleModeIndex"]   = 0,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 3)
@@ -177,7 +181,9 @@ else if (strategyChoice == 3)
         ["overbought"] = 70,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 4)
@@ -190,7 +196,9 @@ else if (strategyChoice == 4)
         ["ottMaMethod"] = "VIDYA",
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 5)
@@ -202,7 +210,10 @@ else if (strategyChoice == 5)
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        // Menu [5] / StrategyConfig SimpleSuperTrendStrategy v1 ile ayni: TP/SL kapali.
+        ["takeProfitExitModeIndex"] = -1,
+        ["stopLossExitModeIndex"]   = -1
     };
 }
 else if (strategyChoice == 6)
@@ -214,7 +225,9 @@ else if (strategyChoice == 6)
         ["max"] = 0.2,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 7)
@@ -225,7 +238,9 @@ else if (strategyChoice == 7)
         ["period"] = 14,
         ["adxThreshold"] = 25,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 8)
@@ -235,7 +250,9 @@ else if (strategyChoice == 8)
     {
         ["period"] = 14,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 9)
@@ -248,7 +265,9 @@ else if (strategyChoice == 9)
         ["signalPeriod"] = 9,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 10)
@@ -260,7 +279,9 @@ else if (strategyChoice == 10)
         ["dPeriod"] = 3,
         ["centerLine"] = 50,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 11)
@@ -272,7 +293,9 @@ else if (strategyChoice == 11)
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 12)
@@ -285,7 +308,9 @@ else if (strategyChoice == 12)
         ["multiplier"] = 2.0,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 13)
@@ -297,7 +322,9 @@ else if (strategyChoice == 13)
         ["positiveThreshold"] = 0.1,
         ["negativeThreshold"] = -0.1,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 14)
@@ -309,7 +336,9 @@ else if (strategyChoice == 14)
         ["oversold"] = 20,
         ["overbought"] = 80,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 15)
@@ -322,7 +351,9 @@ else if (strategyChoice == 15)
         ["negativeThreshold"] = -5,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 16)
@@ -335,7 +366,9 @@ else if (strategyChoice == 16)
         ["negativeThreshold"] = 0,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 17)
@@ -367,7 +400,9 @@ else if (strategyChoice == 18)
         ["threshold"] = 80,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 19)
@@ -379,7 +414,9 @@ else if (strategyChoice == 19)
         ["kijunPeriod"] = 26,
         ["senkouPeriod"] = 52,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 20)
@@ -390,7 +427,9 @@ else if (strategyChoice == 20)
         ["param1"] = 3,
         ["param2"] = 5,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 21)
@@ -403,7 +442,9 @@ else if (strategyChoice == 21)
         ["maPeriod"] = 10,
         ["pmaxMaMethod"] = "EMA",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 22)
@@ -414,7 +455,9 @@ else if (strategyChoice == 22)
         ["period"] = 5,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 23)
@@ -427,7 +470,9 @@ else if (strategyChoice == 23)
         ["momentumPeriod"] = 14,
         ["useMFI"] = true,
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        ["takeProfitExitModeIndex"] = 0,    // eski davranis: ctor varsayilani once 0'di, simdi -1 (off) - eski aktif TP/SL burada acikca korunuyor
+        ["stopLossExitModeIndex"]   = 0
     };
 }
 else if (strategyChoice == 24)

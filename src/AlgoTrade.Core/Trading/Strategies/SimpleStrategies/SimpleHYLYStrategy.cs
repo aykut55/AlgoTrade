@@ -54,6 +54,10 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         private readonly int period;
         private readonly double threshold;
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
 
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de
         // tanimli (protected, readonly degil) - degerleri asagida constructor'da parametre olarak atanir.
@@ -73,10 +77,16 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public SimpleHYLYStrategy(List<StockData> data, IndicatorManager indicators,
             int period = 20, double threshold = 80, PriceSource priceSource = PriceSource.Close,
-            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0, int ruleModeIndex = 0)
+            double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1, int ruleModeIndex = -1)
         {
             this.period          = period;
             this.threshold       = threshold;
+            this.karAlFiyatSeviyesi       = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi    = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi             = karAlYuzdesi;
+            this.zararKesYuzdesi          = zararKesYuzdesi;
             this.priceSource     = priceSource;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
@@ -101,9 +111,15 @@ namespace AlgoTrade.Core.Trading.Strategies
             // acikca true birakildi (BaseStrategy varsayilani zaten true).
             takeProfitExitModeEnabled = true;
             stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
 
             Parameters["Period"]               = period;
             Parameters["Threshold"]            = threshold;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]             = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]          = zararKesYuzdesi;
             Parameters["PriceSource"]          = priceSource;
             Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
@@ -139,35 +155,45 @@ namespace AlgoTrade.Core.Trading.Strategies
             // noktada zaten dolu (Initialize() icinde OnInit()'ten once cagrildi).
             source = Indicators.Trend.ResolvePriceSource(priceSource);
 
-            var hhv = Indicators.Utils.HHV(highPrices, period);
-            var llv = Indicators.Utils.LLV(lowPrices, period);
-
-            hy = new double[barCount];
-            ly = new double[barCount];
-            for (int i = 0; i < barCount; i++)
+            try
             {
-                double range = hhv[i] - llv[i];
-                if (double.IsNaN(hhv[i]) || double.IsNaN(llv[i]) || range <= 0)
+                var hhv = Indicators.Utils.HHV(highPrices, period);
+                var llv = Indicators.Utils.LLV(lowPrices, period);
+
+                hy = new double[barCount];
+                ly = new double[barCount];
+                for (int i = 0; i < barCount; i++)
                 {
-                    hy[i] = double.NaN;
-                    ly[i] = double.NaN;
+                    double range = hhv[i] - llv[i];
+                    if (double.IsNaN(hhv[i]) || double.IsNaN(llv[i]) || range <= 0)
+                    {
+                        hy[i] = double.NaN;
+                        ly[i] = double.NaN;
+                    }
+                    else
+                    {
+                        hy[i] = ((source[i] - llv[i]) / range) * 100;
+                        ly[i] = ((hhv[i] - source[i]) / range) * 100;
+                    }
                 }
-                else
+
+                bool allSeriesLengthsMatch = true;
+                allSeriesLengthsMatch &= hy.Length     == barCount;
+                allSeriesLengthsMatch &= ly.Length     == barCount;
+                allSeriesLengthsMatch &= source.Length == barCount;
+
+                if (!allSeriesLengthsMatch)
                 {
-                    hy[i] = ((source[i] - llv[i]) / range) * 100;
-                    ly[i] = ((hhv[i] - source[i]) / range) * 100;
+                    throw new InvalidOperationException(
+                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): hy={hy.Length}, ly={ly.Length}, source={source.Length}");
                 }
             }
-
-            bool allSeriesLengthsMatch = true;
-            allSeriesLengthsMatch &= hy.Length     == barCount;
-            allSeriesLengthsMatch &= ly.Length     == barCount;
-            allSeriesLengthsMatch &= source.Length == barCount;
-
-            if (!allSeriesLengthsMatch)
+            catch (NotImplementedException)
             {
-                throw new InvalidOperationException(
-                    $"Seri uzunlukları uyuşmuyor (barCount={barCount}): hy={hy.Length}, ly={ly.Length}, source={source.Length}");
+                LogWarning("HHV/LLV indicator threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/Utils/PriceUtils.cs — HHV()/LLV() implementation may be missing/broken.");
+                hy = new double[barCount];
+                ly = new double[barCount];
             }
         }
 
@@ -396,11 +422,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (takeProfitExitModeIndex == 4)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -424,11 +450,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 }
                 else if (stopLossExitModeIndex == 4)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
 
@@ -477,6 +503,9 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (isTimeEnabled && !isWithinTimeWindow) { buy = false; sell = false; flat = true; }
             if (isDayEnabled  && !isWithinDayWindow)  { buy = false; sell = false; flat = true; }
 
+            // Sinyal önceliklendirmesi - Not: 6 sinyal de yukaridaki gate blogunda Trader.signals.*Enabled
+            // ile filtrelendi, flag'i kapali olan sinyal buraya hep false gelir, zincir bir sonraki
+            // gecerli sinyale duser.
             if (skip) return TradeSignals.Skip;
             else if (flat) return TradeSignals.Flat;
             else if (takeProfit) return TradeSignals.TakeProfit;

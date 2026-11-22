@@ -95,6 +95,10 @@ namespace AlgoTrade.Core.Trading.Strategies
         // buySignalModeIndex/sellSignalModeIndex/takeProfitExitModeIndex/stopLossExitModeIndex/
         // flatModeIndex/skipModeIndex/ruleModeIndex artik BaseStrategy'de tanimli (protected, readonly
         // degil) - degerleri asagida constructor'da parametre olarak atanir.
+        private readonly double karAlFiyatSeviyesi;
+        private readonly double zararKesFiyatSeviyesi;
+        private readonly double karAlYuzdesi;
+        private readonly double zararKesYuzdesi;
         private Dictionary<string, double[]>? series;
 
         // barCount artik BaseStrategy'de (protected) - LoadCommonSeries() tarafindan Initialize()
@@ -113,9 +117,15 @@ namespace AlgoTrade.Core.Trading.Strategies
         // field hep 0 kalir - digger metotlarda boyle bir isim çakışması olmadigi icin "this."
         // gerekmiyor).
         public SimpleComboStrategy(List<StockData> data, IndicatorManager indicators,
-            int ruleModeIndex = 0, int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = 0, int stopLossExitModeIndex = 0, int flatModeIndex = 0, int skipModeIndex = 0)
+            int ruleModeIndex = 0, double karAlFiyatSeviyesi = 1000.0, double zararKesFiyatSeviyesi = -500.0,
+            double karAlYuzdesi = 3.0, double zararKesYuzdesi = -2.0,
+            int buySignalModeIndex = 0, int sellSignalModeIndex = 0, int takeProfitExitModeIndex = -1, int stopLossExitModeIndex = -1, int flatModeIndex = -1, int skipModeIndex = -1)
         {
             this.ruleModeIndex           = ruleModeIndex;
+            this.karAlFiyatSeviyesi       = karAlFiyatSeviyesi;
+            this.zararKesFiyatSeviyesi    = zararKesFiyatSeviyesi;
+            this.karAlYuzdesi             = karAlYuzdesi;
+            this.zararKesYuzdesi          = zararKesYuzdesi;
             this.buySignalModeIndex      = buySignalModeIndex;
             this.sellSignalModeIndex     = sellSignalModeIndex;
             this.takeProfitExitModeIndex = takeProfitExitModeIndex;
@@ -134,7 +144,16 @@ namespace AlgoTrade.Core.Trading.Strategies
             isDayEnabled         = false;
             isTriggerTimeEnabled = false;
 
+            takeProfitExitModeEnabled = true;
+            stopLossExitModeEnabled   = true;
+            flatModeEnabled           = true;
+            skipModeEnabled           = true;
+
             Parameters["RuleModeIndex"]           = ruleModeIndex;
+            Parameters["KarAlFiyatSeviyesi"]      = karAlFiyatSeviyesi;
+            Parameters["ZararKesFiyatSeviyesi"]   = zararKesFiyatSeviyesi;
+            Parameters["KarAlYuzdesi"]             = karAlYuzdesi;
+            Parameters["ZararKesYuzdesi"]          = zararKesYuzdesi;
             Parameters["BuySignalModeIndex"]      = buySignalModeIndex;
             Parameters["SellSignalModeIndex"]     = sellSignalModeIndex;
             Parameters["TakeProfitExitModeIndex"] = takeProfitExitModeIndex;
@@ -156,28 +175,40 @@ namespace AlgoTrade.Core.Trading.Strategies
             if (!IsInitialized)
                 return;
 
-            series = BuildSeriesCatalog(Indicators);
-
-            barCount    = series["Close"].Length;
-            buySignals  = new bool[barCount];
-            sellSignals = new bool[barCount];
-            flatSignals = new bool[barCount];
-
-            // Tüm seriler BuildSignals()/OnStep'te aynı index ile birlikte okunuyor - uzunlukları
-            // uyuşmazsa (örn. biri filtrelenmiş/kırpılmış gelirse) IndexOutOfRange yerine burada
-            // net hata ver. Diğer 21 stratejideki allSeriesLengthsMatch guard'ının dictionary
-            // üzerinden döngüyle yazılmış hali - burada seri sayısı sabit değil (BuildSeriesCatalog
-            // genişleyebilir), o yüzden isim isim AND zinciri yerine foreach kullanılıyor.
-            foreach (var kvp in series)
+            try
             {
-                if (kvp.Value.Length != barCount)
-                {
-                    throw new InvalidOperationException(
-                        $"Seri uzunlukları uyuşmuyor (barCount={barCount}): {kvp.Key}={kvp.Value.Length}");
-                }
-            }
+                series = BuildSeriesCatalog(Indicators);
 
-            BuildSignals(ruleModeIndex);
+                barCount    = series["Close"].Length;
+                buySignals  = new bool[barCount];
+                sellSignals = new bool[barCount];
+                flatSignals = new bool[barCount];
+
+                // Tüm seriler BuildSignals()/OnStep'te aynı index ile birlikte okunuyor - uzunlukları
+                // uyuşmazsa (örn. biri filtrelenmiş/kırpılmış gelirse) IndexOutOfRange yerine burada
+                // net hata ver. Diğer 21 stratejideki allSeriesLengthsMatch guard'ının dictionary
+                // üzerinden döngüyle yazılmış hali - burada seri sayısı sabit değil (BuildSeriesCatalog
+                // genişleyebilir), o yüzden isim isim AND zinciri yerine foreach kullanılıyor.
+                foreach (var kvp in series)
+                {
+                    if (kvp.Value.Length != barCount)
+                    {
+                        throw new InvalidOperationException(
+                            $"Seri uzunlukları uyuşmuyor (barCount={barCount}): {kvp.Key}={kvp.Value.Length}");
+                    }
+                }
+
+                BuildSignals(ruleModeIndex);
+            }
+            catch (NotImplementedException)
+            {
+                LogWarning("One or more indicators (RSI/MACD/SuperTrend/SMA) threw NotImplementedException! Strategy will not generate signals.");
+                LogWarning("Check src/Trading/Indicators/ — implementation may be missing/broken.");
+                series = new Dictionary<string, double[]>();
+                buySignals  = new bool[barCount];
+                sellSignals = new bool[barCount];
+                flatSignals = new bool[barCount];
+            }
         }
 
         public override TradeSignals OnStep(int currentIndex)
@@ -287,12 +318,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (takeProfitExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, 1000.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararFiyatSeviyesindenKarAlHesapla(currentIndex, karAlFiyatSeviyesi) != 0;
                 }
                 else if (takeProfitExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, 3.0) != 0;
+                    takeProfit = Trader.karAlZararKes.KarZararYuzdesindenKarAlHesapla(currentIndex, karAlYuzdesi) != 0;
                 }
             }
 
@@ -321,12 +352,12 @@ namespace AlgoTrade.Core.Trading.Strategies
                 else if (stopLossExitModeIndex == 4)
                 {
                     // 4: Anlık kar/zarar fiyat seviyesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, -500.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararFiyatSeviyesindenZararKesHesapla(currentIndex, zararKesFiyatSeviyesi) != 0;
                 }
                 else if (stopLossExitModeIndex == 5)
                 {
                     // 5: Anlık kar/zarar yüzdesi (pozisyon bazlı)
-                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, -2.0) != 0;
+                    stopLoss = Trader.karAlZararKes.KarZararYuzdesindenZararKesHesapla(currentIndex, zararKesYuzdesi) != 0;
                 }
             }
             // ************************************************************************************************************************

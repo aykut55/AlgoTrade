@@ -77,7 +77,7 @@ string filePrefix = "ConfirmingSingleTrader";
 // =============================================================================
 // SignalTrader Stratejisi (ham Al/Sat/Flat sinyalini uretir)
 // =============================================================================
-int strategyChoice = 0; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy, 5=SimpleParabolicSARStrategy
+int strategyChoice = 4; // 0=SimpleMostStrategy, 1=SimpleMAStrategy, 2=SimpleRSIStrategy, 3=SimpleOTTStrategy, 4=SimpleSuperTrendStrategy, 5=SimpleParabolicSARStrategy
 
 string strategyName;
 Dictionary<string, object> strategyParameters;
@@ -144,7 +144,10 @@ else if (strategyChoice == 4)
         ["multiplier"] = 3.0,
         ["priceSource"] = "Close",
         ["buySignalModeIndex"] = 0,
-        ["sellSignalModeIndex"] = 0
+        ["sellSignalModeIndex"] = 0,
+        // Menu [5]/[23] - StrategyConfig SimpleSuperTrendStrategy v1 ile ayni.
+        ["takeProfitExitModeIndex"] = -1,
+        ["stopLossExitModeIndex"] = -1
     };
 }
 else if (strategyChoice == 5)

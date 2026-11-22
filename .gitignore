@@ -125,3 +125,6 @@ inputs/python/offlineReplay/samples/
 deploy.log
 
 aykut.md
+
+# Kullanicinin kendi denemeleri icin scratch klasoru - takip edilmiyor.
+zDenemeler/
