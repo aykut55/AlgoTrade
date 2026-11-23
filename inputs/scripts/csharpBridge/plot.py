@@ -16,7 +16,6 @@ from src.plotting.pctChangePanel import attachPctChangeUpdater
 
 CYAN = (60, 200, 255, 255)
 YELLOW = (255, 255, 0, 255)
-ORANGE = (255, 127, 14, 255)
 
 pm.deleteAllPanels()
 xs = list(range(len(bridge.closes)))
@@ -80,23 +79,35 @@ if ts is not None:
     pm.addPanel(pnlPctPanel)
     pnlPctPanel.addData(1, "PnL %", "line", xs, ts["pnlPct"], timestamps=bridge.timestamps, intraday=True, color=YELLOW)
 
-    returnPanel = pm.createPanel("Return", "Return / Net Return")
+    # Kullanıcı tercihi: Return/Net Return ve Return %/Net Return % artık AYRI panel
+    # (eskiden ikişer seri tek panelde birleşikti). Sıra: Net Return, Net Return %, Return, Return %.
+    netReturnPanel = pm.createPanel("Net Return", "Net Return")
+    netReturnPanel.setHeight(220)
+    netReturnPanel.setYLabel("Net Return")
+    pm.addPanel(netReturnPanel)
+    netReturnPanel.addData(1, "Net Return", "line", xs, ts["returnNet"],
+                           timestamps=bridge.timestamps, intraday=True, color=YELLOW)
+
+    netReturnPctPanel = pm.createPanel("Net Return %", "Net Return %")
+    netReturnPctPanel.setHeight(220)
+    netReturnPctPanel.setYLabel("Net Return %")
+    pm.addPanel(netReturnPctPanel)
+    netReturnPctPanel.addData(1, "Net Return %", "line", xs, ts["returnPctNet"],
+                              timestamps=bridge.timestamps, intraday=True, color=YELLOW)
+
+    returnPanel = pm.createPanel("Return", "Return")
     returnPanel.setHeight(220)
     returnPanel.setYLabel("Return")
     pm.addPanel(returnPanel)
     returnPanel.addData(1, "Return", "line", xs, ts["returnFiyat"],
                         timestamps=bridge.timestamps, intraday=True, color=YELLOW)
-    returnPanel.addData(2, "Net Return", "line", xs, ts["returnNet"],
-                        timestamps=bridge.timestamps, intraday=True, color=ORANGE)
 
-    returnPctPanel = pm.createPanel("Return %", "Return % / Net Return %")
+    returnPctPanel = pm.createPanel("Return %", "Return %")
     returnPctPanel.setHeight(220)
     returnPctPanel.setYLabel("Return %")
     pm.addPanel(returnPctPanel)
     returnPctPanel.addData(1, "Return %", "line", xs, ts["returnPct"],
                            timestamps=bridge.timestamps, intraday=True, color=YELLOW)
-    returnPctPanel.addData(2, "Net Return %", "line", xs, ts["returnPctNet"],
-                           timestamps=bridge.timestamps, intraday=True, color=ORANGE)
 
 # En son panel: AL/SAT uretn indikatorler (default.py'deki "Indicators" paneli
 # ile ayni fikir) - SADECE kullanilan indikator serileri, AL/SAT isareti YOK

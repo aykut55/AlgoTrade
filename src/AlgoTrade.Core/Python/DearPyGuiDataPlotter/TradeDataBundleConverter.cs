@@ -18,8 +18,10 @@ namespace AlgoTrade.Core.Python.DearPyGuiDataPlotter;
 /// stage2LoadPreparedData/stage3FillPanelsFromView) dönüştürür.
 ///
 /// Üretilen panel seti (bkz. src/panels.jpg - imgui_bundle referans ekranı):
-/// OHLC, Signals (AL/SAT/FLAT), PnL, PnL %, Return+Net Return, Return %+Net
-/// Return %, ve stratejinin kendi indikatörleri (örn. MOST+EXMOV) için ayrı
+/// OHLC, % Change, Signals (AL/SAT/FLAT), PnL, PnL %, Net Return, Net Return %,
+/// Return, Return % (dördü de AYRI panel - eskiden Return/Net Return ve
+/// Return %/Net Return % birer panelde birleşikti, kullanıcı tercihiyle
+/// ayrıldı), ve stratejinin kendi indikatörleri (örn. MOST+EXMOV) için ayrı
 /// bir panel.
 /// </summary>
 public class TradeDataBundleConverter
@@ -341,9 +343,10 @@ public class TradeDataBundleConverter
     }
 
     /// <summary>
-    /// src/panels.jpg'deki 7 panelli layout'u üreten view.json'ı yazar:
-    /// OHLC, Signals, PnL, PnL %, Return+Net Return, Return %+Net Return %,
-    /// ve (varsa) stratejinin kendi indikatörleri (örn. MOST+EXMOV).
+    /// src/panels.jpg'deki layout'u üreten view.json'ı yazar:
+    /// OHLC, % Change, Signals, PnL, PnL %, Net Return, Net Return %, Return,
+    /// Return % (dördü AYRI panel), ve (varsa) stratejinin kendi indikatörleri
+    /// (örn. MOST+EXMOV).
     /// </summary>
     private static string BuildAndWriteView(string outputDir, string fileBaseName, string? symbol,
         List<string> strategyIndicatorNames, List<ChildOverlaySeries> childOverlays,
@@ -365,10 +368,6 @@ public class TradeDataBundleConverter
         // ilk denemede magenta yazılmıştı ama referans görüntüde açık camgöbeği/cyan kullanılıyor.
         int[] cyan = new[] { 60, 200, 255, 255 };
         int[] yellow = new[] { 255, 255, 0, 255 };
-
-        // Child overlay'lerde gross (Return/Return %) soluk, net (Net Return/Net Return %) tam
-        // renkte çizilir — src/PythonPlotter/multiple_data_plotter.py'deki dim/color ayrımıyla aynı.
-        static int[] Dim(int[] color) => new[] { color[0] / 2, color[1] / 2, color[2] / 2, 178 };
 
         static Dictionary<string, object?> Panel(string id, string name, string caption, int height, int ySyncId,
             List<Dictionary<string, object?>> series, string? yLabel = null, double[]? yFixedRange = null)
@@ -408,10 +407,17 @@ public class TradeDataBundleConverter
                 new() { Series("indicator", "PnL", "PnL", color: yellow) }, yLabel: "PnL Price"),
             Panel("pnlPct", "PnL Price %", "PnL %", 220, 3,
                 new() { Series("indicator", "PnL %", "PnL %", color: yellow) }, yLabel: "PnL Price %"),
-            Panel("returnCombo", "Return", "Return / Net Return", 220, 4,
-                new() { Series("indicator", "Return", "Return"), Series("indicator", "Net Return", "Net Return") }, yLabel: "Return"),
-            Panel("returnPctCombo", "Return %", "Return % / Net Return %", 220, 5,
-                new() { Series("indicator", "Return %", "Return %"), Series("indicator", "Net Return %", "Net Return %") }, yLabel: "Return %"),
+            // Kullanıcı tercihi: Return/Net Return ve Return %/Net Return % artık AYRI panel
+            // (eskiden "returnCombo"/"returnPctCombo" olarak ikişer seri tek panelde birleşikti).
+            // Sıra: Net Return, Net Return %, Return, Return %.
+            Panel("netReturn", "Net Return", "Net Return", 220, 4,
+                new() { Series("indicator", "Net Return", "Net Return", color: yellow) }, yLabel: "Net Return"),
+            Panel("netReturnPct", "Net Return %", "Net Return %", 220, 5,
+                new() { Series("indicator", "Net Return %", "Net Return %", color: yellow) }, yLabel: "Net Return %"),
+            Panel("return", "Return", "Return", 220, 8,
+                new() { Series("indicator", "Return", "Return", color: yellow) }, yLabel: "Return"),
+            Panel("returnPct", "Return %", "Return %", 220, 9,
+                new() { Series("indicator", "Return %", "Return %", color: yellow) }, yLabel: "Return %"),
         };
 
         // multiple_data_plotter.py ile birebir aynı davranış:
@@ -427,19 +433,22 @@ public class TradeDataBundleConverter
             pnlPctPanelSeries!.Add(Series("indicator", child.PnLPctName, $"{child.Label} PnL %", color: child.Color));
         }
 
-        // Return/Return % → child overlay'leri SADECE includeChildReturnOverlays
+        // Net Return/Net Return %/Return/Return % → child overlay'leri SADECE includeChildReturnOverlays
         // (SHOW_CHILD_TRADERS_IN_NEW_PLOTTER) açıkken eklenir — multiple_data_plotter.py:ShowChildsData ile aynı.
+        // Panel'ler ayrıldığı için gross/net artık aynı panelde değil - dim/tam renk ayrımına gerek yok,
+        // her child kendi panelinde tam renkle çizilir.
         if (includeChildReturnOverlays)
         {
-            var returnPanelSeries = panels[5]["series"] as List<Dictionary<string, object?>>;
-            var returnPctPanelSeries = panels[6]["series"] as List<Dictionary<string, object?>>;
+            var netReturnPanelSeries = panels[5]["series"] as List<Dictionary<string, object?>>;
+            var netReturnPctPanelSeries = panels[6]["series"] as List<Dictionary<string, object?>>;
+            var returnPanelSeries = panels[7]["series"] as List<Dictionary<string, object?>>;
+            var returnPctPanelSeries = panels[8]["series"] as List<Dictionary<string, object?>>;
             foreach (var child in childOverlays)
             {
-                int[] dim = Dim(child.Color);
-                returnPanelSeries!.Add(Series("indicator", child.ReturnName, $"{child.Label} Gross", color: dim));
-                returnPanelSeries.Add(Series("indicator", child.NetReturnName, $"{child.Label} Net", color: child.Color));
-                returnPctPanelSeries!.Add(Series("indicator", child.ReturnPctName, $"{child.Label} Gross %", color: dim));
-                returnPctPanelSeries.Add(Series("indicator", child.NetReturnPctName, $"{child.Label} Net %", color: child.Color));
+                netReturnPanelSeries!.Add(Series("indicator", child.NetReturnName, $"{child.Label} Net", color: child.Color));
+                netReturnPctPanelSeries!.Add(Series("indicator", child.NetReturnPctName, $"{child.Label} Net %", color: child.Color));
+                returnPanelSeries!.Add(Series("indicator", child.ReturnName, $"{child.Label} Gross", color: child.Color));
+                returnPctPanelSeries!.Add(Series("indicator", child.ReturnPctName, $"{child.Label} Gross %", color: child.Color));
             }
         }
 

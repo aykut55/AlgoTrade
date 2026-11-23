@@ -174,59 +174,80 @@ class MultipleDataPlotter:
                 p3.setData(i, DataType.Line, arr, label, color)
 
         # ------------------------------------------------------------------
-        # Panel 4: Return  (getiri_fiyat_list + getiri_fiyat_net_list — overlay)
-        # Her trader için 2 çizgi: gross (açık renk) + net (tam renk)
+        # Panel 4: Net Return (getiri_fiyat_net_list) - her trader kendi renginde.
         # ShowChildsData=False ise sadece mainTrader çizilir.
         # ------------------------------------------------------------------
         p4 = plotter.AddPanel(4)
-        p4.setTitle("Return")
-        p4.setYAxisLabel("Return")
+        p4.setTitle("Net Return")
+        p4.setYAxisLabel("Net Return")
         p4.setHeightRatio(0.5)
         p4.setInfoPanelPosition(100, 2)
         p4.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
         _p4_traders = self._traders if ShowChildsData else self._traders[:1]
-        data_id = 0
         for i, td in enumerate(_p4_traders):
-            label  = "Main" if i == 0 else f"Child {i}"
-            color  = _TRADER_COLORS[i % len(_TRADER_COLORS)]
-            dim    = tuple(c * 0.5 for c in color[:3]) + (0.7,)   # soluk = gross
-
-            if td.getiri_fiyat_list:
-                arr = np.array(td.getiri_fiyat_list, dtype=np.float64)
-                p4.setData(data_id, DataType.Line, arr, f"{label} Gross", dim)
-                data_id += 1
+            label = "Main" if i == 0 else f"Child {i}"
+            color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
             if td.getiri_fiyat_net_list:
                 arr = np.array(td.getiri_fiyat_net_list, dtype=np.float64)
-                p4.setData(data_id, DataType.Line, arr, f"{label} Net", color)
-                data_id += 1
+                p4.setData(i, DataType.Line, arr, f"{label} Net", color)
 
         # ------------------------------------------------------------------
-        # Panel 5: Return %  (getiri_fiyat_yuzde_list + getiri_fiyat_net_yuzde_list)
+        # Panel 5: Net Return % (getiri_fiyat_net_yuzde_list)
         # ShowChildsData=False ise sadece mainTrader çizilir.
         # ------------------------------------------------------------------
         p5 = plotter.AddPanel(5)
-        p5.setTitle("Return %")
-        p5.setYAxisLabel("Return %")
+        p5.setTitle("Net Return %")
+        p5.setYAxisLabel("Net Return %")
         p5.setHeightRatio(0.5)
         p5.setInfoPanelPosition(100, 2)
         p5.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
         _p5_traders = self._traders if ShowChildsData else self._traders[:1]
-        data_id = 0
         for i, td in enumerate(_p5_traders):
             label = "Main" if i == 0 else f"Child {i}"
             color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
-            dim   = tuple(c * 0.5 for c in color[:3]) + (0.7,)
-
-            if td.getiri_fiyat_yuzde_list:
-                arr = np.array(td.getiri_fiyat_yuzde_list, dtype=np.float64)
-                p5.setData(data_id, DataType.Line, arr, f"{label} Gross %", dim)
-                data_id += 1
             if td.getiri_fiyat_net_yuzde_list:
                 arr = np.array(td.getiri_fiyat_net_yuzde_list, dtype=np.float64)
-                p5.setData(data_id, DataType.Line, arr, f"{label} Net %", color)
-                data_id += 1
+                p5.setData(i, DataType.Line, arr, f"{label} Net %", color)
+
+        # ------------------------------------------------------------------
+        # Panel 6: Return (getiri_fiyat_list) - gross/brüt, her trader kendi renginde.
+        # ShowChildsData=False ise sadece mainTrader çizilir.
+        # ------------------------------------------------------------------
+        p6 = plotter.AddPanel(6)
+        p6.setTitle("Return")
+        p6.setYAxisLabel("Return")
+        p6.setHeightRatio(0.5)
+        p6.setInfoPanelPosition(100, 2)
+        p6.setInfoPanelOffsets(label_dx=5, value_dx=80)
+
+        _p6_traders = self._traders if ShowChildsData else self._traders[:1]
+        for i, td in enumerate(_p6_traders):
+            label = "Main" if i == 0 else f"Child {i}"
+            color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
+            if td.getiri_fiyat_list:
+                arr = np.array(td.getiri_fiyat_list, dtype=np.float64)
+                p6.setData(i, DataType.Line, arr, f"{label} Gross", color)
+
+        # ------------------------------------------------------------------
+        # Panel 7: Return % (getiri_fiyat_yuzde_list) - gross/brüt
+        # ShowChildsData=False ise sadece mainTrader çizilir.
+        # ------------------------------------------------------------------
+        p7 = plotter.AddPanel(7)
+        p7.setTitle("Return %")
+        p7.setYAxisLabel("Return %")
+        p7.setHeightRatio(0.5)
+        p7.setInfoPanelPosition(100, 2)
+        p7.setInfoPanelOffsets(label_dx=5, value_dx=80)
+
+        _p7_traders = self._traders if ShowChildsData else self._traders[:1]
+        for i, td in enumerate(_p7_traders):
+            label = "Main" if i == 0 else f"Child {i}"
+            color = _TRADER_COLORS[i % len(_TRADER_COLORS)]
+            if td.getiri_fiyat_yuzde_list:
+                arr = np.array(td.getiri_fiyat_yuzde_list, dtype=np.float64)
+                p7.setData(i, DataType.Line, arr, f"{label} Gross %", color)
 
         # Y-axis sync
         plotter.RegisterYSyncGroup(0, p0)

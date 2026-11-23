@@ -326,8 +326,8 @@ class DataPlotter:
             plotter.setShowTradeSignals(True)
             plotter.setEnableRangeSlider(False)
 
-            # Panel:              0     1     2     3     4     5     6
-            HeightRatioList = [1.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5]
+            # Panel:              0     1     2     3     4     5     6     7     8
+            HeightRatioList = [1.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5]
 
             # ------------------------------------------------------------------
             # Panel 0: Price Chart (OHLC)
@@ -378,40 +378,60 @@ class DataPlotter:
             panel3.setData(0, DataType.Line, kar_zarar_fiyat_yuzde_list, "PnL %", (0.0, 0.5, 1.0, 1.0))
 
             # ------------------------------------------------------------------
-            # Panel 4: Balance (Getiri)
+            # Panel 4: Net Return
             # ------------------------------------------------------------------
             panel4 = plotter.AddPanel(4)
-            panel4.setTitle("Return")
-            panel4.setYAxisLabel("Return")
+            panel4.setTitle("Net Return")
+            panel4.setYAxisLabel("Net Return")
             panel4.setHeightRatio(HeightRatioList[4])
             panel4.setInfoPanelPosition(100, 2)
             panel4.setInfoPanelOffsets(label_dx=5, value_dx=80)
-            panel4.setData(0, DataType.Line, getiri_fiyat_list,     "Return",     (0.0, 0.5, 1.0, 1.0))
-            panel4.setData(1, DataType.Line, getiri_fiyat_net_list, "Net Return", (1.0, 1.0, 0.0, 1.0))
+            panel4.setData(0, DataType.Line, getiri_fiyat_net_list, "Net Return", (1.0, 1.0, 0.0, 1.0))
 
             # ------------------------------------------------------------------
-            # Panel 5: Balance (Getiri) %
+            # Panel 5: Net Return %
             # ------------------------------------------------------------------
             panel5 = plotter.AddPanel(5)
-            panel5.setTitle("Return % ")
-            panel5.setYAxisLabel("Return %")
+            panel5.setTitle("Net Return %")
+            panel5.setYAxisLabel("Net Return %")
             panel5.setHeightRatio(HeightRatioList[5])
             panel5.setInfoPanelPosition(100, 2)
             panel5.setInfoPanelOffsets(label_dx=5, value_dx=80)
-            panel5.setData(0, DataType.Line, getiri_fiyat_yuzde_list,     "Return %",     (0.0, 0.5, 1.0, 1.0))
-            panel5.setData(1, DataType.Line, getiri_fiyat_net_yuzde_list, "Net Return %", (1.0, 1.0, 0.0, 1.0))
+            panel5.setData(0, DataType.Line, getiri_fiyat_net_yuzde_list, "Net Return %", (1.0, 1.0, 0.0, 1.0))
 
             # ------------------------------------------------------------------
-            # Panel 6: Strategy Indicators (dinamik)
+            # Panel 6: Return
+            # ------------------------------------------------------------------
+            panel6 = plotter.AddPanel(6)
+            panel6.setTitle("Return")
+            panel6.setYAxisLabel("Return")
+            panel6.setHeightRatio(HeightRatioList[6])
+            panel6.setInfoPanelPosition(100, 2)
+            panel6.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel6.setData(0, DataType.Line, getiri_fiyat_list, "Return", (1.0, 1.0, 0.0, 1.0))
+
+            # ------------------------------------------------------------------
+            # Panel 7: Return %
+            # ------------------------------------------------------------------
+            panel7 = plotter.AddPanel(7)
+            panel7.setTitle("Return %")
+            panel7.setYAxisLabel("Return %")
+            panel7.setHeightRatio(HeightRatioList[7])
+            panel7.setInfoPanelPosition(100, 2)
+            panel7.setInfoPanelOffsets(label_dx=5, value_dx=80)
+            panel7.setData(0, DataType.Line, getiri_fiyat_yuzde_list, "Return %", (1.0, 1.0, 0.0, 1.0))
+
+            # ------------------------------------------------------------------
+            # Panel 8: Strategy Indicators (dinamik)
             # ------------------------------------------------------------------
             strategy_indicators = td.strategy_indicators
             if strategy_indicators and len(strategy_indicators) > 0:
-                panel6 = plotter.AddPanel(6)
-                panel6.setTitle("Strategy Indicators")
-                panel6.setYAxisLabel("Value")
-                panel6.setHeightRatio(HeightRatioList[6])
-                panel6.setInfoPanelPosition(100, 2)
-                panel6.setInfoPanelOffsets(label_dx=5, value_dx=80)
+                panel8 = plotter.AddPanel(8)
+                panel8.setTitle("Strategy Indicators")
+                panel8.setYAxisLabel("Value")
+                panel8.setHeightRatio(HeightRatioList[8])
+                panel8.setInfoPanelPosition(100, 2)
+                panel8.setInfoPanelOffsets(label_dx=5, value_dx=80)
 
                 colors = [
                     (1.0, 1.0, 0.0, 1.0),  # Sarı
@@ -425,7 +445,7 @@ class DataPlotter:
                     if values is not None:
                         arr   = np.array(values, dtype=np.float64)
                         color = colors[data_idx % len(colors)]
-                        panel6.setData(data_idx, DataType.Line, arr, name, color)
+                        panel8.setData(data_idx, DataType.Line, arr, name, color)
                         print(f"✓ Indicator '{name}' plotted ({len(arr)} values)")
 
             # Y-axis sync
