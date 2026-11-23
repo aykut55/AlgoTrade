@@ -1539,6 +1539,104 @@ public class AlgoTrader : MarketDataProvider, IDisposable
     }
 
     /// <summary>
+    /// "Opt Sonuçları Overlay" menü maddesi için: RunSingleTraderWithProgressAsync()'in TAM AYNI
+    /// yaşam döngüsünü (strateji oluştur → SingleTrader kur → bar bar Run() → Finalize()) kullanır,
+    /// ama sonucu class-level <c>singleTrader</c> alanına YAZMAZ/onu DISPOSE ETMEZ - çağıran taraf
+    /// (Program.cs'teki yeni menü maddesi) N defa art arda çağırıp dönen TÜM SingleTrader
+    /// örneklerini canlı tutarak TradeDataBundleConverter.ConvertOptOverlayRuns()'a verebilir.
+    /// Bu yüzden MultipleTrader/ChildOverlaySeries ensemble altyapısına (ECF/Export/Query gibi
+    /// fazladan konfigürasyon taşıyan, "confirmation" amaçlı mekanizma) ENTEGRE OLMAZ - bağımsız,
+    /// basit bir koşum yoludur. Bkz. docs/opt-sonuclari-overlay-plot-plani.md §3.1/3.4.
+    ///
+    /// Trade params / temel sinyal ayarları, daha önce ApplySingleTrader(...) ile class-level
+    /// _singleTraderTradeParamsConfig / _singleTraderSignalsConfig alanlarına yazılmış baseline'dan
+    /// (ApplySingleTraderFlagsConfigs ile) alınır; <paramref name="signalsOverride"/> SADECE
+    /// null olmayan alanları bu baseline'ın üzerine yazar (Seçim01/Seçim02 karışık koşum - bkz.
+    /// plan dokümanı §2.3).
+    /// </summary>
+    public async Task<SingleTrader> RunIndependentSingleTraderAsync(
+        int id, string label, string strategyName, Dictionary<string, object> strategyParams,
+        AlgoTrade.Core.Trading.OptOverlay.OptOverlaySignalsOverride? signalsOverride = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsInitialized)
+            throw new InvalidOperationException("AlgoTrader not initialized. Call Initialize() first.");
+
+        int totalBars = this.Data.Count;
+
+        var runIndicators = new IndicatorManager(this.Data);
+        var runStrategy = _strategyRegistry.CreateStrategy(this.Data, runIndicators, _logger, strategyName, strategyParams)
+            ?? throw new InvalidOperationException($"Strategy '{strategyName}' can not be created...");
+
+        var runTrader = new SingleTrader(id, label, this.Data, runIndicators, _logger);
+        runTrader.ClearCallbacks()
+                 .SetCallbacks(OnSingleTraderReset, OnSingleTraderInit, OnSingleTraderRun, OnSingleTraderFinal,
+                               OnSingleTraderBeforeOrder, OnSingleTraderNotifySignal, OnSingleTraderAfterOrder, OnSingleTraderProgress);
+        runTrader.Reset();
+
+        runTrader.SymbolName   = this.SymbolName;
+        runTrader.SymbolPeriod = this.SymbolPeriod;
+        runTrader.LastExecutionTime      = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+        runTrader.LastExecutionTimeStart = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+        if (_singleTraderTradeParamsConfig != null)
+            runTrader.initialTradeParams!.ApplyFrom(_singleTraderTradeParamsConfig);
+
+        ApplySingleTraderFlagsConfigs(runTrader);
+
+        // Batch koşumda N kere dosyaya yazmamak icin (sadece bellekteki Return/Net Return/stats
+        // lazim) - baseline Save config'i burada bilerek override ediyoruz.
+        runTrader.SaveStatisticsToFile = false;
+
+        if (signalsOverride is { } ov)
+        {
+            if (ov.AlEnabled.HasValue)              runTrader.signals.AlEnabled              = ov.AlEnabled.Value;
+            if (ov.SatEnabled.HasValue)             runTrader.signals.SatEnabled             = ov.SatEnabled.Value;
+            if (ov.FlatOlEnabled.HasValue)          runTrader.signals.FlatOlEnabled          = ov.FlatOlEnabled.Value;
+            if (ov.PasGecEnabled.HasValue)          runTrader.signals.PasGecEnabled          = ov.PasGecEnabled.Value;
+            if (ov.KarAlEnabled.HasValue)           runTrader.signals.KarAlEnabled           = ov.KarAlEnabled.Value;
+            if (ov.ZararKesEnabled.HasValue)        runTrader.signals.ZararKesEnabled        = ov.ZararKesEnabled.Value;
+            if (ov.GunSonuPozKapatEnabled.HasValue) runTrader.signals.GunSonuPozKapatEnabled = ov.GunSonuPozKapatEnabled.Value;
+        }
+
+        runTrader.RunMode = TraderRunMode.TradeOnly;
+        runTrader.SetStrategy(runStrategy);
+
+        runTrader.Init();
+
+        await Task.Run(() =>
+        {
+            runTrader.IsStarted = true;
+            runTrader.IsRunning = true;
+            runTrader.IsStopped = false;
+            runTrader.IsStopRequested = false;
+
+            for (int i = 0; i < totalBars; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (runTrader.IsStopRequested)
+                {
+                    Log($"[{label}] stopped by user request at bar {i}/{totalBars}");
+                    break;
+                }
+
+                runTrader.Run(i);
+            }
+        }, cancellationToken);
+
+        runTrader.IsRunning = false;
+        runTrader.LastExecutionTimeStop = System.DateTime.Now.ToString("yyyy.MM.dd HH:mm:ss");
+
+        runTrader.Finalize();
+
+        runTrader.IsRunning = false;
+        runTrader.IsStopped = true;
+
+        return runTrader;
+    }
+
+    /// <summary>
     /// SingleTrader verilerini arka planda dosyalara yazar.
     /// RunSingleTraderWithProgressAsync içinden alındı; grafik açıkken
     /// paralel çalışması için ayrı metod yapıldı.

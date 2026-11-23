@@ -69,10 +69,49 @@ public class TradeDataBundleConverter
         => ConvertCore(trader, outputDir, fileBaseName, new List<SingleTrader>(),
             includeChildReturnOverlays: false, includeRunMetrics: true, strategyIndicatorOverride: strategyIndicators);
 
+    /// <summary>
+    /// "Opt Sonuçları Overlay" menü maddesi için: JSON'dan okunan N bağımsız koşumun her birinin
+    /// Return/Net Return eğrisini, kullanıcının verdiği etiketle (childLabels) TEK bir bundle'a
+    /// overlay olarak yazar. <paramref name="mainTraderIndex"/>'teki run'ın OHLC/Signals/PnL/
+    /// metrik-grid verisi ana panelleri besler (bkz. plan dokümanı §2.5 "ana sinyal kaynağı" ile
+    /// AYNI run olmalı - aksi halde metrik grid ile OHLC'deki sinyal birbirini tutmaz); TÜM
+    /// overlayTraders (mainTraderIndex dahil) kendi etiketiyle Return panelinde ayrı renkte
+    /// çizilir (mainTraderIndex'teki koşum için mainTrader'ın kendi "Return"/"Net Return"
+    /// çizgisiyle üst üste binen, etiketsiz bir fazladan çizgi oluşur - kozmetik bir tekrar,
+    /// veri hatası değil). Bkz. docs/opt-sonuclari-overlay-plot-plani.md §3.3-3.4.
+    /// </summary>
+    /// <param name="mainTraderIndex">
+    /// Hangi overlayTraders elemanının OHLC/PnL/metrik-grid kaynağı olacağı (varsayılan 0).
+    /// Çağıran taraf, "ana sinyal kaynağı" seçimiyle (composite/belirli id) AYNI run'ı vermeli.
+    /// </param>
+    /// <param name="mainSignalOverride">
+    /// Verilirse (bkz. OptOverlaySignalCompositor.Compute) OHLC/Signals panelindeki "ana" çizgi
+    /// mainTraderIndex'teki run'ın kendi sinyali DEĞİL, bu bileşke dizisi olur - ama metrik grid/
+    /// PnL panelleri YİNE mainTraderIndex'teki run'dan beslenir (composite'in kendi P&L'i yok).
+    /// </param>
+    public (string bundlePath, string viewPath) ConvertOptOverlayRuns(
+        List<SingleTrader> overlayTraders, IReadOnlyList<string> overlayLabels,
+        string outputDir, string fileBaseName = "opt_overlay_bundle",
+        double[]? mainSignalOverride = null, int mainTraderIndex = 0)
+    {
+        if (overlayTraders == null || overlayTraders.Count == 0)
+            throw new ArgumentException("overlayTraders boş olamaz.", nameof(overlayTraders));
+        if (overlayLabels == null || overlayLabels.Count != overlayTraders.Count)
+            throw new ArgumentException("overlayLabels sayısı overlayTraders ile eşleşmeli.", nameof(overlayLabels));
+        if (mainTraderIndex < 0 || mainTraderIndex >= overlayTraders.Count)
+            mainTraderIndex = 0;
+
+        return ConvertCore(overlayTraders[mainTraderIndex], outputDir, fileBaseName, overlayTraders,
+            includeChildReturnOverlays: true, includeRunMetrics: true, childLabels: overlayLabels,
+            mainSignalOverride: mainSignalOverride);
+    }
+
     private static (string bundlePath, string viewPath) ConvertCore(SingleTrader trader,
         string outputDir, string fileBaseName, List<SingleTrader> childTraders,
         bool includeChildReturnOverlays, bool includeRunMetrics = false,
-        IReadOnlyDictionary<string, double[]>? strategyIndicatorOverride = null)
+        IReadOnlyDictionary<string, double[]>? strategyIndicatorOverride = null,
+        IReadOnlyList<string>? childLabels = null,
+        double[]? mainSignalOverride = null)
     {
         if (trader == null)
             throw new ArgumentNullException(nameof(trader));
@@ -137,7 +176,7 @@ public class TradeDataBundleConverter
             Lists? childLists = childTraders[c].lists;
             if (childLists == null) continue;
 
-            string label = $"Child {c + 1}";
+            string label = (childLabels != null && c < childLabels.Count) ? childLabels[c] : $"Child {c + 1}";
             string signalName = $"{label} Signal";
             string pnlName = $"{label} PnL";
             string pnlPctName = $"{label} PnL %";
@@ -163,8 +202,12 @@ public class TradeDataBundleConverter
 
         // signal_codes: TradeSignalRenderer icin SEYREK (sadece degisim barlarinda) event kodu.
         // signal_steps: ayri "Signals" paneli icin YOGUN (her barda tekrar eden) durum kodu.
-        var signalCodes = BuildSignalCodes(lists.SinyalList, n);
-        var signalSteps = lists.SinyalList.Take(n).Select(v => (long)v).ToList();
+        // mainSignalOverride (opsiyonel - bkz. ConvertOptOverlayRuns/OptOverlaySignalCompositor):
+        // verilmişse trader.lists.SinyalList YERİNE bu dizi kullanılır - OHLC/Signals panelindeki
+        // "ana" çizgi, mainTrader'ın kendi sinyali değil, N run'dan türetilen bir bileşke olur.
+        IReadOnlyList<double> mainSinyalSource = mainSignalOverride != null ? mainSignalOverride : lists.SinyalList;
+        var signalCodes = BuildSignalCodes(mainSinyalSource, n);
+        var signalSteps = mainSinyalSource.Take(n).Select(v => (long)v).ToList();
 
         var meta = new Dictionary<string, object?>
         {
@@ -261,7 +304,7 @@ public class TradeDataBundleConverter
     /// bar ayrı bir run olur (yanlış + çok yavaş). Bu yüzden burada sadece
     /// DEĞİŞİM barlarında kod yazıyoruz, diğerlerinde 0 (sinyal yok) bırakıyoruz.
     /// </summary>
-    private static long[] BuildSignalCodes(List<double> sinyalList, int n)
+    private static long[] BuildSignalCodes(IReadOnlyList<double> sinyalList, int n)
     {
         var codes = new long[n];
         double? previous = null;

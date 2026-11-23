@@ -1,0 +1,24 @@
+{
+  "baseConfig": {
+    "strategyName": "SimpleSuperTrendStrategy",
+    "version": "v1"
+  },
+  // mainSignalSource: OHLC/Signals panelindeki ANA al/sat çizgisi nereden gelsin?
+  //   "composite"      -> runs altındaki run'lardan bileşke (bkz. compositeSignal ayarı)
+  //   runs[].id değeri  -> o run'ın kendi sinyali (örn. "3")
+  "mainSignalSource": "composite",
+  // compositeSignal: mainSignalSource="composite" iken geçerli.
+  //   mode: "unanimous" (hepsi AL -> AL, hepsi SAT -> SAT, aksi halde FLAT) ya da
+  //         "majority" (en çok oyu alan yön kazanır, eşitlikte FLAT).
+  //   runIds: bileşkeye katılacak run id'leri (boş/yok = tüm run'lar katılır).
+  "compositeSignal": {
+    "mode": "unanimous"
+  },
+  "runs": [
+    { "id": "1", "label": "1", "params": { "period": 21, "multiplier": 4.25 } },
+    { "id": "2", "label": "2", "params": { "period": 6,  "multiplier": 4.25 } },
+    { "id": "3", "label": "3", "params": { "period": 7,  "multiplier": 4.25 } },
+    { "id": "4", "label": "4", "params": { "period": 10, "multiplier": 4.5  } },
+    { "id": "5", "label": "5", "params": { "period": 22, "multiplier": 4.25 } }
+  ]
+}

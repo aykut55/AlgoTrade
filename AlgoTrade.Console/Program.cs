@@ -14,6 +14,7 @@ using AlgoTrade.Core.Trading.Strategies;
 using AlgoTrade.Core.Trading.Queries;
 using AlgoTrade.Core.Trading.ChartStudies;
 using AlgoTrade.Core.Trading.EquityCurve;
+using AlgoTrade.Core.Trading.OptOverlay;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -3604,6 +3605,254 @@ async Task handleSingleTrader()
     }
 }
 
+/// <summary>
+/// Menü [31]: inputs/configs/OptOverlayRuns.json'daki her run'ı sırayla
+/// AlgoTrader.RunIndependentSingleTraderAsync() ile çalıştırır, her run tamamlandığında o ana
+/// kadarki TÜM sonuçlarla TradeDataBundleConverter.ConvertOptOverlayRuns() bundle'ını yeniden
+/// yazar ve plotter'a yükler (bkz. docs/opt-sonuclari-overlay-plot-plani.md).
+/// </summary>
+async Task handleOptOverlayRuns()
+{
+    reloadAppConfig();
+
+    if (stockDataReader is null || !stockDataReader.IsDataReady || stockMetaData is null)
+    {
+        Console.WriteLine("  Veri hazır değil - önce [1] Read Data çalıştırın.");
+        return;
+    }
+
+    string configPath = Path.Combine(AppSettings.ConfigsDir, "OptOverlayRuns.json");
+    OptOverlayConfig config;
+    try
+    {
+        config = OptOverlayConfigLoader.Load(configPath);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"  [OptOverlay] Config okunamadı ('{configPath}'): {ex.Message}");
+        return;
+    }
+
+    int totalRuns = config.Runs.Count;
+    Console.WriteLine();
+    Console.WriteLine($"  Opt Overlay: '{configPath}' içinde {totalRuns} run bulundu.");
+    Console.WriteLine($"  Hangi aralığı çalıştırmak istersiniz? (örn. 1-5)  [ENTER] Hepsi");
+    var rangeInput = MenuInput("");
+
+    int startIdx = 0, endIdxExclusive = totalRuns;
+    if (!string.IsNullOrWhiteSpace(rangeInput))
+    {
+        var parts = rangeInput.Split('-', StringSplitOptions.TrimEntries);
+        if (parts.Length == 2 && int.TryParse(parts[0], out int s1) && int.TryParse(parts[1], out int e1)
+            && s1 >= 1 && e1 >= s1 && e1 <= totalRuns)
+        {
+            startIdx = s1 - 1;
+            endIdxExclusive = e1;
+        }
+        else
+        {
+            Console.WriteLine("  Geçersiz aralık, tüm run'lar çalıştırılacak.");
+        }
+    }
+
+    algoTrader = new AlgoTrader("AlgoTrader");
+    algoTrader.OnTraderProgress += OnTraderProgress;
+    algoTrader.RegisterLogger(logger);
+    algoTrader.RegisterTimer(timer);
+    algoTrader.Reset();
+    algoTrader.SetData(stockDataReader.GetData());
+
+    algoTrader.SymbolName   = stockMetaData.GetValueOrDefault("GrafikSembol",  "N/A");
+    algoTrader.SymbolPeriod = stockMetaData.GetValueOrDefault("GrafikPeriyot", "N/A");
+
+    // Baseline: trade params / sinyal / ECF / vs. - buradaki strateji seçimi ÖNEMSİZ, her run
+    // kendi strategyName/params'ını RunIndependentSingleTraderAsync ile ayrıca ayarlar.
+    AppConfigApplier.ApplySingleTrader(algoTrader, appConfig.SingleTrader, AppSettings.ConfigsDir);
+    algoTrader.Initialize();
+
+    var runTraders = new List<SingleTrader>();
+    var runLabels  = new List<string>();
+    var runIds     = new List<string?>();
+
+    bool useImGuiBundle = appConfig.AppSettings.PlotBackend == 1;
+    string bundleOutDir = Path.Combine(
+        useImGuiBundle ? AppSettings.DearImGuiBundleDataPlotterDir : AppSettings.DearPyGuiDataPlotterDir,
+        "inputs");
+    var bundleConverter = new TradeDataBundleConverter();
+    string? primaryBundlePath = null;
+
+    // Report2 paneli (bkz. BundleReportPackager) TEK bir run'ın istatistik dosyalarını okur -
+    // N bağımsız run'dan HANGİSİ "raporlanacak" diye seçim gerekiyor: mainSignalSource bir run
+    // id'si ise o run, "composite"/boşsa aralıktaki İLK çalışan run (pozisyona göre, overlayTraders[0]
+    // ile aynı mantık). Diğer run'lar için dosya yazılmaz (disk şişmesin).
+    string? reportTargetRunId = (!string.IsNullOrWhiteSpace(config.MainSignalSource) &&
+                                  !string.Equals(config.MainSignalSource, "composite", StringComparison.OrdinalIgnoreCase))
+        ? config.MainSignalSource
+        : null;
+
+    // Composite ana sinyal kaynağı artık KENDİ gerçek backtest'ini üretiyor (bkz.
+    // Strategies/ReplayStrategies/ReplaySignalStrategy.cs, plan dokümanı §3.7 çözümü) - böylece
+    // Report2/metrik grid composite ile tutarlı olur (eskiden hep run[0]'ı gösteriyordu).
+    bool isCompositeMode = string.Equals(config.MainSignalSource, "composite", StringComparison.OrdinalIgnoreCase);
+    SingleTrader? compositeTrader = null;
+    string compositeLabel = "Composite";
+
+    for (int i = startIdx; i < endIdxExclusive; i++)
+    {
+        var run = config.Runs[i];
+        string label;
+        try
+        {
+            var (strategyName, parameters, signalsOverride) = OptOverlayConfigLoader.Resolve(config, run);
+            label = OptOverlayConfigLoader.ResolveLabel(run, i);
+
+            Console.WriteLine();
+            Console.WriteLine($"  [{i + 1}/{totalRuns}] '{label}' çalışıyor...");
+
+            var runTrader = await algoTrader.RunIndependentSingleTraderAsync(i, label, strategyName, parameters, signalsOverride);
+            runTraders.Add(runTrader);
+            runLabels.Add(label);
+            runIds.Add(run.Id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [{i + 1}/{totalRuns}] HATA: {ex.Message} - bu run atlanıyor.");
+            continue;
+        }
+
+        // Her run sonrası bundle'ı o ana kadarki TÜM sonuçlarla yeniden yaz (kesintiye karşı
+        // dayanıklılık - bkz. plan dokümanı §2.4). Tek run'da bile hata plot'u durdurmaz.
+        try
+        {
+            // Ana sinyal kaynağı (bkz. plan dokümanı §2.5/§3.7): MainSignalSource tek alanla
+            // seçilir - "composite" -> N run'dan bileşke sinyali GERÇEK bir trader'a besleyip
+            // kendi P&L'ini üretir, bir run id'si -> o run'ın kendi sinyali/istatistiği,
+            // boş/eşleşmezse varsayılan davranış (overlayTraders[0]).
+            if (isCompositeMode)
+            {
+                var compositeCfg = config.CompositeSignal ?? new OptOverlayCompositeSignalConfig();
+                List<SingleTrader> participants = runTraders;
+                if (compositeCfg.RunIds is { Count: > 0 })
+                {
+                    participants = new List<SingleTrader>();
+                    for (int k = 0; k < runTraders.Count; k++)
+                        if (runIds[k] != null && compositeCfg.RunIds.Contains(runIds[k]!))
+                            participants.Add(runTraders[k]);
+                }
+
+                if (participants.Count > 0)
+                {
+                    double[] compositeDirections = OptOverlaySignalCompositor.Compute(compositeCfg.Mode, participants);
+                    var compositeCommands = OptOverlaySignalCompositor.ToEdgeTriggeredCommands(compositeDirections);
+                    compositeLabel = $"Composite ({compositeCfg.Mode})";
+
+                    // Composite'e kendi GERÇEK P&L'ini ürettirmek için, strateji yazmak yerine
+                    // zaten var olan "ReplaySignalStrategy"yi kullanıyoruz (bkz. AlgoTrade.ReplayRunner/
+                    // Program.cs'teki AYNI kullanım, src/AlgoTrade.Core/Trading/Strategies/ReplayStrategies/
+                    // ReplaySignalStrategy.cs) - dışarıdan verilen (kenar-tetikli) bir TradeSignals
+                    // dizisini bar-bar GERÇEK SingleTrader execution motoruna (komisyon/pozisyon/
+                    // kar-al-zarar-kes) geri verir. RunIndependentSingleTraderAsync DEĞİŞTİRİLMEDİ.
+                    compositeTrader = await algoTrader.RunIndependentSingleTraderAsync(
+                        -1, compositeLabel, "ReplaySignalStrategy",
+                        new Dictionary<string, object> { ["signals"] = compositeCommands },
+                        config.BaseConfig?.Signals);
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(config.MainSignalSource))
+            {
+                // "composite" değilse runs[].Id'den biriyle eşleşmesi beklenir - eşleşmezse uyar
+                // (o run henüz çalışmamış olabilir, sonraki iterasyonda tekrar denenir).
+                if (!runIds.Contains(config.MainSignalSource))
+                    Console.WriteLine($"  [OptOverlay] mainSignalSource='{config.MainSignalSource}' henüz çalışan run'lar arasında yok (atlanıyor).");
+            }
+
+            // Metrik grid / PnL / OHLC panelinin "ana" verisi de rapor hedefiyle AYNI run'dan
+            // gelsin - aksi halde ekrandaki metrikler, seçilen ana sinyal kaynağıyla tutarsız
+            // kalır (bu konuşmada kullanıcının fark ettiği sorun - composite için artık KENDİ
+            // gerçek backtest'i var, bkz. plan dokümanı §3.7 çözümü).
+            List<SingleTrader> bundleTraders = runTraders;
+            List<string> bundleLabels = runLabels;
+            int mainTraderIndex = 0;
+
+            if (isCompositeMode && compositeTrader != null)
+            {
+                bundleTraders = new List<SingleTrader>(runTraders) { compositeTrader };
+                bundleLabels  = new List<string>(runLabels) { compositeLabel };
+                mainTraderIndex = bundleTraders.Count - 1;
+            }
+            else if (reportTargetRunId != null)
+            {
+                mainTraderIndex = runIds.IndexOf(reportTargetRunId);
+                if (mainTraderIndex < 0) mainTraderIndex = 0;
+            }
+
+            var (bundlePath, viewPath) = bundleConverter.ConvertOptOverlayRuns(
+                bundleTraders, bundleLabels, bundleOutDir, "opt_overlay_bundle", mainTraderIndex: mainTraderIndex);
+            primaryBundlePath = bundlePath;
+
+            if (useImGuiBundle)
+            {
+                dearImGuiBundleTestPlotter ??= new DearImGuiBundleDataPlotter();
+                dearImGuiBundleTestPlotter.SetLogger(logger);
+                if (!dearImGuiBundleTestPlotter.IsRunning)
+                {
+                    dearImGuiBundleTestPlotter.PrepareStartupBundle(bundlePath, viewPath);
+                    dearImGuiBundleTestPlotter.StartPlotter();
+                }
+                else
+                {
+                    dearImGuiBundleTestPlotter.LoadBundle(bundlePath, viewPath);
+                }
+            }
+            else
+            {
+                dearPyGuiTestPlotter ??= new DearPyGuiDataPlotter();
+                dearPyGuiTestPlotter.SetLogger(logger);
+                dearPyGuiTestPlotter.StartPlotter();
+                dearPyGuiTestPlotter.LoadBundle(bundlePath, viewPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  [OptOverlay] Bundle/plot güncelleme hatası: {ex.Message}");
+        }
+    }
+
+    Console.WriteLine();
+    Console.WriteLine($"  Opt Overlay tamamlandı: {runTraders.Count}/{endIdxExclusive - startIdx} run başarıyla çalıştı.");
+    if (primaryBundlePath is not null)
+        Console.WriteLine($"  Bundle: {primaryBundlePath}");
+
+    // Report2 paneli - TÜM run'lar bittikten SONRA, bir kez yazılır (kullanıcı tercihi: ara
+    // adımda değil, en sonda). Rapor hedefi: mainSignalSource bir run id'si ise o run, "composite"/
+    // boşsa çalışan run'ların İLKİ.
+    if (runTraders.Count > 0 && primaryBundlePath is not null)
+    {
+        SingleTrader reportTrader;
+        if (isCompositeMode && compositeTrader != null)
+        {
+            reportTrader = compositeTrader;
+        }
+        else
+        {
+            int reportTraderIdx = reportTargetRunId != null ? runIds.IndexOf(reportTargetRunId) : 0;
+            if (reportTraderIdx < 0) reportTraderIdx = 0;
+            reportTrader = runTraders[reportTraderIdx];
+        }
+
+        reportTrader.SaveStatisticsToFile = true;
+        await algoTrader.WriteTraderDataToFilesAsync(reportTrader);
+
+        string reportsIndexPath = BundleReportPackager.Create(
+            primaryBundlePath, AppSettings.LogsDir, AppSettings.ConfigsDir, "SingleTrader");
+        Console.WriteLine($"  [OptOverlay] Report2 index'i oluşturuldu: {reportsIndexPath}");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("  Run completed.  [ENTER] Back to Main Menu");
+    ReadMenuInput();
+}
+
 async Task handleMultipleTrader()
 {
     reloadAppConfig();
@@ -4725,6 +4974,10 @@ void showMainMenu()
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [30]  C# Bridge (Bos Plotter)                                   ║");
     Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("╠═══ Opt Sonuçları Overlay ══════════════════════════════════════════╣");
+    Console.WriteLine("║                                                                    ║");
+    Console.WriteLine("║    [31]  Opt Sonuçları Overlay (JSON'dan N koşum + birlikte çiz)   ║");
+    Console.WriteLine("║                                                                    ║");
     Console.WriteLine("╠═══ Fast Run ═══════════════════════════════════════════════════════╣");
     Console.WriteLine("║                                                                    ║");
     Console.WriteLine("║    [F]   Fast Run - Son baslangic sekansini calistir               ║");
@@ -5013,6 +5266,7 @@ async Task main()
             case "28": handleChartStudy();                                  break;
             case "29": if (handleReadData()) { startupSequenceIncludesReadData = true; handleChartStudy(); } break;
             case "30": handleCSharpBridgePlotter();                         break;
+            case "31": if (handleReadData()) { startupSequenceIncludesReadData = true; await handleOptOverlayRuns(); } break;
             case "f": await runLastStartupSequence();                       break;
             case "0": running = false;                                      break;
             default:  Console.WriteLine("Invalid selection.");              break;
