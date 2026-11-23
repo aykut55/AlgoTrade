@@ -54,7 +54,9 @@ using AlgoTrade.Core.Trading;
 // =============================================================================
 // Ayarlar
 // =============================================================================
-string stockDataFullFileName = @"C:\data\csvFiles\VIP\01\VIP-X030-T.csv";
+// AppConfig.json -> AppSettings.StockDataFile ile AYNI (05 = 5dk) - Menü [7] ile parite icin
+// (eskiden "01" idi, Menü [7]'den farkli bir zaman dilimi veriyordu - duzeltildi).
+string stockDataFullFileName = @"C:\data\csvFiles\VIP\05\VIP-X030-T.csv";
 
 // =============================================================================
 // Veri Filtreleme (ReadData) - AppConfig.json'daki ReadData bolumunun karsiligi
@@ -130,7 +132,7 @@ bool satEnabled                = true;
 bool flatOlEnabled             = true;
 bool pasGecEnabled             = true;
 bool karAlEnabled              = true;
-bool zararKesEnabled           = false;   // TP-only opt: strateji stopLoss uretir ama gate sifirlar (bkz. SINYAL GATE'I)
+bool zararKesEnabled           = true;    // AppConfig.json SingleTraderOptimizer.Signals.ZararKesEnabled ile ayni (Menü [7] parite) - eskiden false'tu (bir TP-only deneyinden kalma)
 bool gunSonuPozKapatEnabled    = false;
 bool timeFilteringEnabled      = false;
 string signalsStartDateTime    = "2025.05.25 09:00:00";
@@ -181,7 +183,7 @@ string sortedTxtFileName3 = "singleTraderOptLog_sorted_scoreFiyatNet.txt";
 // CreateFromBestMatchingConstructor). Eslesmeyen bir key HATA VERMEZ, sessizce yok sayilir; o
 // parametre kendi varsayilan degerine duser - once ilgili Strategy sinifinin constructor'ina bak.
 // =============================================================================
-int optChoice = 1;
+int optChoice = 28;   // Menü [7] (SingleTraderOptimizer) ile parite - bkz. optChoice==28
 
 string optimizationStrategyName;
 List<(string name, double min, double max, double step)> optimizationRanges;
@@ -824,6 +826,27 @@ else if (optChoice == 27)
         if (r.name == "triggerPeriod") triggerPeriodInRanges = true;
     if (!triggerPeriodInRanges)
         fixedParams["triggerPeriod"] = 5;
+}
+else if (optChoice == 28)
+{
+    // SimpleSuperTrendStrategy - Menü [7] (AppConfig.json SingleTraderOptimizer -> OptimizationConfig.txt
+    // "SimpleSuperTrendStrategy|v1|Default", bkz. inputs/configs/OptimizationConfig.txt satır 39) ile
+    // BİREBİR aynı range/fixedParams - Menü [7] yerine bu script çalıştırılırsa aynı sonucu üretsin diye.
+    // takeProfitExitModeIndex/stopLossExitModeIndex BİLEREK fixedParams'ta YOK - OptimizationConfig.txt'teki
+    // "v1 Default" de bunları fix'lemiyor, ikisi de constructor varsayılanına (-1, kapalı) düşüyor
+    // (aynı şekilde Menü [5]/[8→1]/[30]'daki SuperTrend koşumlarıyla da TP/SL kapalı eşleşiyor).
+    optimizationStrategyName = "SimpleSuperTrendStrategy";
+    optimizationRanges = new List<(string name, double min, double max, double step)>
+    {
+        ("period",     5, 50, 1),
+        ("multiplier", 0.5, 5.0, 0.25),
+    };
+    fixedParams = new Dictionary<string, object>
+    {
+        ["priceSource"]         = "Close",
+        ["buySignalModeIndex"]  = 0,
+        ["sellSignalModeIndex"] = 0
+    };
 }
 else
 {
