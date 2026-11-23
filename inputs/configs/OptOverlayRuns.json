@@ -20,5 +20,68 @@
     { "id": "3", "label": "3", "params": { "period": 7,  "multiplier": 4.25 } },
     { "id": "4", "label": "4", "params": { "period": 10, "multiplier": 4.5  } },
     { "id": "5", "label": "5", "params": { "period": 22, "multiplier": 4.25 } }
+  ],
+
+  // ---------------------------------------------------------------------------
+  // ÖRNEK NODE'LAR (kod tarafından OKUNMUYOR - sadece "runs" alanı okunuyor).
+  // Asıl çalışan node her zaman "runs" - bunlar sadece kopyala-yapıştır referansı.
+  // ---------------------------------------------------------------------------
+
+  // runs_1: tek strateji (SimpleSuperTrendStrategy), sadece period/multiplier taraması -
+  // en basit/ilk örnek, şu anki "runs" ile aynı.
+  "runs_1": [
+    { "id": "1", "label": "1", "params": { "period": 21, "multiplier": 4.25 } },
+    { "id": "2", "label": "2", "params": { "period": 6,  "multiplier": 4.25 } },
+    { "id": "3", "label": "3", "params": { "period": 7,  "multiplier": 4.25 } },
+    { "id": "4", "label": "4", "params": { "period": 10, "multiplier": 4.5  } },
+    { "id": "5", "label": "5", "params": { "period": 22, "multiplier": 4.25 } }
+  ],
+
+  // runs_2: 3 FARKLI strateji (her biri repo'nun başka yerlerinde de kullanılan varsayılan
+  // parametreleriyle) - compositeSignal'in strateji farkına bakmadığını doğrulamak için.
+  "runs_2": [
+    { "id": "1", "label": "SuperTrend", "strategyName": "SimpleSuperTrendStrategy",
+      "params": { "period": 10, "multiplier": 3.0, "priceSource": "Close", "buySignalModeIndex": 0, "sellSignalModeIndex": 0 } },
+    { "id": "2", "label": "MA 10/20 EMA", "strategyName": "SimpleMAStrategy",
+      "params": { "fastPeriod": 10, "slowPeriod": 20, "fastMaMethod": "EMA", "slowMaMethod": "EMA", "priceSource": "Close", "buySignalModeIndex": 0, "sellSignalModeIndex": 0 } },
+    { "id": "3", "label": "RSI 14", "strategyName": "SimpleRSIStrategy",
+      "params": { "period": 14, "oversold": 30, "overbought": 70, "priceSource": "Close", "buySignalModeIndex": 0, "sellSignalModeIndex": 0 } }
+  ],
+
+  // runs_3: AYNI strateji, ama her run'ın kendi "signals" override'ıyla FARKLI sinyal
+  // davranışı (sadece al/sat | al/sat + karAl %3 | gün sonu kapat). "signals" sadece
+  // OptOverlaySignalsOverride'daki 7 alanla sınırlı (alEnabled/satEnabled/flatOlEnabled/
+  // pasGecEnabled/karAlEnabled/zararKesEnabled/gunSonuPozKapatEnabled) - "params" ise
+  // seçilen stratejinin constructor'ının kabul ettiği HERHANGİ bir parametre olabilir
+  // (yanlış/olmayan isim sessizce yok sayılır, hata vermez - dikkat).
+  "runs_3": [
+    { "id": "1", "label": "SuperTrend - sadece al/sat", "strategyName": "SimpleSuperTrendStrategy",
+      "params": { "period": 10, "multiplier": 3.0, "priceSource": "Close", "buySignalModeIndex": 0, "sellSignalModeIndex": 0 },
+      "signals": { "karAlEnabled": false, "zararKesEnabled": false, "gunSonuPozKapatEnabled": false } },
+
+    { "id": "2", "label": "SuperTrend - al/sat + karAl %3", "strategyName": "SimpleSuperTrendStrategy",
+      "params": { "period": 10, "multiplier": 3.0, "priceSource": "Close", "buySignalModeIndex": 0, "sellSignalModeIndex": 0,
+                  "takeProfitExitModeIndex": 5, "karAlYuzdesi": 3.0 },
+      "signals": { "karAlEnabled": true, "zararKesEnabled": false, "gunSonuPozKapatEnabled": false } },
+
+    { "id": "3", "label": "SuperTrend - gün sonu kapat", "strategyName": "SimpleSuperTrendStrategy",
+      "params": { "period": 10, "multiplier": 3.0, "priceSource": "Close", "buySignalModeIndex": 0, "sellSignalModeIndex": 0 },
+      "signals": { "karAlEnabled": false, "zararKesEnabled": false, "gunSonuPozKapatEnabled": true } }
+  ],
+
+  // runs_4: 5 run var ama compositeSignal'e SADECE bir alt küme katılıyor - "runIds" alanı
+  // boş/yoksa TÜM run'lar katılır, doldurulursa SADECE listelenen id'ler katılır (diğerleri
+  // yine çalışır/plot'ta görünür, sadece bileşke hesabına girmez). Bunu denemek için üstteki
+  // "compositeSignal" bloğunu şöyle değiştirmen gerekir (tek bir compositeSignal alanı olabilir,
+  // bu yüzden örnek burada metin olarak):
+  //   "compositeSignal": { "mode": "majority", "runIds": ["1", "2", "4"] }
+  // -> 1/2/4 arasında çoğunluk oyu composite olur; 3 ve 5 "gözlemci" gibi çalışır, grafikte
+  //    kendi Return eğrileriyle görünürler ama composite'in yönüne oy vermezler.
+  "runs_4": [
+    { "id": "1", "label": "1 (katılıyor)", "params": { "period": 21, "multiplier": 4.25 } },
+    { "id": "2", "label": "2 (katılıyor)", "params": { "period": 6,  "multiplier": 4.25 } },
+    { "id": "3", "label": "3 (gözlemci)",  "params": { "period": 7,  "multiplier": 4.25 } },
+    { "id": "4", "label": "4 (katılıyor)", "params": { "period": 10, "multiplier": 4.5  } },
+    { "id": "5", "label": "5 (gözlemci)",  "params": { "period": 22, "multiplier": 4.25 } }
   ]
 }
