@@ -96,6 +96,86 @@ namespace AlgoTrade.Core.Trading.Indicators.Utils
         }
 
         /// <summary>
+        /// HY (İdeal Sistem Sistem.HY(Periyot) ile AYNI) - fiyatın, ÖNCEDEN HESAPLANMIŞ HHV
+        /// serisine ham yüzde mesafesi: (source-hhv)/hhv*100. (HHV-LLV) aralığına göre normalize
+        /// ETMEZ (RSI/Stochastic %K gibi 0-100 osilatör DEĞİL) - sadece HHV'ye göre. HHV mevcut
+        /// barı da kapsadığı için fiyat HHV'yi hiç aşamaz -> sonuç hep &lt;= 0.
+        /// </summary>
+        /// <param name="source">Fiyat serisi (HY/LY hesabındaki "fiyat" tarafı, örn. Close)</param>
+        /// <param name="hhv">Önceden hesaplanmış HHV serisi (bkz. HHV())</param>
+        /// <returns>Array of HY values</returns>
+        public double[] HY(double[] source, double[] hhv)
+        {
+            if (source == null || source.Length == 0)
+                throw new ArgumentException("Source array cannot be null or empty", nameof(source));
+            if (hhv == null || hhv.Length != source.Length)
+                throw new ArgumentException("hhv array must be non-null and same length as source", nameof(hhv));
+
+            _logManager?.WriteLog($"PriceUtils.HY: length={source.Length}");
+
+            var result = new double[source.Length];
+            for (int i = 0; i < source.Length; i++)
+            {
+                result[i] = (double.IsNaN(hhv[i]) || hhv[i] == 0)
+                    ? double.NaN
+                    : (source[i] - hhv[i]) / hhv[i] * 100;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// LY (İdeal Sistem Sistem.LY(Periyot) ile AYNI) - fiyatın, ÖNCEDEN HESAPLANMIŞ LLV
+        /// serisine ham yüzde mesafesi: (source-llv)/llv*100. (HHV-LLV) aralığına göre normalize
+        /// ETMEZ - sadece LLV'ye göre. LLV mevcut barı da kapsadığı için fiyat LLV'nin hiç altına
+        /// inemez -> sonuç hep &gt;= 0.
+        /// </summary>
+        /// <param name="source">Fiyat serisi (HY/LY hesabındaki "fiyat" tarafı, örn. Close)</param>
+        /// <param name="llv">Önceden hesaplanmış LLV serisi (bkz. LLV())</param>
+        /// <returns>Array of LY values</returns>
+        public double[] LY(double[] source, double[] llv)
+        {
+            if (source == null || source.Length == 0)
+                throw new ArgumentException("Source array cannot be null or empty", nameof(source));
+            if (llv == null || llv.Length != source.Length)
+                throw new ArgumentException("llv array must be non-null and same length as source", nameof(llv));
+
+            _logManager?.WriteLog($"PriceUtils.LY: length={source.Length}");
+
+            var result = new double[source.Length];
+            for (int i = 0; i < source.Length; i++)
+            {
+                result[i] = (double.IsNaN(llv[i]) || llv[i] == 0)
+                    ? double.NaN
+                    : (source[i] - llv[i]) / llv[i] * 100;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// HHLL (İdeal Sistem Sistem.HHLL(Periyot) ile AYNI) - ÖNCEDEN HESAPLANMIŞ HHV ile LLV
+        /// serileri ARASINDAKİ FARK (kanal genişliği): hhv-llv.
+        /// </summary>
+        /// <param name="hhv">Önceden hesaplanmış HHV serisi (bkz. HHV())</param>
+        /// <param name="llv">Önceden hesaplanmış LLV serisi (bkz. LLV())</param>
+        /// <returns>Array of HHLL values</returns>
+        public double[] HHLL(double[] hhv, double[] llv)
+        {
+            if (hhv == null || hhv.Length == 0)
+                throw new ArgumentException("hhv array cannot be null or empty", nameof(hhv));
+            if (llv == null || llv.Length != hhv.Length)
+                throw new ArgumentException("llv array must be non-null and same length as hhv", nameof(llv));
+
+            _logManager?.WriteLog($"PriceUtils.HHLL: length={hhv.Length}");
+
+            var result = new double[hhv.Length];
+            for (int i = 0; i < hhv.Length; i++)
+            {
+                result[i] = (double.IsNaN(hhv[i]) || double.IsNaN(llv[i])) ? double.NaN : hhv[i] - llv[i];
+            }
+            return result;
+        }
+
+        /// <summary>
         /// Sum of values over period
         /// </summary>
         /// <param name="source">Data array</param>

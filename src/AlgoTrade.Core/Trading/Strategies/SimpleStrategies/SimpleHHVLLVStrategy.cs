@@ -16,6 +16,9 @@ namespace AlgoTrade.Core.Trading.Strategies
     /// - Belirli periyottaki en yüksek/en düşük seviyeler - Bollinger/ATR bandının kanal analogu
     /// - HHV/LLV High/Low'a bağımlı (priceSource'tan etkilenmez); priceSource sadece OnStep'teki
     ///   "fiyat" tarafını besler (klasik davranışta Close)
+    /// - HHLL (İdeal Sistem Sistem.HHLL(Periyot) ile aynı, 2026-11-23'te eklendi): HHV ile LLV
+    ///   ARASINDAKİ FARK (kanal genişliği) - fiyat barları üzerine değil, GetPlotIndicators()'ın
+    ///   diğer tüm serileriyle aynı şekilde ayrı/alt "Strategy Indicators" paneline çiziliyor.
     ///
     /// Parametreler:
     /// - period: HHV/LLV lookback periyodu (varsayılan 20)
@@ -74,6 +77,7 @@ namespace AlgoTrade.Core.Trading.Strategies
         private double[]? hhv;
         private double[]? llv;
         private double[]? mid;
+        private double[]? hhll;
 
         // runContextResolved/timeframeMinutes/isOptimizationRun/isOneMinute.../ResolveRunContext() artik
         // BaseStrategy'de (protected) - burada tekrar tanimlanmaz.
@@ -165,17 +169,23 @@ namespace AlgoTrade.Core.Trading.Strategies
                 for (int i = 0; i < barCount; i++)
                     mid[i] = (double.IsNaN(hhv[i]) || double.IsNaN(llv[i])) ? double.NaN : (hhv[i] + llv[i]) / 2.0;
 
+                // HHLL (İdeal Sistem Sistem.HHLL(Periyot) ile aynı) - PriceUtils.HHLL() reusable
+                // indikator fonksiyonuna taşındı (2026-11-23), fiyat barları üzerine değil ayrı/alt
+                // panele çizilecek bir seri (HHV ile LLV ARASINDAKİ FARK, kanal genişliği).
+                hhll = Indicators.Utils.HHLL(hhv, llv);
+
                 bool allSeriesLengthsMatch = true;
                 allSeriesLengthsMatch &= hhv.Length    == barCount;
                 allSeriesLengthsMatch &= llv.Length    == barCount;
                 allSeriesLengthsMatch &= mid.Length    == barCount;
+                allSeriesLengthsMatch &= hhll.Length   == barCount;
                 allSeriesLengthsMatch &= source.Length == barCount;
 
                 if (!allSeriesLengthsMatch)
                 {
                     throw new InvalidOperationException(
                         $"Seri uzunlukları uyuşmuyor (barCount={barCount}): " +
-                        $"hhv={hhv.Length}, llv={llv.Length}, mid={mid.Length}, source={source.Length}");
+                        $"hhv={hhv.Length}, llv={llv.Length}, mid={mid.Length}, hhll={hhll.Length}, source={source.Length}");
                 }
             }
             catch (NotImplementedException)
@@ -185,6 +195,7 @@ namespace AlgoTrade.Core.Trading.Strategies
                 hhv = new double[barCount];
                 llv = new double[barCount];
                 mid = new double[barCount];
+                hhll = new double[barCount];
             }
         }
 
@@ -560,6 +571,7 @@ namespace AlgoTrade.Core.Trading.Strategies
 
         public double[]? GetHHV() => hhv;
         public double[]? GetLLV() => llv;
+        public double[]? GetHHLL() => hhll;
 
         // IsFirstBarOfDay/IsLastBarOfDay/IsFirstBarOfWeek/IsFirstBarOfMonth artik BaseStrategy'de
         // (protected) - burada tekrar tanimlanmaz.
@@ -569,6 +581,7 @@ namespace AlgoTrade.Core.Trading.Strategies
             var indicators = new Dictionary<string, double[]>();
             if (hhv != null && hhv.Length > 0) indicators["HHV"] = hhv;
             if (llv != null && llv.Length > 0) indicators["LLV"] = llv;
+            if (hhll != null && hhll.Length > 0) indicators["HHLL"] = hhll;
             return indicators.Count > 0 ? indicators : null;
         }
     }

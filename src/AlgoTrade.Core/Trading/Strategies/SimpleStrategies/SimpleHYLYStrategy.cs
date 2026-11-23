@@ -10,11 +10,31 @@ using static AlgoTrade.Core.Trading.Utils.Utils;
 namespace AlgoTrade.Core.Trading.Strategies
 {
     /// <summary>
+    /// ⚠️ ÇALIŞMIYOR (2026-11-23) - bu strateji şu an varsayılan ayarlarla HİÇ SİNYAL ÜRETMİYOR,
+    /// canlı/backtest kullanıma uygun DEĞİL. HY/LY formülü doğru İdeal Sistem tanımına düzeltildi
+    /// (aşağıda), AMA 8 sinyal modunun (buySignalModeIndex/sellSignalModeIndex) threshold/midline/
+    /// bandThreshold değerleri (80/50/40) hâlâ ESKİ (yanlış, 0-100 ölçekli) formüle göre kalibre -
+    /// yeni formülde HY hep <=0, LY hep >=0 (küçük yüzdeler), bu eşiklere pratikte HİÇ ULAŞILAMIYOR.
+    /// Özellikle mode 4 (band filtresi, "HY-LY>40") matematiksel olarak artık İMKANSIZ (HY≤0, LY≥0
+    /// olduğu için fark asla 40'ı geçemez) - buy tarafı tamamen ölü. Düzeltme kapsamı bilerek
+    /// ertelendi (kullanıcı kararı) - bkz. 8 modun yeniden tasarımı gereken konuşma. Kullanmadan
+    /// önce sinyal mantığı yeniden kalibre edilmeli.
+    ///
     /// HY/LY (High-Yakınlık / Low-Yakınlık) Relatif Mesafe Stratejisi
     ///
-    /// HY/LY Mantığı:
-    /// - HY = (fiyat-LLV)/(HHV-LLV)*100, LY = (HHV-fiyat)/(HHV-LLV)*100 - RSI'nin 0-100 mimari
-    ///   analogu, ama tek seri yerine tamamlayıcı iki seri (HY yükseğe, LY düşüğe yakınlık)
+    /// HY/LY Mantığı (İdeal Sistem Sistem.HY(Periyot)/Sistem.LY(Periyot) ile AYNI - 2026-11-23'te
+    /// düzeltildi, önceki (HHV-LLV) aralığına göre normalize eden RSI-benzeri formül YANLIŞTI):
+    /// - HY = (fiyat-HHV)/HHV*100 - fiyatın periyottaki EN YÜKSEK değere ham yüzde mesafesi.
+    ///   HHV mevcut barı da kapsadığı için fiyat HHV'yi hiç aşamaz -> HY hep <= 0.
+    /// - LY = (fiyat-LLV)/LLV*100 - fiyatın periyottaki EN DÜŞÜK değere ham yüzde mesafesi.
+    ///   LLV mevcut barı da kapsadığı için fiyat LLV'nin hiç altına inemez -> LY hep >= 0.
+    /// - (HHV-LLV) aralığına göre normalize ETMEZ (RSI/Stochastic %K gibi 0-100 osilatör DEĞİL) -
+    ///   referans İdeal Sistem örneklerinde bu ham (genelde negatif/pozitif) değerin Math.Abs()'i
+    ///   alınıp küçük bir yüzde eşikle (örn. %2-3) karşılaştırılıyor.
+    /// - BİLİNEN EKSİK: aşağıdaki 8 sinyal modundaki threshold/midline/bandThreshold (80/50/40 gibi)
+    ///   değerleri hâlâ ESKİ (yanlış) 0-100 ölçeğine göre seçilmiş - formül düzeltildi ama sinyal
+    ///   mantığı YENİ ölçeğe (küçük +/- yüzdeler) göre henüz yeniden kalibre edilmedi (kullanıcı
+    ///   kararıyla bu konuşmada kapsam dışı bırakıldı, ayrı bir iş olarak ele alınacak).
     ///
     /// Parametreler:
     /// - period: HHV/LLV lookback periyodu (varsayılan 20)
@@ -160,22 +180,11 @@ namespace AlgoTrade.Core.Trading.Strategies
                 var hhv = Indicators.Utils.HHV(highPrices, period);
                 var llv = Indicators.Utils.LLV(lowPrices, period);
 
-                hy = new double[barCount];
-                ly = new double[barCount];
-                for (int i = 0; i < barCount; i++)
-                {
-                    double range = hhv[i] - llv[i];
-                    if (double.IsNaN(hhv[i]) || double.IsNaN(llv[i]) || range <= 0)
-                    {
-                        hy[i] = double.NaN;
-                        ly[i] = double.NaN;
-                    }
-                    else
-                    {
-                        hy[i] = ((source[i] - llv[i]) / range) * 100;
-                        ly[i] = ((hhv[i] - source[i]) / range) * 100;
-                    }
-                }
+                // Gercek Ideal Sistem formulu (bkz. sinif basi yorumu) - PriceUtils.HY()/LY()
+                // reusable indikator fonksiyonlarina tasindi (2026-11-23), (HHV-LLV) araligina
+                // gore DEGIL, her biri kendi ham referansina (HHV/LLV) gore yuzde mesafe.
+                hy = Indicators.Utils.HY(source, hhv);
+                ly = Indicators.Utils.LY(source, llv);
 
                 bool allSeriesLengthsMatch = true;
                 allSeriesLengthsMatch &= hy.Length     == barCount;
