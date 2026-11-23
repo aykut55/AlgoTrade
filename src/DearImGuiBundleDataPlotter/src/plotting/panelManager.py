@@ -145,6 +145,16 @@ class PanelManager:
         self._detachedPanelIds = set()
         self._detachedInitialSizePending = set()
         self._panelHeightRestorePending = {}
+        # Maximize/Restore: hangi panel maximize edilmis (None = yok) + Maximize
+        # ANINDA gizlenen diger panellerin O ANKI gorunurlugu (Restore'da AYNEN
+        # geri uygulanir - Maximize oncesi zaten Hide ile gizlenmis bir panel
+        # Restore'dan sonra da gizli kalir).
+        self._maximizedPanelId = None
+        self._preMaximizeVisibility = {}
+        self._preMaximizeOriginalIndex = None
+        self._preMaximizeHeight = None
+        self._minimizedPanelIds = set()
+        self._minimizedOriginalIndex = {}
 
     def setInteractionManager(self, interactionManager):
         self._interactionManager = interactionManager
@@ -344,6 +354,12 @@ class PanelManager:
         self._detachedPanelIds.clear()
         self._detachedInitialSizePending.clear()
         self._panelHeightRestorePending.clear()
+        self._maximizedPanelId = None
+        self._preMaximizeVisibility.clear()
+        self._preMaximizeOriginalIndex = None
+        self._preMaximizeHeight = None
+        self._minimizedPanelIds.clear()
+        self._minimizedOriginalIndex.clear()
 
     def _deletePanelUi(self, panelId):
         self._drawnPanelIds.discard(panelId)
@@ -1404,6 +1420,124 @@ class PanelManager:
         self._panelHeightRestorePending[panelId] = max(80, int(panel.height or 300))
         return True
 
+    # --------------------------------------------------------- maximize/minimize
+    def _findOhlcPanelId(self):
+        """OHLC panelinin GERCEK PanelManager id'sini bulur. view.json'daki 'ohlc'
+        string id'si PanelManager'in kendi panel.id'si DEGIL - o sadece default.py/
+        plot.py tarafinda tutulan AYRI bir isim->panel haritasinda (panelByViewId)
+        var. Butun bundle uretim yollarinda (TradeDataBundleConverter.cs,
+        csharpBridge/plot.py) OHLC paneli her zaman name="OHLC" ile olusturuluyor -
+        bu yuzden gercek id'yi panel.name'den buluyoruz."""
+        for pid, panel in self._panels.items():
+            if getattr(panel, "name", None) == "OHLC":
+                return pid
+        return None
+
+    def maximizePanel(self, panelId):
+        """OHLC ve panelId DISINDAKI tum STACKED (detached olmayan) panelleri
+        tamamen gizler (Hide gibi - hic yer kaplamaz, Up/Down/Collapse/... satiri
+        bile cizilmez) VE panelId'yi _panelOrder icinde OHLC'nin HEMEN ALTINA
+        tasir (eski sirasi ne olursa olsun - OHLC her zaman gorunur kaldigi icin,
+        panelId boylece gorsel olarak dogrudan OHLC'nin altina gelir). Restore
+        ile, o anda gizlenen panellerin ONCEKI gorunurlugu (zaten Hide ile
+        gizliyse gizli kalir) VE panelId'nin ONCEKI sirasi aynen geri uygulanir.
+        Detached panellere hic dokunulmaz/uygulanmaz (Up/Down ile ayni kisit)."""
+        if panelId not in self._panelOrder or panelId in self._detachedPanelIds:
+            return False
+        if self._maximizedPanelId is not None and self._maximizedPanelId != panelId:
+            self.restoreMaximizedPanel()
+
+        anchorId = self._findOhlcPanelId()
+        saved = {}
+        for pid in self._panelOrder:
+            if pid == anchorId or pid == panelId or pid in self._detachedPanelIds:
+                continue
+            panel = self._panels.get(pid)
+            if panel is not None:
+                saved[pid] = panel.getVisible()
+                panel.setVisible(False)
+        self._preMaximizeVisibility = saved
+        self._maximizedPanelId = panelId
+        self._preMaximizeOriginalIndex = self._panelOrder.index(panelId)
+        targetPanel = self._panels.get(panelId)
+        self._preMaximizeHeight = targetPanel.height if targetPanel is not None else None
+        self.expandPanel(panelId)
+
+        if anchorId is not None and panelId != anchorId and anchorId in self._panelOrder:
+            self._panelOrder.remove(panelId)
+            anchorIdx = self._panelOrder.index(anchorId)
+            self._panelOrder.insert(anchorIdx + 1, panelId)
+        return True
+
+    def restoreMaximizedPanel(self):
+        """maximizePanel() ile gizlenen panelleri ONCEKI gorunurluklerine, maximize
+        edilen paneli de ONCEKI sirasina geri dondurur. Maximize edilmis panel
+        yoksa no-op."""
+        panelId = self._maximizedPanelId
+        for pid, wasVisible in self._preMaximizeVisibility.items():
+            panel = self._panels.get(pid)
+            if panel is not None:
+                panel.setVisible(wasVisible)
+        self._preMaximizeVisibility = {}
+        self._maximizedPanelId = None
+
+        originalIndex = self._preMaximizeOriginalIndex
+        self._preMaximizeOriginalIndex = None
+        if (panelId is not None and originalIndex is not None and
+                panelId in self._panelOrder):
+            self._panelOrder.remove(panelId)
+            insertAt = min(originalIndex, len(self._panelOrder))
+            self._panelOrder.insert(insertAt, panelId)
+
+        # Maximize sirasinda ekrani doldurmak icin zorla buyutulen yukseklik -
+        # eski (maximize oncesi) yuksekligine geri dondur, aksi halde panel
+        # maximize'daki buyuk haliyle kalir.
+        originalHeight = self._preMaximizeHeight
+        self._preMaximizeHeight = None
+        if panelId is not None and originalHeight is not None:
+            panel = self._panels.get(panelId)
+            if panel is not None:
+                panel.height = originalHeight
+                self._panelHeightRestorePending[panelId] = originalHeight
+
+    def isPanelMaximized(self, panelId):
+        return self._maximizedPanelId == panelId
+
+    def minimizePanel(self, panelId):
+        """Collapse ile AYNI kucultme (panel._collapsed = True) + panelId'yi
+        _panelOrder'in EN SONUNA tasir - minimize edilen paneller dibe birikir,
+        aktif/buyuk panellerin arasina girmez. Panel o anda maximize edilmisse
+        once Restore edilir (maximize + minimize ayni anda anlamsiz olurdu).
+        Orijinal sirasi kaydedilir - restoreMinimizedPanel() ile geri gelir."""
+        if panelId not in self._panelOrder:
+            return False
+        if self.isPanelMaximized(panelId):
+            self.restoreMaximizedPanel()
+        if panelId not in self._minimizedPanelIds:
+            self._minimizedOriginalIndex[panelId] = self._panelOrder.index(panelId)
+            self._minimizedPanelIds.add(panelId)
+        self.collapsePanel(panelId)
+        self._panelOrder.remove(panelId)
+        self._panelOrder.append(panelId)
+        return True
+
+    def restoreMinimizedPanel(self, panelId):
+        """minimizePanel() ile kucultulup dibe tasinan paneli ACAR ve ONCEKI
+        sirasina geri koyar. Minimize edilmemis bir panel icin no-op."""
+        if panelId not in self._minimizedPanelIds:
+            return False
+        self._minimizedPanelIds.discard(panelId)
+        originalIndex = self._minimizedOriginalIndex.pop(panelId, None)
+        self.expandPanel(panelId)
+        if originalIndex is not None and panelId in self._panelOrder:
+            self._panelOrder.remove(panelId)
+            insertAt = min(originalIndex, len(self._panelOrder))
+            self._panelOrder.insert(insertAt, panelId)
+        return True
+
+    def isPanelMinimized(self, panelId):
+        return panelId in self._minimizedPanelIds
+
     # --------------------------------------------------------- info paneli
     def setInfoPanelMode(self, mode: str):
         mode = str(mode or "").lower()
@@ -1685,6 +1819,19 @@ class PanelManager:
         self.sync()
         curHoverState = None
 
+        # Maximize edilmis panel varsa, bos kalan alani doldursun diye yuksekligi
+        # HER FRAME (pencere boyutu degisse de guncel kalsin diye) mevcut bos alana
+        # gore yeniden hesaplanip zorla uygulanir - OHLC + maximize edilen panel disinda
+        # her sey gizli oldugu icin bos alan = toplam alan - OHLC yuksekligi - bosluk.
+        if self._maximizedPanelId is not None:
+            anchorId = self._findOhlcPanelId()
+            anchorPanel = self._panels.get(anchorId) if anchorId else None
+            ohlcHeight = (anchorPanel.height if anchorPanel is not None and anchorPanel.height
+                          else 380)
+            avail = imgui.get_content_region_avail()
+            computed = int(avail.y - ohlcHeight - 12)
+            self._panelHeightRestorePending[self._maximizedPanelId] = max(200, computed)
+
         for panelId in list(self._panelOrder):
             panel = self._panels.get(panelId)
             if (panel is None or panelId not in self._drawnPanelIds or
@@ -1935,6 +2082,28 @@ class PanelManager:
         if imgui.small_button(f"Hide##panel_header_hide_{panelId}"):
             panel.setVisible(False)
             self.attachPanel(panelId)
+        imgui.same_line()
+
+        # Maximize/Restore + Minimize - sadece stacked panellerde (Up/Down ile ayni kisit,
+        # detached zaten kendi floating penceresi, stack-sirasi/diger-panelleri-gizleme
+        # kavramlari onun icin tanimli degil).
+        imgui.begin_disabled(detached)
+        if self.isPanelMaximized(panelId):
+            if imgui.small_button(f"Restore##panel_header_maximize_{panelId}"):
+                self.restoreMaximizedPanel()
+        else:
+            if imgui.small_button(f"Maximize##panel_header_maximize_{panelId}"):
+                self.maximizePanel(panelId)
+        imgui.end_disabled()
+        imgui.same_line()
+        imgui.begin_disabled(detached)
+        if self.isPanelMinimized(panelId):
+            if imgui.small_button(f"Restore##panel_header_minimize_{panelId}"):
+                self.restoreMinimizedPanel(panelId)
+        else:
+            if imgui.small_button(f"Minimize##panel_header_minimize_{panelId}"):
+                self.minimizePanel(panelId)
+        imgui.end_disabled()
 
         if self._showCaptions:
             captionWidth = imgui.calc_text_size(panel.caption).x
