@@ -44,6 +44,8 @@ SimpleSuperTrendStrategy|v5|KarAlYuzde|period:5:50:1|multiplier:0.5:5.0:0.25|kar
 SimpleSuperTrendStrategy|v6|ZararKesYuzde|period:5:50:1|multiplier:0.5:5.0:0.25|zararKesYuzdesi:-10.0:-1.0:1.0|fixed:priceSource:string:Close|fixed:stopLossExitModeIndex:int:5
 SimpleSuperTrendStrategy|v7|KarAlZararKesYuzde|period:5:50:1|multiplier:0.5:5.0:0.25|karAlYuzdesi:1.0:10.0:1.0|zararKesYuzdesi:-10.0:-1.0:1.0|fixed:priceSource:string:Close|fixed:takeProfitExitModeIndex:int:5|fixed:stopLossExitModeIndex:int:5
 SimpleSuperTrendStrategy|v100|DirectionFlip|period:5:50:1|multiplier:0.5:5.0:0.25|fixed:priceSource:string:Close|fixed:buySignalModeIndex:int:1|fixed:sellSignalModeIndex:int:1
+SimpleSuperTrendStrategy|v8|Wide1dk|period:20:250:5|multiplier:0.5:10.0:0.5|fixed:priceSource:string:Close
+SimpleSuperTrendStrategy|v9|Wide1dkV2|period:20:250:5|multiplier:5.0:20.0:0.5|fixed:priceSource:string:Close
 
 SimpleParabolicSARStrategy|v1|Default|step:0.01:0.05:0.01|max:0.1:0.3:0.1|fixed:priceSource:string:Close
 SimpleParabolicSARStrategy|v2|KarAl|step:0.01:0.05:0.01|max:0.1:0.3:0.1|karAlFiyatSeviyesi:500:15000:500|fixed:priceSource:string:Close|fixed:takeProfitExitModeIndex:int:4

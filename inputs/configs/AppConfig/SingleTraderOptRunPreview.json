@@ -11,20 +11,20 @@
   },
   "Optimization": {
     "StrategyName": "SimpleSuperTrendStrategy",
-    "Version": "v1",
-    "DisplayName": "Default",
+    "Version": "v9",
+    "DisplayName": "Wide1dkV2",
     "ParameterRanges": [
       {
         "Name": "period",
-        "Min": 5,
-        "Max": 50,
-        "Step": 1
+        "Min": 20,
+        "Max": 250,
+        "Step": 5
       },
       {
         "Name": "multiplier",
-        "Min": 0.5,
-        "Max": 5,
-        "Step": 0.25
+        "Min": 5,
+        "Max": 20,
+        "Step": 0.5
       }
     ],
     "FixedParameters": {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -24,7 +25,7 @@ public class StatisticsExporter
         _statistics.AssignToMapForExport();
         StringBuilder sb = new StringBuilder();
         sb.AppendLine("================================================================================");
-        sb.AppendLine($"                    SINGLE TRADER STATISTICS REPORT - ({_statistics.SistemName}-{_statistics.GrafikSembol})");
+        sb.AppendLine($"                    SINGLE TRADER STATISTICS REPORT - ({_statistics.SistemName}-{_statistics.GrafikSembol}-{_statistics.GrafikPeriyot})");
         sb.AppendLine($"                    Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine("================================================================================");
         sb.AppendLine();
@@ -119,7 +120,7 @@ public class StatisticsExporter
             return;
 
         using StreamWriter writer = CreateSharedWriter(filePath);
-        writer.WriteLine($"BAR-BY-BAR TRADING DATA (ALL) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
+        writer.WriteLine($"BAR-BY-BAR TRADING DATA (ALL) - {_statistics.SistemName} ({_statistics.GrafikSembol}, {_statistics.GrafikPeriyot})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         writer.WriteLine("".PadRight(500, '='));
 
@@ -254,7 +255,7 @@ public class StatisticsExporter
             throw new InvalidOperationException("Statistics exporter config has no enabled columns.");
 
         using StreamWriter writer = CreateSharedWriter(filePath);
-        writer.WriteLine($"BAR-BY-BAR TRADING DATA (ALL) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
+        writer.WriteLine($"BAR-BY-BAR TRADING DATA (ALL) - {_statistics.SistemName} ({_statistics.GrafikSembol}, {_statistics.GrafikPeriyot})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         writer.WriteLine($"BarSayisi: {trader.Data.Count}  |  {trader.Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {trader.Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
         writer.WriteLine("".PadRight(850, '='));
@@ -332,12 +333,6 @@ public class StatisticsExporter
 
         var rows = _statistics.PerformansRows;
 
-        using StreamWriter writer = CreateSharedWriter(filePath);
-        writer.WriteLine($"SINGLE TRADER PERFORMANS (version={version}) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
-        writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
-        writer.WriteLine($"BarSayisi: {trader.Data.Count}  |  {trader.Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {trader.Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
-        writer.WriteLine("".PadRight(200, '='));
-
         var colWidths = new int[columns.Count];
         var headerCells = new List<string>(columns.Count);
         for (int c = 0; c < columns.Count; c++)
@@ -351,8 +346,15 @@ public class StatisticsExporter
             bool leftAlign = IsLeftAlignedPerformansField(col.field ?? "");
             headerCells.Add(leftAlign ? header.PadRight(width) : header.PadLeft(width));
         }
-        writer.WriteLine(string.Join(" | ", headerCells));
-        writer.WriteLine("".PadRight(200, '-'));
+        int lineWidth = colWidths.Sum() + (colWidths.Length - 1) * 3 + 2;
+
+        using StreamWriter writer = CreateSharedWriter(filePath);
+        writer.WriteLine($"SINGLE TRADER PERFORMANS (version={version}) - {_statistics.SistemName} ({_statistics.GrafikSembol}, {_statistics.GrafikPeriyot})");
+        writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
+        writer.WriteLine($"BarSayisi: {trader.Data.Count}  |  {trader.Data[0].DateTime:yyyy.MM.dd HH:mm:ss} — {trader.Data[^1].DateTime:yyyy.MM.dd HH:mm:ss}");
+        writer.WriteLine("".PadRight(lineWidth, '='));
+        writer.WriteLine(string.Join(" | ", headerCells) + " |");
+        writer.WriteLine("".PadRight(lineWidth, '-'));
 
         for (int i = 0; i < rows.Count; i++)
         {
@@ -365,10 +367,10 @@ public class StatisticsExporter
                 bool leftAlign = IsLeftAlignedPerformansField(col.field ?? "");
                 rowCells.Add(leftAlign ? value.PadRight(width) : value.PadLeft(width));
             }
-            writer.WriteLine(string.Join(" | ", rowCells));
+            writer.WriteLine(string.Join(" | ", rowCells) + " |");
         }
 
-        writer.WriteLine("".PadRight(200, '='));
+        writer.WriteLine("".PadRight(lineWidth, '='));
     }
 
     public void SavePerformansToCsvFromConfig(string filePath, string configPath = "inputs/StatisticsExporterConfig.json", string version = "v1")
@@ -486,7 +488,7 @@ public class StatisticsExporter
     {
         _statistics.AssignToMapMinimalForExport();
         StringBuilder sb = new StringBuilder();
-        sb.AppendLine($"TRADING STATISTICS REPORT (MINIMAL) - {_statistics.SistemName} ({_statistics.GrafikSembol})");
+        sb.AppendLine($"TRADING STATISTICS REPORT (MINIMAL) - {_statistics.SistemName} ({_statistics.GrafikSembol}, {_statistics.GrafikPeriyot})");
         sb.AppendLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         sb.AppendLine("================================================================================");
         sb.AppendLine($"{"Property Name".PadRight(40)} : Value");
@@ -526,7 +528,7 @@ public class StatisticsExporter
             return;
 
         using StreamWriter writer = CreateSharedWriter(filePath);
-        writer.WriteLine($"BAR-BY-BAR TRADING DATA - {_statistics.SistemName} ({_statistics.GrafikSembol})");
+        writer.WriteLine($"BAR-BY-BAR TRADING DATA - {_statistics.SistemName} ({_statistics.GrafikSembol}, {_statistics.GrafikPeriyot})");
         writer.WriteLine($"Generated: {DateTime.Now:yyyy.MM.dd HH:mm:ss}");
         writer.WriteLine("".PadRight(200, '='));
 
@@ -1995,9 +1997,11 @@ public class StatisticsExporter
             "No" => (rowIndex + 1).ToString(),
             "YonList" => row.Yon,
             "KontratSayisi" => row.KontratSayisi.ToString("F2"),
+            "AcilisBarNo" => row.AcilisBarNo.ToString(),
             "AcilisTarihi" => row.AcilisTarihSaat.ToString("yyyy.MM.dd"),
             "AcilisSaati" => row.AcilisTarihSaat.ToString("HH:mm:ss"),
             "AcilisFiyati" => row.AcilisFiyati.ToString("F2"),
+            "KapanisBarNo" => row.KapanisBarNo.ToString(),
             "KapanisTarihi" => row.KapanisTarihSaat.ToString("yyyy.MM.dd"),
             "KapanisSaati" => row.KapanisTarihSaat.ToString("HH:mm:ss"),
             "KapanisFiyati" => row.KapanisFiyati.ToString("F2"),
@@ -2006,6 +2010,7 @@ public class StatisticsExporter
             "BakiyePuan" => row.BakiyePuan.ToString("F2"),
             "GetiriPuan" => row.GetiriPuan.ToString("F2"),
             "GetiriPuanYuzde" => row.GetiriPuanYuzde.ToString("F2"),
+            "IsAcik" => row.IsAcik ? "1" : "0",
             _ => ""
         };
     }

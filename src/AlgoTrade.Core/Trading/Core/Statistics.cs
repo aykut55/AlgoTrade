@@ -315,8 +315,10 @@ namespace AlgoTrade.Core.Trading.Statistics
             public int No { get; set; }
             public string Yon { get; set; } = "";
             public double KontratSayisi { get; set; }
+            public int AcilisBarNo { get; set; }
             public DateTime AcilisTarihSaat { get; set; }
             public double AcilisFiyati { get; set; }
+            public int KapanisBarNo { get; set; }
             public DateTime KapanisTarihSaat { get; set; }
             public double KapanisFiyati { get; set; }
             // Direction-adjusted entry-to-exit price change, independent of position size.
@@ -330,6 +332,9 @@ namespace AlgoTrade.Core.Trading.Statistics
             public double BakiyePuan { get; set; }
             public double GetiriPuan { get; set; }
             public double GetiriPuanYuzde { get; set; }
+            // True for a trailing row representing a still-open position at the end of data
+            // (mark-to-market, not a confirmed close) — see CalculatePerformances.
+            public bool IsAcik { get; set; }
         }
 
         public List<PerformansRow> PerformansRows { get; private set; } = new();
@@ -586,8 +591,10 @@ namespace AlgoTrade.Core.Trading.Statistics
                             No = PerformansRows.Count + 1,
                             Yon = entryYon,
                             KontratSayisi = varlikAdedSayisi,
+                            AcilisBarNo = entryIndex,
                             AcilisTarihSaat = entryTime,
                             AcilisFiyati = entryFiyat,
+                            KapanisBarNo = i,
                             KapanisTarihSaat = Trader.Data[i].DateTime,
                             KapanisFiyati = Trader.lists.SeviyeList[i],
                             KarZararPuan = tradePnlPuan,
@@ -620,8 +627,10 @@ namespace AlgoTrade.Core.Trading.Statistics
                             No = PerformansRows.Count + 1,
                             Yon = entryYon,
                             KontratSayisi = varlikAdedSayisi,
+                            AcilisBarNo = entryIndex,
                             AcilisTarihSaat = entryTime,
                             AcilisFiyati = entryFiyat,
+                            KapanisBarNo = i,
                             KapanisTarihSaat = Trader.Data[i].DateTime,
                             KapanisFiyati = Trader.lists.SeviyeList[i],
                             KarZararPuan = tradePnlPuan,
@@ -638,6 +647,33 @@ namespace AlgoTrade.Core.Trading.Statistics
                     entryFiyat = 0.0;
                     entryTime = default;
                 }
+            }
+
+            if (currentYon == "A" || currentYon == "S")
+            {
+                int lastIndex = barCount - 1;
+                double tradePnlPuan = Trader.lists.KarZararPuanList[lastIndex] * varlikAdedSayisi;
+                double unrealizedBalancePuan = balancePuan + tradePnlPuan;
+                double getiriPuan = unrealizedBalancePuan - bakiyePuan;
+                double getiriPuanYuzde = bakiyePuan != 0.0 ? 100.0 * getiriPuan / bakiyePuan : 0.0;
+
+                PerformansRows.Add(new PerformansRow
+                {
+                    No = PerformansRows.Count + 1,
+                    Yon = entryYon,
+                    KontratSayisi = varlikAdedSayisi,
+                    AcilisBarNo = entryIndex,
+                    AcilisTarihSaat = entryTime,
+                    AcilisFiyati = entryFiyat,
+                    KapanisBarNo = lastIndex,
+                    KapanisTarihSaat = Trader.Data[lastIndex].DateTime,
+                    KapanisFiyati = Trader.Data[lastIndex].Close,
+                    KarZararPuan = tradePnlPuan,
+                    BakiyePuan = unrealizedBalancePuan,
+                    GetiriPuan = getiriPuan,
+                    GetiriPuanYuzde = getiriPuanYuzde,
+                    IsAcik = true
+                });
             }
         }
 
