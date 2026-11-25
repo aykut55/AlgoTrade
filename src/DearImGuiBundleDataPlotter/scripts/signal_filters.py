@@ -71,6 +71,26 @@ def filterByReturnThreshold(signalCodes, signalSteps, pnlPct,
     return edited, removed, len(segments)
 
 
+def filterByDirection(signalCodes, signalSteps, keepDirection):
+    """Sadece bir yonu (long=1/short=-1) tutar - diger yondeki HER segmentin
+    entry sinyalini siler (0'a cevirir), getiri/PnL esigine bakmadan.
+
+    keepDirection: 1 (sadece A/long) veya -1 (sadece S/short).
+
+    Donus: (editedSignalCodes, silinenTradeSayisi, toplamTradeSayisi)
+    """
+    edited = np.array(signalCodes, copy=True)
+    segments = extractSegments(signalSteps)
+
+    removed = 0
+    for startIdx, _endIdx, direction in segments:
+        if direction != keepDirection:
+            edited[startIdx] = NONE_CODE
+            removed += 1
+
+    return edited, removed, len(segments)
+
+
 def forceSeparateSameDirectionReentries(signalCodes, signalSteps):
     """filterByReturnThreshold SONRASI uygulanir. Sinyaller zincir gibidir:
     iki hayatta kalan trade'in arasinda silinmis (NONE_CODE) segment(ler)

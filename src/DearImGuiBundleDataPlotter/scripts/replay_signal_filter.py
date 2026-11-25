@@ -30,6 +30,9 @@ import signal_filters as sf  # noqa: E402
 # AYARLAR - deneme yaparken sadece bu blogu degistir
 # =============================================================================
 
+# Yon filtresi: "A" (sadece long), "S" (sadece short) veya "AS" (ikisi de, filtre yok).
+DIRECTION_FILTER = "AS"
+
 # Filtre A: trade'in kapanis anindaki yon-duzeltilmis kar%'i esigin ALTINDAYSA
 # (kar da olsa zarar da olsa) o trade silinir. Long/short icin AYRI esik.
 FILTER_A_ENABLED = True
@@ -59,6 +62,7 @@ OUTPUT_BUNDLE_NAME = "replay_filtered_bundle"
 # geri yuklenir. "Mevcuttan devam et" icin bu alani BOS birak - script zaten
 # her zaman o an ekranda acik olan bundle'i baz alir (zincirleme/chaining
 # dogal olarak calisir).
+LOAD_BACKUP_PATH = r"D:\Aykut\Projects\AlgoTrade\src\DearImGuiBundleDataPlotter\inputs\replay_backups\1795631517831_latest_bundle.npz"
 LOAD_BACKUP_PATH = ""
 
 # =============================================================================
@@ -132,15 +136,23 @@ def run():
 
     edited = signalCodes
     totalTrades = 0
+    anyDeletionFilterApplied = False
+
+    if DIRECTION_FILTER != "AS":
+        keepDirection = 1 if DIRECTION_FILTER == "A" else -1
+        edited, removed, totalTrades = sf.filterByDirection(edited, signalSteps, keepDirection)
+        print(f"[ReplaySignalFilter] Yon filtresi ({DIRECTION_FILTER}): {totalTrades} trade, {removed} silindi, {totalTrades - removed} kaldi")
+        anyDeletionFilterApplied = True
 
     if FILTER_A_ENABLED:
         edited, removed, totalTrades = sf.filterByReturnThreshold(
             edited, signalSteps, pnlPct, LONG_RETURN_THRESHOLD_PCT, SHORT_RETURN_THRESHOLD_PCT)
         print(f"[ReplaySignalFilter] Filtre A: {totalTrades} trade, {removed} silindi, {totalTrades - removed} kaldi")
+        anyDeletionFilterApplied = True
 
-        if FORCE_SEPARATE_ENABLED:
-            edited, forcedSeparations = sf.forceSeparateSameDirectionReentries(edited, signalSteps)
-            print(f"[ReplaySignalFilter] Zorla ayirma: {forcedSeparations} ayni-yon zincirlenmesi koparildi")
+    if anyDeletionFilterApplied and FORCE_SEPARATE_ENABLED:
+        edited, forcedSeparations = sf.forceSeparateSameDirectionReentries(edited, signalSteps)
+        print(f"[ReplaySignalFilter] Zorla ayirma: {forcedSeparations} ayni-yon zincirlenmesi koparildi")
 
     if FILTER_B_ENABLED:
         edited, earlyClosed, liveTrades = sf.applyEarlyExitOnProfit(edited, signalSteps, pnl, PROFIT_TAKE_THRESHOLD_TL)
