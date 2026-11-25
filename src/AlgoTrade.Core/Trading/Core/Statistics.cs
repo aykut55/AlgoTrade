@@ -321,6 +321,8 @@ namespace AlgoTrade.Core.Trading.Statistics
             public int KapanisBarNo { get; set; }
             public DateTime KapanisTarihSaat { get; set; }
             public double KapanisFiyati { get; set; }
+            // Raw entry-to-exit price change, yon'dan bagimsiz (A/S ayrimi yapmadan ham % degisim).
+            public double HamDegisimYuzde => AcilisFiyati == 0.0 ? 0.0 : 100.0 * (KapanisFiyati - AcilisFiyati) / AcilisFiyati;
             // Direction-adjusted entry-to-exit price change, independent of position size.
             public double YonBazliDegisimYuzde => AcilisFiyati == 0.0 ? 0.0 : Yon switch
             {

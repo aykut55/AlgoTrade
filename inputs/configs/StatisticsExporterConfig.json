@@ -156,6 +156,7 @@
           {"field": "KapanisTarihi",                  "header": "Kapanış Tarihi",                 "width": 13, "enabled": true},
           {"field": "KapanisSaati",                   "header": "Kapanış Saati",                  "width": 12, "enabled": true},
           {"field": "KapanisFiyati",                  "header": "Kapanış Fiyatı",                 "width": 13, "enabled": true},
+          {"field": "HamDegisimYuzde",                "header": "Ham Değişim %",                  "width": 14, "enabled": true},
           {"field": "YonBazliDegisimYuzde",            "header": "Yön Bazlı Değişim %",           "width": 18, "enabled": true},
           {"field": "KarZararPuan",                   "header": "Kar/Zarar",                      "width": 10, "enabled": true},
           {"field": "BakiyePuan",                     "header": "Bakiye Puan",                    "width": 12, "enabled": true},
