@@ -224,10 +224,15 @@ def main():
         if all(row_matches(row, field, op, value) for field, op, value in args.filter)
     ]
 
-    output_path = Path(args.output)
-    write_rows(output_path, fieldnames, matched)
+    # Her calistirmada hem .csv hem .txt yazilir - -o'nun uzantisi sadece dosya adi
+    # govdesini belirler, ikisi de uretilir.
+    output_stem = Path(args.output).with_suffix("")
+    output_paths = [output_stem.with_suffix(".csv"), output_stem.with_suffix(".txt")]
+    for output_path in output_paths:
+        write_rows(output_path, fieldnames, matched)
 
-    print(f"{len(matched)}/{len(rows)} satir filtreye uydu -> {output_path}")
+    written = ", ".join(str(p) for p in output_paths)
+    print(f"{len(matched)}/{len(rows)} satir filtreye uydu -> {written}")
 
 
 if __name__ == "__main__":
