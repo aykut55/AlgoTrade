@@ -170,21 +170,33 @@ namespace AlgoTrade.Core.Trading.Indicators.MovingAverages
             var result = new double[source.Length];
             var multiplier = 2.0 / (period + 1);
 
+            // Girdinin basinda NaN bloklari olabilir (orn. MACD'nin Signal cizgisi, fastEMA/slowEMA
+            // warm-up'i bitene kadar NaN olan macdLine uzerinde EMA alinir) - SMA tohumu ilk NaN
+            // olmayan `period` uzunlugundaki pencereden baslatilir. Bu kontrol olmadan, baştaki NaN
+            // ilk EMA degerini (ve ozyinelemeli formul - result[i-1] - yuzunden SONRASINDAKI TUM
+            // degerleri) sonsuza kadar NaN'a cevirir.
+            int start = 0;
+            while (start < source.Length && double.IsNaN(source[start]))
+                start++;
+
+            for (int i = 0; i < start; i++)
+                result[i] = double.NaN;
+
             // First EMA = SMA
             var sum = 0.0;
-            for (int i = 0; i < Math.Min(period, source.Length); i++)
+            for (int i = start; i < Math.Min(start + period, source.Length); i++)
             {
                 sum += source[i];
-                if (i < period - 1)
+                if (i < start + period - 1)
                     result[i] = double.NaN;
             }
 
-            if (source.Length >= period)
+            if (source.Length >= start + period)
             {
-                result[period - 1] = sum / period;
+                result[start + period - 1] = sum / period;
 
                 // Subsequent EMAs
-                for (int i = period; i < source.Length; i++)
+                for (int i = start + period; i < source.Length; i++)
                 {
                     result[i] = (source[i] - result[i - 1]) * multiplier + result[i - 1];
                 }
